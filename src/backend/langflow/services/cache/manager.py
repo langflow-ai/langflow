@@ -1,153 +1,256 @@
-from contextlib import contextmanager
-from typing import Any, Awaitable, Callable, List, Optional
-from langflow.services.base import Service
+import threading
+import time
+from collections import OrderedDict
 
-import pandas as pd
-from PIL import Image
+from langflow.services.cache.base import BaseCacheManager
 
-
-class Subject:
-    """Base class for implementing the observer pattern."""
-
-    def __init__(self):
-        self.observers: List[Callable[[], None]] = []
-
-    def attach(self, observer: Callable[[], None]):
-        """Attach an observer to the subject."""
-        self.observers.append(observer)
-
-    def detach(self, observer: Callable[[], None]):
-        """Detach an observer from the subject."""
-        self.observers.remove(observer)
-
-    def notify(self):
-        """Notify all observers about an event."""
-        for observer in self.observers:
-            if observer is None:
-                continue
-            observer()
+import pickle
+import redis
 
 
-class AsyncSubject:
-    """Base class for implementing the async observer pattern."""
+class InMemoryCache(BaseCacheManager):
 
-    def __init__(self):
-        self.observers: List[Callable[[], Awaitable]] = []
+    """
+    A simple in-memory cache using an OrderedDict.
 
-    def attach(self, observer: Callable[[], Awaitable]):
-        """Attach an observer to the subject."""
-        self.observers.append(observer)
+    This cache supports setting a maximum size and expiration time for cached items.
+    When the cache is full, it uses a Least Recently Used (LRU) eviction policy.
+    Thread-safe using a threading Lock.
 
-    def detach(self, observer: Callable[[], Awaitable]):
-        """Detach an observer from the subject."""
-        self.observers.remove(observer)
+    Attributes:
+        max_size (int, optional): Maximum number of items to store in the cache.
+        expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
 
-    async def notify(self):
-        """Notify all observers about an event."""
-        for observer in self.observers:
-            if observer is None:
-                continue
-            await observer()
+    Example:
 
+        cache = InMemoryCache(max_size=3, expiration_time=5)
 
-class CacheManager(Subject, Service):
-    """Manages cache for different clients and notifies observers on changes."""
+        # setting cache values
+        cache.set("a", 1)
+        cache.set("b", 2)
+        cache["c"] = 3
 
-    name = "cache_manager"
+        # getting cache values
+        a = cache.get("a")
+        b = cache["b"]
+    """
 
-    def __init__(self):
-        super().__init__()
-        self._cache = {}
-        self.current_client_id = None
-        self.current_cache = {}
-
-    @contextmanager
-    def set_client_id(self, client_id: str):
+    def __init__(self, max_size=None, expiration_time=60 * 60):
         """
-        Context manager to set the current client_id and associated cache.
+        Initialize a new InMemoryCache instance.
 
         Args:
-            client_id (str): The client identifier.
+            max_size (int, optional): Maximum number of items to store in the cache.
+            expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
-        previous_client_id = self.current_client_id
-        self.current_client_id = client_id
-        self.current_cache = self._cache.setdefault(client_id, {})
+        self._cache = OrderedDict()
+        self._lock = threading.Lock()
+        self.max_size = max_size
+        self.expiration_time = expiration_time
+
+    def get(self, key):
+        """
+        Retrieve an item from the cache.
+
+        Args:
+            key: The key of the item to retrieve.
+
+        Returns:
+            The value associated with the key, or None if the key is not found or the item has expired.
+        """
+        with self._lock:
+            if key in self._cache:
+                item = self._cache.pop(key)
+                if (
+                    self.expiration_time is None
+                    or time.time() - item["time"] < self.expiration_time
+                ):
+                    # Move the key to the end to make it recently used
+                    self._cache[key] = item
+                    return item["value"]
+                else:
+                    self.delete(key)
+            return None
+
+    def set(self, key, value):
+        """
+        Add an item to the cache.
+
+        If the cache is full, the least recently used item is evicted.
+
+        Args:
+            key: The key of the item.
+            value: The value to cache.
+        """
+        with self._lock:
+            if key in self._cache:
+                # Remove existing key before re-inserting to update order
+                self.delete(key)
+            elif self.max_size and len(self._cache) >= self.max_size:
+                # Remove least recently used item
+                self._cache.popitem(last=False)
+            self._cache[key] = {"value": value, "time": time.time()}
+
+    def get_or_set(self, key, value):
+        """
+        Retrieve an item from the cache. If the item does not exist, set it with the provided value.
+
+        Args:
+            key: The key of the item.
+            value: The value to cache if the item doesn't exist.
+
+        Returns:
+            The cached value associated with the key.
+        """
+        with self._lock:
+            if key in self._cache:
+                return self.get(key)
+            self.set(key, value)
+            return value
+
+    def delete(self, key):
+        """
+        Remove an item from the cache.
+
+        Args:
+            key: The key of the item to remove.
+        """
+        # with self._lock:
+        self._cache.pop(key, None)
+
+    def clear(self):
+        """
+        Clear all items from the cache.
+        """
+        with self._lock:
+            self._cache.clear()
+
+    def __contains__(self, key):
+        """Check if the key is in the cache."""
+        return key in self._cache
+
+    def __getitem__(self, key):
+        """Retrieve an item from the cache using the square bracket notation."""
+        return self.get(key)
+
+    def __setitem__(self, key, value):
+        """Add an item to the cache using the square bracket notation."""
+        self.set(key, value)
+
+    def __delitem__(self, key):
+        """Remove an item from the cache using the square bracket notation."""
+        self.delete(key)
+
+    def __len__(self):
+        """Return the number of items in the cache."""
+        return len(self._cache)
+
+    def __repr__(self):
+        """Return a string representation of the InMemoryCache instance."""
+        return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
+
+
+class RedisCache(BaseCacheManager):
+    """
+    A Redis-based cache implementation.
+
+    This cache supports setting an expiration time for cached items.
+
+    Attributes:
+        expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
+
+    Example:
+
+        cache = RedisCache(expiration_time=5)
+
+        # setting cache values
+        cache.set("a", 1)
+        cache.set("b", 2)
+        cache["c"] = 3
+
+        # getting cache values
+        a = cache.get("a")
+        b = cache["b"]
+    """
+
+    def __init__(self, host="localhost", port=6379, db=0, expiration_time=60 * 60):
+        """
+        Initialize a new RedisCache instance.
+
+        Args:
+            host (str, optional): Redis host.
+            port (int, optional): Redis port.
+            db (int, optional): Redis DB.
+            expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
+        """
+        self._client = redis.StrictRedis(host=host, port=port, db=db)
+        self.expiration_time = expiration_time
+
+    # check connection
+    def is_connected(self):
+        """
+        Check if the Redis client is connected.
+        """
         try:
-            yield
-        finally:
-            self.current_client_id = previous_client_id
-            self.current_cache = self._cache.get(self.current_client_id, {})
+            self._client.ping()
+            return True
+        except redis.exceptions.ConnectionError:
+            return False
 
-    def add(self, name: str, obj: Any, obj_type: str, extension: Optional[str] = None):
+    def get(self, key):
         """
-        Add an object to the current client's cache.
+        Retrieve an item from the cache.
 
         Args:
-            name (str): The cache key.
-            obj (Any): The object to cache.
-            obj_type (str): The type of the object.
-        """
-        object_extensions = {
-            "image": "png",
-            "pandas": "csv",
-        }
-        if obj_type in object_extensions:
-            _extension = object_extensions[obj_type]
-        else:
-            _extension = type(obj).__name__.lower()
-        self.current_cache[name] = {
-            "obj": obj,
-            "type": obj_type,
-            "extension": extension or _extension,
-        }
-        self.notify()
-
-    def add_pandas(self, name: str, obj: Any):
-        """
-        Add a pandas DataFrame or Series to the current client's cache.
-
-        Args:
-            name (str): The cache key.
-            obj (Any): The pandas DataFrame or Series object.
-        """
-        if isinstance(obj, (pd.DataFrame, pd.Series)):
-            self.add(name, obj.to_csv(), "pandas", extension="csv")
-        else:
-            raise ValueError("Object is not a pandas DataFrame or Series")
-
-    def add_image(self, name: str, obj: Any, extension: str = "png"):
-        """
-        Add a PIL Image to the current client's cache.
-
-        Args:
-            name (str): The cache key.
-            obj (Any): The PIL Image object.
-        """
-        if isinstance(obj, Image.Image):
-            self.add(name, obj, "image", extension=extension)
-        else:
-            raise ValueError("Object is not a PIL Image")
-
-    def get(self, name: str):
-        """
-        Get an object from the current client's cache.
-
-        Args:
-            name (str): The cache key.
+            key: The key of the item to retrieve.
 
         Returns:
-            The cached object associated with the given cache key.
+            The value associated with the key, or None if the key is not found.
         """
-        return self.current_cache[name]
+        value = self._client.get(key)
+        return pickle.loads(value) if value else None
 
-    def get_last(self):
+    def set(self, key, value):
         """
-        Get the last added item in the current client's cache.
+        Add an item to the cache.
 
-        Returns:
-            The last added item in the cache.
+        Args:
+            key: The key of the item.
+            value: The value to cache.
         """
-        return list(self.current_cache.values())[-1]
+        self._client.setex(key, self.expiration_time, pickle.dumps(value))
 
+    def delete(self, key):
+        """
+        Remove an item from the cache.
 
-cache_manager = CacheManager()
+        Args:
+            key: The key of the item to remove.
+        """
+        self._client.delete(key)
+
+    def clear(self):
+        """
+        Clear all items from the cache.
+        """
+        self._client.flushdb()
+
+    def __contains__(self, key):
+        """Check if the key is in the cache."""
+        return self._client.exists(key)
+
+    def __getitem__(self, key):
+        """Retrieve an item from the cache using the square bracket notation."""
+        return self.get(key)
+
+    def __setitem__(self, key, value):
+        """Add an item to the cache using the square bracket notation."""
+        self.set(key, value)
+
+    def __delitem__(self, key):
+        """Remove an item from the cache using the square bracket notation."""
+        self.delete(key)
+
+    def __repr__(self):
+        """Return a string representation of the RedisCache instance."""
+        return f"RedisCache(expiration_time={self.expiration_time})"

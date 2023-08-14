@@ -1,10 +1,14 @@
 import abc
 
+from langflow.services.base import Service
 
-class BaseCache(abc.ABC):
+
+class BaseCacheManager(abc.ABC, Service):
     """
     Abstract base class for a cache.
     """
+
+    name = "cache_manager"
 
     @abc.abstractmethod
     def get(self, key):
