@@ -5,7 +5,6 @@ from collections import OrderedDict
 from langflow.services.cache.base import BaseCacheManager
 
 import pickle
-import redis
 
 
 class InMemoryCache(BaseCacheManager):
@@ -204,6 +203,13 @@ class RedisCache(BaseCacheManager):
             db (int, optional): Redis DB.
             expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
+        try:
+            import redis
+        except ImportError as exc:
+            raise ImportError(
+                "RedisCache requires the redis-py package. Please install Langflow with the deploy extra: pip install langflow[deploy]"
+            ) from exc
+
         self._client = redis.StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
@@ -212,6 +218,8 @@ class RedisCache(BaseCacheManager):
         """
         Check if the Redis client is connected.
         """
+        import redis
+
         try:
             self._client.ping()
             return True
