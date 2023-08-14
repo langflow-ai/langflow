@@ -4,6 +4,7 @@ import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
+import { specialCharsRegex } from "../constants/constants";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -235,7 +236,11 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, inputValue: string | string[] | null, block: string)
 {
-  if (typeof inputValue === "string" && e.ctrlKey && e.key === "Backspace" && (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' ')) {
+
+  if (typeof inputValue === "string" && e.ctrlKey && e.key === "Backspace" && 
+  (inputValue === block || inputValue?.charAt(inputValue?.length - 1) === ' '
+  || specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1))
+  )) {
     e.preventDefault();
     e.stopPropagation();
   }
