@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-
 from langflow.services.utils import get_session
 from langflow.database.models.token import Token
 from langflow.auth.auth import (

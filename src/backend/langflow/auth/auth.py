@@ -34,6 +34,7 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: UUID = payload.get("sub")  # type: ignore
@@ -121,7 +122,14 @@ def create_refresh_token(refresh_token: str):
 def authenticate_user(
     username: str, password: str, db: Session = Depends(get_session)
 ) -> User | None:
-    if user := get_user_by_username(db, username):
-        return user if verify_password(password, user.password) else None
-    else:
+    user = get_user_by_username(db, username)
+
+    if not user:
         return None
+
+    if not user.is_active:
+        if not user.last_login_at:
+            raise HTTPException(status_code=400, detail="Waiting for approval")
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    return user if verify_password(password, user.password) else None
