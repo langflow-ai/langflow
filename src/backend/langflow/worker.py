@@ -1,10 +1,23 @@
 from langflow.core.celery_app import celery_app
 from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
 
 
 @celery_app.task(acks_late=True)
 def test_celery(word: str) -> str:
     return f"test task return {word}"
+
+
+@celery_app.task
+def build_vertex(vertex: "Vertex") -> "Vertex":
+    """
+    Build a vertex
+    """
+    vertex.build()
+    return vertex
 
 
 @celery_app.task(acks_late=True)

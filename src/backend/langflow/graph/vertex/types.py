@@ -247,7 +247,7 @@ class OutputParserVertex(Vertex):
 
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict):
-        super().__init__(data, base_type="custom_components")
+        super().__init__(data, base_type="custom_components", is_task=True)
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
