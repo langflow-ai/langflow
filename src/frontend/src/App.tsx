@@ -11,11 +11,11 @@ import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
 import Header from "./components/headerComponent";
 import { alertContext } from "./contexts/alertContext";
+import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
-import Router from "./routes";
-import { AuthContext } from "./contexts/authContext";
 import { getLoggedUser } from "./controllers/API";
+import Router from "./routes";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -130,15 +130,16 @@ export default function App() {
   //this function is to get the user logged in when the page is refreshed
   const { setUserData, getAuthentication } = useContext(AuthContext);
   useEffect(() => {
-      setTimeout(() => {
-        if(getAuthentication && !isLoginPage){
-          getLoggedUser().then((user) => {
+    setTimeout(() => {
+      if (getAuthentication && !isLoginPage) {
+        getLoggedUser()
+          .then((user) => {
             setUserData(user);
-          }).catch((error) => {});
-        }
-        }, 1000);
-  },[]);
-
+          })
+          .catch((error) => {});
+      }
+    }, 1000);
+  }, []);
 
   return (
     //need parent component with width and height

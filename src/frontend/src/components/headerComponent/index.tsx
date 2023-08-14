@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getRepoStars } from "../../controllers/API";
@@ -11,7 +12,6 @@ import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import { AuthContext } from "../../contexts/authContext";
 
 export default function Header() {
   const { flows, tabId } = useContext(TabsContext);
@@ -37,13 +37,14 @@ export default function Header() {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <Button 
-        onClick={() => {
-          logout();
-          navigate("/login");
-          
-        }}
-        variant="outline" className="">
+        <Button
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+          variant="outline"
+          className=""
+        >
           Sign out
         </Button>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (

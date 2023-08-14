@@ -1,11 +1,10 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
+import { Cookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
-import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { Cookies } from "react-cookie";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -14,23 +13,23 @@ const api: AxiosInstance = axios.create({
 
 function ApiInterceptor() {
   const { setErrorData } = useContext(alertContext);
-  let { accessToken, login, logout, authenticationErrorCount } = useContext(AuthContext);
+  let { accessToken, login, logout, authenticationErrorCount } =
+    useContext(AuthContext);
   const navigate = useNavigate();
   const cookies = new Cookies();
 
   console.log(accessToken);
-  
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          const refreshToken = cookies.get('refresh_token');
+          const refreshToken = cookies.get("refresh_token");
 
           if (refreshToken) {
             authenticationErrorCount = authenticationErrorCount + 1;
-            if(authenticationErrorCount > 3){
+            if (authenticationErrorCount > 3) {
               authenticationErrorCount = 0;
               logout();
               navigate("/login");
@@ -39,7 +38,7 @@ function ApiInterceptor() {
             const res = await renewAccessToken(refreshToken);
             login(res.data.access_token, res.data.refresh_token);
             try {
-              const accessToken = cookies.get('access_token');
+              const accessToken = cookies.get("access_token");
               delete error.config.headers["Authorization"];
               error.config.headers["Authorization"] = `Bearer ${accessToken}`;
               const response = await axios.request(error.config);
@@ -50,15 +49,13 @@ function ApiInterceptor() {
                 navigate("/login");
               }
             }
-          }
-          else{
+          } else {
             logout();
             navigate("/login");
           }
-        } 
-        else{
+        } else {
           // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-            return Promise.reject(error);
+          return Promise.reject(error);
           // }
         }
         // else {

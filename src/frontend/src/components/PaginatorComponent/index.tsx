@@ -17,12 +17,9 @@ export default function PaginatorComponent({
   totalRowsCount = 0,
   paginate,
 }: PaginatorComponentType) {
-  
   const [size, setPageSize] = useState(pageSize);
   const [index, setPageIndex] = useState(pageIndex);
-  const [maxIndex, setMaxPageIndex] = useState(
-    100
-  );
+  const [maxIndex, setMaxPageIndex] = useState(100);
 
   return (
     <>
@@ -51,11 +48,11 @@ export default function PaginatorComponent({
             </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {index+1} of {maxIndex}
+            Page {index + 1} of {maxIndex}
           </div>
           <div className="flex items-center space-x-2">
             <Button
-            disabled={index <= 0}
+              disabled={index <= 0}
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
@@ -81,7 +78,7 @@ export default function PaginatorComponent({
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
             <Button
-            disabled={maxIndex === index}
+              disabled={maxIndex === index}
               onClick={() => {
                 setPageIndex(index + 1);
                 paginate(size, index + 1);
@@ -93,7 +90,7 @@ export default function PaginatorComponent({
               <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
             <Button
-            disabled={maxIndex === index}
+              disabled={maxIndex === index}
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {

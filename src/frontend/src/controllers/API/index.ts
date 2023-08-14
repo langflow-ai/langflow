@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
+import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
@@ -17,8 +18,6 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
-import { BASE_URL_API } from "../../constants/constants";
-
 
 /**
  * Fetches all objects from the API endpoint.
@@ -390,7 +389,6 @@ export async function renewAccessToken(token: string) {
 
 export async function getLoggedUser(): Promise<Users> {
   try {
-
     const res = await api.get(`${BASE_URL_API}user`);
 
     if (res.status === 200) {
