@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 
 export default function InputComponent({
   value,
@@ -19,6 +20,7 @@ export default function InputComponent({
     }
   }, [disabled, onChange]);
 
+
   return (
     <div className="relative w-full">
       <Input
@@ -33,6 +35,9 @@ export default function InputComponent({
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
           onChange(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          handleKeyDown(e, value, '');
         }}
       />
       {password && (
