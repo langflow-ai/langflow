@@ -1,6 +1,5 @@
-import _, { set } from "lodash";
 import { X } from "lucide-react";
-import { useEffect, useRef, useState,useContext } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -15,17 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { alertContext } from "../../contexts/alertContext";
 import {
   addUser,
   deleteUser,
-  getLoggedUser,
   getUsersPage,
   updateUser,
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
-import { alertContext } from "../../contexts/alertContext";
-import { AuthContext } from "../../contexts/authContext";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -33,9 +30,7 @@ export default function AdminPage() {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(0);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [totalRowsCount, setTotalRowsCount] = useState(0);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { setUserData, getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const userList = useRef([]);
 
@@ -97,7 +92,7 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User deleted!"
+          title: "Success! User deleted!",
         });
       })
       .catch((error) => {
@@ -113,7 +108,7 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User edited!"
+          title: "Success! User edited!",
         });
       })
       .catch((error) => {
@@ -129,7 +124,7 @@ export default function AdminPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! New user added!"
+          title: "Success! New user added!",
         });
       })
       .catch((error) => {
@@ -210,7 +205,7 @@ export default function AdminPage() {
                 )}
                 <div
                   className={
-                    "overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll max-h-[26rem]" +
+                    "max-h-[26rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
                     (loadingUsers ? " border-0" : "")
                   }
                 >
