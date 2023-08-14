@@ -175,8 +175,11 @@ class ChatManager(Service):
         # client_id is the flow id but that already exists in the cache
         # so we need to change it to something else
 
-        client_id = f"{client_id}_chat" if "_chat" not in client_id else client_id
-        self.cache_manager.set(client_id, langchain_object)
+        result_dict = {
+            "result": langchain_object.result,
+            "type": type(langchain_object),
+        }
+        self.cache_manager.upsert(client_id, result_dict)
         return client_id in self.cache_manager
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
@@ -199,9 +202,15 @@ class ChatManager(Service):
                     continue
 
                 with self.chat_cache.set_client_id(client_id):
-                    langchain_object = self.cache_manager.get(f"{client_id}_chat")
-                    await self.process_message(client_id, payload, langchain_object)
+                    if langchain_object := self.cache_manager.get(client_id).get(
+                        "result"
+                    ):
+                        await self.process_message(client_id, payload, langchain_object)
 
+                    else:
+                        raise RuntimeError(
+                            f"Could not find a LangChain object for client_id {client_id}"
+                        )
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.error(f"Error handling websocket: {exc}")

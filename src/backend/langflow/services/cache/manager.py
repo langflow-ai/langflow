@@ -91,6 +91,27 @@ class InMemoryCache(BaseCacheManager):
                 self._cache.popitem(last=False)
             self._cache[key] = {"value": value, "time": time.time()}
 
+    def upsert(self, key, value):
+        """
+        Inserts or updates a value in the cache.
+        If the existing value and the new value are both dictionaries, they are merged.
+
+        Args:
+            key: The key of the item.
+            value: The value to insert or update.
+        """
+        with self._lock:
+            existing_value = self.get(key)
+            if (
+                existing_value is not None
+                and isinstance(existing_value, dict)
+                and isinstance(value, dict)
+            ):
+                existing_value.update(value)
+                value = existing_value
+
+            self.set(key, value)
+
     def get_or_set(self, key, value):
         """
         Retrieve an item from the cache. If the item does not exist, set it with the provided value.
@@ -219,6 +240,26 @@ class RedisCache(BaseCacheManager):
             value: The value to cache.
         """
         self._client.setex(key, self.expiration_time, pickle.dumps(value))
+
+    def upsert(self, key, value):
+        """
+        Inserts or updates a value in the cache.
+        If the existing value and the new value are both dictionaries, they are merged.
+
+        Args:
+            key: The key of the item.
+            value: The value to insert or update.
+        """
+        existing_value = self.get(key)
+        if (
+            existing_value is not None
+            and isinstance(existing_value, dict)
+            and isinstance(value, dict)
+        ):
+            existing_value.update(value)
+            value = existing_value
+
+        self.set(key, value)
 
     def delete(self, key):
         """
