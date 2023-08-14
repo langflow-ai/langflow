@@ -51,7 +51,9 @@ def handle_partial_variables(prompt, format_kwargs: Dict):
     }
     # Remove handle_keys otherwise LangChain raises an error
     partial_variables.pop("handle_keys", None)
-    return prompt.partial(**partial_variables)
+    if partial_variables and hasattr(prompt, "partial"):
+        return prompt.partial(**partial_variables)
+    return prompt
 
 
 def handle_variable(params: Dict, input_variable: str, format_kwargs: Dict):
