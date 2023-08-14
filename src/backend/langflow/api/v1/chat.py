@@ -6,11 +6,8 @@ from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, St
 from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.utils.logger import logger
-from cachetools import LRUCache
 
 router = APIRouter(tags=["Chat"])
-
-flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
 @router.websocket("/chat/{client_id}")
@@ -18,7 +15,7 @@ async def chat(client_id: str, websocket: WebSocket):
     """Websocket endpoint for chat."""
     try:
         chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
-        if client_id in chat_manager.in_memory_cache:
+        if client_id in chat_manager.cache_manager:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
@@ -34,23 +31,23 @@ async def chat(client_id: str, websocket: WebSocket):
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
 async def init_build(graph_data: dict, flow_id: str):
     """Initialize the build by storing graph data and returning a unique session ID."""
-
+    flow_data_store = service_manager.get(ServiceType.CACHE_MANAGER)
     try:
         if flow_id is None:
             raise ValueError("No ID provided")
         # Check if already building
         if (
             flow_id in flow_data_store
-            and flow_data_store[flow_id]["status"] == BuildStatus.IN_PROGRESS
+            and isinstance(flow_data_store[flow_id], dict)
+            and flow_data_store[flow_id].get("status") == BuildStatus.IN_PROGRESS
         ):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
         chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
-        if flow_id in chat_manager.in_memory_cache:
-            with chat_manager.in_memory_cache._lock:
-                chat_manager.in_memory_cache.delete(flow_id)
-                logger.debug(f"Deleted flow {flow_id} from cache")
+        if flow_id in chat_manager.cache_manager:
+            chat_manager.cache_manager.delete(flow_id)
+            logger.debug(f"Deleted flow {flow_id} from cache")
         flow_data_store[flow_id] = {
             "graph_data": graph_data,
             "status": BuildStatus.STARTED,
@@ -65,6 +62,7 @@ async def init_build(graph_data: dict, flow_id: str):
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
 async def build_status(flow_id: str):
     """Check the flow_id is in the flow_data_store."""
+    flow_data_store = service_manager.get(ServiceType.CACHE_MANAGER)
     try:
         built = (
             flow_id in flow_data_store
@@ -83,6 +81,7 @@ async def build_status(flow_id: str):
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(flow_id: str):
     """Stream the build process based on stored flow data."""
+    flow_data_store = service_manager.get(ServiceType.CACHE_MANAGER)
 
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
@@ -163,7 +162,7 @@ async def stream_build(flow_id: str):
                 }
             yield str(StreamData(event="message", data=input_keys_response))
             chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
-            chat_manager.set_cache(flow_id, langchain_object)
+            chat_manager.set_cache(f"{flow_id}_chat", langchain_object)
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)
             flow_data_store[flow_id]["status"] = BuildStatus.SUCCESS
