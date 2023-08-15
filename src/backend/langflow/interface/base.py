@@ -2,13 +2,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
 from langchain.chains.base import Chain
 from langchain.agents import AgentExecutor
+from langflow.services.utils import get_settings_manager
 from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langflow.utils.logger import logger
-from langflow.settings import settings
+
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -26,15 +27,18 @@ class LangChainTypeCreator(BaseModel, ABC):
     @property
     def docs_map(self) -> Dict[str, str]:
         """A dict with the name of the component as key and the documentation link as value."""
+        settings_manager = get_settings_manager()
         if self.name_docs_dict is None:
             try:
-                type_settings = getattr(settings, self.type_name)
+                type_settings = getattr(
+                    settings_manager.settings, self.type_name.upper()
+                )
                 self.name_docs_dict = {
                     name: value_dict["documentation"]
                     for name, value_dict in type_settings.items()
                 }
             except AttributeError as exc:
-                logger.error(exc)
+                logger.error(f"Error getting settings for {self.type_name}: {exc}")
 
                 self.name_docs_dict = {}
         return self.name_docs_dict

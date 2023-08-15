@@ -1,7 +1,9 @@
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
+from langflow.utils.constants import (
+    DEFAULT_PYTHON_FUNCTION,
+)
 
 
 class ToolNode(FrontendNode):

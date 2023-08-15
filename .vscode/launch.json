@@ -1,4 +1,5 @@
 {
+  "version": "0.2.0",
   "configurations": [
     {
       "name": "Debug Backend",
@@ -6,7 +7,8 @@
       "request": "launch",
       "module": "uvicorn",
       "args": [
-        "langflow.main:app",
+        "--factory",
+        "langflow.main:create_app",
         "--port",
         "7860",
         "--reload",
@@ -37,6 +39,15 @@
       "request": "launch",
       "url": "http://localhost:3000/",
       "webRoot": "${workspaceRoot}/src/frontend"
+    },
+    {
+      "name": "Python: Debug Tests",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "purpose": ["debug-test"],
+      "console": "integratedTerminal",
+      "justMyCode": false
     }
   ]
 }

@@ -46,7 +46,7 @@ install_backend:
 
 backend:
 	make install_backend
-	poetry run uvicorn src.backend.langflow.main:app --port 7860 --reload --log-level debug
+	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
 
 build_and_run:
 	echo 'Removing dist folder'

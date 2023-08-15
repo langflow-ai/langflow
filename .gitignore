@@ -251,3 +251,5 @@ langflow.db
 
 # docusaurus
 .docusaurus/
+
+/tmp/*

@@ -141,10 +141,10 @@ export default function Page({ flow }: { flow: FlowType }) {
   }, [setExtraComponent, setExtraNavigation]);
 
   const onEdgesChangeMod = useCallback(
-    (s: EdgeChange[]) => {
-      onEdgesChange(s);
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
+    (change: EdgeChange[]) => {
+      onEdgesChange(change);
+      setNodes((node) => {
+        let newX = _.cloneDeep(node);
         return newX;
       });
       setTabsState((prev) => {
@@ -161,8 +161,8 @@ export default function Page({ flow }: { flow: FlowType }) {
   );
 
   const onNodesChangeMod = useCallback(
-    (s: NodeChange[]) => {
-      onNodesChange(s);
+    (change: NodeChange[]) => {
+      onNodesChange(change);
       setTabsState((prev) => {
         return {
           ...prev,
@@ -193,8 +193,8 @@ export default function Page({ flow }: { flow: FlowType }) {
           eds
         )
       );
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
+      setNodes((node) => {
+        let newX = _.cloneDeep(node);
         return newX;
       });
     },
@@ -219,7 +219,7 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+    if (event.dataTransfer.types.some((types) => types === "nodedata")) {
       event.dataTransfer.dropEffect = "move";
     } else {
       event.dataTransfer.dropEffect = "copy";
@@ -229,7 +229,7 @@ export default function Page({ flow }: { flow: FlowType }) {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+      if (event.dataTransfer.types.some((types) => types === "nodedata")) {
         takeSnapshot();
 
         // Get the current bounds of the ReactFlow wrapper element
@@ -281,7 +281,7 @@ export default function Page({ flow }: { flow: FlowType }) {
           // Add the new node to the list of nodes in state
         }
         setNodes((nds) => nds.concat(newNode));
-      } else if (event.dataTransfer.types.some((t) => t === "Files")) {
+      } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         uploadFlow(false, event.dataTransfer.files.item(0));
       }
@@ -303,7 +303,10 @@ export default function Page({ flow }: { flow: FlowType }) {
       takeSnapshot();
       setEdges(
         edges.filter(
-          (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
+          (edge) =>
+            !mynodes.some(
+              (node) => edge.source === node.id || edge.target === node.id
+            )
         )
       );
     },
@@ -326,7 +329,7 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   const onEdgeUpdateEnd = useCallback((_, edge) => {
     if (!edgeUpdateSuccessful.current) {
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      setEdges((eds) => eds.filter((edg) => edg.id !== edge.id));
     }
 
     edgeUpdateSuccessful.current = true;

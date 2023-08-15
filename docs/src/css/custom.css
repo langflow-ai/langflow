@@ -3,17 +3,19 @@
  * bundles Infima by default. Infima is a CSS framework designed to
  * work well for content-centric websites.
  */
- :root {
+:root {
   --ifm-background-color: var(--token-primary-bg-c);
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-navbar-item-padding-vertical: 0;
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, Inter, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI emoji';
-  --ifm-font-family-monospace: 'SFMono-Regular', 'Roboto Mono', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, Inter, Helvetica,
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
+  --ifm-font-family-monospace: "SFMono-Regular", "Roboto Mono", Consolas,
+    "Liberation Mono", Menlo, Courier, monospace;
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
-  margin-top: 1.5rem!important;
+  margin-top: 1.5rem !important;
 }
 
 .docusaurus-highlight-code-line {
@@ -31,7 +33,7 @@
   transform: skewY(6deg);
 }
 
-[class^='announcementBar'] {
+[class^="announcementBar"] {
   z-index: 10;
 }
 
@@ -112,7 +114,7 @@ body {
 }
 
 .header-github-link:before {
-  content: '';
+  content: "";
   width: 24px;
   height: 24px;
   display: flex;
@@ -126,7 +128,7 @@ body {
 }
 
 .header-twitter-link::before {
-  content: '';
+  content: "";
   width: 24px;
   height: 24px;
   display: flex;
@@ -140,14 +142,13 @@ body {
 }
 
 .header-discord-link::before {
-  content: '';
+  content: "";
   width: 24px;
   height: 24px;
   display: flex;
   background: url("/logos/discord.svg");
   background-size: contain;
 }
-
 
 /* Images */
 .image-rendering-crisp {
@@ -164,7 +165,7 @@ body {
 .img-center {
   display: flex;
   justify-content: center;
-  width: 100%,
+  width: 100%;
 }
 
 .resized-image {
@@ -188,4 +189,22 @@ body {
   .mendable-search {
     width: 140px;
   }
+}
+/*
+.ch-scrollycoding {
+  gap: 10rem !important;
+} */
+
+.ch-scrollycoding-content {
+  max-width: 55% !important;
+  min-width: 40% !important;
+}
+
+.ch-scrollycoding-sticker {
+  max-width: 60% !important;
+  min-width: 45% !important;
+}
+
+.ch-scrollycoding-step-content {
+  min-height: 70px;
 }

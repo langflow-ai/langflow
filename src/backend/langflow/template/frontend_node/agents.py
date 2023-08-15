@@ -145,7 +145,7 @@ class CSVAgentNode(FrontendNode):
                 name="path",
                 value="",
                 suffixes=[".csv"],
-                fileTypes=["csv"],
+                file_types=["csv"],
             ),
             TemplateField(
                 field_type="BaseLanguageModel",

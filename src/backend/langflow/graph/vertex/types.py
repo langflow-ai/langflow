@@ -226,7 +226,11 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            template = self._built_object.format(**artifacts)
+            template = self._built_object.template
+            for key, value in artifacts.items():
+                if value:
+                    replace_key = "{" + key + "}"
+                    template = template.replace(replace_key, value)
             return (
                 template
                 if isinstance(template, str)
@@ -239,3 +243,12 @@ class PromptVertex(Vertex):
 class OutputParserVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="output_parsers")
+
+
+class CustomComponentVertex(Vertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="custom_components")
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()

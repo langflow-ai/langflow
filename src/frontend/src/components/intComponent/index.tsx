@@ -41,17 +41,17 @@ export default function IntComponent({
         type="number"
         step="1"
         min={min}
-        onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
-          if (e.target.value < min.toString()) {
-            e.target.value = min.toString();
+        onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
+          if (event.target.value < min.toString()) {
+            event.target.value = min.toString();
           }
         }}
         value={value ?? ""}
         className={editNode ? "input-edit-node" : ""}
         disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
     </div>

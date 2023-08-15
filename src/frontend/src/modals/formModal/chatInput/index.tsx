@@ -46,8 +46,8 @@ export default function ChatInput({
           }`,
         }}
         value={lockChat ? "Thinking..." : chatValue}
-        onChange={(e) => {
-          setChatValue(e.target.value);
+        onChange={(event) => {
+          setChatValue(event.target.value);
         }}
         className={classNames(
           lockChat

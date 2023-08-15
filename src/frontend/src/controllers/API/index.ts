@@ -339,3 +339,10 @@ export async function uploadFile(
   formData.append("file", file);
   return await api.post(`/api/v1/upload/${id}`, formData);
 }
+
+export async function postCustomComponent(
+  code: string,
+  apiClass: APIClassType
+): Promise<AxiosResponse<APIClassType>> {
+  return await api.post(`/api/v1/custom_component`, { code });
+}

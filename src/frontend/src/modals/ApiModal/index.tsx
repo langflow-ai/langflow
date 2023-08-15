@@ -21,6 +21,7 @@ import {
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
+  getWidgetCode,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -29,9 +30,11 @@ const ApiModal = forwardRef(
     {
       flow,
       children,
+      disable,
     }: {
       flow: FlowType;
       children: ReactNode;
+      disable: boolean;
     },
     ref
   ) => {
@@ -43,6 +46,7 @@ const ApiModal = forwardRef(
     const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
     const curl_code = getCurlCode(flow, tweak.current, tabsState);
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+    const widgetCode = getWidgetCode(flow, tabsState);
     const tweaksCode = buildTweaks(flow);
     const [tabs, setTabs] = useState([
       {
@@ -66,6 +70,15 @@ const ApiModal = forwardRef(
         image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
         language: "py",
         code: pythonCode,
+      },
+      {
+        name: "Chat Widget HTML",
+        description:
+          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: widgetCode,
       },
     ]);
 
@@ -112,6 +125,15 @@ const ApiModal = forwardRef(
             code: pythonCode,
           },
           {
+            name: "Chat Widget HTML",
+            description:
+              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
+          },
+          {
             name: "Tweaks",
             mode: "python",
             image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
@@ -143,6 +165,15 @@ const ApiModal = forwardRef(
             language: "py",
             code: pythonCode,
           },
+          {
+            name: "Chat Widget HTML",
+            description:
+              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
+            mode: "html",
+            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+            language: "py",
+            code: widgetCode,
+          },
         ]);
       }
     }, [flow["data"]["nodes"], open]);
@@ -150,22 +181,22 @@ const ApiModal = forwardRef(
     function filterNodes() {
       let arrNodesWithValues = [];
 
-      flow["data"]["nodes"].forEach((t) => {
-        Object.keys(t["data"]["node"]["template"])
+      flow["data"]["nodes"].forEach((node) => {
+        Object.keys(node["data"]["node"]["template"])
           .filter(
-            (n) =>
-              n.charAt(0) !== "_" &&
-              t.data.node.template[n].show &&
-              (t.data.node.template[n].type === "str" ||
-                t.data.node.template[n].type === "bool" ||
-                t.data.node.template[n].type === "float" ||
-                t.data.node.template[n].type === "code" ||
-                t.data.node.template[n].type === "prompt" ||
-                t.data.node.template[n].type === "file" ||
-                t.data.node.template[n].type === "int")
+            (templateField) =>
+              templateField.charAt(0) !== "_" &&
+              node.data.node.template[templateField].show &&
+              (node.data.node.template[templateField].type === "str" ||
+                node.data.node.template[templateField].type === "bool" ||
+                node.data.node.template[templateField].type === "float" ||
+                node.data.node.template[templateField].type === "code" ||
+                node.data.node.template[templateField].type === "prompt" ||
+                node.data.node.template[templateField].type === "file" ||
+                node.data.node.template[templateField].type === "int")
           )
           .map((n, i) => {
-            arrNodesWithValues.push(t["id"]);
+            arrNodesWithValues.push(node["id"]);
           });
       });
 
@@ -210,13 +241,15 @@ const ApiModal = forwardRef(
         tweak.current.push(newTweak);
       }
 
-      const pythonApiCode = getPythonApiCode(flow, tweak.current);
-      const curl_code = getCurlCode(flow, tweak.current);
-      const pythonCode = getPythonCode(flow, tweak.current);
+      const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
+      const curl_code = getCurlCode(flow, tweak.current, tabsState);
+      const pythonCode = getPythonCode(flow, tweak.current, tabsState);
+      const widgetCode = getWidgetCode(flow, tabsState);
 
       tabs[0].code = curl_code;
       tabs[1].code = pythonApiCode;
       tabs[2].code = pythonCode;
+      tabs[3].code = widgetCode;
 
       setTweak(tweak.current);
     }
@@ -253,7 +286,7 @@ const ApiModal = forwardRef(
     }
 
     return (
-      <BaseModal open={open} setOpen={setOpen}>
+      <BaseModal open={open} setOpen={setOpen} disable={disable}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>

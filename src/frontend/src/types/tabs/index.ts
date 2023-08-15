@@ -18,6 +18,8 @@ export type TabsContextType = {
   ) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
+  isBuilt: boolean;
+  setIsBuilt: (state: boolean) => void;
   uploadFlow: (newFlow?: boolean, file?: File) => void;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;

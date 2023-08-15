@@ -1,11 +1,10 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
-import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -23,14 +22,9 @@ export default function GenericNode({
   selected: boolean;
 }) {
   const [data, setData] = useState(olddata);
-  const { setErrorData } = useContext(alertContext);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const showError = useRef(true);
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
-  // any to avoid type conflict
-  const Icon: any =
-    nodeIconsLucide[data.type] || nodeIconsLucide[types[data.type]];
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] = useState(null);
   // State for outline color
@@ -67,18 +61,6 @@ export default function GenericNode({
     }
   }, [sseData, data.id]);
 
-  if (!Icon) {
-    if (showError.current) {
-      setErrorData({
-        title: data.type
-          ? `The ${data.type} node could not be rendered, please review your json file`
-          : "There was a node that can't be rendered, please review your json file",
-      });
-      showError.current = false;
-    }
-    deleteNode(data.id);
-    return;
-  }
   return (
     <>
       <NodeToolbar>
@@ -95,6 +77,11 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
+        {data.node.beta && (
+          <div className="beta-badge-wrapper">
+            <div className="beta-badge-content">BETA</div>
+          </div>
+        )}
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
@@ -127,7 +114,7 @@ export default function GenericNode({
                     </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      {validationStatus.params
+                      {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
                             .map((line, index) => <div key={index}>{line}</div>)
@@ -172,44 +159,59 @@ export default function GenericNode({
 
           <>
             {Object.keys(data.node.template)
-              .filter((t) => t.charAt(0) !== "_")
-              .map((t: string, idx) => (
+              .filter((templateField) => templateField.charAt(0) !== "_")
+              .map((templateField: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                  {data.node.template[templateField].show &&
+                  !data.node.template[templateField].advanced ? (
                     <ParameterComponent
+                      key={
+                        (data.node.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateField].type) +
+                        "|" +
+                        templateField +
+                        "|" +
+                        data.id
+                      }
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[t].type]] ??
-                        nodeColors[data.node.template[t].type] ??
+                        nodeColors[
+                          types[data.node.template[templateField].type]
+                        ] ??
+                        nodeColors[data.node.template[templateField].type] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[t].display_name
-                          ? data.node.template[t].display_name
-                          : data.node.template[t].name
-                          ? toTitleCase(data.node.template[t].name)
-                          : toTitleCase(t)
+                        data.node.template[templateField].display_name
+                          ? data.node.template[templateField].display_name
+                          : data.node.template[templateField].name
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
-                      info={data.node.template[t].info}
-                      name={t}
+                      info={data.node.template[templateField].info}
+                      name={templateField}
                       tooltipTitle={
-                        data.node.template[t].input_types?.join("\n") ??
-                        data.node.template[t].type
+                        data.node.template[templateField].input_types?.join(
+                          "\n"
+                        ) ?? data.node.template[templateField].type
                       }
-                      required={data.node.template[t].required}
+                      required={data.node.template[templateField].required}
                       id={
-                        (data.node.template[t].input_types?.join(";") ??
-                          data.node.template[t].type) +
+                        (data.node.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node.template[templateField].type) +
                         "|" +
-                        t +
+                        templateField +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node.template[t].type}
-                      optionalHandle={data.node.template[t].input_types}
+                      type={data.node.template[templateField].type}
+                      optionalHandle={
+                        data.node.template[templateField].input_types
+                      }
                     />
                   ) : (
                     <></>
@@ -225,6 +227,7 @@ export default function GenericNode({
               {" "}
             </div>
             <ParameterComponent
+              key={[data.type, data.id, ...data.node.base_classes].join("|")}
               data={data}
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}

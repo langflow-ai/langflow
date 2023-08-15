@@ -71,6 +71,8 @@ module.exports = {
         "status-yellow": "var(--status-yellow)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "beta-background": "var(--beta-background)",
+        "beta-foreground": "var(--beta-foreground)",
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
 
@@ -153,7 +155,9 @@ module.exports = {
           overflow: "hidden",
           "text-overflow": "ellipsis",
         },
-
+        ".word-break-break-word": {
+          wordBreak: "break-word",
+        },
         ".arrow-hide": {
           "&::-webkit-inner-spin-button": {
             "-webkit-appearance": "none",

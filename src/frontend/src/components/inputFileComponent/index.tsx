@@ -49,11 +49,11 @@ export default function InputFileComponent({
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 
-    input.onchange = (e: Event) => {
+    input.onchange = (event: Event) => {
       setLoading(true);
 
       // Get the selected file
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
@@ -66,12 +66,12 @@ export default function InputFileComponent({
             const { file_path } = data;
             console.log("File name:", file_path);
 
+            // sets the value that goes to the backend
+            onFileChange(file_path);
             // Update the state and callback with the name of the file
             // sets the value to the user
             setMyValue(file.name);
             onChange(file.name);
-            // sets the value that goes to the backend
-            onFileChange(file_path);
             setLoading(false);
           })
           .catch(() => {
@@ -102,8 +102,8 @@ export default function InputFileComponent({
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-              ? "input-disable input-dialog input-primary"
-              : "input-dialog input-primary text-muted-foreground"
+              ? "input-disable input-dialog primary-input"
+              : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}

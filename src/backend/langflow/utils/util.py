@@ -1,13 +1,15 @@
-import importlib
-import inspect
 import re
+import inspect
+import importlib
 from functools import wraps
-from typing import Dict, Optional
+from typing import Optional, Dict, Any, Union
 
 from docstring_parser import parse  # type: ignore
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
+from langflow.utils.logger import logger
+from multiprocess import cpu_count  # type: ignore
 
 
 def build_template_from_function(
@@ -214,111 +216,6 @@ def get_default_factory(module: str, function: str):
     return None
 
 
-def format_dict(d, name: Optional[str] = None):
-    """
-    Formats a dictionary by removing certain keys and modifying the
-    values of other keys.
-
-    Args:
-        d: the dictionary to format
-        name: the name of the class to format
-
-    Returns:
-        A new dictionary with the desired modifications applied.
-    """
-
-    # Process remaining keys
-    for key, value in d.items():
-        if key == "_type":
-            continue
-
-        _type = value["type"]
-
-        if not isinstance(_type, str):
-            _type = _type.__name__
-
-        # Remove 'Optional' wrapper
-        if "Optional" in _type:
-            _type = _type.replace("Optional[", "")[:-1]
-
-        # Check for list type
-        if "List" in _type or "Sequence" in _type or "Set" in _type:
-            _type = (
-                _type.replace("List[", "")
-                .replace("Sequence[", "")
-                .replace("Set[", "")[:-1]
-            )
-            value["list"] = True
-        else:
-            value["list"] = False
-
-        # Replace 'Mapping' with 'dict'
-        if "Mapping" in _type:
-            _type = _type.replace("Mapping", "dict")
-
-        # Change type from str to Tool
-        value["type"] = "Tool" if key in ["allowed_tools"] else _type
-
-        value["type"] = "int" if key in ["max_value_length"] else value["type"]
-
-        # Show or not field
-        value["show"] = bool(
-            (value["required"] and key not in ["input_variables"])
-            or key in FORCE_SHOW_FIELDS
-            or "api_key" in key
-        )
-
-        # Add password field
-        value["password"] = any(
-            text in key.lower() for text in ["password", "token", "api", "key"]
-        )
-
-        # Add multline
-        value["multiline"] = key in [
-            "suffix",
-            "prefix",
-            "template",
-            "examples",
-            "code",
-            "headers",
-            "format_instructions",
-        ]
-
-        # Replace dict type with str
-        if "dict" in value["type"].lower():
-            value["type"] = "code"
-
-        if key == "dict_":
-            value["type"] = "file"
-            value["suffixes"] = [".json", ".yaml", ".yml"]
-            value["fileTypes"] = ["json", "yaml", "yml"]
-
-        # Replace default value with actual value
-        if "default" in value:
-            value["value"] = value["default"]
-            value.pop("default")
-
-        if key == "headers":
-            value[
-                "value"
-            ] = """{'Authorization':
-            'Bearer <token>'}"""
-        # Add options to openai
-        if name == "OpenAI" and key == "model_name":
-            value["options"] = constants.OPENAI_MODELS
-            value["list"] = True
-            value["value"] = constants.OPENAI_MODELS[0]
-        elif name == "ChatOpenAI" and key == "model_name":
-            value["options"] = constants.CHAT_OPENAI_MODELS
-            value["list"] = True
-            value["value"] = constants.CHAT_OPENAI_MODELS[0]
-        elif (name == "Anthropic" or name == "ChatAnthropic") and key == "model_name":
-            value["options"] = constants.ANTHROPIC_MODELS
-            value["list"] = True
-            value["value"] = constants.ANTHROPIC_MODELS[0]
-    return d
-
-
 def update_verbose(d: dict, new_value: bool) -> dict:
     """
     Recursively updates the value of the 'verbose' key in a dictionary.
@@ -349,3 +246,219 @@ def sync_to_async(func):
         return func(*args, **kwargs)
 
     return async_wrapper
+
+
+def format_dict(
+    dictionary: Dict[str, Any], class_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Formats a dictionary by removing certain keys and modifying the
+    values of other keys.
+
+    Returns:
+        A new dictionary with the desired modifications applied.
+    """
+
+    for key, value in dictionary.items():
+        if key == "_type":
+            continue
+
+        _type: Union[str, type] = get_type(value)
+
+        _type = remove_optional_wrapper(_type)
+        _type = check_list_type(_type, value)
+        _type = replace_mapping_with_dict(_type)
+
+        value["type"] = get_formatted_type(key, _type)
+        value["show"] = should_show_field(value, key)
+        value["password"] = is_password_field(key)
+        value["multiline"] = is_multiline_field(key)
+
+        replace_dict_type_with_code(value)
+
+        if key == "dict_":
+            set_dict_file_attributes(value)
+
+        replace_default_value_with_actual(value)
+
+        if key == "headers":
+            set_headers_value(value)
+
+        add_options_to_field(value, class_name, key)
+
+    return dictionary
+
+
+def get_type(value: Any) -> Union[str, type]:
+    """
+    Retrieves the type value from the dictionary.
+
+    Returns:
+        The type value.
+    """
+    _type = value["type"]
+
+    return _type if isinstance(_type, str) else _type.__name__
+
+
+def remove_optional_wrapper(_type: Union[str, type]) -> str:
+    """
+    Removes the 'Optional' wrapper from the type string.
+
+    Returns:
+        The type string with the 'Optional' wrapper removed.
+    """
+    if isinstance(_type, type):
+        _type = str(_type)
+    if "Optional" in _type:
+        _type = _type.replace("Optional[", "")[:-1]
+
+    return _type
+
+
+def check_list_type(_type: str, value: Dict[str, Any]) -> str:
+    """
+    Checks if the type is a list type and modifies the value accordingly.
+
+    Returns:
+        The modified type string.
+    """
+    if any(list_type in _type for list_type in ["List", "Sequence", "Set"]):
+        _type = (
+            _type.replace("List[", "").replace("Sequence[", "").replace("Set[", "")[:-1]
+        )
+        value["list"] = True
+    else:
+        value["list"] = False
+
+    return _type
+
+
+def replace_mapping_with_dict(_type: str) -> str:
+    """
+    Replaces 'Mapping' with 'dict' in the type string.
+
+    Returns:
+        The modified type string.
+    """
+    if "Mapping" in _type:
+        _type = _type.replace("Mapping", "dict")
+
+    return _type
+
+
+def get_formatted_type(key: str, _type: str) -> str:
+    """
+    Formats the type value based on the given key.
+
+    Returns:
+        The formatted type value.
+    """
+    if key == "allowed_tools":
+        return "Tool"
+
+    elif key == "max_value_length":
+        return "int"
+
+    return _type
+
+
+def should_show_field(value: Dict[str, Any], key: str) -> bool:
+    """
+    Determines if the field should be shown or not.
+
+    Returns:
+        True if the field should be shown, False otherwise.
+    """
+    return (
+        (value["required"] and key != "input_variables")
+        or key in FORCE_SHOW_FIELDS
+        or any(text in key.lower() for text in ["password", "token", "api", "key"])
+    )
+
+
+def is_password_field(key: str) -> bool:
+    """
+    Determines if the field is a password field.
+
+    Returns:
+        True if the field is a password field, False otherwise.
+    """
+    return any(text in key.lower() for text in ["password", "token", "api", "key"])
+
+
+def is_multiline_field(key: str) -> bool:
+    """
+    Determines if the field is a multiline field.
+
+    Returns:
+        True if the field is a multiline field, False otherwise.
+    """
+    return key in {
+        "suffix",
+        "prefix",
+        "template",
+        "examples",
+        "code",
+        "headers",
+        "format_instructions",
+    }
+
+
+def replace_dict_type_with_code(value: Dict[str, Any]) -> None:
+    """
+    Replaces the type value with 'code' if the type is a dict.
+    """
+    if "dict" in value["type"].lower():
+        value["type"] = "code"
+
+
+def set_dict_file_attributes(value: Dict[str, Any]) -> None:
+    """
+    Sets the file attributes for the 'dict_' key.
+    """
+    value["type"] = "file"
+    value["suffixes"] = [".json", ".yaml", ".yml"]
+    value["fileTypes"] = ["json", "yaml", "yml"]
+
+
+def replace_default_value_with_actual(value: Dict[str, Any]) -> None:
+    """
+    Replaces the default value with the actual value.
+    """
+    if "default" in value:
+        value["value"] = value["default"]
+        value.pop("default")
+
+
+def set_headers_value(value: Dict[str, Any]) -> None:
+    """
+    Sets the value for the 'headers' key.
+    """
+    value["value"] = """{'Authorization': 'Bearer <token>'}"""
+
+
+def add_options_to_field(
+    value: Dict[str, Any], class_name: Optional[str], key: str
+) -> None:
+    """
+    Adds options to the field based on the class name and key.
+    """
+    options_map = {
+        "OpenAI": constants.OPENAI_MODELS,
+        "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
+        "Anthropic": constants.ANTHROPIC_MODELS,
+        "ChatAnthropic": constants.ANTHROPIC_MODELS,
+    }
+
+    if class_name in options_map and key == "model_name":
+        value["options"] = options_map[class_name]
+        value["list"] = True
+        value["value"] = options_map[class_name][0]
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import CodeAreaModal from "../../modals/codeAreaModal";
-import { TextAreaComponentType } from "../../types/components";
+import { CodeAreaComponentType } from "../../types/components";
 
 import IconComponent from "../genericIconComponent";
 
@@ -10,8 +10,9 @@ export default function CodeAreaComponent({
   disabled,
   editNode = false,
   nodeClass,
+  dynamic,
   setNodeClass,
-}: TextAreaComponentType) {
+}: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
   );
@@ -29,12 +30,13 @@ export default function CodeAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <CodeAreaModal
+        dynamic={dynamic}
         value={myValue}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
-        setValue={(t: string) => {
-          setMyValue(t);
-          onChange(t);
+        setValue={(value: string) => {
+          setMyValue(value);
+          onChange(value);
         }}
       >
         <div className="flex w-full items-center">
@@ -43,7 +45,7 @@ export default function CodeAreaComponent({
               editNode
                 ? "input-edit-node input-dialog"
                 : (disabled ? " input-disable input-ring " : "") +
-                  " input-primary text-muted-foreground "
+                  " primary-input text-muted-foreground "
             }
           >
             {myValue !== "" ? myValue : "Type something..."}

@@ -5,12 +5,13 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from langflow.template.frontend_node.formatter import field_formatters
-from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import (
+    CLASSES_TO_REMOVE,
+    FORCE_SHOW_FIELDS,
+)
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import constants
-
-CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object"]
 
 
 class FieldFormatters(BaseModel):
@@ -51,14 +52,8 @@ class FrontendNode(BaseModel):
     custom_fields: defaultdict = defaultdict(list)
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
-
-    def process_base_classes(self) -> None:
-        """Removes unwanted base classes from the list of base classes."""
-        self.base_classes = [
-            base_class
-            for base_class in self.base_classes
-            if base_class not in CLASSES_TO_REMOVE
-        ]
+    beta: bool = False
+    error: Optional[str] = None
 
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
@@ -69,6 +64,14 @@ class FrontendNode(BaseModel):
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
         self.documentation = documentation
+
+    def process_base_classes(self) -> None:
+        """Removes unwanted base classes from the list of base classes."""
+        self.base_classes = [
+            base_class
+            for base_class in self.base_classes
+            if base_class not in CLASSES_TO_REMOVE
+        ]
 
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
@@ -82,6 +85,8 @@ class FrontendNode(BaseModel):
                 "custom_fields": self.custom_fields,
                 "output_types": self.output_types,
                 "documentation": self.documentation,
+                "beta": self.beta,
+                "error": self.error,
             },
         }
 

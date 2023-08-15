@@ -36,10 +36,9 @@ Before you start, make sure you have the following installed:
 - Poetry (>=1.4)
 - Node.js
 
-Then install the dependencies and start the development server for the backend:
+Then, in the root folder, install the dependencies and start the development server for the backend:
 
 ```bash
-make install_backend
 make backend
 ```
 
@@ -48,6 +47,7 @@ And the frontend:
 ```bash
 make frontend
 ```
+
 
 ---
 
@@ -60,3 +60,18 @@ docker compose up --build
 # or
 make dev build=1
 ```
+
+---
+
+## Documentation
+
+The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
+
+```bash
+cd docs
+npm install
+npm run start
+```
+
+The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
+Once you are done with your changes, you can create a Pull Request to the `main` branch.
