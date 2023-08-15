@@ -152,15 +152,19 @@ class DirectoryReader:
         Check if a specific type hint is used in the
         function definitions within the given code.
         """
-        module = ast.parse(code)
+        try:
+            module = ast.parse(code)
 
-        for node in ast.walk(module):
-            if isinstance(node, ast.FunctionDef):
-                for arg in node.args.args:
-                    if self._is_type_hint_in_arg_annotation(
-                        arg.annotation, type_hint_name
-                    ):
-                        return True
+            for node in ast.walk(module):
+                if isinstance(node, ast.FunctionDef):
+                    for arg in node.args.args:
+                        if self._is_type_hint_in_arg_annotation(
+                            arg.annotation, type_hint_name
+                        ):
+                            return True
+        except SyntaxError:
+            # Returns False if the code is not valid Python
+            return False
         return False
 
     def _is_type_hint_in_arg_annotation(self, annotation, type_hint_name: str) -> bool:
@@ -204,8 +208,13 @@ class DirectoryReader:
             return False, "Syntax error"
         elif not self.validate_build(file_content):
             return False, "Missing build function"
-        elif self.is_type_hint_used_but_not_imported("Optional", file_content):
-            return False, "Type hint 'Optional' is used but not imported in the code."
+        elif self._is_type_hint_used_in_args(
+            "Optional", file_content
+        ) and not self._is_type_hint_imported("Optional", file_content):
+            return (
+                False,
+                "Type hint 'Optional' is used but not imported in the code.",
+            )
         else:
             if self.compress_code_field:
                 file_content = str(StringCompressor(file_content).compress_string())
