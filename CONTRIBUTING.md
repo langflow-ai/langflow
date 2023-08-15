@@ -7,9 +7,14 @@ to contributions, whether it be in the form of a new feature, improved infra, or
 To contribute to this project, please follow a ["fork and pull request"](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 Please do not try to push directly to this repo unless you are a maintainer.
 
+The branch structure is as follows:
+
+- `main`: The stable version of Langflow
+- `dev`: The development version of Langflow. This branch is used to test new features before they are merged into `main` and, as such, may be unstable.
+
 ## 🗺️Contributing Guidelines
 
-### 🚩GitHub Issues
+## 🚩GitHub Issues
 
 Our [issues](https://github.com/logspace-ai/langflow/issues) page is kept up to date
 with bugs, improvements, and feature requests. There is a taxonomy of labels to help
@@ -33,18 +38,19 @@ so that more people can benefit from it.
   [collapses the content](https://developer.mozilla.org/en/docs/Web/HTML/Element/details)
   so it only becomes visible on click, making the issue easier to read and follow.
 
-### Issue labels
+## Issue labels
 
 [See this page](https://github.com/logspace-ai/langflow/labels) for an overview of
 the system we use to tag our issues and pull requests.
 
+## Local development
 
-### Local development
 You can develop Langflow using docker compose, or locally.
 
 We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
 
 Setting up hooks:
+
 ```bash
 make init
 ```
@@ -53,30 +59,46 @@ This will install the pre-commit hooks, which will run `make format` on every co
 
 It is advised to run `make lint` before pushing to the repository.
 
-#### **Locally**
-Run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
+## Run locally
+
+Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
 
 Before you start, make sure you have the following installed:
-  - Poetry (>=1.4)
-  - Node.js
 
-For the backend, you will need to install the dependencies and start the development server.
+- Poetry (>=1.4)
+- Node.js
+
+Then, in the root folder, install the dependencies and start the development server for the backend:
+
 ```bash
-make install_backend
 make backend
 ```
-For the frontend, you will need to install the dependencies and start the development server.
+
+And the frontend:
+
 ```bash
 make frontend
 ```
 
+## Docker compose
 
-#### **Docker compose**
-This will run the backend and frontend in separate containers. The frontend will be available at `localhost:3000` and the backend at `localhost:7860`.
+The following snippet will run the backend and frontend in separate containers. The frontend will be available at `localhost:3000` and the backend at `localhost:7860`.
+
 ```bash
 docker compose up --build
 # or
 make dev build=1
 ```
 
+## Documentation
 
+The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
+
+```bash
+cd docs
+npm install
+npm run start
+```
+
+The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
+Once you are done with your changes, you can create a Pull Request to the `main` branch.

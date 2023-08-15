@@ -31,6 +31,9 @@ CUSTOM_NODES = {
         "MidJourneyPromptChain": frontend_node.chains.MidJourneyPromptChainNode(),
         "load_qa_chain": frontend_node.chains.CombineDocsChainNode(),
     },
+    "custom_components": {
+        "CustomComponent": frontend_node.custom_components.CustomComponentFrontendNode(),
+    },
 }
 
 

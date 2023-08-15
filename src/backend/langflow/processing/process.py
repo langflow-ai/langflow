@@ -85,12 +85,17 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
-def process_graph_cached(data_graph: Dict[str, Any], inputs: Optional[dict] = None):
+def process_graph_cached(
+    data_graph: Dict[str, Any], inputs: Optional[dict] = None, clear_cache=False
+):
     """
     Process graph by extracting input variables and replacing ZeroShotPrompt
     with PromptTemplate,then run the graph and return the result and thought.
     """
     # Load langchain object
+    if clear_cache:
+        build_sorted_vertices_with_caching.clear_cache()
+        logger.debug("Cleared cache")
     langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
     logger.debug("Loaded LangChain object")
     if inputs is None:

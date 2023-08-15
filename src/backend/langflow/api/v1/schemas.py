@@ -1,7 +1,7 @@
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from langflow.database.models.flow import FlowCreate, FlowRead
+from langflow.services.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
 import json
 
@@ -116,3 +116,20 @@ class StreamData(BaseModel):
 
     def __str__(self) -> str:
         return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
+
+
+class CustomComponentCode(BaseModel):
+    code: str
+
+
+class CustomComponentResponseError(BaseModel):
+    detail: str
+    traceback: str
+
+
+class ComponentListCreate(BaseModel):
+    flows: List[FlowCreate]
+
+
+class ComponentListRead(BaseModel):
+    flows: List[FlowRead]

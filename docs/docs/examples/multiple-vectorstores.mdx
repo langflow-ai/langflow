@@ -1,26 +1,31 @@
+import Admonition from "@theme/Admonition";
+
 # Multiple Vector Stores
 
 The example below shows an agent operating with two vector stores built upon different data sources.
 
 The `TextLoader` loads a TXT file, while the `WebBaseLoader` pulls text from webpages into a document format to accessed downstream. The `Chroma` vector stores are created analogous to what we have demonstrated in our [CSV Loader](/examples/csv-loader.mdx) example. Finally, the `VectorStoreRouterAgent` constructs an agent that routes between the vector stores.
 
-:::info
-Get the TXT file used [here](https://github.com/hwchase17/chat-your-data/blob/master/state_of_the_union.txt).
-:::
+<Admonition type="info">
+  Get the TXT file used
+  [here](https://github.com/hwchase17/chat-your-data/blob/master/state_of_the_union.txt).
+</Admonition>
 
 URL used by the `WebBaseLoader`:
 
-```txt
+```text
 https://pt.wikipedia.org/wiki/Harry_Potter
 ```
 
-:::tip
-When you build the flow, request information about one of the sources. The agent should be able to use the correct source to generate a response.
-:::
+<Admonition type="tip">
+  When you build the flow, request information about one of the sources. The
+  agent should be able to use the correct source to generate a response.
+</Admonition>
 
-:::info
-Learn more about Multiple Vector Stores [here](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore?highlight=Multiple%20Vector%20Stores#multiple-vectorstores).
-:::
+<Admonition type="info">
+  Learn more about Multiple Vector Stores
+  [here](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore?highlight=Multiple%20Vector%20Stores#multiple-vectorstores).
+</Admonition>
 
 ## ⛓️ Langflow Example
 
@@ -37,7 +42,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 #### <a target="\_blank" href="json_files/Multiple_Vector_Stores.json" download>Download Flow</a>
 
-:::note LangChain Components 🦜🔗
+<Admonition type="note" title="LangChain Components 🦜🔗">
 
 - [`WebBaseLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/web_base)
 - [`TextLoader`](https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/unstructured_file)
@@ -49,4 +54,4 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 - [`VectorStoreRouterToolkit`](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore)
 - [`VectorStoreRouterAgent`](https://python.langchain.com/docs/modules/agents/toolkits/vectorstore)
 
-:::
+</Admonition>

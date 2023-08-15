@@ -34,8 +34,6 @@ class Function(BaseModel):
 
 
 class PythonFunctionTool(Function, Tool):
-    """Python function"""
-
     name: str = "Custom Tool"
     description: str
     code: str
@@ -49,6 +47,4 @@ class PythonFunctionTool(Function, Tool):
 
 
 class PythonFunction(Function):
-    """Python function"""
-
     code: str

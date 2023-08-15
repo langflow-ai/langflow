@@ -3,13 +3,13 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
-from langflow.chat.manager import ChatManager
+from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.utils.logger import logger
 from cachetools import LRUCache
 
 router = APIRouter(tags=["Chat"])
-chat_manager = ChatManager()
+
 flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
@@ -17,6 +17,7 @@ flow_data_store: LRUCache = LRUCache(maxsize=10)
 async def chat(client_id: str, websocket: WebSocket):
     """Websocket endpoint for chat."""
     try:
+        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
@@ -26,7 +27,7 @@ async def chat(client_id: str, websocket: WebSocket):
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
-        logger.error(exc)
+        logger.error(f"Websocket error: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
@@ -45,6 +46,7 @@ async def init_build(graph_data: dict, flow_id: str):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
+        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if flow_id in chat_manager.in_memory_cache:
             with chat_manager.in_memory_cache._lock:
                 chat_manager.in_memory_cache.delete(flow_id)
@@ -56,7 +58,7 @@ async def init_build(graph_data: dict, flow_id: str):
 
         return InitResponse(flowId=flow_id)
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error initializing build: {exc}")
         return HTTPException(status_code=500, detail=str(exc))
 
 
@@ -74,7 +76,7 @@ async def build_status(flow_id: str):
         )
 
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error checking build status: {exc}")
         return HTTPException(status_code=500, detail=str(exc))
 
 
@@ -125,9 +127,8 @@ async def stream_build(flow_id: str):
                     vertex.build()
                     params = vertex._built_object_repr()
                     valid = True
-                    logger.debug(
-                        f"Building node {str(params)[:50]}{'...' if len(str(params)) > 50 else ''}"
-                    )
+                    logger.debug(f"Building node {str(vertex.vertex_type)}")
+                    logger.debug(f"Output: {params}")
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response
@@ -156,12 +157,12 @@ async def stream_build(flow_id: str):
                 )
             else:
                 input_keys_response = {
-                    "input_keys": {},
+                    "input_keys": None,
                     "memory_keys": [],
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-
+            chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
             chat_manager.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)
@@ -177,5 +178,5 @@ async def stream_build(flow_id: str):
     try:
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
     except Exception as exc:
-        logger.error(exc)
+        logger.error(f"Error streaming build: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

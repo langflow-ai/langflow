@@ -25,18 +25,18 @@ export default function InputListComponent({
         "flex flex-col gap-3"
       )}
     >
-      {value.map((i, idx) => {
+      {value.map((singleValue, idx) => {
         return (
           <div key={idx} className="flex w-full gap-3">
             <Input
               disabled={disabled}
               type="text"
-              value={i}
+              value={singleValue}
               className={editNode ? "input-edit-node" : ""}
               placeholder="Type something..."
-              onChange={(e) => {
+              onChange={(event) => {
                 let newInputList = _.cloneDeep(value);
-                newInputList[idx] = e.target.value;
+                newInputList[idx] = event.target.value;
                 onChange(newInputList);
               }}
             />

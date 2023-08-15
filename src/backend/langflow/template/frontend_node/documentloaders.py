@@ -14,7 +14,7 @@ def build_file_field(
         name=name,
         value="",
         suffixes=suffixes,
-        fileTypes=fileTypes,
+        file_types=fileTypes,
     )
 
 
@@ -30,7 +30,6 @@ class DocumentLoaderFrontNode(FrontendNode):
         "UnstructuredEmailLoader": build_file_field(
             suffixes=[".eml"], fileTypes=["eml"]
         ),
-        "SlackDirectoryLoader": build_file_field(suffixes=[".zip"], fileTypes=["zip"]),
         "EverNoteLoader": build_file_field(suffixes=[".xml"], fileTypes=["xml"]),
         "FacebookChatLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "BSHTMLLoader": build_file_field(suffixes=[".html"], fileTypes=["html"]),
@@ -105,7 +104,30 @@ class DocumentLoaderFrontNode(FrontendNode):
                     advanced=False,
                 )
             )
-
+        elif self.template.type_name in {"SlackDirectoryLoader"}:
+            self.template.add_field(
+                TemplateField(
+                    field_type="file",
+                    required=True,
+                    show=True,
+                    name="zip_path",
+                    value="",
+                    display_name="Path to zip file",
+                    suffixes=[".zip"],
+                    file_types=["zip"],
+                )
+            )
+            self.template.add_field(
+                TemplateField(
+                    field_type="str",
+                    required=False,
+                    show=True,
+                    name="workspace_url",
+                    value="",
+                    display_name="Workspace URL",
+                    advanced=False,
+                )
+            )
         elif self.template.type_name in self.file_path_templates:
             self.template.add_field(self.file_path_templates[self.template.type_name])
         elif self.template.type_name in {

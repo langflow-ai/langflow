@@ -1,21 +1,27 @@
-import contextlib
 import json
-from typing import Any, Callable, Dict, List, Sequence, Type
+from typing import Any, Callable, Dict, Sequence, Type
 
-from langchain.agents import ZeroShotAgent
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.llm import initialize_vertexai
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
-from langchain.schema import Document, BaseOutputParser
 from pydantic import ValidationError
 
+from langflow.interface.importing.utils import (
+    get_function,
+    get_function_custom,
+    import_by_type,
+)
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import get_function, import_by_type
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.chains.base import chain_creator
@@ -27,6 +33,7 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
+from langflow.utils.logger import logger
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -38,7 +45,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
             return custom_node(**params)
-
+    logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
     return instantiate_based_on_type(class_object, base_type, node_type, params)
 
@@ -58,7 +65,12 @@ def convert_kwargs(params):
     kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
-            params[key] = json.loads(params[key])
+            try:
+                params[key] = json.loads(params[key])
+            except json.JSONDecodeError:
+                # if the string is not a valid json string, we will
+                # remove the key from the params
+                params.pop(key, None)
     return params
 
 
@@ -76,7 +88,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
-        return instantiate_embedding(class_object, params)
+        return instantiate_embedding(node_type, class_object, params)
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
@@ -95,10 +107,22 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
         return instantiate_retriever(node_type, class_object, params)
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
+    elif base_type == "custom_components":
+        return instantiate_custom_component(node_type, class_object, params)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
+
+
+def instantiate_custom_component(node_type, class_object, params):
+    # we need to make a copy of the params because we will be
+    # modifying it
+    params_copy = params.copy()
+    class_object = get_function_custom(params_copy.pop("code"))
+    custom_component = class_object()
+    built_object = custom_component.build(**params_copy)
+    return built_object, {"repr": custom_component.custom_repr()}
 
 
 def instantiate_wrapper(node_type, class_object, params):
@@ -123,7 +147,7 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # This is a workaround so JinaChat works until streaming is implemented
     # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
     # False if condition is True
-    if node_type == "VertexAI":
+    if "VertexAI" in node_type:
         return initialize_vertexai(class_object=class_object, params=params)
     # max_tokens sometimes is a string and should be an int
     if "max_tokens" in params:
@@ -199,68 +223,11 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
 
 
 def instantiate_prompt(node_type, class_object, params: Dict):
-    if node_type == "ZeroShotPrompt":
-        if "tools" not in params:
-            params["tools"] = []
-        return ZeroShotAgent.create_prompt(**params)
-    elif "MessagePromptTemplate" in node_type:
-        # Then we only need the template
-        from_template_params = {
-            "template": params.pop("prompt", params.pop("template", ""))
-        }
-
-        if not from_template_params.get("template"):
-            raise ValueError("Prompt template is required")
-        prompt = class_object.from_template(**from_template_params)
-
-    elif node_type == "ChatPromptTemplate":
-        prompt = class_object.from_messages(**params)
-    else:
-        prompt = class_object(**params)
-
-    format_kwargs: Dict[str, Any] = {}
-    for input_variable in prompt.input_variables:
-        if input_variable in params:
-            variable = params[input_variable]
-            if isinstance(variable, str):
-                format_kwargs[input_variable] = variable
-            elif isinstance(variable, BaseOutputParser) and hasattr(
-                variable, "get_format_instructions"
-            ):
-                format_kwargs[input_variable] = variable.get_format_instructions()
-            elif isinstance(variable, List) and all(
-                isinstance(item, Document) for item in variable
-            ):
-                # Format document to contain page_content and metadata
-                # as one string separated by a newline
-                if len(variable) > 1:
-                    content = "\n".join(
-                        [item.page_content for item in variable if item.page_content]
-                    )
-                else:
-                    content = variable[0].page_content
-                    # content could be a json list of strings
-                    with contextlib.suppress(json.JSONDecodeError):
-                        content = json.loads(content)
-                        if isinstance(content, list):
-                            content = ",".join([str(item) for item in content])
-                format_kwargs[input_variable] = content
-                # handle_keys will be a list but it does not exist yet
-                # so we need to create it
-
-            if (
-                isinstance(variable, List)
-                and all(isinstance(item, Document) for item in variable)
-            ) or (
-                isinstance(variable, BaseOutputParser)
-                and hasattr(variable, "get_format_instructions")
-            ):
-                if "handle_keys" not in format_kwargs:
-                    format_kwargs["handle_keys"] = []
-
-                # Add the handle_keys to the list
-                format_kwargs["handle_keys"].append(input_variable)
-
+    params, prompt = handle_node_type(node_type, class_object, params)
+    format_kwargs = handle_format_kwargs(prompt, params)
+    # Now we'll use partial_format to format the prompt
+    if format_kwargs:
+        prompt = handle_partial_variables(prompt, format_kwargs)
     return prompt, format_kwargs
 
 
@@ -294,9 +261,13 @@ def instantiate_toolkit(node_type, class_object: Type[BaseToolkit], params: Dict
     return loaded_toolkit
 
 
-def instantiate_embedding(class_object, params: Dict):
+def instantiate_embedding(node_type, class_object, params: Dict):
     params.pop("model", None)
     params.pop("headers", None)
+
+    if "VertexAI" in node_type:
+        return initialize_vertexai(class_object=class_object, params=params)
+
     try:
         return class_object(**params)
     except ValidationError:
@@ -363,6 +334,8 @@ def instantiate_textsplitter(
 ):
     try:
         documents = params.pop("documents")
+        if not isinstance(documents, list):
+            documents = [documents]
     except KeyError as exc:
         raise ValueError(
             "The source you provided did not load correctly or was empty."

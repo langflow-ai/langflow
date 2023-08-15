@@ -1,5 +1,11 @@
 import { cloneDeep } from "lodash";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -13,21 +19,18 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { MAX_LENGTH_TO_SCROLL_TOOLTIP } from "../../../../constants/constants";
+import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
+import { TabsState } from "../../../../types/tabs";
 import { isValidConnection } from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import {
-  classNames,
-  getRandomKeyByssmm,
-  groupByFamily,
-} from "../../../../utils/utils";
+import { classNames, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -42,14 +45,15 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
-}: ParameterComponentType) {
-  const ref = useRef(null);
-  const refHtml = useRef(null);
-  const refNumberComponents = useRef(0);
-  const infoHtml = useRef(null);
+}: ParameterComponentType): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, save } = useContext(TabsContext);
+  const { setTabsState, tabId, save, flows } = useContext(TabsContext);
+
+  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -65,32 +69,37 @@ export default function ParameterComponent({
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
-    reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+    reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ??
+    false;
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: any) => {
+  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
     let newData = cloneDeep(data);
-    newData.node.template[name].value = newValue;
+    newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
-    setTabsState((prev) => {
+    //@ts-ignore
+    setTabsState((prev: TabsState) => {
       return {
         ...prev,
         [tabId]: {
           ...prev[tabId],
           isPending: true,
+          formKeysData: prev[tabId].formKeysData,
         },
       };
     });
+    renderTooltips();
   };
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
+    // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
-        {info.split("\n").map((line, i) => (
-          <p key={i} className="block">
+        {info.split("\n").map((line, index) => (
+          <p key={index} className="block">
             {line}
           </p>
         ))}
@@ -98,57 +107,67 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-  useEffect(() => {
-    const groupedObj = groupByFamily(myData, tooltipTitle, left, data.type);
+  function renderTooltips() {
+    let groupedObj = groupByFamily(myData, tooltipTitle!, left, flow!);
 
-    refNumberComponents.current = groupedObj[0]?.type?.length;
+    if (groupedObj && groupedObj.length > 0) {
+      //@ts-ignore
+      refHtml.current = groupedObj.map((item, index) => {
+        const Icon: any =
+          nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
-    refHtml.current = groupedObj.map((item, i) => {
-      const Icon: any = nodeIconsLucide[item.family];
-
-      return (
-        <span
-          key={getRandomKeyByssmm() + item.family + i}
-          className={classNames(
-            i > 0 ? "mt-2 flex items-center" : "flex items-center"
-          )}
-        >
-          <div
-            className="h-5 w-5"
-            style={{
-              color: nodeColors[item.family],
-            }}
+        return (
+          <span
+            key={index}
+            className={classNames(
+              index > 0 ? "mt-2 flex items-center" : "flex items-center"
+            )}
           >
-            <Icon
+            <div
               className="h-5 w-5"
-              strokeWidth={1.5}
               style={{
-                color: nodeColors[item.family] ?? nodeColors.unknown,
+                color: nodeColors[item.family],
               }}
-            />
-          </div>
-          <span className="ps-2 text-xs text-foreground">
-            {nodeNames[item.family] ?? ""}{" "}
-            <span className="text-xs">
-              {" "}
-              {item.type === "" ? "" : " - "}
-              {item.type.split(", ").length > 2
-                ? item.type.split(", ").map((el, i) => (
-                    <React.Fragment key={el + i}>
-                      <span>
-                        {i === item.type.split(", ").length - 1
-                          ? el
-                          : (el += `, `)}
-                      </span>
-                    </React.Fragment>
-                  ))
-                : item.type}
+            >
+              <Icon
+                className="h-5 w-5"
+                strokeWidth={1.5}
+                style={{
+                  color: nodeColors[item.family] ?? nodeColors.unknown,
+                }}
+              />
+            </div>
+            <span className="ps-2 text-xs text-foreground">
+              {nodeNames[item.family] ?? "Other"}
+              <span className="text-xs">
+                {" "}
+                {item.type === "" ? "" : " - "}
+                {item.type.split(", ").length > 2
+                  ? item.type.split(", ").map((el, index) => (
+                      <React.Fragment key={el + index}>
+                        <span>
+                          {index === item.type.split(", ").length - 1
+                            ? el
+                            : (el += `, `)}
+                        </span>
+                      </React.Fragment>
+                    ))
+                  : item.type}
+              </span>
             </span>
           </span>
-        </span>
-      );
-    });
-  }, [tooltipTitle]);
+        );
+      });
+    } else {
+      //@ts-ignore
+      refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
+    }
+  }
+
+  useEffect(() => {
+    renderTooltips();
+  }, [tooltipTitle, flow]);
+
   return (
     <div
       ref={ref}
@@ -190,11 +209,7 @@ export default function ParameterComponent({
           <></>
         ) : (
           <ShadTooltip
-            styleClasses={
-              refNumberComponents.current > MAX_LENGTH_TO_SCROLL_TOOLTIP
-                ? "tooltip-fixed-width custom-scroll overflow-y-scroll nowheel"
-                : "tooltip-fixed-width"
-            }
+            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
             delayDuration={0}
             content={refHtml.current}
             side={left ? "left" : "right"}
@@ -204,7 +219,7 @@ export default function ParameterComponent({
               position={left ? Position.Left : Position.Right}
               id={id}
               isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance)
+                isValidConnection(connection, reactFlowInstance!)
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
@@ -220,9 +235,9 @@ export default function ParameterComponent({
 
         {left === true &&
         type === "str" &&
-        !data.node.template[name].options ? (
+        !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
-            {data.node.template[name].list ? (
+            {data.node?.template[name].list ? (
               <InputListComponent
                 disabled={disabled}
                 value={
@@ -233,7 +248,7 @@ export default function ParameterComponent({
                 }
                 onChange={handleOnNewValue}
               />
-            ) : data.node.template[name].multiline ? (
+            ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
@@ -242,8 +257,8 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
-                password={data.node.template[name].password ?? false}
-                value={data.node.template[name].value ?? ""}
+                password={data.node?.template[name].password ?? false}
+                value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
             )}
@@ -252,9 +267,9 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={data.node.template[name].value}
-              setEnabled={(t) => {
-                handleOnNewValue(t);
+              enabled={data.node?.template[name].value ?? false}
+              setEnabled={(isEnabled) => {
+                handleOnNewValue(isEnabled);
               }}
               size="large"
             />
@@ -263,13 +278,13 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <FloatComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node.template[name].options ? (
+          data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name].options}
@@ -280,12 +295,13 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
+              dynamic={data.node?.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -293,12 +309,12 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <InputFileComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              fileTypes={data.node.template[name].fileTypes}
-              suffixes={data.node.template[name].suffixes}
-              onFileChange={(t: string) => {
-                data.node.template[name].file_path = t;
+              fileTypes={data.node?.template[name].fileTypes}
+              suffixes={data.node?.template[name].suffixes}
+              onFileChange={(filePath: string) => {
+                data.node!.template[name].file_path = filePath;
                 save();
               }}
             ></InputFileComponent>
@@ -307,7 +323,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <IntComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -320,7 +336,7 @@ export default function ParameterComponent({
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>

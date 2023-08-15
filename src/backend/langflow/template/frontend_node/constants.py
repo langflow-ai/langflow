@@ -63,3 +63,6 @@ You can change this to use other APIs like JinaChat, LocalAI and Prem.
 
 INPUT_KEY_INFO = """The variable to be used as Chat Input when more than one variable is available."""
 OUTPUT_KEY_INFO = """The variable to be used as Chat Output (e.g. answer in a ConversationalRetrievalChain)"""
+
+
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object", "Runnable", "Generic"]

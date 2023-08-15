@@ -2,7 +2,7 @@ import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import { IVarHighlightType } from "../types/components";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
@@ -88,119 +88,93 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, type) {
-  let parentOutput: string;
-  let arrOfParent: string[] = [];
-  let arrOfType: { family: string; type: string; component: string }[] = [];
-  let arrOfLength: { length: number; type: string }[] = [];
-  let lastType = "";
-  Object.keys(data).forEach((d) => {
-    Object.keys(data[d]).forEach((n) => {
-      try {
-        if (
-          data[d][n].base_classes.some((r) =>
-            baseClasses.split("\n").includes(r)
-          )
-        ) {
-          arrOfParent.push(d);
-        }
-        if (n === type) {
-          parentOutput = d;
-        }
+export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
+  const baseClassesSet = new Set(baseClasses.split("\n"));
+  let arrOfPossibleInputs = [];
+  let arrOfPossibleOutputs = [];
+  let checkedNodes = new Map();
+  const excludeTypes = new Set([
+    "str",
+    "bool",
+    "float",
+    "code",
+    "prompt",
+    "file",
+    "int",
+  ]);
 
-        if (d !== lastType) {
-          arrOfLength.push({
-            length: Object.keys(data[d]).length,
-            type: d,
-          });
+  const checkBaseClass = (template: any) =>
+    template.type &&
+    template.show &&
+    ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
+      (template.input_types &&
+        template.input_types.some((inputType) =>
+          baseClassesSet.has(inputType)
+        )));
 
-          lastType = d;
-        }
-      } catch (e) {
-        console.log(e);
-      }
-    });
-  });
+  if (flow) {
+    for (const node of flow) {
+      const nodeData = node.data;
+      const foundNode = checkedNodes.get(nodeData.type);
+      checkedNodes.set(nodeData.type, {
+        hasBaseClassInTemplate:
+          foundNode?.hasBaseClassInTemplate ||
+          Object.values(nodeData.node.template).some(checkBaseClass),
+        hasBaseClassInBaseClasses:
+          foundNode?.hasBaseClassInBaseClasses ||
+          nodeData.node.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
+          ),
+      });
+    }
+  }
 
-  Object.keys(data).map((d) => {
-    Object.keys(data[d]).map((n) => {
-      try {
-        baseClasses.split("\n").forEach((tol) => {
-          data[d][n].base_classes.forEach((data) => {
-            if (tol === data) {
-              arrOfType.push({
-                family: d,
-                type: data,
-                component: n,
-              });
-            }
-          });
-        });
-      } catch (e) {
-        console.log(e);
-      }
-    });
-  });
+  for (const [d, nodes] of Object.entries(data)) {
+    let tempInputs = [],
+      tempOutputs = [];
 
-  if (left === false) {
-    let groupedBy = arrOfType.filter((object, index, self) => {
-      const foundIndex = self.findIndex(
-        (o) => o.family === object.family && o.type === object.type
-      );
-      return foundIndex === index;
-    });
-
-    return groupedBy.reduce((result, item) => {
-      const existingGroup = result.find(
-        (group) => group.family === item.family
-      );
-
-      if (existingGroup) {
-        existingGroup.type += `, ${item.type}`;
-      } else {
-        result.push({
-          family: item.family,
-          type: item.type,
-          component: item.component,
-        });
+    for (const [n, node] of Object.entries(nodes)) {
+      let foundNode = checkedNodes.get(n);
+      if (!foundNode) {
+        foundNode = {
+          hasBaseClassInTemplate: Object.values(node.template).some(
+            checkBaseClass
+          ),
+          hasBaseClassInBaseClasses: node.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
+          ),
+        };
+        checkedNodes.set(n, foundNode);
       }
 
-      if (left === false) {
-        let resFil = result.filter((group) => group.family === parentOutput);
-        result = resFil;
-      }
-
-      return result;
-    }, []);
-  } else {
-    const groupedArray = [];
-    const groupedData = {};
-
-    arrOfType.forEach((item) => {
-      const { family, type, component } = item;
-      const key = `${family}-${type}`;
-
-      if (!groupedData[key]) {
-        groupedData[key] = { family, type, component: [component] };
-      } else {
-        groupedData[key].component.push(component);
-      }
-    });
-
-    for (const key in groupedData) {
-      groupedArray.push(groupedData[key]);
+      if (foundNode.hasBaseClassInTemplate) tempInputs.push(n);
+      if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
     }
 
-    groupedArray.forEach((object, index, self) => {
-      const findObj = arrOfLength.find((x) => x.type === object.family);
-      if (object.component.length === findObj.length) {
-        self[index]["type"] = "";
-      } else {
-        self[index]["type"] = object.component.join(", ");
-      }
-    });
-    return groupedArray;
+    const totalNodes = Object.keys(nodes).length;
+    if (tempInputs.length)
+      arrOfPossibleInputs.push({
+        category: d,
+        nodes: tempInputs,
+        full: tempInputs.length === totalNodes,
+      });
+    if (tempOutputs.length)
+      arrOfPossibleOutputs.push({
+        category: d,
+        nodes: tempOutputs,
+        full: tempOutputs.length === totalNodes,
+      });
   }
+
+  return left
+    ? arrOfPossibleOutputs.map((output) => ({
+        family: output.category,
+        type: output.full ? "" : output.nodes.join(", "),
+      }))
+    : arrOfPossibleInputs.map((input) => ({
+        family: input.category,
+        type: input.full ? "" : input.nodes.join(", "),
+      }));
 }
 
 export function buildInputs(tabsState, id) {
@@ -277,6 +251,27 @@ export function buildTweakObject(tweak) {
 
   const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
+}
+
+/**
+ * Function to get Chat Input Field
+ * @param {FlowType} flow - The current flow.
+ * @param {TabsState} tabsState - The current tabs state.
+ * @returns {string} - The chat input field
+ */
+export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+  let chat_input_field = "text";
+
+  if (
+    tabsState[flow.id] &&
+    tabsState[flow.id].formKeysData &&
+    tabsState[flow.id].formKeysData.input_keys
+  ) {
+    chat_input_field = Object.keys(
+      tabsState[flow.id].formKeysData.input_keys
+    )[0];
+  }
+  return chat_input_field;
 }
 
 /**
@@ -364,7 +359,7 @@ export function getCurlCode(
 
 /**
  * Function to get the python code for the API
- * @param {string} flowName - The name of the flow
+ * @param {string} flow - The current flow
  * @returns {string} - The python code
  */
 export function getPythonCode(
@@ -385,4 +380,33 @@ flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 inputs = ${inputs}
 flow(inputs)`;
+}
+
+/**
+ * Function to get the widget code for the API
+ * @param {string} flow - The current flow.
+ * @returns {string} - The widget code
+ */
+export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
+  const flowId = flow.id;
+  const flowName = flow.name;
+  const inputs = buildInputs(tabsState, flow.id);
+  let chat_input_field = getChatInputField(flow, tabsState);
+
+  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+
+<!-- chat_inputs: Stringified JSON with all the input keys and its values. The value of the key that is defined
+as chat_input_field will be overwritten by the chat message.
+chat_input_field: Input key that you want the chat to send the user message with. -->
+<langflow-chat
+  window_title="${flowName}"
+  flow_id="${flowId}"
+  ${
+    tabsState[flow.id] && tabsState[flow.id].formKeysData
+      ? `chat_inputs='${inputs}'
+  chat_input_field="${chat_input_field}"
+  `
+      : ""
+  }host_url="http://localhost:7860"
+></langflow-chat>`;
 }
