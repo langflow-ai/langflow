@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = False
+    AUTO_LOGIN: bool = True
     FIRST_SUPERUSER: str = "superuser"
     FIRST_SUPERUSER_PASSWORD: str = "12345"
 
