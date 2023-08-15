@@ -1,16 +1,15 @@
 from typing import List
 from uuid import UUID
-from langflow.settings import settings
 from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
-from langflow.database.models.flow import (
+from langflow.services.database.models.flow import (
     Flow,
     FlowCreate,
     FlowRead,
-    FlowReadWithStyle,
     FlowUpdate,
 )
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
+from langflow.services.utils import get_settings_manager
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
@@ -32,7 +31,7 @@ def create_flow(*, session: Session = Depends(get_session), flow: FlowCreate):
     return db_flow
 
 
-@router.get("/", response_model=list[FlowReadWithStyle], status_code=200)
+@router.get("/", response_model=list[FlowRead], status_code=200)
 def read_flows(*, session: Session = Depends(get_session)):
     """Read all flows."""
     try:
@@ -42,7 +41,7 @@ def read_flows(*, session: Session = Depends(get_session)):
     return [jsonable_encoder(flow) for flow in flows]
 
 
-@router.get("/{flow_id}", response_model=FlowReadWithStyle, status_code=200)
+@router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 def read_flow(*, session: Session = Depends(get_session), flow_id: UUID):
     """Read a flow."""
     if flow := session.get(Flow, flow_id):
@@ -61,7 +60,8 @@ def update_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.dict(exclude_unset=True)
-    if settings.remove_api_keys:
+    settings_manager = get_settings_manager()
+    if settings_manager.settings.REMOVE_API_KEYS:
         flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():
         setattr(db_flow, key, value)

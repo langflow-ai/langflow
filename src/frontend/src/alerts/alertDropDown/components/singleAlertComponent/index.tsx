@@ -36,14 +36,14 @@ export default function SingleAlert({
             />
           </div>
           <div className="ml-3">
-            <h3 className="break-words text-sm font-medium text-error-foreground">
+            <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
               {dropItem.title}
             </h3>
             {dropItem.list ? (
               <div className="mt-2 text-sm text-error-foreground">
                 <ul className="list-disc space-y-1 pl-5">
                   {dropItem.list.map((item, idx) => (
-                    <li className="break-words" key={idx}>
+                    <li className="word-break-break-word" key={idx}>
                       {item}
                     </li>
                   ))}

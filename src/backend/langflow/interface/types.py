@@ -1,4 +1,7 @@
-from typing import Any
+import ast
+import contextlib
+from typing import Any, List
+from langflow.api.utils import merge_nested_dicts_with_renaming
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -28,7 +31,6 @@ from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.utils.logger import logger
 from langflow.utils.util import get_base_classes
-from langflow.api.utils import merge_nested_dicts
 
 import re
 import warnings
@@ -145,7 +147,7 @@ def add_code_field(template, raw_code, field_config):
             "dynamic": True,
             "required": True,
             "placeholder": "",
-            "show": True,
+            "show": field_config.pop("show", True),
             "multiline": True,
             "value": raw_code,
             "password": False,
@@ -186,13 +188,19 @@ def build_frontend_node(custom_component: CustomComponent):
         return None
 
 
-def update_display_name_and_description(frontend_node, template_config):
+def update_attributes(frontend_node, template_config):
     """Update the display name and description of a frontend node"""
     if "display_name" in template_config:
         frontend_node["display_name"] = template_config["display_name"]
 
     if "description" in template_config:
         frontend_node["description"] = template_config["description"]
+
+    if "beta" in template_config:
+        frontend_node["beta"] = template_config["beta"]
+
+    if "documentation" in template_config:
+        frontend_node["documentation"] = template_config["documentation"]
 
 
 def build_field_config(custom_component: CustomComponent):
@@ -247,55 +255,60 @@ def get_field_properties(extra_field):
     if not field_required:
         field_type = extract_type_from_optional(field_type)
 
+    with contextlib.suppress(Exception):
+        field_value = ast.literal_eval(field_value)
     return field_name, field_type, field_value, field_required
 
 
-def add_base_classes(frontend_node, return_type):
+def add_base_classes(frontend_node, return_types: List[str]):
     """Add base classes to the frontend node"""
-    if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": (
-                    "Invalid return type should be one of: "
-                    f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
-                ),
-                "traceback": traceback.format_exc(),
-            },
-        )
+    for return_type in return_types:
+        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Invalid return type should be one of: "
+                        f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
 
-    return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
-    base_classes = get_base_classes(return_type_instance)
+        return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
+        base_classes = get_base_classes(return_type_instance)
 
-    for base_class in base_classes:
-        if base_class not in CLASSES_TO_REMOVE:
-            frontend_node.get("base_classes").append(base_class)
+        for base_class in base_classes:
+            if base_class not in CLASSES_TO_REMOVE:
+                frontend_node.get("base_classes").append(base_class)
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
+    logger.debug("Building custom component template")
     frontend_node = build_frontend_node(custom_component)
 
     if frontend_node is None:
         return None
-
+    logger.debug("Built base frontend node")
     template_config = custom_component.build_template_config
 
-    update_display_name_and_description(frontend_node, template_config)
-
+    update_attributes(frontend_node, template_config)
+    logger.debug("Updated attributes")
     field_config = build_field_config(custom_component)
+    logger.debug("Built field config")
     add_extra_fields(
         frontend_node, field_config, custom_component.get_function_entrypoint_args
     )
-
+    logger.debug("Added extra fields")
     frontend_node = add_code_field(
         frontend_node, custom_component.code, field_config.get("code", {})
     )
-
+    logger.debug("Added code field")
     add_base_classes(
         frontend_node, custom_component.get_function_entrypoint_return_type
     )
-
+    logger.debug("Added base classes")
     return frontend_node
 
 
@@ -306,7 +319,7 @@ def load_files_from_path(path: str):
     return reader.get_files()
 
 
-def build_and_validate_all_files(reader, file_list):
+def build_and_validate_all_files(reader: DirectoryReader, file_list):
     """Build and validate all files"""
     data = reader.build_component_menu_list(file_list)
 
@@ -319,31 +332,53 @@ def build_and_validate_all_files(reader, file_list):
 def build_valid_menu(valid_components):
     """Build the valid menu"""
     valid_menu = {}
+    logger.debug("------------------- VALID COMPONENTS -------------------")
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
+            logger.debug(f"Building component: {component}")
             try:
                 component_name = component["name"]
                 component_code = component["code"]
+                component_output_types = component["output_types"]
 
                 component_extractor = CustomComponent(code=component_code)
                 component_extractor.is_check_valid()
+
                 component_template = build_langchain_template_custom_component(
                     component_extractor
                 )
+                component_template["output_types"] = component_output_types
+                if len(component_output_types) == 1:
+                    component_name = component_output_types[0]
+                else:
+                    file_name = component.get("file").split(".")[0]
+                    if "_" in file_name:
+                        # turn .py file into camelcase
+                        component_name = "".join(
+                            [word.capitalize() for word in file_name.split("_")]
+                        )
+                    else:
+                        component_name = file_name
 
                 valid_menu[menu_name][component_name] = component_template
+                logger.debug(f"Added {component_name} to valid menu to {menu_name}")
 
             except Exception as exc:
-                logger.error(f"Error while building custom component: {exc}")
+                logger.error(f"Error loading Component: {component['output_types']}")
+                logger.exception(
+                    f"Error while building custom component {component_output_types}: {exc}"
+                )
 
     return valid_menu
 
 
 def build_invalid_menu(invalid_components):
     """Build the invalid menu"""
+    if invalid_components.get("menu"):
+        logger.debug("------------------- INVALID COMPONENTS -------------------")
     invalid_menu = {}
     for menu_item in invalid_components["menu"]:
         menu_name = menu_item["name"]
@@ -364,12 +399,16 @@ def build_invalid_menu(invalid_components):
                 )
 
                 component_template["error"] = component.get("error", None)
+                logger.debug(component)
+                logger.debug(f"Component Path: {component.get('path', None)}")
+                logger.debug(f"Component Error: {component.get('error', None)}")
                 component_template.get("template").get("code")["value"] = component_code
 
                 invalid_menu[menu_name][component_name] = component_template
+                logger.debug(f"Added {component_name} to invalid menu to {menu_name}")
 
             except Exception as exc:
-                logger.error(
+                logger.exception(
                     f"Error while creating custom component [{component_name}]: {str(exc)}"
                 )
 
@@ -388,4 +427,4 @@ def build_langchain_custom_component_list_from_path(path: str):
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)
 
-    return merge_nested_dicts(valid_menu, invalid_menu)
+    return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)

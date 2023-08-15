@@ -4,17 +4,16 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
-import { codeAreaModalPropsType } from "../../types/components";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
+import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -174,8 +173,8 @@ export default function CodeAreaModal({
               <h1 className="text-lg text-destructive">
                 {error?.detail?.error}
               </h1>
-              <div className="ml-2 w-full break-all text-sm text-status-red">
-                <pre className="w-full whitespace-pre-wrap break-all">
+              <div className="ml-2 w-full text-sm text-status-red word-break-break-word">
+                <pre className="w-full word-break-break-word">
                   {error?.detail?.traceback}
                 </pre>
               </div>

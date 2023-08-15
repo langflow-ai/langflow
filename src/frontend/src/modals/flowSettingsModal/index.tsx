@@ -14,17 +14,18 @@ export default function FlowSettingsModal({
 }: FlowSettingsPropsType): JSX.Element {
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow, saveFlow } =
-    useContext(TabsContext);
+  const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const maxLength = 50;
-  const [name, setName] = useState(flows.find((f) => f.id === tabId)!.name);
+  const [name, setName] = useState(
+    flows.find((flow) => flow.id === tabId)!.name
+  );
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId)!.description
+    flows.find((flow) => flow.id === tabId)!.description
   );
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
-    let savedFlow = flows.find((f) => f.id === tabId);
+    let savedFlow = flows.find((flow) => flow.id === tabId);
     savedFlow!.name = name;
     savedFlow!.description = description;
     saveFlow(savedFlow!);

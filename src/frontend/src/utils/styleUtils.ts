@@ -65,7 +65,6 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { Edge, Node } from "reactflow";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -207,6 +206,7 @@ export const nodeIconsLucide: iconsType = {
   SupabaseVectorStore: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
+  VertexAIEmbeddings: VertexAIIcon,
   agents: Rocket,
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
@@ -278,8 +278,3 @@ export const nodeIconsLucide: iconsType = {
   MessageSquare,
   MoreHorizontal,
 };
-export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
-  const sourceId = edge.source;
-  const targetId = edge.target;
-  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
-}

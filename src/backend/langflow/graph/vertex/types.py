@@ -226,7 +226,11 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            template = self._built_object.format(**artifacts)
+            template = self._built_object.template
+            for key, value in artifacts.items():
+                if value:
+                    replace_key = "{" + key + "}"
+                    template = template.replace(replace_key, value)
             return (
                 template
                 if isinstance(template, str)

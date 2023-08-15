@@ -2,8 +2,8 @@ import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { InputProps } from "../../types/components";
 import { readFlowsFromDatabase } from "../../controllers/API";
+import { InputProps } from "../../types/components";
 import { FlowType } from "../../types/flow";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
@@ -43,12 +43,12 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   };
 
   const [desc, setDesc] = useState(
-    flows.find((f) => f.id === tabId)?.description
+    flows.find((flow) => flow.id === tabId)?.description
   );
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((f) => f.id === tabId)!.description = event.target.value;
-    setDesc(flows.find((f) => f.id === tabId)?.description);
+    flows.find((flow) => flow.id === tabId)!.description = event.target.value;
+    setDesc(flows.find((flow) => flow.id === tabId)?.description);
     setDescription(event.target.value);
   };
 

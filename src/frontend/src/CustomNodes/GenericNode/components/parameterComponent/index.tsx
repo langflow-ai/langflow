@@ -53,7 +53,7 @@ export default function ParameterComponent({
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
 
-  const flow = flows.find((f) => f.id === tabId)?.data?.nodes ?? null;
+  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -69,7 +69,8 @@ export default function ParameterComponent({
 
   const { reactFlowInstance } = useContext(typesContext);
   let disabled =
-    reactFlowInstance?.getEdges().some((e) => e.targetHandle === id) ?? false;
+    reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ??
+    false;
 
   const { data: myData } = useContext(typesContext);
 
@@ -97,8 +98,8 @@ export default function ParameterComponent({
     // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
-        {info.split("\n").map((line, i) => (
-          <p key={i} className="block">
+        {info.split("\n").map((line, index) => (
+          <p key={index} className="block">
             {line}
           </p>
         ))}
@@ -111,15 +112,16 @@ export default function ParameterComponent({
 
     if (groupedObj && groupedObj.length > 0) {
       //@ts-ignore
-      refHtml.current = groupedObj.map((item, i) => {
+      //@ts-ignore
+      refHtml.current = groupedObj.map((item, index) => {
         const Icon: any =
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
           <span
-            key={i}
+            key={index}
             className={classNames(
-              i > 0 ? "mt-2 flex items-center" : "flex items-center"
+              index > 0 ? "mt-2 flex items-center" : "flex items-center"
             )}
           >
             <div
@@ -142,10 +144,10 @@ export default function ParameterComponent({
                 {" "}
                 {item.type === "" ? "" : " - "}
                 {item.type.split(", ").length > 2
-                  ? item.type.split(", ").map((el, i) => (
-                      <React.Fragment key={el + i}>
+                  ? item.type.split(", ").map((el, index) => (
+                      <React.Fragment key={el + index}>
                         <span>
-                          {i === item.type.split(", ").length - 1
+                          {index === item.type.split(", ").length - 1
                             ? el
                             : (el += `, `)}
                         </span>
@@ -267,8 +269,8 @@ export default function ParameterComponent({
             <ToggleShadComponent
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
-              setEnabled={(t) => {
-                handleOnNewValue(t);
+              setEnabled={(isEnabled) => {
+                handleOnNewValue(isEnabled);
               }}
               size="large"
             />
@@ -312,8 +314,8 @@ export default function ParameterComponent({
               onChange={handleOnNewValue}
               fileTypes={data.node?.template[name].fileTypes}
               suffixes={data.node?.template[name].suffixes}
-              onFileChange={(t: string) => {
-                data.node!.template[name].file_path = t;
+              onFileChange={(filePath: string) => {
+                data.node!.template[name].file_path = filePath;
                 save();
               }}
             ></InputFileComponent>

@@ -3,7 +3,6 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import {
-  MutableRefObject,
   ReactNode,
   forwardRef,
   useContext,
@@ -16,17 +15,18 @@ import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import { FlowType, NodeType, TweaksType } from "../../types/flow/index";
+import { TemplateVariableType } from "../../types/api";
+import { tweakType, uniqueTweakType } from "../../types/components";
+import { FlowType, NodeType } from "../../types/flow/index";
 import { buildTweaks } from "../../utils/reactflowUtils";
 import {
   getCurlCode,
   getPythonApiCode,
   getPythonCode,
   getWidgetCode,
+  tabsArray,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { tweakType, uniqueTweakType } from "../../types/components";
-import { APITemplateType, TemplateVariableType } from "../../types/api";
 
 const ApiModal = forwardRef(
   (
@@ -51,39 +51,14 @@ const ApiModal = forwardRef(
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
     const widgetCode = getWidgetCode(flow, tabsState);
     const tweaksCode = buildTweaks(flow);
-    const [tabs, setTabs] = useState([
-      {
-        name: "cURL",
-        mode: "bash",
-        image: "https://curl.se/logo/curl-symbol-transparent.png",
-        language: "sh",
-        code: curl_code,
-      },
-      {
-        name: "Python API",
-        mode: "python",
-        image:
-          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-        language: "py",
-        code: pythonApiCode,
-      },
-      {
-        name: "Python Code",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: pythonCode,
-      },
-      {
-        name: "Chat Widget HTML",
-        description:
-          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-        mode: "html",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: widgetCode,
-      },
-    ]);
+    const codesArray = [
+      curl_code,
+      pythonApiCode,
+      pythonCode,
+      widgetCode,
+      pythonCode,
+    ];
+    const [tabs, setTabs] = useState(tabsArray(codesArray, 0));
 
     function startState() {
       tweak.current = [];
@@ -104,102 +79,31 @@ const ApiModal = forwardRef(
 
       if (Object.keys(tweaksCode).length > 0) {
         setActiveTab("0");
-        setTabs([
-          {
-            name: "cURL",
-            mode: "bash",
-            image: "https://curl.se/logo/curl-symbol-transparent.png",
-            language: "sh",
-            code: curl_code,
-          },
-          {
-            name: "Python API",
-            mode: "python",
-            image:
-              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-            language: "py",
-            code: pythonApiCode,
-          },
-          {
-            name: "Python Code",
-            mode: "python",
-            language: "py",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            code: pythonCode,
-          },
-          {
-            name: "Chat Widget HTML",
-            description:
-              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-            mode: "html",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: widgetCode,
-          },
-          {
-            name: "Tweaks",
-            mode: "python",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: pythonCode,
-          },
-        ]);
+        setTabs(tabsArray(codesArray, 1));
       } else {
-        setTabs([
-          {
-            name: "cURL",
-            mode: "bash",
-            image: "https://curl.se/logo/curl-symbol-transparent.png",
-            language: "sh",
-            code: curl_code,
-          },
-          {
-            name: "Python API",
-            mode: "python",
-            image:
-              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-            language: "py",
-            code: pythonApiCode,
-          },
-          {
-            name: "Python Code",
-            mode: "python",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: pythonCode,
-          },
-          {
-            name: "Chat Widget HTML",
-            description:
-              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-            mode: "html",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: widgetCode,
-          },
-        ]);
+        setTabs(tabsArray(codesArray, 1));
       }
     }, [flow["data"]!["nodes"], open]);
 
     function filterNodes() {
       let arrNodesWithValues: string[] = [];
 
-      flow["data"]!["nodes"].forEach((t) => {
-        Object.keys(t["data"]["node"]["template"])
+      flow["data"]!["nodes"].forEach((node) => {
+        Object.keys(node["data"]["node"]["template"])
           .filter(
-            (n) =>
-              n.charAt(0) !== "_" &&
-              t.data.node.template[n].show &&
-              (t.data.node.template[n].type === "str" ||
-                t.data.node.template[n].type === "bool" ||
-                t.data.node.template[n].type === "float" ||
-                t.data.node.template[n].type === "code" ||
-                t.data.node.template[n].type === "prompt" ||
-                t.data.node.template[n].type === "file" ||
-                t.data.node.template[n].type === "int")
+            (templateField) =>
+              templateField.charAt(0) !== "_" &&
+              node.data.node.template[templateField].show &&
+              (node.data.node.template[templateField].type === "str" ||
+                node.data.node.template[templateField].type === "bool" ||
+                node.data.node.template[templateField].type === "float" ||
+                node.data.node.template[templateField].type === "code" ||
+                node.data.node.template[templateField].type === "prompt" ||
+                node.data.node.template[templateField].type === "file" ||
+                node.data.node.template[templateField].type === "int")
           )
           .map((n, i) => {
-            arrNodesWithValues.push(t["id"]);
+            arrNodesWithValues.push(node["id"]);
           });
       });
 
@@ -207,7 +111,11 @@ const ApiModal = forwardRef(
         return self.indexOf(value) === index;
       });
     }
-    function buildTweakObject(tw: string, changes: string | string[] | boolean | number, template: TemplateVariableType) {
+    function buildTweakObject(
+      tw: string,
+      changes: string | string[] | boolean | number,
+      template: TemplateVariableType
+    ) {
       if (typeof changes === "string" && template.type === "float") {
         changes = parseFloat(changes);
       }
@@ -266,7 +174,11 @@ const ApiModal = forwardRef(
       return htmlContent;
     }
 
-    function getValue(value: string, node: NodeType, template: TemplateVariableType) {
+    function getValue(
+      value: string,
+      node: NodeType,
+      template: TemplateVariableType
+    ) {
       let returnValue = value ?? "";
 
       if (getTweak.length > 0) {

@@ -65,4 +65,4 @@ INPUT_KEY_INFO = """The variable to be used as Chat Input when more than one var
 OUTPUT_KEY_INFO = """The variable to be used as Chat Output (e.g. answer in a ConversationalRetrievalChain)"""
 
 
-CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object"]
+CLASSES_TO_REMOVE = ["Serializable", "BaseModel", "object", "Runnable", "Generic"]

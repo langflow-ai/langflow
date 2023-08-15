@@ -1,11 +1,15 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { IVarHighlightType, groupDataType, groupedObjType, tweakType } from "../types/components";
+import { APIDataType } from "../types/api";
+import {
+  IVarHighlightType,
+  groupedObjType,
+  tweakType,
+} from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
-import { APIClassType, APIDataType, APIObjectType } from "../types/api";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -89,10 +93,23 @@ export function checkUpperWords(str: string): string {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data: APIDataType, baseClasses: string, left: boolean, flow?: NodeType[]): groupedObjType[] {
+export function groupByFamily(
+  data: APIDataType,
+  baseClasses: string,
+  left: boolean,
+  flow?: NodeType[]
+): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
-  let arrOfPossibleInputs: Array<{ category: string; nodes: string[]; full: boolean; }>  = [];
-  let arrOfPossibleOutputs: Array<{ category: string; nodes: string[]; full: boolean; }> = [];
+  let arrOfPossibleInputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
+  let arrOfPossibleOutputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
     "str",
@@ -104,11 +121,14 @@ export function groupByFamily(data: APIDataType, baseClasses: string, left: bool
     "int",
   ]);
 
-  const checkBaseClass = (t) =>
-    t.type &&
-    t.show &&
-    ((!excludeTypes.has(t.type) && baseClassesSet.has(t.type)) ||
-      (t.input_types && t.input_types.some((x) => baseClassesSet.has(x))));
+  const checkBaseClass = (template) =>
+    template.type &&
+    template.show &&
+    ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
+      (template.input_types &&
+        template.input_types.some((inputType) =>
+          baseClassesSet.has(inputType)
+        )));
 
   if (flow) {
     for (const node of flow) {
@@ -120,7 +140,9 @@ export function groupByFamily(data: APIDataType, baseClasses: string, left: bool
           Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node!.base_classes.some((t) => baseClassesSet.has(t)),
+          nodeData.node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
+          ),
       });
     }
   }
@@ -136,8 +158,8 @@ export function groupByFamily(data: APIDataType, baseClasses: string, left: bool
           hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node!.base_classes.some((t) =>
-            baseClassesSet.has(t)
+          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
           ),
         };
         checkedNodes.set(n, foundNode);
@@ -163,13 +185,13 @@ export function groupByFamily(data: APIDataType, baseClasses: string, left: bool
   }
 
   return left
-    ? arrOfPossibleOutputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    ? arrOfPossibleOutputs.map((output) => ({
+        family: output.category,
+        type: output.full ? "" : output.nodes.join(", "),
       }))
-    : arrOfPossibleInputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    : arrOfPossibleInputs.map((input) => ({
+        family: input.category,
+        type: input.full ? "" : input.nodes.join(", "),
       }));
 }
 
@@ -246,6 +268,27 @@ export function buildTweakObject(tweak: tweakType) {
   });
   const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
+}
+
+/**
+ * Function to get Chat Input Field
+ * @param {FlowType} flow - The current flow.
+ * @param {TabsState} tabsState - The current tabs state.
+ * @returns {string} - The chat input field
+ */
+export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+  let chat_input_field = "text";
+
+  if (
+    tabsState[flow.id] &&
+    tabsState[flow.id].formKeysData &&
+    tabsState[flow.id].formKeysData.input_keys
+  ) {
+    chat_input_field = Object.keys(
+      tabsState[flow.id].formKeysData.input_keys
+    )[0];
+  }
+  return chat_input_field;
 }
 
 /**
@@ -365,6 +408,7 @@ export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowId = flow.id;
   const flowName = flow.name;
   const inputs = buildInputs(tabsState!, flow.id);
+  let chat_input_field = getChatInputField(flow, tabsState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -377,11 +421,88 @@ chat_input_field: Input key that you want the chat to send the user message with
   ${
     tabsState![flow.id] && tabsState![flow.id].formKeysData
       ? `chat_inputs='${inputs}'
-  chat_input_field="${
-    Object.keys(tabsState![flow.id].formKeysData.input_keys!)[0]
-  }"
+  chat_input_field="${chat_input_field}"
   `
       : ""
-  }host_url="http://localhost:7860" 
+  }host_url="http://localhost:7860"
 ></langflow-chat>`;
+}
+
+export function tabsArray(codes: string[], method: number) {
+  if (!method) return;
+  if (method === 0) {
+    return [
+      {
+        name: "cURL",
+        mode: "bash",
+        image: "https://curl.se/logo/curl-symbol-transparent.png",
+        language: "sh",
+        code: codes[0],
+      },
+      {
+        name: "Python API",
+        mode: "python",
+        image:
+          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+        language: "py",
+        code: codes[1],
+      },
+      {
+        name: "Python Code",
+        mode: "python",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[2],
+      },
+      {
+        name: "Chat Widget HTML",
+        description:
+          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[3],
+      },
+    ];
+  }
+  return [
+    {
+      name: "cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      language: "sh",
+      code: codes[0],
+    },
+    {
+      name: "Python API",
+      mode: "python",
+      image:
+        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+      language: "py",
+      code: codes[1],
+    },
+    {
+      name: "Python Code",
+      mode: "python",
+      language: "py",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      code: codes[2],
+    },
+    {
+      name: "Chat Widget HTML",
+      description:
+        "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+      mode: "html",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[3],
+    },
+    {
+      name: "Tweaks",
+      mode: "python",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[4],
+    },
+  ];
 }
