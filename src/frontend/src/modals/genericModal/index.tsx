@@ -1,4 +1,4 @@
-import { Ref, RefObject, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -198,9 +198,9 @@ export default function GenericModal({
                   setIsEdit(false);
                 }}
                 autoFocus
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  checkVariables(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                  checkVariables(event.target.value);
                 }}
                 placeholder="Type message here."
               />
@@ -208,12 +208,12 @@ export default function GenericModal({
               <TextAreaContentView />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
-              //@ts-ignore
+                //@ts-ignore
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
                 }}
                 placeholder="Type message here."
               />

@@ -2,7 +2,7 @@ import threading
 import time
 from collections import OrderedDict
 
-from langflow.cache.base import BaseCache
+from langflow.services.cache.base import BaseCache
 
 
 class InMemoryCache(BaseCache):

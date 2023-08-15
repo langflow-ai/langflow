@@ -8,12 +8,12 @@ import { useSSE } from "../../contexts/SSEContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import { validationStatusType } from "../../types/components";
 
 export default function GenericNode({
   data: olddata,
@@ -27,7 +27,8 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
-  const [validationStatus, setValidationStatus] = useState<validationStatusType | null>(null);
+  const [validationStatus, setValidationStatus] =
+    useState<validationStatusType | null>(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
@@ -115,7 +116,6 @@ export default function GenericNode({
                     </span>
                   ) : (
                     <div className="max-h-96 overflow-auto">
-                      
                       {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
@@ -163,52 +163,59 @@ export default function GenericNode({
 
           <>
             {Object.keys(data.node!.template)
-              .filter((t) => t.charAt(0) !== "_")
-              .map((t: string, idx) => (
+              .filter((templateField) => templateField.charAt(0) !== "_")
+              .map((templateField: string, idx) => (
                 <div key={idx}>
-                  {data.node!.template[t].show &&
-                  !data.node!.template[t].advanced ? (
+                  {data.node!.template[templateField].show &&
+                  !data.node!.template[templateField].advanced ? (
                     <ParameterComponent
                       key={
-                        (data.node!.template[t].input_types?.join(";") ??
-                          data.node!.template[t].type) +
+                        (data.node!.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node!.template[templateField].type) +
                         "|" +
-                        t +
+                        templateField +
                         "|" +
                         data.id
                       }
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node?.template[t].type!]] ??
-                        nodeColors[data.node?.template[t].type!] ??
+                        nodeColors[
+                          types[data.node?.template[templateField].type!]
+                        ] ??
+                        nodeColors[data.node?.template[templateField].type!] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node?.template[t].display_name
-                          ? data.node.template[t].display_name
-                          : data.node?.template[t].name
-                          ? toTitleCase(data.node.template[t].name)
-                          : toTitleCase(t)
+                        data.node?.template[templateField].display_name
+                          ? data.node.template[templateField].display_name
+                          : data.node?.template[templateField].name
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
-                      info={data.node?.template[t].info}
-                      name={t}
+                      info={data.node?.template[templateField].info}
+                      name={templateField}
                       tooltipTitle={
-                        data.node?.template[t].input_types?.join("\n") ??
-                        data.node?.template[t].type
+                        data.node?.template[templateField].input_types?.join(
+                          "\n"
+                        ) ?? data.node?.template[templateField].type
                       }
-                      required={data.node?.template[t].required}
+                      required={data.node?.template[templateField].required}
                       id={
-                        (data.node?.template[t].input_types?.join(";") ??
-                          data.node?.template[t].type) +
+                        (data.node?.template[templateField].input_types?.join(
+                          ";"
+                        ) ?? data.node?.template[templateField].type) +
                         "|" +
-                        t +
+                        templateField +
                         "|" +
                         data.id
                       }
                       left={true}
-                      type={data.node?.template[t].type}
-                      optionalHandle={data.node?.template[t].input_types}
+                      type={data.node?.template[templateField].type}
+                      optionalHandle={
+                        data.node?.template[templateField].input_types
+                      }
                     />
                   ) : (
                     <></>

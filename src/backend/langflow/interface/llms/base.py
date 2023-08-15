@@ -2,7 +2,8 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.llms import LLMFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class
@@ -33,10 +34,12 @@ class LLMCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        settings_manager = get_settings_manager()
         return [
             llm.__name__
             for llm in self.type_to_loader_dict.values()
-            if llm.__name__ in settings.llms or settings.dev
+            if llm.__name__ in settings_manager.settings.LLMS
+            or settings_manager.settings.DEV
         ]
 
 

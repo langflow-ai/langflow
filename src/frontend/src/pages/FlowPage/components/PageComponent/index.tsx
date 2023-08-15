@@ -1,5 +1,12 @@
 import _ from "lodash";
-import { MouseEvent, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  MouseEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import ReactFlow, {
   Background,
   Connection,
@@ -27,11 +34,11 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
+import { TabsState } from "../../../../types/tabs";
 import { isValidConnection } from "../../../../utils/reactflowUtils";
 import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { TabsState } from "../../../../types/tabs";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -143,10 +150,10 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
   }, [setExtraComponent, setExtraNavigation]);
 
   const onEdgesChangeMod = useCallback(
-    (s: EdgeChange[]) => {
-      onEdgesChange(s);
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
+    (change: EdgeChange[]) => {
+      onEdgesChange(change);
+      setNodes((node) => {
+        let newX = _.cloneDeep(node);
         return newX;
       });
       //@ts-ignore
@@ -164,8 +171,8 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
   );
 
   const onNodesChangeMod = useCallback(
-    (s: NodeChange[]) => {
-      onNodesChange(s);
+    (change: NodeChange[]) => {
+      onNodesChange(change);
       //@ts-ignore
       setTabsState((prev: TabsState) => {
         return {
@@ -197,8 +204,8 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
           eds
         )
       );
-      setNodes((x) => {
-        let newX = _.cloneDeep(x);
+      setNodes((node) => {
+        let newX = _.cloneDeep(node);
         return newX;
       });
     },
@@ -223,7 +230,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+    if (event.dataTransfer.types.some((types) => types === "nodedata")) {
       event.dataTransfer.dropEffect = "move";
     } else {
       event.dataTransfer.dropEffect = "copy";
@@ -233,7 +240,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      if (event.dataTransfer.types.some((t) => t === "nodedata")) {
+      if (event.dataTransfer.types.some((types) => types === "nodedata")) {
         takeSnapshot();
 
         // Get the current bounds of the ReactFlow wrapper element
@@ -283,7 +290,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
           // Add the new node to the list of nodes in state
         }
         setNodes((nds) => nds.concat(newNode));
-      } else if (event.dataTransfer.types.some((t) => t === "Files")) {
+      } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         uploadFlow(false, event.dataTransfer.files.item(0)!);
       }
@@ -305,7 +312,10 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
       takeSnapshot();
       setEdges(
         edges.filter(
-          (ns) => !mynodes.some((n) => ns.source === n.id || ns.target === n.id)
+          (edge) =>
+            !mynodes.some(
+              (node) => edge.source === node.id || edge.target === node.id
+            )
         )
       );
     },
@@ -328,7 +338,7 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
     if (!edgeUpdateSuccessful.current) {
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      setEdges((eds) => eds.filter((edg) => edg.id !== edge.id));
     }
     edgeUpdateSuccessful.current = true;
   }, []);
@@ -352,9 +362,12 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
     }
   }, [selectionEnded, lastSelection]);
 
-  const onSelectionChange = useCallback((flow: OnSelectionChangeParams): void => {
-    setLastSelection(flow);
-  }, []);
+  const onSelectionChange = useCallback(
+    (flow: OnSelectionChangeParams): void => {
+      setLastSelection(flow);
+    },
+    []
+  );
 
   return (
     <div className="flex h-full overflow-hidden">

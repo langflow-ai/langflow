@@ -14,17 +14,17 @@ export default function NodeToolbarComponent({
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
-      (t) =>
-        t.charAt(0) !== "_" &&
-        data.node?.template[t].show &&
-        (data.node.template[t].type === "str" ||
-          data.node.template[t].type === "bool" ||
-          data.node.template[t].type === "float" ||
-          data.node.template[t].type === "code" ||
-          data.node.template[t].type === "prompt" ||
-          data.node.template[t].type === "file" ||
-          data.node.template[t].type === "Any" ||
-          data.node.template[t].type === "int")
+      (templateField) =>
+        templateField.charAt(0) !== "_" &&
+        data.node?.template[templateField].show &&
+        (data.node.template[templateField].type === "str" ||
+          data.node.template[templateField].type === "bool" ||
+          data.node.template[templateField].type === "float" ||
+          data.node.template[templateField].type === "code" ||
+          data.node.template[templateField].type === "prompt" ||
+          data.node.template[templateField].type === "file" ||
+          data.node.template[templateField].type === "Any" ||
+          data.node.template[templateField].type === "int")
     ).length
   );
 

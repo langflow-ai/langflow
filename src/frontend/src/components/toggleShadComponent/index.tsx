@@ -35,8 +35,8 @@ export default function ToggleShadComponent({
         disabled={disabled}
         className=""
         checked={enabled}
-        onCheckedChange={(x: boolean) => {
-          setEnabled(x);
+        onCheckedChange={(isEnabled: boolean) => {
+          setEnabled(isEnabled);
         }}
       ></Switch>
     </div>

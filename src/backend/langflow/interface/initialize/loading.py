@@ -6,7 +6,11 @@ from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 
 from langflow.interface.initialize.vector_store import vecstore_initializer
 
@@ -29,6 +33,7 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
+from langflow.utils.logger import logger
 
 
 def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
@@ -40,7 +45,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
             return custom_node(**params)
-
+    logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
     return instantiate_based_on_type(class_object, base_type, node_type, params)
 
@@ -60,7 +65,12 @@ def convert_kwargs(params):
     kwargs_keys = [key for key in params.keys() if "kwargs" in key or "config" in key]
     for key in kwargs_keys:
         if isinstance(params[key], str):
-            params[key] = json.loads(params[key])
+            try:
+                params[key] = json.loads(params[key])
+            except json.JSONDecodeError:
+                # if the string is not a valid json string, we will
+                # remove the key from the params
+                params.pop(key, None)
     return params
 
 
@@ -78,7 +88,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
-        return instantiate_embedding(class_object, params)
+        return instantiate_embedding(node_type, class_object, params)
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
@@ -106,9 +116,12 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
 
 
 def instantiate_custom_component(node_type, class_object, params):
-    class_object = get_function_custom(params.pop("code"))
+    # we need to make a copy of the params because we will be
+    # modifying it
+    params_copy = params.copy()
+    class_object = get_function_custom(params_copy.pop("code"))
     custom_component = class_object()
-    built_object = custom_component.build(**params)
+    built_object = custom_component.build(**params_copy)
     return built_object, {"repr": custom_component.custom_repr()}
 
 
@@ -134,7 +147,7 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # This is a workaround so JinaChat works until streaming is implemented
     # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
     # False if condition is True
-    if node_type == "VertexAI":
+    if "VertexAI" in node_type:
         return initialize_vertexai(class_object=class_object, params=params)
     # max_tokens sometimes is a string and should be an int
     if "max_tokens" in params:
@@ -212,6 +225,9 @@ def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params:
 def instantiate_prompt(node_type, class_object, params: Dict):
     params, prompt = handle_node_type(node_type, class_object, params)
     format_kwargs = handle_format_kwargs(prompt, params)
+    # Now we'll use partial_format to format the prompt
+    if format_kwargs:
+        prompt = handle_partial_variables(prompt, format_kwargs)
     return prompt, format_kwargs
 
 
@@ -245,9 +261,13 @@ def instantiate_toolkit(node_type, class_object: Type[BaseToolkit], params: Dict
     return loaded_toolkit
 
 
-def instantiate_embedding(class_object, params: Dict):
+def instantiate_embedding(node_type, class_object, params: Dict):
     params.pop("model", None)
     params.pop("headers", None)
+
+    if "VertexAI" in node_type:
+        return initialize_vertexai(class_object=class_object, params=params)
+
     try:
         return class_object(**params)
     except ValidationError:

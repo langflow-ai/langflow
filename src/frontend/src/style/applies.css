@@ -301,13 +301,13 @@
   }
 
   .error-build-message {
-    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background  p-4 shadow-xl;
+    @apply mt-6 w-96 cursor-pointer rounded-md bg-error-background p-4 shadow-xl;
   }
   .error-build-message-circle {
     @apply alert-icon text-status-red;
   }
   .error-build-text {
-    @apply text-error-foreground;
+    @apply text-error-foreground word-break-break-word;
   }
   .error-build-foreground {
     @apply error-build-text alert-font-size;
@@ -326,7 +326,7 @@
     @apply alert-icon text-status-green;
   }
   .success-alert-message {
-    @apply alert-font-size text-success-foreground;
+    @apply word-break-break-word alert-font-size text-success-foreground;
   }
 
   .card-component-title-display {
@@ -336,7 +336,7 @@
     @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
   }
   .card-component-title-size {
-    @apply inline-block w-full flex-1 break-words truncate-doubleline;
+    @apply w-full flex-1 word-break-break-word truncate-doubleline;
   }
   .card-component-delete-button {
     @apply flex self-start;
@@ -495,6 +495,12 @@
   .header-github-link-box {
     @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
   }
+  .header-waitlist-link-box {
+    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-2 shadow-sm text-sm  font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap;
+  }
+  .header-waitlist-link-box:hover {
+    @apply hover:bg-accent hover:text-accent-foreground;
+  }
   .header-github-link {
     @apply header-github-link-box text-sm  font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
@@ -544,7 +550,7 @@
     @apply focus:outline-none focus:ring-1 focus:ring-primary focus:ring-offset-1;
   }
   .toggle-component-span {
-    @apply pointer-events-none relative inline-block h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out;
+    @apply pointer-events-none relative h-5 w-5 transform rounded-full  shadow ring-0 transition duration-200 ease-in-out;
   }
   .toggle-component-second-span {
     @apply absolute inset-0 flex h-full w-full items-center justify-center transition-opacity;
@@ -590,13 +596,13 @@
     @apply flex-max-width items-center text-start;
   }
   .chat-message-modal-text {
-    @apply relative inline-block w-full text-start text-sm  font-normal text-muted-foreground;
+    @apply relative w-full text-start text-sm  font-normal text-muted-foreground;
   }
   .chat-message-modal-icon-div {
     @apply absolute -left-2 -top-1 cursor-pointer;
   }
   .chat-message-modal-thought {
-    @apply chat-message-modal-thought-cursor ml-3 inline-block h-full w-[95%] rounded-md border border-ring bg-muted px-2 pb-3 pt-3 text-start text-muted-foreground;
+    @apply chat-message-modal-thought-cursor ml-3 h-full w-[95%] rounded-md border border-ring bg-muted px-2 pb-3 pt-3 text-start text-muted-foreground;
   }
   .chat-message-modal-thought-cursor {
     @apply cursor-pointer overflow-scroll scrollbar-hide;
@@ -608,7 +614,7 @@
     @apply mt-1 animate-pulse cursor-default;
   }
   .chat-message-modal-alert {
-    @apply inline-block px-3 text-start text-muted-foreground;
+    @apply px-3 text-start text-muted-foreground;
   }
 
   .file-card-modal-image-div {
@@ -852,11 +858,11 @@
     @apply bg-white text-primary;
   }
   .code-highlight {
-    @apply block max-h-[64vh] w-full overflow-y-hidden break-all border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[64vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
   }
 
   .code-nohighlight {
-    @apply block max-h-[70vh] w-full overflow-y-hidden break-all border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[70vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
   }
   .form-modal-lockchat {
     @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
@@ -913,7 +919,7 @@
     @apply rounded-md border border-ring/60;
   }
   .form-modal-chat-thought-size {
-    @apply inline-block h-full w-[95%];
+    @apply h-full w-[95%];
   }
   .form-modal-chat-thought {
     @apply form-modal-chat-thought-border form-modal-chat-thought-size cursor-pointer overflow-scroll bg-background px-2 py-2 text-start text-primary scrollbar-hide;

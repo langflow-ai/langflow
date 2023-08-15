@@ -34,9 +34,9 @@ export default function CodeAreaComponent({
         value={myValue}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass!}
-        setValue={(t: string) => {
-          setMyValue(t);
-          onChange(t);
+        setValue={(value: string) => {
+          setMyValue(value);
+          onChange(value);
         }}
       >
         <div className="flex w-full items-center">
