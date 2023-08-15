@@ -17,6 +17,7 @@ def setup_callbacks(sync, **kwargs):
         callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
 
     if langfuse_callback := get_langfuse_callback():
+        logger.debug("Langfuse callback loaded")
         callbacks.append(langfuse_callback)
     return callbacks
 
@@ -24,13 +25,18 @@ def setup_callbacks(sync, **kwargs):
 def get_langfuse_callback():
     from langflow.settings import settings
 
+    logger.debug("Initializing langfuse callback")
     if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+        logger.debug("Langfuse credentials found")
         try:
             from langfuse.callback import CallbackHandler
 
             return CallbackHandler(
-                settings.LANGFUSE_PUBLIC_KEY, settings.LANGFUSE_SECRET_KEY
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY,
+                host=settings.LANGFUSE_HOST,
             )
+
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
     return None
