@@ -41,9 +41,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
+
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
+    AUTO_LOGIN: bool = False
+    FIRST_SUPERUSER: str = "superuser"
+    FIRST_SUPERUSER_PASSWORD: str = "12345"
 
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):
