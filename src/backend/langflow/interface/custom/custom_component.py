@@ -13,6 +13,10 @@ import yaml
 
 
 class CustomComponent(Component, extra=Extra.allow):
+    """
+    A custom component class that extends the base Component class.
+    This class is used to define custom components that can be used in a Langflow flow.
+    """
     code: Optional[str]
     field_config: dict = {}
     code_class_base_inheritance = "CustomComponent"
@@ -25,6 +29,9 @@ class CustomComponent(Component, extra=Extra.allow):
         super().__init__(**data)
 
     def custom_repr(self):
+        """
+        A method that returns a string representation of the component's repr_value attribute.
+        """
         if isinstance(self.repr_value, dict):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
@@ -32,9 +39,15 @@ class CustomComponent(Component, extra=Extra.allow):
         return str(self.repr_value)
 
     def build_config(self):
+        """
+        A method that returns the component's field_config attribute.
+        """
         return self.field_config
 
     def _class_template_validation(self, code: str):
+        """
+        A method that validates the component's code template.
+        """
         TYPE_HINT_LIST = ["Optional", "Prompt", "PromptTemplate", "LLMChain"]
 
         if not code:
@@ -59,13 +72,22 @@ class CustomComponent(Component, extra=Extra.allow):
                 raise HTTPException(status_code=400, detail=error_detail)
 
     def is_check_valid(self) -> bool:
+        """
+        A method that checks if the component's code template is valid.
+        """
         return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
+        """
+        A method that returns the code tree of the component's code template.
+        """
         return super().get_code_tree(code)
 
     @property
     def get_function_entrypoint_args(self) -> str:
+        """
+        A property that returns the arguments of the component's build method.
+        """
         if not self.code:
             return ""
         tree = self.get_code_tree(self.code)
@@ -95,6 +117,9 @@ class CustomComponent(Component, extra=Extra.allow):
 
     @property
     def get_function_entrypoint_return_type(self) -> List[str]:
+        """
+        A property that returns the return type of the component's build method.
+        """
         if not self.code:
             return []
         tree = self.get_code_tree(self.code)
@@ -134,6 +159,9 @@ class CustomComponent(Component, extra=Extra.allow):
 
     @property
     def get_main_class_name(self):
+        """
+        A property that returns the name of the main class in the component's code template.
+        """
         tree = self.get_code_tree(self.code)
 
         base_name = self.code_class_base_inheritance
@@ -151,6 +179,9 @@ class CustomComponent(Component, extra=Extra.allow):
 
     @property
     def build_template_config(self):
+        """
+        A property that returns the attributes of the main class in the component's code template.
+        """
         tree = self.get_code_tree(self.code)
 
         attributes = [
@@ -160,14 +191,19 @@ class CustomComponent(Component, extra=Extra.allow):
         ]
         # Get just the first item
         attributes = next(iter(attributes), [])
-
         return super().build_template_config(attributes)
 
     @property
     def get_function(self):
+        """
+        A property that returns the component's build method.
+        """
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
+        """
+        A method that loads a flow from the database and returns it.
+        """
         from langflow.processing.process import build_sorted_vertices_with_caching
         from langflow.processing.process import process_tweaks
 
@@ -180,9 +216,12 @@ class CustomComponent(Component, extra=Extra.allow):
         return build_sorted_vertices_with_caching(graph_data)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
+        """
+        A method that returns a list of all flows in the database.
+        """
         get_session = get_session or session_getter
         with get_session() as session:
-            flows = session.query(Flow).all()
+            flows = session.query(Flow).all()            
         return flows
 
     def get_flow(
@@ -193,6 +232,9 @@ class CustomComponent(Component, extra=Extra.allow):
         tweaks: Optional[dict] = None,
         get_session: Optional[Callable] = None,
     ) -> Flow:
+        """
+        A method that returns a flow from the database.
+        """
         get_session = get_session or session_getter
 
         with get_session() as session:
@@ -208,4 +250,7 @@ class CustomComponent(Component, extra=Extra.allow):
         return self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        A method that builds the component.
+        """
         raise NotImplementedError

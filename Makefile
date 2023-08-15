@@ -37,6 +37,12 @@ install_frontend:
 run_frontend:
 	cd src/frontend && npm start
 
+setup_devcontainer:
+	curl -sSL https://install.python-poetry.org | python3 -
+	make init
+	make build_frontend
+	poetry run langflow --path src/frontend/build
+
 frontend:
 	make install_frontend
 	make run_frontend
