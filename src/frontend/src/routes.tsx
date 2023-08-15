@@ -1,5 +1,8 @@
 import { Route, Routes } from "react-router-dom";
+import { ProtectedAdminRoute } from "./components/authAdminGuard";
+import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
+import { CatchAllRoute } from "./components/catchAllRoutes";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import CommunityPage from "./pages/CommunityPage";
@@ -8,9 +11,6 @@ import HomePage from "./pages/MainPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
-import { CatchAllRoute } from "./components/catchAllRoutes";
-import { ProtectedRoute } from "./components/authGuard";
-import { ProtectedAdminRoute } from "./components/authAdminGuard";
 
 const Router = () => {
   return (

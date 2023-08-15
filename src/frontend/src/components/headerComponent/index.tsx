@@ -34,7 +34,7 @@ export default function Header() {
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
-      <Link to="/">
+        <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         <Button

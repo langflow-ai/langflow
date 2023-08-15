@@ -47,14 +47,11 @@ function ApiInterceptor() {
                 navigate("/login");
               }
             }
-          } 
-          
-          if(!refreshToken && error?.config?.url?.includes(
-            "login"
-          ) ){
-            return Promise.reject(error);
           }
-          else{
+
+          if (!refreshToken && error?.config?.url?.includes("login")) {
+            return Promise.reject(error);
+          } else {
             logout();
             navigate("/login");
           }
@@ -63,7 +60,6 @@ function ApiInterceptor() {
           return Promise.reject(error);
           // }
         }
-
       }
     );
 
