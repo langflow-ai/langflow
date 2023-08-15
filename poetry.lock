@@ -739,13 +739,13 @@ sqlalchemy = ["sqlalchemy (>1.3.21,<2.0)"]
 
 [[package]]
 name = "cohere"
-version = "4.20.0"
+version = "4.20.1"
 description = ""
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "cohere-4.20.0-py3-none-any.whl", hash = "sha256:bebe4b1d21da0719aaa7db2cc180b5f3d0a802c19ad2d893d627971286e50497"},
-    {file = "cohere-4.20.0.tar.gz", hash = "sha256:a16e86981945c201bab67ad6d47e57f42a37bf2a774f6ac6b8b12233aae6409a"},
+    {file = "cohere-4.20.1-py3-none-any.whl", hash = "sha256:4466c7abdbb168fe2893e5b5123882fe91691d0e3fe43ee254b411917f780dfc"},
+    {file = "cohere-4.20.1.tar.gz", hash = "sha256:533e4a45b38dc338f8a27f24e098b652b4f5ed9f9fbb4719780d1a9fcd1af39e"},
 ]
 
 [package.dependencies]
@@ -1577,13 +1577,13 @@ grpcio-gcp = ["grpcio-gcp (>=0.2.2,<1.0.dev0)"]
 
 [[package]]
 name = "google-api-python-client"
-version = "2.96.0"
+version = "2.97.0"
 description = "Google API Client Library for Python"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-api-python-client-2.96.0.tar.gz", hash = "sha256:f712373d03d338af57b9f5fe98c91f4b5baaa8765469b015bc623c4681c5bd51"},
-    {file = "google_api_python_client-2.96.0-py2.py3-none-any.whl", hash = "sha256:38c2b61b10d15bb41ec8f89303e3837ec2d2c3e4e38de5800c05ee322492f937"},
+    {file = "google-api-python-client-2.97.0.tar.gz", hash = "sha256:48277291894876a1ca7ed4127e055e81f81e6343ced1b544a7200ae2c119dcd7"},
+    {file = "google_api_python_client-2.97.0-py2.py3-none-any.whl", hash = "sha256:5215f4cd577753fc4192ccfbe0bb8b55d4bb5fd68fa6268ac5cf271b6305de31"},
 ]
 
 [package.dependencies]
