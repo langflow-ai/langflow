@@ -409,7 +409,6 @@ export default function Page({
                   zoomOnScroll={!view}
                   zoomOnPinch={!view}
                   panOnDrag={!view}
-                  panOnScroll={!view}
                 >
                   <Background className="" />
                   {!view && (
