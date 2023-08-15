@@ -35,7 +35,13 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({ flow }: { flow: FlowType }) {
+export default function Page({
+  flow,
+  view,
+}: {
+  flow: FlowType;
+  view?: boolean;
+}) {
   let {
     updateFlow,
     uploadFlow,
@@ -357,7 +363,7 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <ExtraSidebar />
+      {view && <ExtraSidebar />}
       {/* Main area */}
       <main className="flex flex-1">
         {/* Primary column */}
@@ -366,47 +372,65 @@ export default function Page({ flow }: { flow: FlowType }) {
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
               <div className="h-full w-full">
-                <ReactFlow
-                  nodes={nodes}
-                  onMove={() => {
-                    if (reactFlowInstance)
-                      updateFlow({
-                        ...flow,
-                        data: reactFlowInstance.toObject(),
-                      });
-                  }}
-                  edges={edges}
-                  onNodesChange={onNodesChangeMod}
-                  onEdgesChange={onEdgesChangeMod}
-                  onConnect={onConnect}
-                  disableKeyboardA11y={true}
-                  onLoad={setReactFlowInstance}
-                  onInit={setReactFlowInstance}
-                  nodeTypes={nodeTypes}
-                  onEdgeUpdate={onEdgeUpdate}
-                  onEdgeUpdateStart={onEdgeUpdateStart}
-                  onEdgeUpdateEnd={onEdgeUpdateEnd}
-                  onNodeDragStart={onNodeDragStart}
-                  onSelectionDragStart={onSelectionDragStart}
-                  onSelectionEnd={onSelectionEnd}
-                  onSelectionStart={onSelectionStart}
-                  onEdgesDelete={onEdgesDelete}
-                  connectionLineComponent={ConnectionLineComponent}
-                  onDragOver={onDragOver}
-                  onDrop={onDrop}
-                  onNodesDelete={onDelete}
-                  onSelectionChange={onSelectionChange}
-                  className="theme-attribution"
-                  minZoom={0.01}
-                  maxZoom={8}
-                >
-                  <Background className="" />
-                  <Controls
-                    className="bg-muted fill-foreground stroke-foreground text-primary
+                {view ? (
+                  <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    className="theme-attribution"
+                    minZoom={0.01}
+                    maxZoom={8}
+                  >
+                    <Background className="" />
+                    <Controls
+                      className="bg-muted fill-foreground stroke-foreground text-primary
+                 [&>button]:border-b-border hover:[&>button]:bg-border"
+                    ></Controls>
+                  </ReactFlow>
+                ) : (
+                  <ReactFlow
+                    nodes={nodes}
+                    onMove={() => {
+                      if (reactFlowInstance)
+                        updateFlow({
+                          ...flow,
+                          data: reactFlowInstance.toObject(),
+                        });
+                    }}
+                    edges={edges}
+                    onNodesChange={onNodesChangeMod}
+                    onEdgesChange={onEdgesChangeMod}
+                    onConnect={onConnect}
+                    disableKeyboardA11y={true}
+                    onLoad={setReactFlowInstance}
+                    onInit={setReactFlowInstance}
+                    nodeTypes={nodeTypes}
+                    onEdgeUpdate={onEdgeUpdate}
+                    onEdgeUpdateStart={onEdgeUpdateStart}
+                    onEdgeUpdateEnd={onEdgeUpdateEnd}
+                    onNodeDragStart={onNodeDragStart}
+                    onSelectionDragStart={onSelectionDragStart}
+                    onSelectionEnd={onSelectionEnd}
+                    onSelectionStart={onSelectionStart}
+                    onEdgesDelete={onEdgesDelete}
+                    connectionLineComponent={ConnectionLineComponent}
+                    onDragOver={onDragOver}
+                    onDrop={onDrop}
+                    onNodesDelete={onDelete}
+                    onSelectionChange={onSelectionChange}
+                    className="theme-attribution"
+                    minZoom={0.01}
+                    maxZoom={8}
+                  >
+                    <Background className="" />
+                    <Controls
+                      className="bg-muted fill-foreground stroke-foreground text-primary
                    [&>button]:border-b-border hover:[&>button]:bg-border"
-                  ></Controls>
-                </ReactFlow>
-                <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                    ></Controls>
+                  </ReactFlow>
+                )}
+                {view && (
+                  <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                )}
               </div>
             ) : (
               <></>
