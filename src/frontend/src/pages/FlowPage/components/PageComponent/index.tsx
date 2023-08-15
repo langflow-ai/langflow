@@ -405,7 +405,6 @@ export default function Page({
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
-                  zoomOnDoubleClick={!view}
                   zoomOnScroll={!view}
                   zoomOnPinch={!view}
                   panOnDrag={!view}
