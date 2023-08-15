@@ -7,9 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from datetime import datetime, timedelta, timezone
 
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_manager, get_session
 
-from langflow.services.utils import get_session
 from langflow.database.models.user import (
     User,
     get_user_by_id,
@@ -123,6 +122,23 @@ def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
         "refresh_token": None,
         "token_type": "bearer",
     }
+
+
+def create_user_api_key(user_id: UUID) -> dict:
+    access_token = create_token(
+        data={"sub": str(user_id), "role": "api_key"},
+        expires_delta=timedelta(days=365 * 2),
+    )
+
+    return {"api_key": access_token}
+
+
+def get_user_id_from_token(token: str) -> UUID:
+    try:
+        user_id = jwt.get_unverified_claims(token)["sub"]
+        return UUID(user_id)
+    except (KeyError, JWTError, ValueError):
+        return UUID(int=0)
 
 
 def create_user_tokens(
