@@ -1,10 +1,10 @@
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
+import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { UserManagementType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
-import InputComponent from "../../components/inputComponent";
 
 export default function UserManagementModal({
   title,
