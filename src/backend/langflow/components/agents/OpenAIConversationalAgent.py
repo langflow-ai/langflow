@@ -15,7 +15,7 @@ from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions i
 
 
 class ConversationalAgent(CustomComponent):
-    display_name: str = "OpenaAI Conversational Agent"
+    display_name: str = "OpenAI Conversational Agent"
     description: str = "Conversational Agent that can use OpenAI's function calling API"
 
     def build_config(self):
@@ -41,12 +41,18 @@ class ConversationalAgent(CustomComponent):
     def build(
         self,
         model_name: str,
+        openai_api_key: str,
+        openai_api_base: str,
         tools: Tool,
         memory: Optional[BaseMemory] = None,
         system_message: Optional[SystemMessagePromptTemplate] = None,
         max_token_limit: int = 2000,
     ) -> AgentExecutor:
-        llm = ChatOpenAI(model=model_name)
+        llm = ChatOpenAI(
+            model=model_name,
+            openai_api_key=openai_api_key,
+            openai_api_base=openai_api_base,
+        )
         if not memory:
             memory_key = "chat_history"
             memory = ConversationTokenBufferMemory(
