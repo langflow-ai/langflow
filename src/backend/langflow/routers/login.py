@@ -20,7 +20,7 @@ async def login_to_get_access_token(
     # _: Session = Depends(get_current_active_user)
 ):
     if user := authenticate_user(form_data.username, form_data.password, db):
-        return create_user_tokens(user_id=user.id, db=db)
+        return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

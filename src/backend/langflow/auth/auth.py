@@ -76,7 +76,9 @@ def create_token(data: dict, expires_delta: timedelta):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def create_user_tokens(user_id: UUID, db: Session = Depends(get_session)) -> dict:
+def create_user_tokens(
+    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
+) -> dict:
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_token(
         data={"sub": str(user_id)},
@@ -90,7 +92,8 @@ def create_user_tokens(user_id: UUID, db: Session = Depends(get_session)) -> dic
     )
 
     # Update: last_login_at
-    update_user_last_login_at(user_id, db)
+    if update_last_login:
+        update_user_last_login_at(user_id, db)
 
     return {
         "access_token": access_token,
@@ -99,7 +102,7 @@ def create_user_tokens(user_id: UUID, db: Session = Depends(get_session)) -> dic
     }
 
 
-def create_refresh_token(refresh_token: str):
+def create_refresh_token(refresh_token: str, db: Session = Depends(get_session)):
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: UUID = payload.get("sub")  # type: ignore
@@ -110,7 +113,7 @@ def create_refresh_token(refresh_token: str):
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
-        return create_user_tokens(user_id)
+        return create_user_tokens(user_id, db)
 
     except JWTError as e:
         raise HTTPException(

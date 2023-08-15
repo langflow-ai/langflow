@@ -49,7 +49,13 @@ const ApiModal = forwardRef(
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
     const widgetCode = getWidgetCode(flow, tabsState);
     const tweaksCode = buildTweaks(flow);
-    const codesArray = [curl_code, pythonApiCode, pythonCode, widgetCode, pythonCode];
+    const codesArray = [
+      curl_code,
+      pythonApiCode,
+      pythonCode,
+      widgetCode,
+      pythonCode,
+    ];
     const [tabs, setTabs] = useState(tabsArray(codesArray, 0));
 
     function startState() {
