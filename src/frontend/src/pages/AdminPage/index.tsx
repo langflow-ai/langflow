@@ -25,6 +25,7 @@ import {
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
+import { UserInputType } from "../../types/components";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -164,7 +165,7 @@ export default function AdminPage() {
       });
   }
 
-  function handleNewUser(user) {
+  function handleNewUser(user: UserInputType) {
     addUser(user)
       .then((res) => {
         resetFilter();
