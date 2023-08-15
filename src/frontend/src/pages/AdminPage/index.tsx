@@ -251,7 +251,7 @@ export default function AdminPage() {
                   )}
                   <div
                     className={
-                      "max-h-[26rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
+                      "max-h-[26rem] min-h-[26rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
                       (loadingUsers ? " border-0" : "")
                     }
                   >
@@ -362,7 +362,7 @@ export default function AdminPage() {
                                     titleHeader={`${user.id}`}
                                     cancelText="Cancel"
                                     confirmationText="Edit"
-                                    icon={"UserCog2"}
+                                    icon={"UserPlus2"}
                                     data={user}
                                     index={index}
                                     onConfirm={(index, editUser) => {

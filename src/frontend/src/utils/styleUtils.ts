@@ -214,6 +214,7 @@ export const nodeIconsLucide = {
   SupabaseVectorStore: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
+  VertexAIEmbeddings: VertexAIIcon,
   agents: Rocket,
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,

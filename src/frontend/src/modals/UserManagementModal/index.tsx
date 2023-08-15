@@ -12,7 +12,6 @@ import {
 } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
-import InputComponent from "../../components/inputComponent";
 
 export default function UserManagementModal({
   title,
