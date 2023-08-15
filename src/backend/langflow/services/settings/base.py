@@ -62,72 +62,41 @@ class Settings(BaseSettings):
 
         return str(value)
 
-    from typing import Any
-    import os
-    from pathlib import Path
-    from shutil import copy2
-    from loguru import logger
-    from pydantic import validator
+    @validator("DATABASE_URL", pre=True)
+    def set_database_url(cls, value, values):
+        if not value:
+            logger.debug(
+                "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
+            )
+            if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
+                value = langflow_database_url
+                logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
+            else:
+                logger.debug("No DATABASE_URL env variable, using sqlite database")
+                # Originally, we used sqlite:///./langflow.db
+                # so we need to migrate to the new format
+                # if there is a database in that location
+                if not values["CONFIG_DIR"]:
+                    raise ValueError(
+                        "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
+                    )
 
-    class BaseSettings:
-        """
-        Base settings class for Langflow service.
-        """
+                new_path = f"{values['CONFIG_DIR']}/langflow.db"
+                if Path("./langflow.db").exists():
+                    if Path(new_path).exists():
+                        logger.debug(f"Database already exists at {new_path}, using it")
+                    else:
+                        try:
+                            logger.debug("Copying existing database to new location")
+                            copy2("./langflow.db", new_path)
+                            logger.debug(f"Copied existing database to {new_path}")
+                        except Exception:
+                            logger.error("Failed to copy database, using default path")
+                            new_path = "./langflow.db"
 
-        DEBUG: bool = False
-        TESTING: bool = False
-        CONFIG_DIR: str = ""
-        DATABASE_URL: str = ""
+                value = f"sqlite:///{new_path}"
 
-        @validator("DATABASE_URL", pre=True)
-        def set_database_url(cls, value, values):
-            """
-            Validator to set the DATABASE_URL value.
-
-            If no value is provided, it will try to get the LANGFLOW_DATABASE_URL environment variable.
-            If that is not set, it will use a sqlite database.
-            If a CONFIG_DIR is provided, it will use that directory to store the sqlite database.
-            If a sqlite database already exists in the current directory, it will be copied to the new location.
-            """
-            if not value:
-                logger.debug(
-                    "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
-                )
-                if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
-                    value = langflow_database_url
-                    logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
-                else:
-                    logger.debug("No DATABASE_URL env variable, using sqlite database")
-                    # Originally, we used sqlite:///./langflow.db
-                    # so we need to migrate to the new format
-                    # if there is a database in that location
-                    if not values["CONFIG_DIR"]:
-                        raise ValueError(
-                            "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
-                        )
-
-                    new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                    if Path("./langflow.db").exists():
-                        if Path(new_path).exists():
-                            logger.debug(
-                                f"Database already exists at {new_path}, using it"
-                            )
-                        else:
-                            try:
-                                logger.debug(
-                                    "Copying existing database to new location"
-                                )
-                                copy2("./langflow.db", new_path)
-                                logger.debug(f"Copied existing database to {new_path}")
-                            except Exception:
-                                logger.error(
-                                    "Failed to copy database, using default path"
-                                )
-                                new_path = "./langflow.db"
-
-                    value = f"sqlite:///{new_path}"
-
-            return value
+        return value
 
     @validator("COMPONENTS_PATH", pre=True)
     def set_components_path(cls, value):
