@@ -611,4 +611,4 @@ export function tabsArray(codes: string[], method: number) {
 
 export const BASE_URL_API = "http://localhost:7860/";
 
-export let LOCALHOST_JWT = true;
+export let LOCALHOST_JWT = false;

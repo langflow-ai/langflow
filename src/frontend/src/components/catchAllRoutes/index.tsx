@@ -6,7 +6,7 @@ export const CatchAllRoute = () => {
 
   // Redirect to the root ("/") when the catch-all route is matched
   useEffect(() => {
-    navigate('/');
+    navigate("/");
   }, []);
 
   return null;

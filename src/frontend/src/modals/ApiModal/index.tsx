@@ -22,6 +22,7 @@ import {
   getPythonApiCode,
   getPythonCode,
   getWidgetCode,
+  tabsArray,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -48,39 +49,14 @@ const ApiModal = forwardRef(
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
     const widgetCode = getWidgetCode(flow, tabsState);
     const tweaksCode = buildTweaks(flow);
-    const [tabs, setTabs] = useState([
-      {
-        name: "cURL",
-        mode: "bash",
-        image: "https://curl.se/logo/curl-symbol-transparent.png",
-        language: "sh",
-        code: curl_code,
-      },
-      {
-        name: "Python API",
-        mode: "python",
-        image:
-          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-        language: "py",
-        code: pythonApiCode,
-      },
-      {
-        name: "Python Code",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: pythonCode,
-      },
-      {
-        name: "Chat Widget HTML",
-        description:
-          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
-        mode: "html",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: widgetCode,
-      },
-    ]);
+    const codesArray = [
+      curl_code,
+      pythonApiCode,
+      pythonCode,
+      widgetCode,
+      pythonCode,
+    ];
+    const [tabs, setTabs] = useState(tabsArray(codesArray, 0));
 
     function startState() {
       tweak.current = [];
@@ -101,80 +77,9 @@ const ApiModal = forwardRef(
 
       if (Object.keys(tweaksCode).length > 0) {
         setActiveTab("0");
-        setTabs([
-          {
-            name: "cURL",
-            mode: "bash",
-            image: "https://curl.se/logo/curl-symbol-transparent.png",
-            language: "sh",
-            code: curl_code,
-          },
-          {
-            name: "Python API",
-            mode: "python",
-            image:
-              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-            language: "py",
-            code: pythonApiCode,
-          },
-          {
-            name: "Python Code",
-            mode: "python",
-            language: "py",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            code: pythonCode,
-          },
-          {
-            name: "Chat Widget HTML",
-            description:
-              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
-            mode: "html",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: widgetCode,
-          },
-          {
-            name: "Tweaks",
-            mode: "python",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: pythonCode,
-          },
-        ]);
+        setTabs(tabsArray(codesArray, 1));
       } else {
-        setTabs([
-          {
-            name: "cURL",
-            mode: "bash",
-            image: "https://curl.se/logo/curl-symbol-transparent.png",
-            language: "sh",
-            code: curl_code,
-          },
-          {
-            name: "Python API",
-            mode: "python",
-            image:
-              "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-            language: "py",
-            code: pythonApiCode,
-          },
-          {
-            name: "Python Code",
-            mode: "python",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: pythonCode,
-          },
-          {
-            name: "Chat Widget HTML",
-            description:
-              "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://docs.langflow.org/guidelines/widget'>documentation</a>.",
-            mode: "html",
-            image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-            language: "py",
-            code: widgetCode,
-          },
-        ]);
+        setTabs(tabsArray(codesArray, 1));
       }
     }, [flow["data"]["nodes"], open]);
 
