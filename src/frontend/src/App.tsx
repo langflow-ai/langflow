@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -14,8 +14,10 @@ import { alertContext } from "./contexts/alertContext";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
-import { getLoggedUser } from "./controllers/API";
+import { getLoggedUser, onLogin } from "./controllers/API";
 import Router from "./routes";
+import { LOCALHOST_JWT } from "./constants/constants";
+import { LoginType } from "./types/api";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -37,7 +39,9 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    setErrorData
   } = useContext(alertContext);
+  const navigate = useNavigate();
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -51,6 +55,7 @@ export default function App() {
   const isLoginPage = location.pathname.includes("login");
   const isAdminPage = location.pathname.includes("admin");
   const isSignUpPage = location.pathname.includes("signup");
+  const isLocalHost = window.location.href.includes("localhost");
 
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -128,7 +133,7 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication } = useContext(AuthContext);
+  const { setUserData, getAuthentication, login } = useContext(AuthContext);
   useEffect(() => {
     setTimeout(() => {
       if (getAuthentication && !isLoginPage) {
@@ -140,6 +145,40 @@ export default function App() {
       }
     }, 1000);
   }, []);
+
+  useEffect(() => {
+
+    if(LOCALHOST_JWT === true && isLocalHost === true){
+      const user: LoginType = {
+        username: "superuser",
+        password: "12345",
+      };
+      onLogin(user)
+        .then((user) => {
+          login(user.access_token, user.refresh_token);
+          getUser();
+          navigate("/");
+        })
+        .catch((error) => {
+          setErrorData({
+            title: "Error signing in",
+            list: [error["response"]["data"]["detail"]],
+          });
+        });
+    }
+  }, [])
+
+  function getUser() {
+    if (getAuthentication) {
+      setTimeout(() => {
+        getLoggedUser()
+          .then((user) => {
+            setUserData(user);
+          })
+          .catch((error) => {});
+      }, 1000);
+    }
+  }
 
   return (
     //need parent component with width and height

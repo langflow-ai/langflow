@@ -19,7 +19,8 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [index, setPageIndex] = useState(pageIndex);
-  const [maxIndex, setMaxPageIndex] = useState(100);
+  const [maxIndex, setMaxPageIndex] = useState(Math.ceil(totalRowsCount/pageSize));
+  const [currentPage, setCurrentPage] = useState(1);
 
   return (
     <>
@@ -31,7 +32,7 @@ export default function PaginatorComponent({
             <Select
               onValueChange={(pageSize: string) => {
                 setPageSize(Number(pageSize));
-                setMaxPageIndex(100);
+                setMaxPageIndex(Math.ceil(totalRowsCount/Number(pageSize)))
                 paginate(Number(pageSize), 0);
               }}
             >
@@ -48,7 +49,7 @@ export default function PaginatorComponent({
             </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {index + 1} of {maxIndex}
+            Page {currentPage} of {maxIndex}
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -57,18 +58,25 @@ export default function PaginatorComponent({
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
                 setPageIndex(0);
+                setCurrentPage(1);
                 paginate(size, 0);
               }}
             >
               <span className="sr-only">Go to first page</span>
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
             </Button>
+
+
+
+
             <Button
               disabled={index <= 0}
               onClick={() => {
                 if (index > 0) {
-                  setPageIndex(index - 1);
-                  paginate(size, index - 1);
+                  const pgIndex = size - index;
+                  setCurrentPage(currentPage-1);
+                  setPageIndex(pgIndex);
+                  paginate(size, pgIndex);
                 }
               }}
               variant="outline"
@@ -77,11 +85,17 @@ export default function PaginatorComponent({
               <span className="sr-only">Go to previous page</span>
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
+
+
+
+
             <Button
-              disabled={maxIndex === index}
+              disabled={currentPage === maxIndex}
               onClick={() => {
-                setPageIndex(index + 1);
-                paginate(size, index + 1);
+                const pgIndex = size + index;
+                setPageIndex(pgIndex);
+                setCurrentPage(currentPage+1);
+                paginate(size, pgIndex);
               }}
               variant="outline"
               className="h-8 w-8 p-0"
@@ -89,13 +103,18 @@ export default function PaginatorComponent({
               <span className="sr-only">Go to next page</span>
               <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
+
+
+
+
             <Button
-              disabled={maxIndex === index}
+              disabled={currentPage === maxIndex}
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
-                setPageIndex(maxIndex);
-                paginate(size, maxIndex);
+                setPageIndex(maxIndex-1);
+                setCurrentPage(maxIndex);
+                paginate(size, size);
               }}
             >
               <span className="sr-only">Go to last page</span>

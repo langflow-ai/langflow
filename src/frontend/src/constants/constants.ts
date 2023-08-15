@@ -524,7 +524,7 @@ export const CONTROL_LOGIN_STATE = {
 export const CONTROL_NEW_USER = {
   username: "",
   password: "",
-  is_disabled: false,
+  is_active: false,
   is_superuser: false,
 };
 
@@ -610,3 +610,5 @@ export function tabsArray(codes: string[], method: number) {
 }
 
 export const BASE_URL_API = "http://localhost:7860/";
+
+export let LOCALHOST_JWT = true;

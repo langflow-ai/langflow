@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { USER_PROJECTS_HEADER } from "../../constants/constants";
+import { LOCALHOST_JWT, USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -22,6 +22,7 @@ export default function Header() {
   const navigate = useNavigate();
 
   const [stars, setStars] = useState(null);
+  const isLocalHost = window.location.href.includes("localhost");
 
   // Get and set numbers of stars on header
   useEffect(() => {
@@ -34,19 +35,21 @@ export default function Header() {
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
-      <Link to="/">
+        <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <Button
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-          variant="outline"
-          className=""
-        >
-          Sign out
-        </Button>
+        {!isLocalHost || !LOCALHOST_JWT && (
+          <Button
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+            variant="outline"
+            className=""
+          >
+            Sign out
+          </Button>
+        )}
 
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />

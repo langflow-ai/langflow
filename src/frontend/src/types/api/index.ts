@@ -81,7 +81,7 @@ export type LoginAuthType = {
 export type Users = {
   id: string;
   username: string;
-  is_disabled: boolean;
+  is_active: boolean;
   is_superuser: boolean;
   create_at: Date;
   updated_at: Date;

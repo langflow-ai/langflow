@@ -32,12 +32,10 @@ export default function UserManagementModal({
   const [password, setPassword] = useState(data?.password ?? "");
   const [username, setUserName] = useState(data?.username ?? "");
   const [confirmPassword, setConfirmPassword] = useState(data?.password ?? "");
-  const [isDisabled, setIsDisabled] = useState(data?.is_disabled ?? false);
+  const [isDisabled, setIsDisabled] = useState(data?.is_active ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
   const { userData } = useContext(AuthContext);
-
-  console.log(userData);
 
   function handleInput({
     target: { name, value },
@@ -50,7 +48,7 @@ export default function UserManagementModal({
       resetForm();
     } else {
       handleInput({ target: { name: "username", value: username } });
-      handleInput({ target: { name: "is_disabled", value: isDisabled } });
+      handleInput({ target: { name: "is_active", value: isDisabled } });
       handleInput({ target: { name: "is_superuser", value: isSuperUser } });
     }
   }, [open]);
@@ -230,7 +228,7 @@ export default function UserManagementModal({
               </div>
             </div>
             <div className="flex gap-8">
-              <Form.Field name="is_disabled">
+              <Form.Field name="is_active">
                 <div>
                   <Form.Label className="data-[invalid]:label-invalid mr-3">
                     Disabled
@@ -239,10 +237,10 @@ export default function UserManagementModal({
                     <Checkbox
                       value={isDisabled}
                       checked={isDisabled}
-                      id="is_disabled"
+                      id="is_active"
                       className="relative top-0.5"
                       onCheckedChange={(value) => {
-                        handleInput({ target: { name: "is_disabled", value } });
+                        handleInput({ target: { name: "is_active", value } });
                         setIsDisabled(value);
                       }}
                     />

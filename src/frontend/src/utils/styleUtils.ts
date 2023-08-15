@@ -62,6 +62,7 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserCog2,
   UserMinus2,
   UserPlus2,
   Users2,
@@ -292,4 +293,5 @@ export const nodeIconsLucide = {
   FaApple,
   EyeOff,
   Eye,
+  UserCog2
 };
