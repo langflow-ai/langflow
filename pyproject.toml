@@ -79,6 +79,7 @@ psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
 metaphor-python = "^0.1.11"
+langfuse = "^1.0.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

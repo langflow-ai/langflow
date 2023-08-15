@@ -2925,6 +2925,24 @@ toml = "*"
 test = ["psutil", "pytest", "pytest-asyncio"]
 
 [[package]]
+name = "langfuse"
+version = "1.0.2"
+description = "A client library for accessing langfuse"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langfuse-1.0.2-py3-none-any.whl", hash = "sha256:6cf73d50bde7a7deae581c9817ca54df28b9d15fee0d1fcbbf60cf419a54b112"},
+    {file = "langfuse-1.0.2.tar.gz", hash = "sha256:11e85b54b39fee68534be673278098e94e82746bf2768bf293e0d6f76f7bfe07"},
+]
+
+[package.dependencies]
+attrs = ">=21.3.0"
+httpx = ">=0.15.4,<0.25.0"
+langchain = ">=0.0.237,<1.0"
+pydantic = ">=1.10.7,<2.0"
+python-dateutil = ">=2.8.0,<3.0"
+
+[[package]]
 name = "langsmith"
 version = "0.0.22"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
@@ -7591,4 +7609,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "53bb67a463c4ad0d3dd30c89e30750fc31be5530ee54539d4df34fd82ecf7bc1"
+content-hash = "0f094546812865f69f686c14cc1e08b77ebf9102d0de0b78da9026a3af267655"
