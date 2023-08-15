@@ -9,7 +9,6 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
@@ -133,7 +132,6 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <Header />
         <Router />
       </ErrorBoundary>
       <div></div>
