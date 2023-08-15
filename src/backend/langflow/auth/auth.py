@@ -7,6 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from datetime import datetime, timedelta, timezone
 
+from langflow.services.utils import get_settings_manager
+
 from langflow.services.utils import get_session
 from langflow.database.models.user import (
     User,
@@ -16,12 +18,6 @@ from langflow.database.models.user import (
 )
 
 
-# TODO: Move to env - JUST FOR TEST!!!!!
-SECRET_KEY = "698619adad2d916f1f32d264540976964b3c0d3828e0870a65add5800a8cc6b9"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-REFRESH_TOKEN_EXPIRE_MINUTES = 70
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -29,6 +25,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_session)
 ) -> User:
+    settings_manager = get_settings_manager()
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -36,7 +34,11 @@ async def get_current_user(
     )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            settings_manager.settings.SECRET_KEY,
+            algorithms=[settings_manager.settings.ALGORITHM],
+        )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
 
@@ -68,29 +70,63 @@ def get_password_hash(password):
 
 
 def create_token(data: dict, expires_delta: timedelta):
-    to_encode = data.copy()
+    settings_manager = get_settings_manager()
 
+    to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode["exp"] = expire
 
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        to_encode,
+        settings_manager.settings.SECRET_KEY,
+        algorithm=settings_manager.settings.ALGORITHM,
+    )
 
 
-def create_user_tokens(user_id: UUID, db: Session = Depends(get_session)) -> dict:
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+def create_user_longterm_token(
+    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
+) -> dict:
+    access_token_expires_longterm = timedelta(days=365)
+    access_token = create_token(
+        data={"sub": str(user_id)},
+        expires_delta=access_token_expires_longterm,
+    )
+
+    # Update: last_login_at
+    if update_last_login:
+        update_user_last_login_at(user_id, db)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": None,
+        "token_type": "bearer",
+    }
+
+
+def create_user_tokens(
+    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
+) -> dict:
+    settings_manager = get_settings_manager()
+
+    access_token_expires = timedelta(
+        minutes=settings_manager.settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     access_token = create_token(
         data={"sub": str(user_id)},
         expires_delta=access_token_expires,
     )
 
-    refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(
+        minutes=settings_manager.settings.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
         expires_delta=refresh_token_expires,
     )
 
     # Update: last_login_at
-    update_user_last_login_at(user_id, db)
+    if update_last_login:
+        update_user_last_login_at(user_id, db)
 
     return {
         "access_token": access_token,
@@ -99,9 +135,15 @@ def create_user_tokens(user_id: UUID, db: Session = Depends(get_session)) -> dic
     }
 
 
-def create_refresh_token(refresh_token: str):
+def create_refresh_token(refresh_token: str, db: Session = Depends(get_session)):
+    settings_manager = get_settings_manager()
+
     try:
-        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            refresh_token,
+            settings_manager.settings.SECRET_KEY,
+            algorithms=[settings_manager.settings.ALGORITHM],
+        )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
 
@@ -110,7 +152,7 @@ def create_refresh_token(refresh_token: str):
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
             )
 
-        return create_user_tokens(user_id)
+        return create_user_tokens(user_id, db)
 
     except JWTError as e:
         raise HTTPException(
