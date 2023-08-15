@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
 
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):
         if not value:
