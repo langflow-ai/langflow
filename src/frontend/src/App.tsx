@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
@@ -120,7 +120,6 @@ export default function App() {
       prevAlertsList.filter((alert) => alert.id !== id)
     );
   };
-
 
   return (
     //need parent component with width and height
