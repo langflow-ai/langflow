@@ -1,6 +1,5 @@
-import { Dispatch, SetStateAction } from "react";
-import { FlowType, TweaksType } from "../flow";
 import { tweakType } from "../components";
+import { FlowType } from "../flow";
 
 export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;

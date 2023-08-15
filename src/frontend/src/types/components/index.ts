@@ -213,9 +213,7 @@ export type groupedObjType = {
 
 type test = {
   [char: string]: string;
-}
-
-
+};
 
 export type tweakType = Array<{
   [key: string]: {
@@ -227,13 +225,13 @@ export type uniqueTweakType = {
   [key: string]: {
     [char: string]: string;
   } & FlowStyleType;
-}
+};
 
 export type apiModalTweakType = {
   current: Array<{
     [key: string]: {
       [char: string]: string | number;
-    }
+    };
   }>;
 };
 
