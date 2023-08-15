@@ -405,12 +405,19 @@ export default function Page({
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
+                  zoomOnDoubleClick={!view}
+                  zoomOnScroll={!view}
+                  zoomOnPinch={!view}
+                  panOnDrag={!view}
+                  panOnScroll={!view}
                 >
                   <Background className="" />
-                  <Controls
-                    className="bg-muted fill-foreground stroke-foreground text-primary
+                  {!view && (
+                    <Controls
+                      className="bg-muted fill-foreground stroke-foreground text-primary
                    [&>button]:border-b-border hover:[&>button]:bg-border"
-                  ></Controls>
+                    ></Controls>
+                  )}
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
