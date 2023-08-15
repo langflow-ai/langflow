@@ -1,7 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";

@@ -6,7 +6,6 @@ import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
-import SignUp from "./pages/signUpPage";
 
 const Router = () => {
   return (
