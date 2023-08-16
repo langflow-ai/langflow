@@ -1025,4 +1025,12 @@
   .chat-message-highlight {
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
   }
+
+  .field-invalid{
+    @apply font-medium text-[0.8rem] text-destructive absolute
+  }
+
+  .label-invalid{
+    @apply text-destructive
+  }
 }

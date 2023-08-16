@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronsUpDown,
   Circle,
   Clipboard,
@@ -44,6 +46,7 @@ import {
   MoonIcon,
   MoreHorizontal,
   Paperclip,
+  Pencil,
   Plus,
   Redo,
   Rocket,
@@ -57,6 +60,8 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserMinus2,
+  UserPlus2,
   Users2,
   Variable,
   Wand2,
@@ -65,6 +70,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -277,4 +283,11 @@ export const nodeIconsLucide: iconsType = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  UserMinus2,
+  UserPlus2,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft,
+  FaGithub,
+  FaApple,
 };

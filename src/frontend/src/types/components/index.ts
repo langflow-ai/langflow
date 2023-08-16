@@ -10,9 +10,13 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   password: boolean;
+  required?: boolean;
+  isForm?: boolean;
   editNode?: boolean;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
+  placeholder?: string;
+  className?: string;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -167,7 +171,7 @@ export interface IVarHighlightType {
 
 export type IconComponentProps = {
   name: string;
-  className: string;
+  className?: string;
   iconColor?: string;
 };
 
@@ -205,6 +209,57 @@ export type HeaderProps = { children: ReactNode; description: string };
 export interface languageMap {
   [key: string]: string | undefined;
 }
+
+export type signUpInputStateType = {
+  password: string;
+  cnfPassword: string;
+  username: string;
+};
+
+export type inputHandlerEventType = {
+  target: {
+    value: string;
+    name: string;
+  };
+};
+export type PaginatorComponentType = {
+  pageSize: number;
+  pageIndex: number;
+  rowsCount?: number[];
+  totalRowsCount: number;
+  paginate: (pageIndex: number, pageSize: number) => void;
+};
+
+export type ConfirmationModalType = {
+  title: string;
+  titleHeader: string;
+  modalContent: string;
+  modalContentTitle: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data: any;
+  index: number;
+  onConfirm: (index, data) => void;
+};
+
+export type UserManagementType = {
+  title: string;
+  titleHeader: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data?: any;
+  index?: number;
+  onConfirm: (index, data) => void;
+};
+
+export type loginInputStateType = {
+  username: string;
+  password: string;
+};
 
 export type groupedObjType = {
   family: string;
