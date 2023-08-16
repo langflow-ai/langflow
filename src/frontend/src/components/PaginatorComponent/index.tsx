@@ -19,7 +19,9 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [index, setPageIndex] = useState(pageIndex);
-  const [maxIndex, setMaxPageIndex] = useState(Math.ceil(totalRowsCount/pageSize));
+  const [maxIndex, setMaxPageIndex] = useState(
+    Math.ceil(totalRowsCount / pageSize)
+  );
   const [currentPage, setCurrentPage] = useState(1);
 
   return (
@@ -32,7 +34,7 @@ export default function PaginatorComponent({
             <Select
               onValueChange={(pageSize: string) => {
                 setPageSize(Number(pageSize));
-                setMaxPageIndex(Math.ceil(totalRowsCount/Number(pageSize)))
+                setMaxPageIndex(Math.ceil(totalRowsCount / Number(pageSize)));
                 paginate(Number(pageSize), 0);
               }}
             >
@@ -70,7 +72,7 @@ export default function PaginatorComponent({
               onClick={() => {
                 if (index > 0) {
                   const pgIndex = size - index;
-                  setCurrentPage(currentPage-1);
+                  setCurrentPage(currentPage - 1);
                   setPageIndex(pgIndex);
                   paginate(size, pgIndex);
                 }
@@ -86,7 +88,7 @@ export default function PaginatorComponent({
               onClick={() => {
                 const pgIndex = size + index;
                 setPageIndex(pgIndex);
-                setCurrentPage(currentPage+1);
+                setCurrentPage(currentPage + 1);
                 paginate(size, pgIndex);
               }}
               variant="outline"
@@ -100,7 +102,7 @@ export default function PaginatorComponent({
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
               onClick={() => {
-                setPageIndex(maxIndex-1);
+                setPageIndex(maxIndex - 1);
                 setCurrentPage(maxIndex);
                 paginate(size, size);
               }}

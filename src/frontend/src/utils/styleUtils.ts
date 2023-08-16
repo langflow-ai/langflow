@@ -35,6 +35,7 @@ import {
   HelpCircle,
   Home,
   Info,
+  Key,
   Laptop2,
   Layers,
   Lightbulb,
@@ -72,7 +73,6 @@ import {
   X,
   XCircle,
   Zap,
-  Key
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";

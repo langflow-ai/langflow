@@ -7,12 +7,11 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getLoggedUser, getRepoStars } from "../../controllers/API";
+import { getRepoStars } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import { Users } from "../../types/api";
 
 export default function Header() {
   const { flows, tabId } = useContext(TabsContext);
@@ -53,16 +52,12 @@ export default function Header() {
             Sign out
           </Button>
         )}
-        
+
         {isAdmin && (
-          <Button
-            variant="outline"
-            onClick={() => navigate("/admin")}
-          >
+          <Button variant="outline" onClick={() => navigate("/admin")}>
             Admin page
           </Button>
         )}
-
 
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
