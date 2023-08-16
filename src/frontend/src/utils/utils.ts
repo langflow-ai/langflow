@@ -280,12 +280,13 @@ export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
   let chat_input_field = "text";
 
   if (
+    tabsState &&
     tabsState[flow.id] &&
     tabsState[flow.id].formKeysData &&
     tabsState[flow.id].formKeysData.input_keys
   ) {
     chat_input_field = Object.keys(
-      tabsState[flow.id].formKeysData.input_keys
+      tabsState[flow.id].formKeysData.input_keys!
     )[0];
   }
   return chat_input_field;
