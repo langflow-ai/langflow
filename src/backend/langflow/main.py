@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.routers import login, users, health
+from langflow.routers import api_key, login, users, health
 
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.database.utils import initialize_database
@@ -32,6 +32,7 @@ def create_app():
     )
 
     app.include_router(login.router)
+    app.include_router(api_key.router)
     app.include_router(users.router)
     app.include_router(health.router)
 
