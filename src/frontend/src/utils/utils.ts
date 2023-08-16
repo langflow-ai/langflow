@@ -1,7 +1,7 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType } from "../types/api";
+import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   IVarHighlightType,
   groupedObjType,
@@ -121,7 +121,7 @@ export function groupByFamily(
     "int",
   ]);
 
-  const checkBaseClass = (template) =>
+  const checkBaseClass = (template: TemplateVariableType) =>
     template.type &&
     template.show &&
     ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
