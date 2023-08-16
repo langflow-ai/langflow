@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { FloatComponentType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
 
 export default function FloatComponent({
@@ -42,6 +43,9 @@ export default function FloatComponent({
         }
         onChange={(event) => {
           onChange(event.target.value);
+        }}
+        onKeyDown={(e) => {
+          handleKeyDown(e, value, "0");
         }}
       />
     </div>

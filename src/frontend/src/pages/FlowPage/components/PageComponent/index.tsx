@@ -35,7 +35,13 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({ flow }: { flow: FlowType }) {
+export default function Page({
+  flow,
+  view,
+}: {
+  flow: FlowType;
+  view?: boolean;
+}) {
   let {
     updateFlow,
     uploadFlow,
@@ -360,7 +366,7 @@ export default function Page({ flow }: { flow: FlowType }) {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <ExtraSidebar />
+      {!view && <ExtraSidebar />}
       {/* Main area */}
       <main className="flex flex-1">
         {/* Primary column */}
@@ -402,14 +408,21 @@ export default function Page({ flow }: { flow: FlowType }) {
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
+                  zoomOnScroll={!view}
+                  zoomOnPinch={!view}
+                  panOnDrag={!view}
                 >
                   <Background className="" />
-                  <Controls
-                    className="bg-muted fill-foreground stroke-foreground text-primary
+                  {!view && (
+                    <Controls
+                      className="bg-muted fill-foreground stroke-foreground text-primary
                    [&>button]:border-b-border hover:[&>button]:bg-border"
-                  ></Controls>
+                    ></Controls>
+                  )}
                 </ReactFlow>
-                <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                {!view && (
+                  <Chat flow={flow} reactFlowInstance={reactFlowInstance} />
+                )}
               </div>
             ) : (
               <></>

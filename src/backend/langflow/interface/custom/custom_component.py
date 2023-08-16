@@ -51,8 +51,8 @@ class CustomComponent(Component, extra=Extra.allow):
 
         for type_hint in TYPE_HINT_LIST:
             if reader._is_type_hint_used_in_args(
-                "Optional", code
-            ) and not reader._is_type_hint_imported("Optional", code):
+                type_hint, code
+            ) and not reader._is_type_hint_imported(type_hint, code):
                 error_detail = {
                     "error": "Type hint Error",
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
