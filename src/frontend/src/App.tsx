@@ -14,10 +14,8 @@ import { alertContext } from "./contexts/alertContext";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
-import { getLoggedUser, onLogin } from "./controllers/API";
+import { autoLogin, getLoggedUser, onLogin } from "./controllers/API";
 import Router from "./routes";
-import { LOCALHOST_JWT } from "./constants/constants";
-import { LoginType } from "./types/api";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -133,52 +131,32 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login } = useContext(AuthContext);
+  const { setUserData, getAuthentication, login, setAutoLogin } = useContext(AuthContext);
+
   useEffect(() => {
     setTimeout(() => {
-      if (getAuthentication && !isLoginPage) {
-        getLoggedUser()
-          .then((user) => {
-            setUserData(user);
-          })
-          .catch((error) => {});
-      }
-    }, 1000);
+      autoLogin().then((user) => {
+        if(user && user['access_token']){
+          user['refresh_token'] = "auto";
+          login(user['access_token'], user['refresh_token']);
+          setAutoLogin(true);
+        }
+      }).catch((error) => {
+        setAutoLogin(false);
+        if (getAuthentication && !isLoginPage) {
+          getLoggedUser()
+            .then((user) => {
+              setUserData(user);
+            })
+            .catch((error) => {});
+        }
+        else{
+          navigate("/login");
+        }
+      });
+    }, 500);
   }, []);
 
-  useEffect(() => {
-
-    if(LOCALHOST_JWT === true && isLocalHost === true){
-      const user: LoginType = {
-        username: "superuser",
-        password: "12345",
-      };
-      onLogin(user)
-        .then((user) => {
-          login(user.access_token, user.refresh_token);
-          getUser();
-          navigate("/");
-        })
-        .catch((error) => {
-          setErrorData({
-            title: "Error signing in",
-            list: [error["response"]["data"]["detail"]],
-          });
-        });
-    }
-  }, [])
-
-  function getUser() {
-    if (getAuthentication) {
-      setTimeout(() => {
-        getLoggedUser()
-          .then((user) => {
-            setUserData(user);
-          })
-          .catch((error) => {});
-      }, 1000);
-    }
-  }
 
   return (
     //need parent component with width and height

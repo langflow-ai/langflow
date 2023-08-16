@@ -17,6 +17,8 @@ const initialValue: AuthContextType = {
   setUserData: () => {},
   getAuthentication: () => false,
   authenticationErrorCount: 0,
+  autoLogin: false,
+  setAutoLogin: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -27,6 +29,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users>(null);
+  const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const cookies = new Cookies();
 
   useEffect(() => {
@@ -107,6 +110,8 @@ export function AuthProvider({ children }): React.ReactElement {
         userData,
         getAuthentication,
         authenticationErrorCount: 0,
+        setAutoLogin,
+        autoLogin
       }}
     >
       {children}
