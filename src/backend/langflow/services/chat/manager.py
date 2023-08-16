@@ -176,7 +176,7 @@ class ChatManager(Service):
         # so we need to change it to something else
 
         result_dict = {
-            "result": langchain_object.result,
+            "result": langchain_object,
             "type": type(langchain_object),
         }
         self.cache_manager.upsert(client_id, result_dict)
