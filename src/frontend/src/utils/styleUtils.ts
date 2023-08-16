@@ -72,6 +72,7 @@ import {
   X,
   XCircle,
   Zap,
+  Key
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -294,5 +295,6 @@ export const nodeIconsLucide = {
   FaApple,
   EyeOff,
   Eye,
-  UserCog2
+  UserCog2,
+  Key,
 };

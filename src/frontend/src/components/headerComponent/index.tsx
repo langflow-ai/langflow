@@ -146,6 +146,12 @@ export default function Header() {
               />
             </div>
           </AlertDropdown>
+          <button>
+            <IconComponent
+              name="Key"
+              className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+            />
+          </button>
         </div>
       </div>
     </div>
