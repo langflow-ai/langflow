@@ -32,17 +32,20 @@ lint:
 	poetry run ruff . --fix
 
 install_frontend:
-	@if [ "$(clean)" = "true" ]; then \
-		cd src/frontend && npm ci; \
-	else \
-		cd src/frontend && npm install; \
-	fi
+		cd src/frontend && npm install;
+
+install_frontendc:
+		cd src/frontend && npm ci;
 
 run_frontend:
 	cd src/frontend && npm start
 
 frontend:
 	make install_frontend
+	make run_frontend
+	
+frontendc:
+	make install_frontendc
 	make run_frontend
 
 install_backend:
