@@ -9,7 +9,6 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
@@ -47,6 +46,10 @@ export default function App() {
       id: string;
     }>
   >([]);
+
+  const isLoginPage = location.pathname.includes("login");
+  const isAdminPage = location.pathname.includes("admin");
+  const isSignUpPage = location.pathname.includes("signup");
 
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -135,15 +138,8 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {loading ? (
-          <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
-          </div>
-        ) : (
-          <>
-            <Router />
-          </>
-        )}
+        {!isLoginPage && !isSignUpPage && <Header />}
+        <Router />
       </ErrorBoundary>
       <div></div>
       <div className="app-div" style={{ zIndex: 999 }}>

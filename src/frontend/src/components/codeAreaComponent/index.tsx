@@ -33,7 +33,7 @@ export default function CodeAreaComponent({
         dynamic={dynamic}
         value={myValue}
         nodeClass={nodeClass}
-        setNodeClass={setNodeClass}
+        setNodeClass={setNodeClass!}
         setValue={(value: string) => {
           setMyValue(value);
           onChange(value);

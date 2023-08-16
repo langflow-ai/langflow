@@ -1,6 +1,6 @@
+import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
-import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
@@ -8,9 +8,13 @@ export default function InputComponent({
   value,
   onChange,
   disabled,
+  required = false,
+  isForm = false,
   password,
   editNode = false,
-}: InputComponentType) {
+  placeholder = "Type something...",
+  className,
+}: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
 
   // Clear component state
@@ -22,23 +26,47 @@ export default function InputComponent({
 
   return (
     <div className="relative w-full">
-      <Input
-        value={value}
-        disabled={disabled}
-        className={classNames(
-          password && !pwdVisible && value !== "" ? " text-clip password " : "",
-          editNode ? " input-edit-node " : "",
-          password && editNode ? "pr-8" : "",
-          password && !editNode ? "pr-10" : ""
-        )}
-        placeholder={password && editNode ? "Key" : "Type something..."}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        onKeyDown={(e) => {
-          handleKeyDown(e, value, "");
-        }}
-      />
+      {isForm ? (
+        <Form.Control asChild>
+          <Input
+            value={value}
+            disabled={disabled}
+            required={required}
+            className={classNames(
+              password && !pwdVisible && value !== ""
+                ? " text-clip password "
+                : "",
+              editNode ? " input-edit-node " : "",
+              password && editNode ? "pr-8" : "",
+              password && !editNode ? "pr-10" : "",
+              className!
+            )}
+            placeholder={password && editNode ? "Key" : placeholder}
+            onChange={(e) => {
+              onChange(e.target.value);
+            }}
+          />
+        </Form.Control>
+      ) : (
+        <Input
+          value={value}
+          disabled={disabled}
+          required={required}
+          className={classNames(
+            password && !pwdVisible && value !== ""
+              ? " text-clip password "
+              : "",
+            editNode ? " input-edit-node " : "",
+            password && editNode ? "pr-8" : "",
+            password && !editNode ? "pr-10" : "",
+            className!
+          )}
+          placeholder={password && editNode ? "Key" : placeholder}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+        />
+      )}
       {password && (
         <button
           className={classNames(

@@ -1,6 +1,10 @@
 import _ from "lodash";
-import { Connection, Edge, ReactFlowInstance } from "reactflow";
-import { specialCharsRegex } from "../constants/constants";
+import {
+  Connection,
+  Edge,
+  ReactFlowInstance,
+  ReactFlowJsonObject,
+} from "reactflow";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
@@ -25,8 +29,8 @@ export function cleanEdges({
       if (targetHandle) {
         const field = targetHandle.split("|")[1];
         const id =
-          (targetNode.data.node.template[field]?.input_types?.join(";") ??
-            targetNode.data.node.template[field]?.type) +
+          (targetNode.data.node?.template[field]?.input_types?.join(";") ??
+            targetNode.data.node?.template[field]?.type) +
           "|" +
           field +
           "|" +
@@ -39,7 +43,7 @@ export function cleanEdges({
         const id = [
           sourceNode.data.type,
           sourceNode.data.id,
-          ...sourceNode.data.node.base_classes,
+          ...sourceNode.data.node?.base_classes!,
         ].join("|");
         if (id !== sourceHandle) {
           newEdges = newEdges.filter((edg) => edg.id !== edge.id);
@@ -56,21 +60,21 @@ export function isValidConnection(
 ) {
   if (
     targetHandle
-      .split("|")[0]
+      ?.split("|")[0]
       .split(";")
-      .some((target) => target === sourceHandle.split("|")[0]) ||
+      .some((target) => target === sourceHandle?.split("|")[0]) ||
     sourceHandle
-      .split("|")
+      ?.split("|")
       .slice(2)
       .some((target) =>
         targetHandle
-          .split("|")[0]
+          ?.split("|")[0]
           .split(";")
           .some((n) => n === target)
       ) ||
-    targetHandle.split("|")[0] === "str"
+    targetHandle?.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
+    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -80,11 +84,11 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
+      (!targetNode.template[targetHandle?.split("|")[1]!].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
+      targetNode.template[targetHandle?.split("|")[1]!].list
     ) {
       return true;
     }
@@ -94,7 +98,7 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
+  cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
@@ -127,7 +131,10 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(newFlow, getNodeId) {
+export function updateIds(
+  newFlow: ReactFlowJsonObject,
+  getNodeId: (type: string) => string
+) {
   let idsMap = {};
 
   newFlow.nodes.forEach((node: NodeType) => {
@@ -142,14 +149,14 @@ export function updateIds(newFlow, getNodeId) {
   newFlow.edges.forEach((edge) => {
     edge.source = idsMap[edge.source];
     edge.target = idsMap[edge.target];
-    let sourceHandleSplitted = edge.sourceHandle.split("|");
+    let sourceHandleSplitted = edge.sourceHandle!.split("|");
     edge.sourceHandle =
       sourceHandleSplitted[0] +
       "|" +
       edge.source +
       "|" +
       sourceHandleSplitted.slice(2).join("|");
-    let targetHandleSplitted = edge.targetHandle.split("|");
+    let targetHandleSplitted = edge.targetHandle!.split("|");
     edge.targetHandle =
       targetHandleSplitted.slice(0, -1).join("|") + "|" + edge.target;
     edge.id =
@@ -162,8 +169,8 @@ export function updateIds(newFlow, getNodeId) {
   });
 }
 
-export function buildTweaks(flow) {
-  return flow.data.nodes.reduce((acc, node) => {
+export function buildTweaks(flow: FlowType) {
+  return flow.data!.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
     return acc;
   }, {});
@@ -196,7 +203,7 @@ export function validateNode(
             .getEdges()
             .some(
               (edge) =>
-                edge.targetHandle.split("|")[1] === t &&
+                edge.targetHandle?.split("|")[1] === t &&
                 edge.targetHandle.split("|")[2] === node.id
             )
           ? [
