@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronsUpDown,
   Circle,
   Clipboard,
@@ -44,6 +46,7 @@ import {
   MoonIcon,
   MoreHorizontal,
   Paperclip,
+  Pencil,
   Plus,
   Redo,
   Rocket,
@@ -57,6 +60,8 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserMinus2,
+  UserPlus2,
   Users2,
   Variable,
   Wand2,
@@ -65,7 +70,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { Edge, Node } from "reactflow";
+import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -92,6 +97,7 @@ import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
+import { iconsType } from "../types/components";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -173,7 +179,7 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Other",
 };
 
-export const nodeIconsLucide = {
+export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,
@@ -206,6 +212,7 @@ export const nodeIconsLucide = {
   SupabaseVectorStore: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
+  VertexAIEmbeddings: VertexAIIcon,
   agents: Rocket,
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
@@ -276,9 +283,11 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  UserMinus2,
+  UserPlus2,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft,
+  FaGithub,
+  FaApple,
 };
-export function getConnectedNodes(edge: Edge, nodes: Array<Node>): Array<Node> {
-  const sourceId = edge.source;
-  const targetId = edge.target;
-  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
-}
