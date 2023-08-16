@@ -136,26 +136,22 @@ export default function App() {
 
   useEffect(() => {
     setTimeout(() => {
-      autoLogin()
-        .then((user) => {
-          if (user && user["access_token"]) {
-            user["refresh_token"] = "auto";
-            login(user["access_token"], user["refresh_token"]);
-            setAutoLogin(true);
-          }
-        })
-        .catch((error) => {
-          setAutoLogin(false);
-          if (getAuthentication && !isLoginPage) {
-            getLoggedUser()
-              .then((user) => {
-                setUserData(user);
-              })
-              .catch((error) => {});
-          } else {
-            navigate("/login");
-          }
-        });
+      autoLogin().then((user) => {
+        if(user && user['access_token']){
+          user['refresh_token'] = "auto";
+          login(user['access_token'], user['refresh_token']);
+          setAutoLogin(true);
+        }
+      }).catch((error) => {
+        setAutoLogin(false);
+        if (getAuthentication && !isLoginPage) {
+          getLoggedUser()
+            .then((user) => {
+              setUserData(user);
+            })
+            .catch((error) => {});
+        }
+      });
     }, 500);
   }, []);
 

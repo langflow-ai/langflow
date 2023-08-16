@@ -42,11 +42,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
 
+    # API Key to execute /process endpoint
+    API_KEY_SECRET_KEY: Optional[
+        str
+    ] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
+    API_KEY_ALGORITHM: str = "HS256"
+
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = False
-    FIRST_SUPERUSER: str = "superuser"
-    FIRST_SUPERUSER_PASSWORD: str = "12345"
+    AUTO_LOGIN: bool = True
+    FIRST_SUPERUSER: str = "langflow"
+    FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):

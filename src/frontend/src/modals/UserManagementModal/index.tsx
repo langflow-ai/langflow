@@ -273,17 +273,20 @@ export default function UserManagementModal({
           </div>
 
           <div className="float-right">
-            <Form.Submit asChild>
-              <Button className="mr-3 mt-8">{confirmationText}</Button>
-            </Form.Submit>
-            <Button
+          <Button
               variant="outline"
               onClick={() => {
                 setOpen(false);
               }}
+              className="mr-3"
             >
               {cancelText}
             </Button>
+
+            <Form.Submit asChild>
+              <Button className="mt-8">{confirmationText}</Button>
+            </Form.Submit>
+
           </div>
         </Form.Root>
       </BaseModal.Content>

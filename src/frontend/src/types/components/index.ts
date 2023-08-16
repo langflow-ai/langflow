@@ -233,3 +233,18 @@ export type UserInputType = {
   is_active?: boolean;
   is_superuser?: boolean;
 };
+
+export type ApiKeyType = {
+  title: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data?: any;
+  index?: number;
+  onConfirm: (index, data) => void;
+};
+
+export type ApiKeyInputType = {
+  apikeyname: string;
+};

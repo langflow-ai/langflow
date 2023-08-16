@@ -11,6 +11,7 @@ import HomePage from "./pages/MainPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import ApiKeysPage from "./pages/ApiKeysPage";
 
 const Router = () => {
   return (
@@ -90,6 +91,14 @@ const Router = () => {
           element={
             <ProtectedRoute>
               <DeleteAccountPage />
+            </ProtectedRoute>
+          }
+        ></Route>
+        <Route
+          path="api-keys"
+          element={
+            <ProtectedRoute>
+              <ApiKeysPage />
             </ProtectedRoute>
           }
         ></Route>
