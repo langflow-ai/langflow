@@ -9,7 +9,7 @@ const ForwardedIconComponent = forwardRef(
       <TargetIcon
         strokeWidth={1.5}
         className={className}
-        style={{ color: iconColor }}
+        style={iconColor ? { color: iconColor } : {}}
         ref={ref}
       />
     );
