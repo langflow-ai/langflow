@@ -83,18 +83,40 @@ def create_token(data: dict, expires_delta: timedelta):
     )
 
 
-def create_user_longterm_token(
-    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
-) -> dict:
+def create_super_user(db: Session = Depends(get_session)) -> User:
+    settings_manager = get_settings_manager()
+
+    super_user = get_user_by_username(db, settings_manager.settings.FIRST_SUPERUSER)
+
+    if not super_user:
+        super_user = User(
+            username=settings_manager.settings.FIRST_SUPERUSER,
+            password=get_password_hash(
+                settings_manager.settings.FIRST_SUPERUSER_PASSWORD
+            ),
+            is_superuser=True,
+            is_active=True,
+            last_login_at=None,
+        )
+
+        db.add(super_user)
+        db.commit()
+        db.refresh(super_user)
+
+    return super_user
+
+
+def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
+    super_user = create_super_user(db)
+
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(super_user.id)},
         expires_delta=access_token_expires_longterm,
     )
 
     # Update: last_login_at
-    if update_last_login:
-        update_user_last_login_at(user_id, db)
+    update_user_last_login_at(super_user.id, db)
 
     return {
         "access_token": access_token,
