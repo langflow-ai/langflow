@@ -19,6 +19,7 @@ const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
   const [name, setName] = useState(flow.name);
   const [description, setDescription] = useState(flow.description);
   const [open, setOpen] = useState(false);
+  const [invalidName, setInvalidName] = useState(false);
 
   return (
     <BaseModal size="smaller" open={open} setOpen={setOpen}>
