@@ -1,4 +1,5 @@
 import ast
+from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
@@ -25,7 +26,7 @@ class Vertex:
         self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
-        self._built_object = None
+        self._built_object = UnbuiltObject()
         self._built = False
         self.artifacts: Dict[str, Any] = {}
         self.task_id: Optional[str] = None
@@ -271,8 +272,14 @@ class Vertex:
         """
         Checks if the built object is None and raises a ValueError if so.
         """
-        if self._built_object is None:
-            raise ValueError(f"Node type {self.vertex_type} not found")
+        if isinstance(self._built_object, UnbuiltObject):
+            raise ValueError(f"{self.vertex_type}: {self._built_object_repr()}")
+        elif self._built_object is None:
+            message = f"{self.vertex_type} returned None."
+            if self.base_type == "custom_components":
+                message += " Make sure your build method returns a component."
+
+            raise ValueError(message)
 
     def build(self, force: bool = False) -> Any:
         if not self._built or force:

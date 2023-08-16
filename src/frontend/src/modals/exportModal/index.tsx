@@ -1,4 +1,4 @@
-import { ReactNode, forwardRef, useContext, useState } from "react";
+import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -9,17 +9,17 @@ import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef((props: { children: ReactNode }, ref) => {
-  const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
-    useContext(TabsContext);
+  const { flows, tabId, updateFlow, downloadFlow } = useContext(TabsContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(
-    flows.find((flow) => flow.id === tabId).name
-  );
-  const [invalidName, setInvalidName] = useState(false);
-  const [description, setDescription] = useState(
-    flows.find((flow) => flow.id === tabId).description
-  );
+  const flow = flows.find((f) => f.id === tabId);
+  useEffect(() => {
+    setName(flow.name);
+    setDescription(flow.description);
+  }, [flow.name, flow.description]);
+  const [name, setName] = useState(flow.name);
+  const [description, setDescription] = useState(flow.description);
   const [open, setOpen] = useState(false);
+
   return (
     <BaseModal size="smaller" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
