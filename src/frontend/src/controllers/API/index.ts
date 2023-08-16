@@ -378,6 +378,21 @@ export async function onLogin(user: LoginType) {
   }
 }
 
+export async function autoLogin() {
+  try {
+    const response = await api.get(
+      `${BASE_URL_API}auto_login`
+    );
+
+    if (response.status === 200) {
+      const data = response.data;
+      return data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function renewAccessToken(token: string) {
   try {
     return await api.post(`${BASE_URL_API}refresh?token=${token}`);
