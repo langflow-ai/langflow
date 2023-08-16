@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -13,165 +12,55 @@ import {
 } from "../../components/ui/table";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import {
-  addUser,
-  deleteUser,
-  getUsersPage,
-  updateUser,
-} from "../../controllers/API";
+import { deleteApiKey, getApiKey } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import SecretKeyModal from "../../modals/SecretKeyModal";
-import { UserInputType } from "../../types/components";
+
+import moment from "moment";
 
 export default function ApiKeysPage() {
-  const [inputValue, setInputValue] = useState("");
-
-  const [size, setPageSize] = useState(10);
-  const [index, setPageIndex] = useState(0);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingKeys, setLoadingKeys] = useState(true);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
-  const [totalRowsCount, setTotalRowsCount] = useState(0);
-
-  const userList = useRef([]);
+  const [userId, setUserId] = useState("");
+  const keysList = useRef([]);
 
   useEffect(() => {
     setTimeout(() => {
-      getUsers();
+      getKeys();
     }, 500);
-  }, []);
+  }, [userData]);
 
-  const [filterUserList, setFilterUserList] = useState(userList.current);
-
-  function getUsers() {
-    setLoadingUsers(true);
-    getUsersPage(index, size)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
-  }
-
-  function handleChangePagination(pageIndex: number, pageSize: number) {
-    setLoadingUsers(true);
-    getUsersPage(pageIndex, pageSize)
-      .then((users) => {
-        setTotalRowsCount(users["total_count"]);
-        userList.current = users["users"];
-        setFilterUserList(users["users"]);
-        setLoadingUsers(false);
-      })
-      .catch((error) => {
-        setLoadingUsers(false);
-      });
-  }
-
-  function resetFilter() {
-    setPageIndex(0);
-    setPageSize(10);
-    getUsers();
-  }
-
-  function handleFilterUsers(input: string) {
-    setInputValue(input);
-
-    if (input === "") {
-      setFilterUserList(userList.current);
-    } else {
-      const filteredList = userList.current.filter((user) =>
-        user.username.toLowerCase().includes(input.toLowerCase())
-      );
-      setFilterUserList(filteredList);
+  function getKeys() {
+    setLoadingKeys(true);
+    if (userData) {
+      getApiKey(userData.id)
+        .then((keys) => {
+          keysList.current = keys["api_keys"];
+          setUserId(keys["user_id"]);
+          setLoadingKeys(false);
+        })
+        .catch((error) => {
+          setLoadingKeys(false);
+        });
     }
   }
 
-  function handleDeleteUser(user) {
-    deleteUser(user.id)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: "Success! User deleted!",
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: "Error on delete user",
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
+  function resetFilter() {
+    getKeys();
   }
 
-  function handleEditUser(userId, user) {
-    updateUser(userId, user)
+  function handleDeleteKey(keys) {
+    deleteApiKey(keys)
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! User edited!",
+          title: "Success! Key deleted!",
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on edit user",
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
-  }
-
-  function handleDisableUser(check, userId, user) {
-    const userEdit = cloneDeep(user);
-    userEdit.is_active = !check;
-
-    updateUser(userId, userEdit)
-      .then((res) => {
-        console.log(res);
-
-        resetFilter();
-        setSuccessData({
-          title: "Success! User edited!",
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: "Error on edit user",
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
-  }
-
-  function handleSuperUserEdit(check, userId, user) {
-    const userEdit = cloneDeep(user);
-    userEdit.is_superuser = !check;
-    updateUser(userId, userEdit)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: "Success! User edited!",
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: "Error on edit user",
-          list: [error["response"]["data"]["detail"]],
-        });
-      });
-  }
-
-  function handleNewUser(user: UserInputType) {
-    addUser(user)
-      .then((res) => {
-        resetFilter();
-        setSuccessData({
-          title: "Success! New user added!",
-        });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: "Error on add new user",
+          title: "Error on delete key",
           list: [error["response"]["data"]["detail"]],
         });
       });
@@ -186,6 +75,12 @@ export default function ApiKeysPage() {
         </span>
       </div>
     );
+  }
+
+  function getIdKeyHidden(apiKey: string) {
+    const firstTwoChars = apiKey.slice(0, 2);
+    const lastFourChars = apiKey.slice(-4);
+    return firstTwoChars + "..." + lastFourChars;
   }
 
   return (
@@ -211,7 +106,7 @@ export default function ApiKeysPage() {
                   <div className="flex items-center space-x-2"></div>
                 </div>
 
-                {userList.current.length === 0 && !loadingUsers && (
+                {keysList.current.length === 0 && !loadingKeys && (
                   <>
                     <div className="flex items-center justify-between">
                       <h2>There's no users registered :)</h2>
@@ -219,21 +114,21 @@ export default function ApiKeysPage() {
                   </>
                 )}
                 <>
-                  {loadingUsers && (
+                  {loadingKeys && (
                     <div>
                       <strong>Loading...</strong>
                     </div>
                   )}
                   <div
                     className={
-                      "max-h-[15rem] min-h-[15rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
-                      (loadingUsers ? " border-0" : "")
+                      "max-h-[15rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
+                      (loadingKeys ? " border-0" : "")
                     }
                   >
                     <Table className={"table-fixed bg-muted outline-1"}>
                       <TableHeader
                         className={
-                          loadingUsers
+                          loadingKeys
                             ? "hidden"
                             : "table-fixed bg-muted outline-1"
                         }
@@ -256,37 +151,31 @@ export default function ApiKeysPage() {
                           <TableHead className="h-10 w-[100px]  text-right"></TableHead>
                         </TableRow>
                       </TableHeader>
-                      {!loadingUsers && (
+                      {!loadingKeys && (
                         <TableBody>
-                          {filterUserList.map((user, index) => (
+                          {keysList.current.map((api_keys, index) => (
                             <TableRow key={index}>
                               <TableCell className="truncate py-2">
-                                <ShadTooltip content={user.id}>
+                                <ShadTooltip content={api_keys.name}>
                                   <span className="cursor-default">
-                                    {user.id}
+                                    {api_keys.name}
                                   </span>
                                 </ShadTooltip>
                               </TableCell>
                               <TableCell className="truncate py-2">
-                                <ShadTooltip content={user.username}>
-                                  <span className="cursor-default">
-                                    {user.username}
-                                  </span>
-                                </ShadTooltip>
+                                <span className="cursor-default">
+                                  {getIdKeyHidden(api_keys.id)}
+                                </span>
                               </TableCell>
                               <TableCell className="truncate py-2 ">
-                                {
-                                  new Date(user.create_at)
-                                    .toISOString()
-                                    .split("T")[0]
-                                }
+                                {moment(api_keys.create_at).format(
+                                  "YYYY-MM-DD HH:mm"
+                                )}
                               </TableCell>
                               <TableCell className="truncate py-2">
-                                {
-                                  new Date(user.updated_at)
-                                    .toISOString()
-                                    .split("T")[0]
-                                }
+                                {moment(api_keys.last_used_at).format(
+                                  "YYYY-MM-DD HH:mm"
+                                )}
                               </TableCell>
                               <TableCell className="flex w-[100px] py-2 text-right">
                                 <div className="flex">
@@ -294,14 +183,14 @@ export default function ApiKeysPage() {
                                     title="Delete"
                                     titleHeader="Delete User"
                                     modalContentTitle="Attention!"
-                                    modalContent="Are you sure you want to delete this user? This action cannot be undone."
+                                    modalContent="Are you sure you want to delete this key? This action cannot be undone."
                                     cancelText="Cancel"
                                     confirmationText="Delete"
                                     icon={"UserMinus2"}
-                                    data={user}
+                                    data={api_keys.id}
                                     index={index}
-                                    onConfirm={(index, user) => {
-                                      handleDeleteUser(user);
+                                    onConfirm={(index, keys) => {
+                                      handleDeleteKey(keys);
                                     }}
                                   >
                                     <ShadTooltip content="Delete" side="top">
@@ -327,9 +216,7 @@ export default function ApiKeysPage() {
                         cancelText="Cancel"
                         confirmationText="Create secret key"
                         icon={"Key"}
-                        onConfirm={(index, user) => {
-                          handleNewUser(user);
-                        }}
+                        data={userId}
                       >
                         <Button>
                           <IconComponent name="Plus" className="mr-1 h-5 w-5" />

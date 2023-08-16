@@ -241,8 +241,6 @@ export type ApiKeyType = {
   children: ReactElement;
   icon: string;
   data?: any;
-  index?: number;
-  onConfirm: (index, data) => void;
 };
 
 export type ApiKeyInputType = {
