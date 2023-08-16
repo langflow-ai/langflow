@@ -296,5 +296,5 @@ export const nodeIconsLucide = {
   EyeOff,
   Eye,
   UserCog2,
-  Key,
+  Key
 };
