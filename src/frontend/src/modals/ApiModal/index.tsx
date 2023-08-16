@@ -157,10 +157,10 @@ const ApiModal = forwardRef(
       const pythonCode = getPythonCode(flow, tweak.current, tabsState);
       const widgetCode = getWidgetCode(flow, tabsState);
 
-      tabs[0].code = curl_code;
-      tabs[1].code = pythonApiCode;
-      tabs[2].code = pythonCode;
-      tabs[3].code = widgetCode;
+      tabs![0].code = curl_code;
+      tabs![1].code = pythonApiCode;
+      tabs![2].code = pythonCode;
+      tabs![3].code = widgetCode;
 
       setTweak(tweak.current);
     }
@@ -214,7 +214,7 @@ const ApiModal = forwardRef(
         <BaseModal.Content>
           <CodeTabsComponent
             flow={flow}
-            tabs={tabs}
+            tabs={tabs!}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             tweaks={{
