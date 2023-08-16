@@ -10,7 +10,7 @@ export default function TextAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+}: TextAreaComponentType): JSX.Element {
   // Clear text area
   useEffect(() => {
     if (disabled) {

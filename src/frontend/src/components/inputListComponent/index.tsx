@@ -11,7 +11,7 @@ export default function InputListComponent({
   onChange,
   disabled,
   editNode = false,
-}: InputListComponentType) {
+}: InputListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange([""]);

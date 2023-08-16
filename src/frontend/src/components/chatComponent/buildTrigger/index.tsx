@@ -8,6 +8,8 @@ import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
 import { TabsContext } from "../../../contexts/tabsContext";
+import { parsedDataType } from "../../../types/components";
+import { TabsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -21,7 +23,7 @@ export default function BuildTrigger({
   flow: FlowType;
   setIsBuilt: any;
   isBuilt: boolean;
-}) {
+}): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
   const { setTabsState } = useContext(TabsContext);
@@ -30,12 +32,12 @@ export default function BuildTrigger({
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
 
-  async function handleBuild(flow: FlowType) {
+  async function handleBuild(flow: FlowType): Promise<void> {
     try {
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(reactFlowInstance);
+      const errors = validateNodes(reactFlowInstance!);
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",
@@ -69,7 +71,7 @@ export default function BuildTrigger({
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
     // Step 2: Use the session ID to establish an SSE connection using EventSource
-    let validationResults = [];
+    let validationResults: boolean[] = [];
     let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
     const eventSource = new EventSource(apiUrl);
@@ -91,7 +93,8 @@ export default function BuildTrigger({
         // If the event is a log, log it
         setSuccessData({ title: parsedData.log });
       } else if (parsedData.input_keys !== undefined) {
-        setTabsState((old) => {
+        //@ts-ignore
+        setTabsState((old: TabsState) => {
           return {
             ...old,
             [flowId]: {
@@ -120,13 +123,13 @@ export default function BuildTrigger({
     // Step 3: Wait for the stream to finish
     while (!finished) {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      finished = validationResults.length === flow.data.nodes.length;
+      finished = validationResults.length === flow.data!.nodes.length;
     }
     // Step 4: Return true if all nodes are valid, false otherwise
     return validationResults.every((result) => result);
   }
 
-  function processStreamResult(parsedData) {
+  function processStreamResult(parsedData: parsedDataType) {
     // Process each chunk of data here
     // Parse the chunk and update the context
     try {

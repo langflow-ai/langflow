@@ -1,5 +1,5 @@
-import { Dispatch, SetStateAction } from "react";
-import { FlowType, TweaksType } from "../flow";
+import { tweakType } from "../components";
+import { FlowType } from "../flow";
 
 export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;
@@ -8,7 +8,10 @@ export type TabsContextType = {
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
-  addFlow: (flowData?: FlowType, newProject?: boolean) => Promise<String>;
+  addFlow: (
+    flow?: FlowType,
+    newProject?: Boolean
+  ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
   downloadFlow: (
@@ -24,15 +27,15 @@ export type TabsContextType = {
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   tabsState: TabsState;
-  setTabsState: Dispatch<SetStateAction<TabsState>>;
+  setTabsState: (state: TabsState) => void;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
-  lastCopiedSelection: { nodes: any; edges: any };
+  lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
-  setTweak: (tweak: TweaksType) => void;
-  getTweak: TweaksType[];
+  setTweak: (tweak: tweakType) => tweakType | void;
+  getTweak: tweakType;
 };
 
 export type TabsState = {
@@ -45,4 +48,9 @@ export type TabsState = {
       handle_keys?: Array<string>;
     };
   };
+};
+
+export type errorsVarType = {
+  title: string;
+  list?: Array<string>;
 };

@@ -29,7 +29,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { darkContext } from "../../contexts/darkContext";
-import { FlowType } from "../../types/flow/index";
+import { codeTabsPropsType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
@@ -40,28 +40,15 @@ export default function CodeTabsComponent({
   setActiveTab,
   isMessage,
   tweaks,
-}: {
-  flow?: FlowType;
-  tabs: any;
-  activeTab: string;
-  setActiveTab: any;
-  isMessage?: boolean;
-  tweaks?: {
-    tweak?: any;
-    tweaksList?: any;
-    buildContent?: any;
-    getValue?: any;
-    buildTweakObject?: any;
-  };
-}) {
+}: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
-  const [data, setData] = useState(flow ? flow["data"]["nodes"] : null);
-  const [openAccordion, setOpenAccordion] = useState([]);
+  const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
+  const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
 
   useEffect(() => {
-    if (flow && flow["data"]["nodes"]) {
-      setData(flow["data"]["nodes"]);
+    if (flow && flow["data"]!["nodes"]) {
+      setData(flow["data"]!["nodes"]);
     }
   }, [flow]);
 
@@ -102,8 +89,8 @@ export default function CodeTabsComponent({
   };
 
   function openAccordions() {
-    let accordionsToOpen = [];
-    tweaks.tweak.current.forEach((el) => {
+    let accordionsToOpen: string[] = [];
+    tweaks?.tweak!.current.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
@@ -205,9 +192,9 @@ export default function CodeTabsComponent({
                       : "overflow-hidden"
                   )}
                 >
-                  {data.map((node: any, index) => (
+                  {data?.map((node: any, index) => (
                     <div className="px-3" key={index}>
-                      {tweaks.tweaksList.current.includes(
+                      {tweaks?.tweaksList!.current.includes(
                         node["data"]["id"]
                       ) && (
                         <AccordionComponent
@@ -290,14 +277,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -310,7 +297,7 @@ export default function CodeTabsComponent({
                                                     templateField
                                                   ].multiline ? (
                                                   <ShadTooltip
-                                                    content={tweaks.buildContent(
+                                                    content={tweaks.buildContent!(
                                                       node.data.node.template[
                                                         templateField
                                                       ].value
@@ -339,14 +326,14 @@ export default function CodeTabsComponent({
                                                           setData((old) => {
                                                             let newInputList =
                                                               cloneDeep(old);
-                                                            newInputList[
+                                                            newInputList![
                                                               index
                                                             ].data.node.template[
                                                               templateField
                                                             ].value = target;
                                                             return newInputList;
                                                           });
-                                                          tweaks.buildTweakObject(
+                                                          tweaks.buildTweakObject!(
                                                             node["data"]["id"],
                                                             target,
                                                             node.data.node
@@ -384,14 +371,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -417,14 +404,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = e;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       node["data"]["id"],
                                                       e,
                                                       node.data.node.template[
@@ -440,7 +427,7 @@ export default function CodeTabsComponent({
                                                 templateField
                                               ].type === "file" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
+                                                content={tweaks.buildContent!(
                                                   !node.data.node.template[
                                                     templateField
                                                   ].value ||
@@ -508,14 +495,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -544,14 +531,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -596,14 +583,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList[
+                                                      newInputList![
                                                         index
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject(
+                                                    tweaks.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -617,7 +604,7 @@ export default function CodeTabsComponent({
                                                 templateField
                                               ].type === "prompt" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
+                                                content={tweaks.buildContent!(
                                                   !node.data.node.template[
                                                     templateField
                                                   ].value ||
@@ -651,14 +638,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -673,8 +660,8 @@ export default function CodeTabsComponent({
                                                 templateField
                                               ].type === "code" ? (
                                               <ShadTooltip
-                                                content={tweaks.buildContent(
-                                                  tweaks.getValue(
+                                                content={tweaks.buildContent!(
+                                                  tweaks.getValue!(
                                                     node.data.node.template[
                                                       templateField
                                                     ].value,
@@ -706,14 +693,14 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList[
+                                                        newInputList![
                                                           index
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject(
+                                                      tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -742,7 +729,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaks.tweaksList.current.length === 0 && (
+                      {tweaks?.tweaksList!.current.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.
