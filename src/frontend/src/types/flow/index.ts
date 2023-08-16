@@ -4,7 +4,7 @@ import { APIClassType } from "../api/index";
 export type FlowType = {
   name: string;
   id: string;
-  data: ReactFlowJsonObject;
+  data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
 };
@@ -14,11 +14,11 @@ export type NodeType = {
   position: XYPosition;
   data: NodeDataType;
 };
+
 export type NodeDataType = {
   type: string;
   node?: APIClassType;
   id: string;
-  value: any;
 };
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.

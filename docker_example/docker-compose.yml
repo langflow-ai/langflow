@@ -6,5 +6,5 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5003:5003"
+      - "7860:7860"
     command: langflow --host 0.0.0.0

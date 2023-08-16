@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+import { modalHeaderType } from "../../types/components";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -22,10 +23,10 @@ const Trigger: React.FC<ContentProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-const Header: React.FC<{ children: ReactNode; description: string }> = ({
+const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
   children,
   description,
-}) => {
+}: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -47,7 +48,15 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   disable?: boolean;
-  size?: "smaller" | "small" | "medium" | "large" | "large-h-full";
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
 }
 function BaseModal({
   open,
@@ -73,6 +82,10 @@ function BaseModal({
   let height: string;
 
   switch (size) {
+    case "x-small":
+      minWidth = "min-w-[20vw]";
+      height = "h-[10vh]";
+      break;
     case "smaller":
       minWidth = "min-w-[40vw]";
       height = "h-[27vh]";
@@ -81,9 +94,15 @@ function BaseModal({
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
       break;
+    case "small-h-full":
+      minWidth = "min-w-[40vw]";
+      break;
     case "medium":
       minWidth = "min-w-[60vw]";
       height = "h-[60vh]";
+      break;
+    case "medium-h-full":
+      minWidth = "min-w-[60vw]";
       break;
     case "large":
       minWidth = "min-w-[80vw]";
@@ -108,7 +127,9 @@ function BaseModal({
         {triggerChild}
       </DialogTrigger>
       <DialogContent className={minWidth}>
-        {headerChild}
+        <div className="truncate-doubleline word-break-break-word">
+          {headerChild}
+        </div>
         <div className={`mt-2 flex flex-col ${height} w-full `}>
           {ContentChild}
         </div>

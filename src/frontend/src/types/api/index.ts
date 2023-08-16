@@ -1,6 +1,6 @@
 import { Edge, Node, Viewport } from "reactflow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
-
+export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
 export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
 export type APITemplateType = {
@@ -17,7 +17,7 @@ export type APIClassType = {
   beta?: boolean;
   documentation: string;
   error?: string;
-  [key: string]: Array<string> | string | APITemplateType | boolean;
+  [key: string]: Array<string> | string | APITemplateType | boolean | undefined;
 };
 
 export type TemplateVariableType = {
@@ -37,7 +37,7 @@ export type sendAllProps = {
   name: string;
   description: string;
   viewport: Viewport;
-  inputs: any;
+  inputs: { text?: string };
 
   chatHistory: { message: string | object; isSend: boolean }[];
 };

@@ -5,31 +5,30 @@ import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
   open,
   setOpen,
-}: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}) {
+}: FlowSettingsPropsType): JSX.Element {
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const ref = useRef();
-  const { flows, tabId, updateFlow, setTabsState, saveFlow } =
-    useContext(TabsContext);
+  const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const maxLength = 50;
-  const [name, setName] = useState(flows.find((f) => f.id === tabId).name);
+  const [name, setName] = useState(
+    flows.find((flow) => flow.id === tabId)!.name
+  );
   const [description, setDescription] = useState(
-    flows.find((f) => f.id === tabId).description
+    flows.find((flow) => flow.id === tabId)!.description
   );
   const [invalidName, setInvalidName] = useState(false);
 
-  function handleClick() {
-    let savedFlow = flows.find((f) => f.id === tabId);
-    savedFlow.name = name;
-    savedFlow.description = description;
-    saveFlow(savedFlow);
+  function handleClick(): void {
+    let savedFlow = flows.find((flow) => flow.id === tabId);
+    savedFlow!.name = name;
+    savedFlow!.description = description;
+    saveFlow(savedFlow!);
     setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }
@@ -49,7 +48,6 @@ export default function FlowSettingsModal({
           tabId={tabId}
           setName={setName}
           setDescription={setDescription}
-          updateFlow={updateFlow}
         />
       </BaseModal.Content>
 

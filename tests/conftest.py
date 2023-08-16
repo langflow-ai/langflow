@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 import json
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, TYPE_CHECKING
 from langflow.api.v1.flows import get_session
 
 from langflow.graph.graph.base import Graph
@@ -10,6 +10,10 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
+if TYPE_CHECKING:
+    from langflow.services.database.manager import DatabaseManager
 
 
 def pytest_configure():
@@ -114,8 +118,8 @@ def client_fixture(session: Session):
     app = create_app()
 
     app.dependency_overrides[get_session] = get_session_override
-
-    yield TestClient(app)
+    with TestClient(app) as client:
+        yield client
     app.dependency_overrides.clear()
 
 
@@ -134,15 +138,20 @@ def client_fixture(session: Session):
 
 # create a fixture for session_getter above
 @pytest.fixture(name="session_getter")
-def session_getter_fixture():
+def session_getter_fixture(client):
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(engine)
 
     @contextmanager
-    def blank_session_getter():
-        with Session(engine) as session:
+    def blank_session_getter(db_manager: "DatabaseManager"):
+        with Session(db_manager.engine) as session:
             yield session
 
     yield blank_session_getter
+
+
+@pytest.fixture
+def runner():
+    return CliRunner()

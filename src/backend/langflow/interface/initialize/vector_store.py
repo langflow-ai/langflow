@@ -130,8 +130,8 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 
     import pinecone  # type: ignore
 
-    pinecone_api_key = params.get("pinecone_api_key")
-    pinecone_env = params.get("pinecone_env")
+    pinecone_api_key = params.pop("pinecone_api_key")
+    pinecone_env = params.pop("pinecone_env")
 
     if pinecone_api_key is None or pinecone_env is None:
         if os.getenv("PINECONE_API_KEY") is not None:
@@ -171,11 +171,7 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
 def initialize_chroma(class_object: Type[Chroma], params: dict):
     """Initialize a ChromaDB object from the params"""
     if (  # type: ignore
-        "chroma_server_host" in params
-        or "chroma_server_http_port" in params
-        or "chroma_server_ssl_enabled" in params
-        or "chroma_server_grpc_port" in params
-        or "chroma_server_cors_allow_origins" in params
+        "chroma_server_host" in params or "chroma_server_http_port" in params
     ):
         import chromadb  # type: ignore
 
@@ -186,6 +182,14 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
         }
         chroma_settings = chromadb.config.Settings(**settings_params)
         params["client_settings"] = chroma_settings
+    else:
+        # remove all chroma_server_ keys from params
+        params = {
+            key: value
+            for key, value in params.items()
+            if not key.startswith("chroma_server_")
+        }
+
     persist = params.pop("persist", False)
     if not docs_in_params(params):
         params.pop("documents", None)
