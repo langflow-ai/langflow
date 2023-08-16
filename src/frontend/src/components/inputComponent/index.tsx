@@ -39,7 +39,7 @@ export default function InputComponent({
               editNode ? " input-edit-node " : "",
               password && editNode ? "pr-8" : "",
               password && !editNode ? "pr-10" : "",
-              className
+              className!
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
@@ -59,7 +59,7 @@ export default function InputComponent({
             editNode ? " input-edit-node " : "",
             password && editNode ? "pr-8" : "",
             password && !editNode ? "pr-10" : "",
-            className
+            className!
           )}
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={(e) => {

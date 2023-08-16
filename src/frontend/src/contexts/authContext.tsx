@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<userData>(null);
+  const [userData, setUserData] = useState<userData | null>(null);
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem("access_token");
