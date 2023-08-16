@@ -7,17 +7,40 @@ services:
       dockerfile: base.Dockerfile
     depends_on:
       - queue
+      - db
     environment:
       - LANGFLOW_CACHE_TYPE=redis
       - LANGFLOW_REDIS_HOST=queue
       - LANGFLOW_REDIS_PORT=6379
       - LANGFLOW_REDIS_DB=0
       - LANGFLOW_REDIS_EXPIRE=3600
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@db:5432/langflow
     ports:
       - "7860:7860"
     volumes:
       - ./:/app
     command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --log-level debug"
+
+  db:
+    image: postgres:15.4
+    environment:
+      - POSTGRES_USER=langflow
+      - POSTGRES_PASSWORD=langflow
+      - POSTGRES_DB=langflow
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin:/var/lib/pgadmin
 
   queue:
     image: redis:latest
