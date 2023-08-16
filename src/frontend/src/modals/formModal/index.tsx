@@ -70,10 +70,11 @@ export default function FormModal({
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(() => {
     if (tabsState[flow.id]?.formKeysData?.input_keys) {
-      return Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
+      return Object.keys(tabsState[flow.id].formKeysData.input_keys!).find(
         (key) =>
-          !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === key) &&
-          tabsState[flow.id].formKeysData.input_keys[key] === ""
+          !tabsState[flow.id].formKeysData.handle_keys!.some(
+            (j) => j === key
+          ) && tabsState[flow.id].formKeysData.input_keys![key] === ""
       );
     }
     // TODO: return a sensible default
@@ -430,7 +431,7 @@ export default function FormModal({
 
               {tabsState[id.current]?.formKeysData?.input_keys
                 ? Object.keys(
-                    tabsState[id.current].formKeysData.input_keys
+                    tabsState[id.current].formKeysData.input_keys!
                   ).map((key, index) => (
                     <div className="file-component-accordion-div" key={index}>
                       <AccordionComponent
@@ -454,7 +455,7 @@ export default function FormModal({
                                 size="small"
                                 disabled={tabsState[
                                   id.current
-                                ].formKeysData.handle_keys.some(
+                                ].formKeysData.handle_keys!.some(
                                   (t) => t === key
                                 )}
                               />
@@ -465,7 +466,7 @@ export default function FormModal({
                         keyValue={key}
                       >
                         <div className="file-component-tab-column">
-                          {tabsState[id.current].formKeysData.handle_keys.some(
+                          {tabsState[id.current].formKeysData.handle_keys!.some(
                             (t) => t === key
                           ) && (
                             <div className="font-normal text-muted-foreground ">
@@ -475,7 +476,9 @@ export default function FormModal({
                           <Textarea
                             className="custom-scroll"
                             value={
-                              tabsState[id.current].formKeysData.input_keys[key]
+                              tabsState[id.current].formKeysData.input_keys![
+                                key
+                              ]
                             }
                             onChange={(e) => {
                               //@ts-ignore
@@ -483,7 +486,8 @@ export default function FormModal({
                                 let newTabsState = _.cloneDeep(old);
                                 newTabsState[
                                   id.current
-                                ].formKeysData.input_keys[key] = e.target.value;
+                                ].formKeysData.input_keys![key] =
+                                  e.target.value;
                                 return newTabsState;
                               });
                             }}
@@ -495,7 +499,7 @@ export default function FormModal({
                     </div>
                   ))
                 : null}
-              {tabsState[id.current].formKeysData.memory_keys.map(
+              {tabsState[id.current].formKeysData.memory_keys!.map(
                 (key, index) => (
                   <div className="file-component-accordion-div" key={index}>
                     <AccordionComponent
