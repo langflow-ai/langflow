@@ -112,6 +112,7 @@ export default function ParameterComponent({
 
     if (groupedObj && groupedObj.length > 0) {
       //@ts-ignore
+      //@ts-ignore
       refHtml.current = groupedObj.map((item, index) => {
         const Icon: any =
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
