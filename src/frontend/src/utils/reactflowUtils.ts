@@ -1,5 +1,6 @@
 import _ from "lodash";
-import { Connection, ReactFlowInstance } from "reactflow";
+import { Connection, Edge, ReactFlowInstance } from "reactflow";
+import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";
@@ -231,4 +232,41 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   }
 
   return newName;
+}
+
+export function handleKeyDown(
+  e: React.KeyboardEvent<HTMLInputElement>,
+  inputValue: string | string[] | null,
+  block: string
+) {
+  console.log(e, inputValue, block);
+  //condition to fix bug control+backspace on Windows/Linux
+  if (
+    (typeof inputValue === "string" &&
+      (e.metaKey === true || e.ctrlKey === true) &&
+      e.key === "Backspace" &&
+      (inputValue === block ||
+        inputValue?.charAt(inputValue?.length - 1) === " " ||
+        specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1)))) ||
+    (navigator.userAgent.toUpperCase().includes("MAC") &&
+      e.ctrlKey === true &&
+      e.key === "Backspace")
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  if (e.ctrlKey === true && e.key === "Backspace" && inputValue === block) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+
+export function getConnectedNodes(
+  edge: Edge,
+  nodes: Array<NodeType>
+): Array<NodeType> {
+  const sourceId = edge.source;
+  const targetId = edge.target;
+  return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }

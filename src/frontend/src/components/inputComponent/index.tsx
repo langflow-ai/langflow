@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
@@ -33,6 +34,9 @@ export default function InputComponent({
         placeholder={password && editNode ? "Key" : "Type something..."}
         onChange={(e) => {
           onChange(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          handleKeyDown(e, value, "");
         }}
       />
       {password && (

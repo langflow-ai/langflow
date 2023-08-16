@@ -9,7 +9,6 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
 import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
@@ -142,7 +141,6 @@ export default function App() {
           </div>
         ) : (
           <>
-            <Header />
             <Router />
           </>
         )}

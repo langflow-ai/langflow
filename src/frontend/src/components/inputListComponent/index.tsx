@@ -39,6 +39,12 @@ export default function InputListComponent({
                 newInputList[idx] = e.target.value;
                 onChange(newInputList);
               }}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Backspace") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
             />
             {idx === value.length - 1 ? (
               <button
