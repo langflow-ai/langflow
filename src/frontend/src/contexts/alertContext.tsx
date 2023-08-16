@@ -23,12 +23,16 @@ type alertContextType = {
   pushNotificationList: (Object: AlertItemType) => void;
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
+  loading: boolean;
+  setLoading: (newState: boolean) => void;
 };
 
 //initial values to alertContextType
 const initialValue: alertContextType = {
   errorData: { title: "", list: [] },
   setErrorData: () => {},
+  loading: true,
+  setLoading: () => {},
   errorOpen: false,
   setErrorOpen: () => {},
   noticeData: { title: "", link: "" },
@@ -55,6 +59,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     list?: Array<string>;
   }>({ title: "", list: [] });
   const [errorOpen, setErrorOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [noticeData, setNoticeDataState] = useState<{
     title: string;
     link?: string;
@@ -141,6 +146,8 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         removeFromNotificationList,
         clearNotificationList,
         notificationList,
+        loading,
+        setLoading,
         pushNotificationList,
         setNotificationCenter,
         notificationCenter,
