@@ -74,7 +74,8 @@ export default function InputComponent({
               ? "input-component-true-button"
               : "input-component-false-button"
           )}
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
             setPwdVisible(!pwdVisible);
           }}
         >
