@@ -32,6 +32,13 @@ export default function AccordionComponent({
     value === "" ? setValue(keyValue) : setValue("");
   }
 
+  const handleKeyDown = (event) => {
+    if (event.key === "Backspace") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
   return (
     <>
       <Accordion
@@ -39,6 +46,7 @@ export default function AccordionComponent({
         className="w-full"
         value={value}
         onValueChange={setValue}
+        onKeyDown={handleKeyDown}
       >
         <AccordionItem value={keyValue} className="border-b">
           <AccordionTrigger

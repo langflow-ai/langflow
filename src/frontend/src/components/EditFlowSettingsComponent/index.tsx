@@ -10,8 +10,8 @@ type InputProps = {
   maxLength?: number;
   flows: Array<{ id: string; name: string; description: string }>;
   tabId: string;
-  invalidName: boolean;
-  setInvalidName: (invalidName: boolean) => void;
+  invalidName?: boolean;
+  setInvalidName?: (invalidName: boolean) => void;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
   updateFlow: (flow: { id: string; name: string }) => void;
@@ -46,21 +46,29 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-    if (!nameLists.current.includes(value)) {
-      setInvalidName(false);
-    } else {
-      setInvalidName(true);
+    if (invalidName !== undefined) {
+      if (!nameLists.current.includes(value)) {
+        setInvalidName(false);
+      } else {
+        setInvalidName(true);
+      }
     }
     setName(value);
+    setCurrentName(value);
   };
 
-  const [desc, setDesc] = useState(
-    flows.find((f) => f.id === tabId).description
-  );
+  const [currentName, setCurrentName] = useState(name);
+
+  const [currentDescription, setCurrentDescription] = useState(description);
+
+  useEffect(() => {
+    setCurrentName(name);
+    setCurrentDescription(description);
+  }, [name, description]);
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     flows.find((f) => f.id === tabId).description = event.target.value;
-    setDesc(flows.find((f) => f.id === tabId).description);
+    setCurrentDescription(flows.find((f) => f.id === tabId).description);
     setDescription(event.target.value);
   };
 
@@ -81,7 +89,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           onChange={handleNameChange}
           type="text"
           name="name"
-          value={name ?? ""}
+          value={currentName ?? ""}
           placeholder="File name"
           id="name"
           maxLength={maxLength}
@@ -96,7 +104,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           name="description"
           id="description"
           onChange={handleDescriptionChange}
-          value={desc}
+          value={currentDescription}
           placeholder="Flow description"
           className="mt-2 max-h-[100px] font-normal"
           rows={3}

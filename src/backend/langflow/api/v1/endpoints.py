@@ -46,7 +46,7 @@ def get_all():
         custom_component_dicts = []
         processed_paths = []
         for path in settings.COMPONENTS_PATH:
-            if path in processed_paths:
+            if str(path) in processed_paths:
                 continue
             custom_component_dict = build_langchain_custom_component_list_from_path(
                 str(path)
