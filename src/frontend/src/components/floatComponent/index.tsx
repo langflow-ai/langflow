@@ -7,7 +7,7 @@ export default function FloatComponent({
   onChange,
   disabled,
   editNode = false,
-}: FloatComponentType) {
+}: FloatComponentType): JSX.Element {
   const step = 0.1;
   const min = 0;
   const max = 1;
