@@ -65,10 +65,6 @@ export default function PaginatorComponent({
               <span className="sr-only">Go to first page</span>
               <IconComponent name="ChevronsLeft" className="h-4 w-4" />
             </Button>
-
-
-
-
             <Button
               disabled={index <= 0}
               onClick={() => {
@@ -85,10 +81,6 @@ export default function PaginatorComponent({
               <span className="sr-only">Go to previous page</span>
               <IconComponent name="ChevronLeft" className="h-4 w-4" />
             </Button>
-
-
-
-
             <Button
               disabled={currentPage === maxIndex}
               onClick={() => {
@@ -103,10 +95,6 @@ export default function PaginatorComponent({
               <span className="sr-only">Go to next page</span>
               <IconComponent name="ChevronRight" className="h-4 w-4" />
             </Button>
-
-
-
-
             <Button
               disabled={currentPage === maxIndex}
               variant="outline"
