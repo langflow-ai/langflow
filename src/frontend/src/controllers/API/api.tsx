@@ -79,11 +79,8 @@ function ApiInterceptor() {
           ) ||
           config?.url?.includes(
             "https://api.github.com/repos/logspace-ai/langflow"
-          )
-          ||
-          config?.url?.includes(
-            "auto_login"
-          )
+          ) ||
+          config?.url?.includes("auto_login")
         ) {
           delete config.headers["Authorization"];
         }

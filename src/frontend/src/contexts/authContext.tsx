@@ -1,8 +1,8 @@
 import { createContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
+import { getLoggedUser } from "../controllers/API";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import { getLoggedUser } from "../controllers/API";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
@@ -38,15 +38,15 @@ export function AuthProvider({ children }): React.ReactElement {
       setAccessToken(storedAccessToken);
     }
   }, []);
-  
+
   useEffect(() => {
     if (accessToken) {
       getLoggedUser().then((user) => {
-        const isSuperUser = user.is_superuser
+        const isSuperUser = user.is_superuser;
         setIsAdmin(isSuperUser);
       });
     }
-  }, [accessToken, isAdmin])
+  }, [accessToken, isAdmin]);
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_token");
@@ -85,7 +85,9 @@ export function AuthProvider({ children }): React.ReactElement {
       if (response.ok) {
         const data = await response.json();
         login(data.accessToken, refreshToken);
-        getLoggedUser().then((user) => { console.log('oi')});
+        getLoggedUser().then((user) => {
+          console.log("oi");
+        });
       } else {
         logout();
       }
@@ -111,7 +113,7 @@ export function AuthProvider({ children }): React.ReactElement {
         getAuthentication,
         authenticationErrorCount: 0,
         setAutoLogin,
-        autoLogin
+        autoLogin,
       }}
     >
       {children}

@@ -380,9 +380,7 @@ export async function onLogin(user: LoginType) {
 
 export async function autoLogin() {
   try {
-    const response = await api.get(
-      `${BASE_URL_API}auto_login`
-    );
+    const response = await api.get(`${BASE_URL_API}auto_login`);
 
     if (response.status === 200) {
       const data = response.data;
