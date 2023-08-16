@@ -150,9 +150,6 @@ export default function App() {
             })
             .catch((error) => {});
         }
-        else{
-          navigate("/login");
-        }
       });
     }, 500);
   }, []);
