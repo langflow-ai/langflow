@@ -1,0 +1,83 @@
+version: "3"
+
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    # user: your-non-root-user # Make sure your Dockerfile creates this user
+    depends_on:
+      - queue
+      - db
+    env_file:
+      - ./backend.env
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./:/app
+      - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
+    command: /startup-backend.sh # Fixed the path
+
+  db:
+    image: postgres:15.4
+    env_file:
+      - ./db.env
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    env_file:
+      - ./pgadmin.env
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+
+  queue:
+    image: redis:6.2.5 # Use a specific version
+    ports:
+      - "6379:6379"
+
+  celeryworker:
+    # user: your-non-root-user
+    depends_on:
+      - queue
+    env_file:
+      - ./celeryworker.env
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    command: celery -A langflow.worker.celery_app worker --loglevel=INFO
+
+  flower:
+    # user: your-non-root-user
+    networks:
+      - default
+    depends_on:
+      - queue
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    env_file:
+      - ./flower.env
+    command: celery -A langflow.worker.celery_app --broker=redis://queue:6379/0 flower --port=5555
+    ports:
+      - "5555:5555"
+
+  frontend:
+    # user: your-non-root-user
+    build:
+      context: ../src/frontend
+      dockerfile: Dockerfile
+      args:
+        - BACKEND_URL=http://backend:7860
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend.env
+    ports:
+      - "80:80"
+    restart: on-failure
