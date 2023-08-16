@@ -267,7 +267,7 @@ export default function AdminPage() {
                         <TableRow>
                           <TableHead className="h-10">Id</TableHead>
                           <TableHead className="h-10">Username</TableHead>
-                          <TableHead className="h-10">Disabled</TableHead>
+                          <TableHead className="h-10">Active</TableHead>
                           <TableHead className="h-10">Superuser</TableHead>
                           <TableHead className="h-10">Created At</TableHead>
                           <TableHead className="h-10">Updated At</TableHead>
@@ -305,7 +305,7 @@ export default function AdminPage() {
                                   index={index}
                                   onConfirm={(index, user) => {
                                     handleDisableUser(
-                                      user.is_superuser,
+                                      user.is_active,
                                       user.id,
                                       user
                                     );

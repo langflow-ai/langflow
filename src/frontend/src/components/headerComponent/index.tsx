@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { LOCALHOST_JWT, USER_PROJECTS_HEADER } from "../../constants/constants";
+import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -19,11 +19,10 @@ export default function Header() {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
-  const { logout } = useContext(AuthContext);
+  const { logout, autoLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [stars, setStars] = useState(null);
-  const isLocalHost = window.location.href.includes("localhost");
 
   const { isAdmin, setIsAdmin } = useContext(AuthContext);
 
@@ -42,7 +41,7 @@ export default function Header() {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        {!isLocalHost || !LOCALHOST_JWT && (
+        {autoLogin === false && (
           <Button
             onClick={() => {
               logout();
