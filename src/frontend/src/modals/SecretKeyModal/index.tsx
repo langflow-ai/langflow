@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_NEW_API_KEY } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { createApiKey } from "../../controllers/API";
 import {
   ApiKeyInputType,
   ApiKeyType,
@@ -20,13 +21,11 @@ export default function SecretKeyModal({
   children,
   icon,
   data,
-  index,
-  onConfirm,
 }: ApiKeyType) {
   const Icon: any = nodeIconsLucide[icon];
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
-  const [apiKeyValue, setApiKeyValue] = useState("Value");
+  const [apiKeyValue, setApiKeyValue] = useState("");
   const [inputState, setInputState] =
     useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
   const [renderKey, setRenderKey] = useState(false);
@@ -49,7 +48,7 @@ export default function SecretKeyModal({
 
   function resetForm() {
     setApiKeyName("");
-    setApiKeyValue("Value");
+    setApiKeyValue("");
   }
 
   const handleCopyClick = async () => {
@@ -67,6 +66,14 @@ export default function SecretKeyModal({
       }, 3000);
     }
   };
+
+  function handleAddNewKey() {
+    createApiKey(data)
+      .then((res) => {
+        setApiKeyValue(res["api_key"]);
+      })
+      .catch((err) => {});
+  }
 
   return (
     <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
@@ -122,6 +129,7 @@ export default function SecretKeyModal({
         <Form.Root
           onSubmit={(event) => {
             setRenderKey(true);
+            handleAddNewKey();
             event.preventDefault();
           }}
         >

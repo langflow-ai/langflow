@@ -146,7 +146,11 @@ export default function Header() {
               />
             </div>
           </AlertDropdown>
-          <button>
+          <button
+          onClick={() => {
+            navigate("/account/api-keys");
+          }}
+          >
             <IconComponent
               name="Key"
               className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"

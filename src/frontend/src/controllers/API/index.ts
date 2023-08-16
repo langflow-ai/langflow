@@ -467,3 +467,41 @@ export async function updateUser(user_id: string, user: Users) {
     throw error;
   }
 }
+
+export async function getApiKey(user_id: String) {
+  try {
+    const res = await api.get(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function createApiKey(user_id: string) {
+  try {
+    const res = await api.post(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+
+export async function deleteApiKey(user_id: string) {
+  try {
+    const res = await api.delete(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
