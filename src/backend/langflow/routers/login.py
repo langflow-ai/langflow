@@ -1,4 +1,3 @@
-from uuid import UUID
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -38,8 +37,7 @@ async def auto_login(db: Session = Depends(get_session)):
     settings_manager = get_settings_manager()
 
     if settings_manager.settings.AUTO_LOGIN:
-        user_id = UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6")
-        return create_user_longterm_token(user_id, db)
+        return create_user_longterm_token(db)
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

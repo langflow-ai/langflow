@@ -115,14 +115,13 @@ def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
     """
     new_user = User(
         username="superuser",
-        password="12345",
+        password=get_password_hash("12345"),
         is_active=True,
         is_superuser=True,
         last_login_at=None,
     )
 
     try:
-        new_user.password = get_password_hash(new_user.password)
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
