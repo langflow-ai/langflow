@@ -528,6 +528,10 @@ export const CONTROL_NEW_USER = {
   is_superuser: false,
 };
 
+export const CONTROL_NEW_API_KEY = {
+  apikeyname: "",
+};
+
 export const tabsCode = [];
 
 export function tabsArray(codes: string[], method: number) {
