@@ -2,6 +2,7 @@ import contextlib
 import json
 import os
 from shutil import copy2
+import secrets
 from typing import Optional, List
 from pathlib import Path
 
@@ -38,6 +39,15 @@ class Settings(BaseSettings):
     CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
+
+    # Login settings
+    SECRET_KEY: str = secrets.token_hex(32)
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
+    # If AUTO_LOGIN = True
+    # > The application does not request login and logs in automatically as a super user.
+    AUTO_LOGIN: bool = True
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):

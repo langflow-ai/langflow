@@ -8,7 +8,7 @@ export default function ErrorAlert({
   list = [],
   id,
   removeAlert,
-}: ErrorAlertType) {
+}: ErrorAlertType): JSX.Element {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {
