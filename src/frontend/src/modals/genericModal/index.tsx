@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -15,8 +15,7 @@ import {
 import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
-import { handleKeyDown } from "../../utils/reactflowUtils";
+import { genericModalPropsType } from "../../types/components";
 import {
   classNames,
   getRandomKeyByssmm,
@@ -34,39 +33,29 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
-}: {
-  field_name?: string;
-  setValue: (value: string) => void;
-  value: string;
-  buttonText: string;
-  modalTitle: string;
-  type: number;
-  children: ReactNode;
-  nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType) => void;
-}) {
+}: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlight, setWordsHighlight] = useState([]);
+  const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
   const ref = useRef();
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
-  function checkVariables(valueToCheck) {
+  function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
-    const matches = [];
+    const matches: string[] = [];
     let match;
     while ((match = regex.exec(valueToCheck))) {
       matches.push(`{${match[1]}}`);
     }
 
-    let invalid_chars = [];
-    let fixed_variables = [];
+    let invalid_chars: string[] = [];
+    let fixed_variables: string[] = [];
     let input_variables = matches;
     for (let variable of input_variables) {
       let new_var = variable;
@@ -107,7 +96,7 @@ export default function GenericModal({
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
 
-  const TextAreaContentView = () => {
+  const TextAreaContentView = (): JSX.Element => {
     return (
       <SanitizedHTMLWrapper
         className={getClassByNumberLength()}
@@ -120,7 +109,7 @@ export default function GenericModal({
     );
   };
 
-  function getClassByNumberLength() {
+  function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
       sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;
@@ -130,8 +119,8 @@ export default function GenericModal({
       : "code-nohighlight";
   }
 
-  function validatePrompt(closeModal: boolean) {
-    postValidatePrompt(field_name, inputValue, nodeClass)
+  function validatePrompt(closeModal: boolean): void {
+    postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
@@ -145,7 +134,7 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
-            setNodeClass(apiReturn.data?.frontend_node);
+            setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
           }
@@ -222,6 +211,7 @@ export default function GenericModal({
               <TextAreaContentView />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
+                //@ts-ignore
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}

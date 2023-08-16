@@ -8,7 +8,7 @@ export default function IntComponent({
   onChange,
   disabled,
   editNode = false,
-}: FloatComponentType) {
+}: FloatComponentType): JSX.Element {
   const min = 0;
 
   // Clear component state

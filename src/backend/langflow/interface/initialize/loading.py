@@ -88,7 +88,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "toolkits":
         return instantiate_toolkit(node_type, class_object, params)
     elif base_type == "embeddings":
-        return instantiate_embedding(class_object, params)
+        return instantiate_embedding(node_type, class_object, params)
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
@@ -147,7 +147,7 @@ def instantiate_llm(node_type, class_object, params: Dict):
     # This is a workaround so JinaChat works until streaming is implemented
     # if "openai_api_base" in params and "jina" in params["openai_api_base"]:
     # False if condition is True
-    if node_type == "VertexAI":
+    if "VertexAI" in node_type:
         return initialize_vertexai(class_object=class_object, params=params)
     # max_tokens sometimes is a string and should be an int
     if "max_tokens" in params:
@@ -261,9 +261,13 @@ def instantiate_toolkit(node_type, class_object: Type[BaseToolkit], params: Dict
     return loaded_toolkit
 
 
-def instantiate_embedding(class_object, params: Dict):
+def instantiate_embedding(node_type, class_object, params: Dict):
     params.pop("model", None)
     params.pop("headers", None)
+
+    if "VertexAI" in node_type:
+        return initialize_vertexai(class_object=class_object, params=params)
+
     try:
         return class_object(**params)
     except ValidationError:

@@ -1,10 +1,15 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 from langflow.services.base import Service
+from langflow.services.utils import get_settings_manager
 from sqlmodel import SQLModel, Session, create_engine
 from langflow.utils.logger import logger
 from alembic.config import Config
 from alembic import command
 from langflow.services.database import models  # noqa
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 
 class DatabaseManager(Service):
@@ -17,7 +22,19 @@ class DatabaseManager(Service):
         langflow_dir = Path(__file__).parent.parent.parent
         self.script_location = langflow_dir / "alembic"
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
-        self.engine = create_engine(database_url)
+        self.engine = self._create_engine()
+
+    def _create_engine(self) -> "Engine":
+        """Create the engine for the database."""
+        settings_manager = get_settings_manager()
+        if (
+            settings_manager.settings.DATABASE_URL
+            and settings_manager.settings.DATABASE_URL.startswith("sqlite")
+        ):
+            connect_args = {"check_same_thread": False}
+        else:
+            connect_args = {}
+        return create_engine(self.database_url, connect_args=connect_args)
 
     def __enter__(self):
         self._session = Session(self.engine)

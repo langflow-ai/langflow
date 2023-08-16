@@ -1,6 +1,7 @@
 import contextlib
 import json
 import os
+import secrets
 from typing import Optional, List
 from pathlib import Path
 
@@ -43,6 +44,14 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_CACHE_EXPIRE: int = 3600
+    # Login settings
+    SECRET_KEY: str = secrets.token_hex(32)
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
+    # If AUTO_LOGIN = True
+    # > The application does not request login and logs in automatically as a super user.
+    AUTO_LOGIN: bool = True
 
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):

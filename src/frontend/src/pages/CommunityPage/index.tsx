@@ -9,7 +9,7 @@ import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-export default function CommunityPage() {
+export default function CommunityPage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
     useContext(TabsContext);
 
@@ -22,7 +22,7 @@ export default function CommunityPage() {
   const [examples, setExamples] = useState<FlowType[]>([]);
 
   // Show community examples on screen
-  function handleExamples() {
+  function handleExamples(): void {
     setLoadingExamples(true);
     getExamples()
       .then((result) => {

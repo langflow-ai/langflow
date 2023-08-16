@@ -3,19 +3,8 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { readFlowsFromDatabase } from "../../controllers/API";
-
-type InputProps = {
-  name: string | null;
-  description: string | null;
-  maxLength?: number;
-  flows: Array<{ id: string; name: string; description: string }>;
-  tabId: string;
-  invalidName?: boolean;
-  setInvalidName?: (invalidName: boolean) => void;
-  setName: (name: string) => void;
-  setDescription: (description: string) => void;
-  updateFlow: (flow: { id: string; name: string }) => void;
-};
+import { InputProps } from "../../types/components";
+import { FlowType } from "../../types/flow";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -27,13 +16,12 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   tabId,
   setName,
   setDescription,
-  updateFlow,
-}) => {
+}: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
-  const nameLists = useRef([]);
+  const nameLists = useRef<string[]>([]);
   useEffect(() => {
     readFlowsFromDatabase().then((flows) => {
-      flows.forEach((flow) => {
+      flows.forEach((flow: FlowType) => {
         nameLists.current.push(flow.name);
       });
     });
@@ -46,29 +34,22 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-    if (invalidName !== undefined) {
-      if (!nameLists.current.includes(value)) {
-        setInvalidName(false);
-      } else {
-        setInvalidName(true);
-      }
+    if (!nameLists.current.includes(value)) {
+      setInvalidName!(false);
+    } else {
+      setInvalidName!(true);
     }
     setName(value);
     setCurrentName(value);
   };
 
-  const [currentName, setCurrentName] = useState(name);
-
-  const [currentDescription, setCurrentDescription] = useState(description);
-
-  useEffect(() => {
-    setCurrentName(name);
-    setCurrentDescription(description);
-  }, [name, description]);
+  const [desc, setDesc] = useState(
+    flows.find((flow) => flow.id === tabId)?.description
+  );
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((f) => f.id === tabId).description = event.target.value;
-    setCurrentDescription(flows.find((f) => f.id === tabId).description);
+    flows.find((flow) => flow.id === tabId)!.description = event.target.value;
+    setDesc(flows.find((flow) => flow.id === tabId)?.description);
     setDescription(event.target.value);
   };
 
