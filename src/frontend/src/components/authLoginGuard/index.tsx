@@ -5,7 +5,7 @@ import { AuthContext } from "../../contexts/authContext";
 export const ProtectedLoginRoute = ({ children }) => {
   const { getAuthentication, autoLogin } = useContext(AuthContext);
 
-  if(autoLogin === true){
+  if (autoLogin === true) {
     window.location.replace("/");
     return <Navigate to="/" replace />;
   }

@@ -14,7 +14,7 @@ import { alertContext } from "./contexts/alertContext";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
-import { autoLogin, getLoggedUser, onLogin } from "./controllers/API";
+import { autoLogin, getLoggedUser } from "./controllers/API";
 import Router from "./routes";
 
 export default function App() {
@@ -37,7 +37,7 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
-    setErrorData
+    setErrorData,
   } = useContext(alertContext);
   const navigate = useNavigate();
 
@@ -131,7 +131,8 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login, setAutoLogin } = useContext(AuthContext);
+  const { setUserData, getAuthentication, login, setAutoLogin } =
+    useContext(AuthContext);
 
   useEffect(() => {
     setTimeout(() => {
@@ -153,7 +154,6 @@ export default function App() {
       });
     }, 500);
   }, []);
-
 
   return (
     //need parent component with width and height
