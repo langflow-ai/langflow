@@ -7,11 +7,12 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getRepoStars } from "../../controllers/API";
+import { getLoggedUser, getRepoStars } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import { Users } from "../../types/api";
 
 export default function Header() {
   const { flows, tabId } = useContext(TabsContext);
@@ -23,6 +24,8 @@ export default function Header() {
 
   const [stars, setStars] = useState(null);
 
+  const { isAdmin, setIsAdmin } = useContext(AuthContext);
+
   // Get and set numbers of stars on header
   useEffect(() => {
     async function fetchStars() {
@@ -31,6 +34,7 @@ export default function Header() {
     }
     fetchStars();
   }, []);
+
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
@@ -49,6 +53,16 @@ export default function Header() {
             Sign out
           </Button>
         )}
+        
+        {isAdmin && (
+          <Button
+            variant="outline"
+            onClick={() => navigate("/admin")}
+          >
+            Admin page
+          </Button>
+        )}
+
 
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
@@ -132,6 +146,12 @@ export default function Header() {
               />
             </div>
           </AlertDropdown>
+          <button>
+            <IconComponent
+              name="Key"
+              className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+            />
+          </button>
         </div>
       </div>
     </div>

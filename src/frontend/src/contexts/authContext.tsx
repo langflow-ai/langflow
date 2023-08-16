@@ -2,8 +2,11 @@ import { createContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
+import { getLoggedUser } from "../controllers/API";
 
 const initialValue: AuthContextType = {
+  isAdmin: false,
+  setIsAdmin: () => false,
   isAuthenticated: false,
   accessToken: null,
   refreshToken: null,
@@ -24,6 +27,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const cookies = new Cookies();
@@ -34,6 +38,15 @@ export function AuthProvider({ children }): React.ReactElement {
       setAccessToken(storedAccessToken);
     }
   }, []);
+  
+  useEffect(() => {
+    if (accessToken) {
+      getLoggedUser().then((user) => {
+        const isSuperUser = user.is_superuser
+        setIsAdmin(isSuperUser);
+      });
+    }
+  }, [accessToken, isAdmin])
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_token");
@@ -72,6 +85,7 @@ export function AuthProvider({ children }): React.ReactElement {
       if (response.ok) {
         const data = await response.json();
         login(data.accessToken, refreshToken);
+        getLoggedUser().then((user) => { console.log('oi')});
       } else {
         logout();
       }
@@ -84,6 +98,8 @@ export function AuthProvider({ children }): React.ReactElement {
     // !! to convert string to boolean
     <AuthContext.Provider
       value={{
+        isAdmin,
+        setIsAdmin,
         isAuthenticated: !!accessToken,
         accessToken,
         refreshToken,
