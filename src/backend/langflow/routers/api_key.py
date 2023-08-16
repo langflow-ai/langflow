@@ -1,7 +1,4 @@
-
-
 from fastapi import APIRouter
-
 
 
 router = APIRouter(tags=["APIKey"])
@@ -15,18 +12,21 @@ def get_api_key(user_id: str):
         "api_keys": [
             {
                 "id": "4425707e-cce4-4d1b-a54e-bd2632064657",
+                "api_key": "lf-...abcd",
                 "name": "my api_key name - 01",
                 "created_at": "2023-08-15T19:28:40.019613",
                 "last_used_at": "2023-08-16T18:38:20.875210",
             },
             {
                 "id": "6fb7282b-9f2e-4efe-9bda-0c3d8f899473",
+                "api_key": "lf-...abcd",
                 "name": "my api_key name - 02",
                 "created_at": "2023-08-15T19:41:30.077942",
                 "last_used_at": "2023-08-15T19:45:32.067899",
             },
             {
                 "id": "c55f3b32-4920-42b6-a5cd-698b4251806e",
+                "api_key": "lf-...abcd",
                 "name": "my api_key name - 03",
                 "created_at": "2023-08-15T20:29:40.577808",
                 "last_used_at": "2023-08-15T20:29:40.577816",
