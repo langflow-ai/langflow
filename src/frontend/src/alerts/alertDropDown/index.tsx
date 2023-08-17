@@ -9,7 +9,9 @@ import { alertContext } from "../../contexts/alertContext";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
-export default function AlertDropdown({ children }: AlertDropdownType) {
+export default function AlertDropdown({
+  children,
+}: AlertDropdownType): JSX.Element {
   const {
     notificationList,
     clearNotificationList,

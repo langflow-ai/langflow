@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+import { modalHeaderType } from "../../types/components";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -22,10 +23,10 @@ const Trigger: React.FC<ContentProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-const Header: React.FC<{ children: ReactNode; description: string }> = ({
+const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
   children,
   description,
-}) => {
+}: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>

@@ -28,7 +28,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [userData, setUserData] = useState<Users>(null);
+  const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const cookies = new Cookies();
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.4.7"
+version = "0.4.11"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -97,6 +97,8 @@ pandas-stubs = "^2.0.0.230412"
 types-pillow = "^9.5.0.2"
 types-appdirs = "^1.4.3.5"
 types-pyyaml = "^6.0.12.8"
+types-python-jose = "^3.3.4.8"
+types-passlib = "^1.7.7.13"
 
 
 [tool.poetry.extras]

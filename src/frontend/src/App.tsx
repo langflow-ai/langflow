@@ -9,7 +9,7 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
+import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
@@ -27,6 +27,7 @@ export default function App() {
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
   const { hardReset } = useContext(TabsContext);
+
   const {
     errorData,
     errorOpen,
@@ -38,6 +39,7 @@ export default function App() {
     successOpen,
     setSuccessOpen,
     setErrorData,
+    loading,
   } = useContext(alertContext);
   const navigate = useNavigate();
 
@@ -144,7 +146,7 @@ export default function App() {
         }
       }).catch((error) => {
         setAutoLogin(false);
-        if (getAuthentication && !isLoginPage) {
+        if (getAuthentication() && !isLoginPage) {
           getLoggedUser()
             .then((user) => {
               setUserData(user);
@@ -167,8 +169,15 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {!isLoginPage && !isSignUpPage && <Header />}
-        <Router />
+        {loading ? (
+          <div className="loading-page-panel">
+            <LoadingComponent remSize={50} />
+          </div>
+        ) : (
+          <>
+            <Router />
+          </>
+        )}
       </ErrorBoundary>
       <div></div>
       <div className="app-div" style={{ zIndex: 999 }}>
