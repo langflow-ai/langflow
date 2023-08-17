@@ -16,3 +16,7 @@ def get_db_manager():
 def get_session():
     db_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     yield from db_manager.get_session()
+
+
+def get_cache_manager():
+    return service_manager.get(ServiceType.CACHE_MANAGER)
