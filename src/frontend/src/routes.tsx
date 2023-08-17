@@ -5,6 +5,7 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
+import ApiKeysPage from "./pages/ApiKeysPage";
 import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
@@ -12,7 +13,6 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
-import ApiKeysPage from "./pages/ApiKeysPage";
 
 const Router = () => {
   return (
@@ -42,11 +42,14 @@ const Router = () => {
             </ProtectedRoute>
           }
         />
-        <Route path="view" element={
-                    <ProtectedRoute>
-                    <ViewPage />
-                  </ProtectedRoute>
-        } />
+        <Route
+          path="view"
+          element={
+            <ProtectedRoute>
+              <ViewPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route
         path="*"
