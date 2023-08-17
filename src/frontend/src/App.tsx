@@ -134,7 +134,7 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login, setAutoLogin } =
+  const { setUserData, getAuthentication, login, setAutoLogin, logout } =
     useContext(AuthContext);
 
   useEffect(() => {
@@ -155,6 +155,9 @@ export default function App() {
               setLoading(false);
             })
             .catch((error) => {});
+        }
+        else{
+          setLoading(false);
         }
       });
     }, 500);
