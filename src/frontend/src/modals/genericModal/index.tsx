@@ -16,6 +16,7 @@ import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { genericModalPropsType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,
@@ -203,6 +204,9 @@ export default function GenericModal({
                   checkVariables(event.target.value);
                 }}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, inputValue, "");
+                }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
               <TextAreaContentView />
@@ -216,6 +220,9 @@ export default function GenericModal({
                   setInputValue(event.target.value);
                 }}
                 placeholder="Type message here."
+                onKeyDown={(e) => {
+                  handleKeyDown(e, value, "");
+                }}
               />
             ) : (
               <></>

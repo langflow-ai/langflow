@@ -4,6 +4,7 @@ import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
+import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 
@@ -14,6 +15,7 @@ const Router = () => {
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/flow/:id/">
         <Route path="" element={<FlowPage />} />
+        <Route path="view" element={<ViewPage />} />
       </Route>
       <Route path="*" element={<HomePage />} />
 

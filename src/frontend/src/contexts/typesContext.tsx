@@ -1,8 +1,15 @@
-import { createContext, ReactNode, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Node, ReactFlowInstance } from "reactflow";
 import { getAll } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
+import { alertContext } from "./alertContext";
 
 //context to share types adn functions from nodes to flow
 
@@ -26,6 +33,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
+  const { setLoading } = useContext(alertContext);
 
   useEffect(() => {
     let delay = 1000; // Start delay of 1 second
@@ -41,6 +49,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         const result = await getAll();
         // Make sure to only update the state if the component is still mounted.
         if (isMounted) {
+          setLoading(false);
           setData(result.data);
           setTemplates(
             Object.keys(result.data).reduce((acc, curr) => {
