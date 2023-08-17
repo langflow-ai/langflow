@@ -12,10 +12,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({ flows, tabId }) => {
+export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
   const { addFlow } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
   const { undo, redo } = useContext(undoRedoContext);
@@ -25,12 +26,12 @@ export const MenuBar = ({ flows, tabId }) => {
 
   function handleAddFlow() {
     try {
-      addFlow(null, true).then((id) => {
+      addFlow(undefined, true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();
     } catch (err) {
-      setErrorData(err);
+      setErrorData(err as { title: string; list?: Array<string> });
     }
   }
   let current_flow = flows.find((flow) => flow.id === tabId);
@@ -45,7 +46,9 @@ export const MenuBar = ({ flows, tabId }) => {
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{current_flow.name}</div>
+                <div className="header-menu-flow-name">
+                  {current_flow!.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>

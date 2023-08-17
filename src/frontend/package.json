@@ -72,7 +72,8 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+    "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "eslintConfig": {
     "extends": [

@@ -49,7 +49,7 @@ export default function LoginPage(): JSX.Element {
   }
 
   function getUser() {
-    if (getAuthentication) {
+    if (getAuthentication()) {
       setTimeout(() => {
         getLoggedUser()
           .then((user) => {

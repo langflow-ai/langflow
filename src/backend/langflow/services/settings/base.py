@@ -1,6 +1,7 @@
 import contextlib
 import json
 import os
+from shutil import copy2
 import secrets
 from typing import Optional, List
 from pathlib import Path
@@ -9,7 +10,8 @@ import yaml
 from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
-BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+# BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 class Settings(BaseSettings):
@@ -29,6 +31,9 @@ class Settings(BaseSettings):
     UTILITIES: dict = {}
     OUTPUT_PARSERS: dict = {}
     CUSTOM_COMPONENTS: dict = {}
+
+    # Define the default LANGFLOW_DIR
+    CONFIG_DIR: Optional[str] = None
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
@@ -54,8 +59,31 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: str = "langflow"
     FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
+    @validator("CONFIG_DIR", pre=True, allow_reuse=True)
+    def set_langflow_dir(cls, value):
+        if not value:
+            import appdirs
+
+            # Define the app name and author
+            app_name = "langflow"
+            app_author = "logspace"
+
+            # Get the cache directory for the application
+            cache_dir = appdirs.user_cache_dir(app_name, app_author)
+
+            # Create a .langflow directory inside the cache directory
+            value = Path(cache_dir)
+            value.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(value, str):
+            value = Path(value)
+        if not value.exists():
+            value.mkdir(parents=True, exist_ok=True)
+
+        return str(value)
+
     @validator("DATABASE_URL", pre=True)
-    def set_database_url(cls, value):
+    def set_database_url(cls, value, values):
         if not value:
             logger.debug(
                 "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
@@ -65,7 +93,28 @@ class Settings(BaseSettings):
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
-                value = "sqlite:///./langflow.db"
+                # Originally, we used sqlite:///./langflow.db
+                # so we need to migrate to the new format
+                # if there is a database in that location
+                if not values["CONFIG_DIR"]:
+                    raise ValueError(
+                        "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
+                    )
+
+                new_path = f"{values['CONFIG_DIR']}/langflow.db"
+                if Path("./langflow.db").exists():
+                    if Path(new_path).exists():
+                        logger.debug(f"Database already exists at {new_path}, using it")
+                    else:
+                        try:
+                            logger.debug("Copying existing database to new location")
+                            copy2("./langflow.db", new_path)
+                            logger.debug(f"Copied existing database to {new_path}")
+                        except Exception:
+                            logger.error("Failed to copy database, using default path")
+                            new_path = "./langflow.db"
+
+                value = f"sqlite:///{new_path}"
 
         return value
 
@@ -148,12 +197,17 @@ class Settings(BaseSettings):
                     value = json.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
+                        if isinstance(item, Path):
+                            item = str(item)
                         if item not in getattr(self, key):
                             getattr(self, key).append(item)
                     logger.debug(f"Extended {key}")
                 else:
-                    getattr(self, key).append(value)
-                    logger.debug(f"Appended {key}")
+                    if isinstance(value, Path):
+                        value = str(value)
+                    if value not in getattr(self, key):
+                        getattr(self, key).append(value)
+                        logger.debug(f"Appended {key}")
 
             else:
                 setattr(self, key, value)

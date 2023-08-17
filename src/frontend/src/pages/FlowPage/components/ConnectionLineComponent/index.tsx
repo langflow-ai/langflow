@@ -6,7 +6,7 @@ const ConnectionLineComponent = ({
   toX,
   toY,
   connectionLineStyle = {}, // provide a default value for connectionLineStyle
-}: ConnectionLineComponentProps) => {
+}: ConnectionLineComponentProps): JSX.Element => {
   return (
     <g>
       <path

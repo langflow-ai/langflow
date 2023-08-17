@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
-export default function Header() {
+export default function Header(): JSX.Element {
   const { flows, tabId } = useContext(TabsContext);
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);

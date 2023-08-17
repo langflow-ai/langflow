@@ -29,6 +29,7 @@ export const INVALID_CHARACTERS = [
  */
 
 export const regexHighlight = /\{([^}]+)\}/g;
+export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
   javascript: ".js",
@@ -509,6 +510,8 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/validate/prompt",
   "http://localhost:7860/login",
 ];
+
+export const skipNodeUpdate = ["CustomComponent"];
 
 export const CONTROL_INPUT_STATE = {
   password: "",

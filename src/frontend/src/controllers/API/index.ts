@@ -30,7 +30,7 @@ export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
 
 const GITHUB_API_URL = "https://api.github.com";
 
-export async function getRepoStars(owner, repo) {
+export async function getRepoStars(owner: string, repo: string) {
   try {
     const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
     return response.data.stargazers_count;
@@ -107,7 +107,7 @@ export async function getExamples(): Promise<FlowType[]> {
 export async function saveFlowToDatabase(newFlow: {
   name: string;
   id: string;
-  data: ReactFlowJsonObject;
+  data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
 }): Promise<FlowType> {
@@ -186,7 +186,7 @@ export async function downloadFlowsFromDatabase() {
   }
 }
 
-export async function uploadFlowsToDatabase(flows) {
+export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`/api/v1/flows/upload/`, flows);
 

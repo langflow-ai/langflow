@@ -36,13 +36,14 @@ function ApiInterceptor() {
             const res = await renewAccessToken(refreshToken);
             login(res.data.access_token, res.data.refresh_token);
             try {
-              const accessToken = cookies.get("access_token");
-              delete error.config.headers["Authorization"];
-              error.config.headers["Authorization"] = `Bearer ${accessToken}`;
-              const response = await axios.request(error.config);
-              return response;
+              if (error?.config?.headers) {
+                delete error.config.headers["Authorization"];
+                error.config.headers["Authorization"] = `Bearer ${accessToken}`;
+                const response = await axios.request(error.config);
+                return response;
+              }
             } catch (error) {
-              if (error.response?.status === 401) {
+              if (axios.isAxiosError(error) && error.response?.status === 401) {
                 logout();
                 navigate("/login");
               }
@@ -103,7 +104,7 @@ function ApiInterceptor() {
 }
 
 // Function to sleep for a given duration in milliseconds
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
