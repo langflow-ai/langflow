@@ -14,7 +14,7 @@ services:
     ports:
       - "7860:7860"
     volumes:
-      - ./:/app
+      - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
     command: /startup-backend.sh # Fixed the path
 
@@ -37,7 +37,7 @@ services:
       - ./pgadmin:/var/lib/pgadmin
 
   queue:
-    image: redis:6.2.5 # Use a specific version
+    image: redis:7.2.0
     ports:
       - "6379:6379"
 
@@ -63,7 +63,7 @@ services:
       dockerfile: base.Dockerfile
     env_file:
       - ./flower.env
-    command: celery -A langflow.worker.celery_app --broker=redis://queue:6379/0 flower --port=5555
+    command: /bin/sh -c "celery -A langflow.worker.celery_app --broker=redis://$${LANGFLOW_REDIS_PASSWORD:+default:$${LANGFLOW_REDIS_PASSWORD}@}$${LANGFLOW_REDIS_HOST}:$${LANGFLOW_REDIS_PORT}/$${LANGFLOW_REDIS_DB} flower --port=5555"
     ports:
       - "5555:5555"
 
