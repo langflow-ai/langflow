@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -75,6 +75,7 @@ async def process_flow(
     inputs: Optional[dict] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
+    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     session: Session = Depends(get_session),
 ):
     """
@@ -94,10 +95,10 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        response = process_graph_cached(graph_data, inputs, clear_cache)
-        return ProcessResponse(
-            result=response,
+        response, session_id = process_graph_cached(
+            graph_data, inputs, clear_cache, session_id
         )
+        return ProcessResponse(result=response, session_id=session_id)
     except Exception as e:
         # Log stack trace
         logger.exception(e)
