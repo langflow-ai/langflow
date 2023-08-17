@@ -11,7 +11,7 @@ import inspect
 import types
 from typing import Any, Dict, List, Optional
 from typing import TYPE_CHECKING
-from celery.result import AsyncResult
+
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
@@ -180,6 +180,11 @@ class Vertex:
             return self._built_object
 
         # Check if there's a task_id, which means it was sent to a Celery worker
+        try:
+            from celery.result import AsyncResult
+        except ImportError:
+            # If Celery is not installed, just build the vertex locally
+            return self.build()
         if self.is_task and self.task_id is not None:
             result = AsyncResult(self.task_id).get(
                 timeout=timeout
