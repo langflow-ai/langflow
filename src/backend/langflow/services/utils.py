@@ -20,3 +20,7 @@ def get_session():
 
 def get_cache_manager():
     return service_manager.get(ServiceType.CACHE_MANAGER)
+
+
+def get_session_manager():
+    return service_manager.get(ServiceType.SESSION_MANAGER)
