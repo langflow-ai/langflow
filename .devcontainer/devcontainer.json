@@ -29,7 +29,8 @@
 				"ms-python.python",
 				"sourcery.sourcery",
 				"eamodio.gitlens",
-				"ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools",
+				"GitHub.vscode-pull-request-github"
 			]}
 	}
 
