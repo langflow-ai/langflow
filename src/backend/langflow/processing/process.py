@@ -111,7 +111,7 @@ def load_langchain_object(
     data_graph: Dict[str, Any], session_id: str
 ) -> Tuple[Union[Chain, VectorStore], Dict[str, Any], str]:
     langchain_object, artifacts = get_build_result(data_graph, session_id)
-    session_id = build_sorted_vertices_with_caching.hash
+    session_id = build_sorted_vertices_with_caching.session_id
     logger.debug("Loaded LangChain object")
 
     if langchain_object is None:
