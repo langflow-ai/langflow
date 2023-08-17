@@ -18,12 +18,10 @@ export default function Header() {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
-  const { logout, autoLogin } = useContext(AuthContext);
+  const { logout, autoLogin, isAdmin, setIsAdmin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [stars, setStars] = useState(null);
-
-  const { isAdmin, setIsAdmin } = useContext(AuthContext);
 
   // Get and set numbers of stars on header
   useEffect(() => {
@@ -141,16 +139,18 @@ export default function Header() {
               />
             </div>
           </AlertDropdown>
-          <button
-          onClick={() => {
-            navigate("/account/api-keys");
-          }}
-          >
-            <IconComponent
-              name="Key"
-              className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
-            />
-          </button>
+          {!autoLogin && (
+            <button
+              onClick={() => {
+                navigate("/account/api-keys");
+              }}
+            >
+              <IconComponent
+                name="Key"
+                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+              />
+            </button>
+          )}
         </div>
       </div>
     </div>
