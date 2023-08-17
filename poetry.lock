@@ -7145,6 +7145,17 @@ files = [
 ]
 
 [[package]]
+name = "types-passlib"
+version = "1.7.7.13"
+description = "Typing stubs for passlib"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-passlib-1.7.7.13.tar.gz", hash = "sha256:f152639f1f2103d7f59a56e2aec5f9398a75a80830991d0d68aac5c2b9c32a77"},
+    {file = "types_passlib-1.7.7.13-py3-none-any.whl", hash = "sha256:414b5ee9c88313357c9261cfcf816509b1e8e4673f0796bd61e9ef249f6fe076"},
+]
+
+[[package]]
 name = "types-pillow"
 version = "9.5.0.6"
 description = "Typing stubs for Pillow"
@@ -7154,6 +7165,31 @@ files = [
     {file = "types-Pillow-9.5.0.6.tar.gz", hash = "sha256:6a0cad40686e5c35fe7ada70f52bd3970395d31ece33486609e5420e820a9e4e"},
     {file = "types_Pillow-9.5.0.6-py3-none-any.whl", hash = "sha256:1d238abaa9d529b04941d805b7f4d3f7df30702bb14521ec507617f117406fb4"},
 ]
+
+[[package]]
+name = "types-pyasn1"
+version = "0.4.0.6"
+description = "Typing stubs for pyasn1"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-pyasn1-0.4.0.6.tar.gz", hash = "sha256:8f1965d0b79152f9d1efc89f9aa9a8cdda7cd28b2619df6737c095cbedeff98b"},
+    {file = "types_pyasn1-0.4.0.6-py3-none-any.whl", hash = "sha256:dd5fc818864e63a66cd714be0a7a59a493f4a81b87ee9ac978c41f1eaa9a0cef"},
+]
+
+[[package]]
+name = "types-python-jose"
+version = "3.3.4.8"
+description = "Typing stubs for python-jose"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-python-jose-3.3.4.8.tar.gz", hash = "sha256:3c316675c3cee059ccb9aff87358254344915239fa7f19cee2787155a7db14ac"},
+    {file = "types_python_jose-3.3.4.8-py3-none-any.whl", hash = "sha256:95592273443b45dc5cc88f7c56aa5a97725428753fb738b794e63ccb4904954e"},
+]
+
+[package.dependencies]
+types-pyasn1 = "*"
 
 [[package]]
 name = "types-pytz"
@@ -7909,4 +7945,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "c1581fd2c650cc1365793ca33278917dd86bb4527cc956106a82a5c513ecc483"
+content-hash = "8ad605e7ea30f2819dbc03eac6c2e67576a98d1efa4890912414a7568fc27441"
