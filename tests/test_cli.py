@@ -27,4 +27,4 @@ def test_components_path(runner, client, default_settings):
     )
     assert result.exit_code == 0, result.stdout
     settings_manager = utils.get_settings_manager()
-    assert temp_dir in settings_manager.settings.COMPONENTS_PATH
+    assert str(temp_dir) in settings_manager.settings.COMPONENTS_PATH

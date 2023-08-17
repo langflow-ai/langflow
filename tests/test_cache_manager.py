@@ -2,7 +2,7 @@ from io import StringIO
 
 import pandas as pd
 import pytest
-from langflow.services.cache.manager import CacheManager
+from langflow.services.chat.cache import CacheManager
 from PIL import Image
 
 
