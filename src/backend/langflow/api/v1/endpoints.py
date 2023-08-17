@@ -44,15 +44,21 @@ def get_all():
         logger.info(
             f"Building custom components from {settings_manager.settings.COMPONENTS_PATH}"
         )
-        custom_component_dicts = [
-            build_langchain_custom_component_list_from_path(str(path))
-            for path in settings_manager.settings.COMPONENTS_PATH
-        ]
+
+        custom_component_dicts = []
+        processed_paths = []
+        for path in settings_manager.settings.COMPONENTS_PATH:
+            if str(path) in processed_paths:
+                continue
+            custom_component_dict = build_langchain_custom_component_list_from_path(
+                str(path)
+            )
+            custom_component_dicts.append(custom_component_dict)
+            processed_paths.append(str(path))
+
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
             # custom_component_dict is a dict of dicts
-            if not custom_component_dict:
-                continue
             category = list(custom_component_dict.keys())[0]
             logger.info(
                 f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
