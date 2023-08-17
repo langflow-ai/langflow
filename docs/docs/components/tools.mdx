@@ -7,3 +7,57 @@ import Admonition from '@theme/Admonition';
         We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
     </p>
 </Admonition>
+
+
+### BingSearchRun
+
+Bing Search is a web search engine owned and operated by Microsoft. It provides search results for various types of content, including web pages, images, videos, and news articles. It uses a combination of algorithms and human editors to deliver search results to users.
+
+**Params**
+
+- **Api Wrapper:** A BingSearchAPIWrapper component that takes the search URL and a subscription key.
+
+
+### Calculator
+
+The calculator tool provides mathematical calculation capabilities to an agent by leveraging an LLMMathChain. It allows the agent to perform math when needed to answer questions.
+
+**Params**
+
+- **LLM:** Language Model to use in the calculation.
+
+
+### GoogleSearchResults
+
+A wrapper around Google Search. Useful for when the user needs to answer questions about with more control over the JSON data returned from the API. It returns the full JSON response configured based on the parameters passed to the API wrapper.
+
+**Params**
+
+- **Api Wrapper:** A GoogleSearchAPIWrapper with Google API key and CSE ID
+
+
+### GoogleSearchRun
+
+A quick wrapper around Google Search. It executes the search query and returns just the first result snippet from the highest-priority result type.
+
+**Params**
+
+- **Api Wrapper:** A GoogleSearchAPIWrapper with Google API key and CSE ID
+
+
+### GoogleSerperRun
+
+A low-cost Google Search API.
+
+**Params**
+
+- **Api Wrapper:** A GoogleSerperAPIWrapper component with API key and result keys
+
+
+### InfoSQLDatabaseTool
+
+Tool for getting metadata about a SQL database. The input to this tool is a comma-separated list of tables, and the output is the schema and sample rows for those tables. Example Input: `“table1`, `table2`, `table3”`.
+
+**Params**
+
+- **Db:** SQLDatabase to query.

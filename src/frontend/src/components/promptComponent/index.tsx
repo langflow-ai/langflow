@@ -14,7 +14,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+}: TextAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange("");
@@ -23,9 +23,9 @@ export default function PromptAreaComponent({
 
   useEffect(() => {
     if (value !== "" && !editNode) {
-      postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
+      postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data.frontend_node);
+          setNodeClass!(apiReturn.data.frontend_node);
           // need to update reactFlowInstance to re-render the nodes.
         }
       });

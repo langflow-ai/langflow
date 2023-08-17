@@ -23,7 +23,7 @@ import { FlowType } from "../../types/flow";
 import { classNames } from "../../utils/utils";
 import ButtonBox from "./buttonBox";
 
-export default function ImportModal() {
+export default function ImportModal(): JSX.Element {
   const [open, setOpen] = useState(true);
   const { setErrorData } = useContext(alertContext);
   const ref = useRef();
@@ -32,7 +32,7 @@ export default function ImportModal() {
   const [examples, setExamples] = useState<FlowType[]>([]);
   const { uploadFlow, addFlow } = useContext(TabsContext);
 
-  function handleExamples() {
+  function handleExamples(): void {
     setLoadingExamples(true);
     getExamples()
       .then((result) => {

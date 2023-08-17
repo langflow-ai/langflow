@@ -1,6 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect, useRef } from "react";
-import { URL_EXCLUDED_FROM_ERROR_RETRIES } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 
 // Create a new Axios instance
@@ -8,7 +7,7 @@ const api: AxiosInstance = axios.create({
   baseURL: "",
 });
 
-function ApiInterceptor() {
+function ApiInterceptor(): null {
   const retryCounts = useRef([]);
   const { setErrorData } = useContext(alertContext);
 
@@ -16,32 +15,31 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
-          return Promise.reject(error);
-        }
-        let retryCount = 0;
-
-        while (retryCount < 4) {
-          await sleep(5000); // Sleep for 5 seconds
-          retryCount++;
-          try {
-            const response = await axios.request(error.config);
-            return response;
-          } catch (error) {
-            if (retryCount === 3) {
-              setErrorData({
-                title: "There was an error on web connection, please: ",
-                list: [
-                  "Refresh the page",
-                  "Use a new flow tab",
-                  "Check if the backend is up",
-                  "Endpoint: " + error.config?.url,
-                ],
-              });
-              return Promise.reject(error);
-            }
-          }
-        }
+        // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
+        //   return Promise.reject(error);
+        // }
+        // let retryCount = 0;
+        // while (retryCount < 4) {
+        //   await sleep(5000); // Sleep for 5 seconds
+        //   retryCount++;
+        //   try {
+        //     const response = await axios.request(error.config);
+        //     return response;
+        //   } catch (error) {
+        //     if (retryCount === 3) {
+        //       setErrorData({
+        //         title: "There was an error on web connection, please: ",
+        //         list: [
+        //           "Refresh the page",
+        //           "Use a new flow tab",
+        //           "Check if the backend is up",
+        //           "Endpoint: " + error.config?.url,
+        //         ],
+        //       });
+        //       return Promise.reject(error);
+        //     }
+        //   }
+        // }
       }
     );
 
@@ -55,7 +53,7 @@ function ApiInterceptor() {
 }
 
 // Function to sleep for a given duration in milliseconds
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
