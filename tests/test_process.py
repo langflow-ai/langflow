@@ -218,7 +218,7 @@ def test_load_langchain_object_with_no_cached_session(client, basic_graph_data):
         basic_graph_data, "non_existent_session"
     )
     # Clear the cache
-    build_sorted_vertices_with_caching.clear_cache()
+    build_sorted_vertices_with_caching.clear_cache(session_id1)
     # Use the new session_id to get the langchain_object again
     langchain_object2, artifacts2, session_id2 = load_langchain_object(
         basic_graph_data, session_id1
