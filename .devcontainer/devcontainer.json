@@ -6,7 +6,8 @@
 	"image": "mcr.microsoft.com/devcontainers/universal:2-linux",
 	"features": {
 		"ghcr.io/devcontainers/features/aws-cli:1": {},
-		"ghcr.io/devcontainers/features/docker-in-docker": {}
+		"ghcr.io/devcontainers/features/docker-in-docker": {},
+		"ghcr.io/devcontainers-contrib/features/poetry": {}
 	},
 	"customizations": {
 		"vscode": {"extensions": [
@@ -16,6 +17,10 @@
 				"sourcery.sourcery",
 				"eamodio.gitlens"
 			]}
+	},
+
+	"containerEnv": {
+		"POETRY_VIRTUALENVS_IN_PROJECT": "true"
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
