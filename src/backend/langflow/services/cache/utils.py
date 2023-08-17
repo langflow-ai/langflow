@@ -212,6 +212,10 @@ class Memoize:
         cache_manager = self.get_cache_manager()
         return cache_manager.get(session_id)
 
+    def update_cache(self, session_id, value):
+        cache_manager = self.get_cache_manager()
+        cache_manager.set(session_id, value)
+
     def __call__(self, func: Callable[..., Any]):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -228,5 +232,6 @@ class Memoize:
             return result
 
         wrapper.clear_cache = self.clear_cache
+        wrapper.update_cache = self.update_cache
         wrapper.get_result_by_session_id = self.get_result_by_session_id
         return wrapper
