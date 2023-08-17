@@ -275,6 +275,8 @@ export type ApiKeyType = {
   children: ReactElement;
   icon: string;
   data?: any;
+  onCloseModal: () => void;
+
 };
 
 export type ApiKeyInputType = {
@@ -526,4 +528,12 @@ export type validationStatusType = {
   params: string;
   progress: number;
   valid: boolean;
+};
+
+export type ApiKey = {
+  id: string;
+  api_key: string;
+  name: string;
+  created_at: string;
+  last_used_at: string;
 };

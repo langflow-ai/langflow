@@ -21,6 +21,7 @@ export default function SecretKeyModal({
   children,
   icon,
   data,
+  onCloseModal
 }: ApiKeyType) {
   const Icon: any = nodeIconsLucide[icon];
   const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ export default function SecretKeyModal({
   const [renderKey, setRenderKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
   const { setSuccessData } = useContext(alertContext);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleInput({
     target: { name, value },
@@ -44,6 +45,9 @@ export default function SecretKeyModal({
       setRenderKey(false);
       resetForm();
     }
+    else{
+      onCloseModal();
+    }
   }, [open]);
 
   function resetForm() {
@@ -54,8 +58,8 @@ export default function SecretKeyModal({
   const handleCopyClick = async () => {
     if (apiKeyValue) {
       await navigator.clipboard.writeText(apiKeyValue);
-      inputRef.current.focus();
-      inputRef.current.select();
+      inputRef?.current?.focus();
+      inputRef?.current?.select();
       setSuccessData({
         title: "API Key copied!",
       });

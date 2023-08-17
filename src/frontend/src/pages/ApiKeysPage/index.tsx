@@ -17,6 +17,7 @@ import ConfirmationModal from "../../modals/ConfirmationModal";
 import SecretKeyModal from "../../modals/SecretKeyModal";
 
 import moment from "moment";
+import { ApiKey } from "../../types/components";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -35,7 +36,7 @@ export default function ApiKeysPage() {
     setLoadingKeys(true);
     if (userData) {
       getApiKey(userData.id)
-        .then((keys) => {
+        .then((keys: [ApiKey]) => {
           keysList.current = keys["api_keys"];
           setUserId(keys["user_id"]);
           setLoadingKeys(false);
@@ -75,12 +76,6 @@ export default function ApiKeysPage() {
         </span>
       </div>
     );
-  }
-
-  function getIdKeyHidden(apiKey: string) {
-    const firstTwoChars = apiKey.slice(0, 2);
-    const lastFourChars = apiKey.slice(-4);
-    return firstTwoChars + "..." + lastFourChars;
   }
 
   return (
@@ -153,7 +148,7 @@ export default function ApiKeysPage() {
                       </TableHeader>
                       {!loadingKeys && (
                         <TableBody>
-                          {keysList.current.map((api_keys, index) => (
+                          {keysList.current.map((api_keys: ApiKey, index: number) => (
                             <TableRow key={index}>
                               <TableCell className="truncate py-2">
                                 <ShadTooltip content={api_keys.name}>
@@ -164,11 +159,11 @@ export default function ApiKeysPage() {
                               </TableCell>
                               <TableCell className="truncate py-2">
                                 <span className="cursor-default">
-                                  {getIdKeyHidden(api_keys.id)}
+                                  {api_keys.api_key}
                                 </span>
                               </TableCell>
                               <TableCell className="truncate py-2 ">
-                                {moment(api_keys.create_at).format(
+                                {moment(api_keys.created_at).format(
                                   "YYYY-MM-DD HH:mm"
                                 )}
                               </TableCell>
@@ -217,6 +212,7 @@ export default function ApiKeysPage() {
                         confirmationText="Create secret key"
                         icon={"Key"}
                         data={userId}
+                        onCloseModal={() => {getKeys()}}
                       >
                         <Button>
                           <IconComponent name="Plus" className="mr-1 h-5 w-5" />
