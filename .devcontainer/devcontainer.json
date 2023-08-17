@@ -3,37 +3,36 @@
 {
 	"name": "LangChain Dev Container",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/universal:2-linux",
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.10-bullseye",
+	
+	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-		"ghcr.io/devcontainers/features/aws-cli:1": {},
-		"ghcr.io/devcontainers/features/docker-in-docker": {},
+		"ghcr.io/devcontainers/features/node": {},
 		"ghcr.io/devcontainers-contrib/features/poetry": {}
 	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "make setup_devcontainer",
+
+	"containerEnv": {
+		"POETRY_VIRTUALENVS_IN_PROJECT": "true"
+	},
+
+	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {"extensions": [
 				"actboy168.tasks",
 				"GitHub.copilot",
 				"ms-python.python",
 				"sourcery.sourcery",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"ms-vscode.makefile-tools",
+				"GitHub.vscode-pull-request-github"
 			]}
-	},
-
-	"containerEnv": {
-		"POETRY_VIRTUALENVS_IN_PROJECT": "true"
-	},
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "poetry install"
-
-	// Configure tool-specific properties.
-	// "customizations": {},
+	}
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
