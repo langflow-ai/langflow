@@ -37,6 +37,8 @@ export type alertContextType = {
   pushNotificationList: (Object: AlertItemType) => void;
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
+  loading: boolean;
+  setLoading: (newState: boolean) => void;
 };
 
 export type darkContextType = {

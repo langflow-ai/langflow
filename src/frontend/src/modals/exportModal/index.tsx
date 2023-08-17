@@ -1,4 +1,4 @@
-import { ReactNode, forwardRef, useContext, useState } from "react";
+import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -10,17 +10,17 @@ import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, updateFlow, downloadFlow, saveFlow } =
-      useContext(TabsContext);
+    const { flows, tabId, updateFlow, downloadFlow } = useContext(TabsContext);
     const [checked, setChecked] = useState(false);
-    const [name, setName] = useState(
-      flows.find((flow) => flow.id === tabId)?.name
-    );
-    const [invalidName, setInvalidName] = useState(false);
-    const [description, setDescription] = useState(
-      flows.find((flow) => flow.id === tabId)?.description
-    );
+    const flow = flows.find((f) => f.id === tabId);
+    useEffect(() => {
+      setName(flow.name);
+      setDescription(flow.description);
+    }, [flow.name, flow.description]);
+    const [name, setName] = useState(flow.name);
+    const [description, setDescription] = useState(flow.description);
     const [open, setOpen] = useState(false);
+
     return (
       <BaseModal size="smaller" open={open} setOpen={setOpen}>
         <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
@@ -34,19 +34,18 @@ const ExportModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content>
           <EditFlowSettings
-            invalidName={invalidName}
-            setInvalidName={setInvalidName}
-            name={name!}
-            description={description!}
+            name={name}
+            description={description}
             flows={flows}
             tabId={tabId}
             setName={setName}
             setDescription={setDescription}
+            updateFlow={updateFlow}
           />
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox
               id="terms"
-              onCheckedChange={(event: boolean): void => {
+              onCheckedChange={(event: boolean) => {
                 setChecked(event);
               }}
             />
