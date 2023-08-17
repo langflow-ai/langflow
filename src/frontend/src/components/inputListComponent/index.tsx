@@ -11,7 +11,7 @@ export default function InputListComponent({
   onChange,
   disabled,
   editNode = false,
-}: InputListComponentType) {
+}: InputListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange([""]);
@@ -38,6 +38,12 @@ export default function InputListComponent({
                 let newInputList = _.cloneDeep(value);
                 newInputList[idx] = event.target.value;
                 onChange(newInputList);
+              }}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Backspace") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
               }}
             />
             {idx === value.length - 1 ? (

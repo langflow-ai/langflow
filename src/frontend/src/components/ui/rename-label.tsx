@@ -23,14 +23,14 @@ export default function RenameLabel(props) {
       });
       if (inputRef.current) {
         setTimeout(() => {
-          inputRef.current.focus();
+          inputRef.current?.focus();
         }, 100);
       }
     }
     resizeInput();
   }, [isRename]);
 
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const resizeInput = () => {
     const input = inputRef.current;

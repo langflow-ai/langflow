@@ -1,6 +1,7 @@
 import sys
 import time
 import httpx
+from langflow.services.manager import initialize_settings_manager
 from langflow.services.utils import get_settings_manager
 from langflow.utils.util import get_number_of_workers
 from multiprocess import Process  # type: ignore
@@ -30,6 +31,7 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
+    initialize_settings_manager()
     settings_manager = get_settings_manager()
     if config:
         logger.debug(f"Loading settings from {config}")
