@@ -10,7 +10,8 @@ import yaml
 from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
-BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+# BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 class Settings(BaseSettings):
