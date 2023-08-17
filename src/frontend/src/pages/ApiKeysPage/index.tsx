@@ -129,6 +129,7 @@ export default function ApiKeysPage() {
                         }
                       >
                         <TableRow>
+                          <TableHead className="h-10">Id</TableHead>
                           <TableHead className="h-10">Name</TableHead>
                           <TableHead className="h-10">Key</TableHead>
                           <TableHead className="h-10">Created</TableHead>
@@ -148,57 +149,66 @@ export default function ApiKeysPage() {
                       </TableHeader>
                       {!loadingKeys && (
                         <TableBody>
-                          {keysList.current.map((api_keys: ApiKey, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell className="truncate py-2">
-                                <ShadTooltip content={api_keys.name}>
+                          {keysList.current.map(
+                            (api_keys: ApiKey, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell className="truncate py-2">
+                                  <ShadTooltip content={api_keys.id}>
+                                    <span className="cursor-default">
+                                      {api_keys.id}
+                                    </span>
+                                  </ShadTooltip>
+                                </TableCell>
+                                <TableCell className="truncate py-2">
+                                  <ShadTooltip content={api_keys.name}>
+                                    <span className="cursor-default">
+                                      {api_keys.name}
+                                    </span>
+                                  </ShadTooltip>
+                                </TableCell>
+                                <TableCell className="truncate py-2">
                                   <span className="cursor-default">
-                                    {api_keys.name}
+                                    {api_keys.api_key}
                                   </span>
-                                </ShadTooltip>
-                              </TableCell>
-                              <TableCell className="truncate py-2">
-                                <span className="cursor-default">
-                                  {api_keys.api_key}
-                                </span>
-                              </TableCell>
-                              <TableCell className="truncate py-2 ">
-                                {moment(api_keys.created_at).format(
-                                  "YYYY-MM-DD HH:mm"
-                                )}
-                              </TableCell>
-                              <TableCell className="truncate py-2">
-                                {moment(api_keys.last_used_at).format(
-                                  "YYYY-MM-DD HH:mm"
-                                )}
-                              </TableCell>
-                              <TableCell className="flex w-[100px] py-2 text-right">
-                                <div className="flex">
-                                  <ConfirmationModal
-                                    title="Delete"
-                                    titleHeader="Delete User"
-                                    modalContentTitle="Attention!"
-                                    modalContent="Are you sure you want to delete this key? This action cannot be undone."
-                                    cancelText="Cancel"
-                                    confirmationText="Delete"
-                                    icon={"UserMinus2"}
-                                    data={api_keys.id}
-                                    index={index}
-                                    onConfirm={(index, keys) => {
-                                      handleDeleteKey(keys);
-                                    }}
-                                  >
-                                    <ShadTooltip content="Delete" side="top">
-                                      <IconComponent
-                                        name="Trash2"
-                                        className="ml-2 h-4 w-4 cursor-pointer"
-                                      />
-                                    </ShadTooltip>
-                                  </ConfirmationModal>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                                </TableCell>
+                                <TableCell className="truncate py-2 ">
+                                  {moment(api_keys.created_at).format(
+                                    "YYYY-MM-DD HH:mm"
+                                  )}
+                                </TableCell>
+                                <TableCell className="truncate py-2">
+                                  {moment(api_keys.last_used_at).format(
+                                    "YYYY-MM-DD HH:mm"
+                                  )}
+                                </TableCell>
+                                <TableCell className="flex w-[100px] py-2 text-right">
+                                  <div className="flex">
+                                    <ConfirmationModal
+                                      title="Delete"
+                                      titleHeader="Delete User"
+                                      modalContentTitle="Attention!"
+                                      modalContent="Are you sure you want to delete this key? This action cannot be undone."
+                                      cancelText="Cancel"
+                                      confirmationText="Delete"
+                                      icon={"UserMinus2"}
+                                      data={api_keys.id}
+                                      index={index}
+                                      onConfirm={(index, keys) => {
+                                        handleDeleteKey(keys);
+                                      }}
+                                    >
+                                      <ShadTooltip content="Delete" side="top">
+                                        <IconComponent
+                                          name="Trash2"
+                                          className="ml-2 h-4 w-4 cursor-pointer"
+                                        />
+                                      </ShadTooltip>
+                                    </ConfirmationModal>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          )}
                         </TableBody>
                       )}
                     </Table>
@@ -212,7 +222,9 @@ export default function ApiKeysPage() {
                         confirmationText="Create secret key"
                         icon={"Key"}
                         data={userId}
-                        onCloseModal={() => {getKeys()}}
+                        onCloseModal={() => {
+                          getKeys();
+                        }}
                       >
                         <Button>
                           <IconComponent name="Plus" className="mr-1 h-5 w-5" />
