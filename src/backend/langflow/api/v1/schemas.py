@@ -1,7 +1,7 @@
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from langflow.database.models.flow import FlowCreate, FlowRead
+from langflow.services.database.models.flow import FlowCreate, FlowRead
 from pydantic import BaseModel, Field, validator
 import json
 
@@ -47,6 +47,7 @@ class ProcessResponse(BaseModel):
     """Process response schema."""
 
     result: dict
+    session_id: Optional[str] = None
 
 
 class ChatMessage(BaseModel):

@@ -14,9 +14,7 @@ env:
 
 jobs:
   if_release:
-    if: |
-      ${{ github.event.pull_request.merged == true }}
-      && ${{ contains(github.event.pull_request.labels.*.name, 'Release') }}
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'Release') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -7,7 +7,7 @@ export default function ToggleComponent({
   enabled,
   setEnabled,
   disabled,
-}: ToggleComponentType) {
+}: ToggleComponentType): JSX.Element {
   // set component state as disabled
   useEffect(() => {
     if (disabled) {
@@ -18,8 +18,8 @@ export default function ToggleComponent({
     <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
       <Switch
         checked={enabled}
-        onChange={(x: boolean) => {
-          setEnabled(x);
+        onChange={(isEnabled: boolean) => {
+          setEnabled(isEnabled);
         }}
         className={classNames(
           enabled ? "bg-primary" : "bg-input",

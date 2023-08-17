@@ -1,5 +1,11 @@
 import { cloneDeep } from "lodash";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, {
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -17,6 +23,7 @@ import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
+import { TabsState } from "../../../../types/tabs";
 import {
   isValidConnection,
   scapedJSONStringfy,
@@ -41,15 +48,15 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
-}: ParameterComponentType) {
-  const ref = useRef(null);
-  const refHtml = useRef(null);
-  const infoHtml = useRef(null);
+}: ParameterComponentType): JSX.Element {
+  const ref = useRef<HTMLDivElement>(null);
+  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
 
-  const flow = flows.find((f) => f.id === tabId).data?.nodes ?? null;
+  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -67,16 +74,17 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance
       ?.getEdges()
-      .some((e) => e.targetHandle === scapedJSONStringfy(id)) ?? false;
+      .some((edge) => edge.targetHandle === scapedJSONStringfy(id)) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: any) => {
+  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
     let newData = cloneDeep(data);
-    newData.node.template[name].value = newValue;
+    newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
-    setTabsState((prev) => {
+    //@ts-ignore
+    setTabsState((prev: TabsState) => {
       return {
         ...prev,
         [tabId]: {
@@ -91,10 +99,11 @@ export default function ParameterComponent({
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
+    // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
-        {info.split("\n").map((line, i) => (
-          <p key={i} className="block">
+        {info.split("\n").map((line, index) => (
+          <p key={index} className="block">
             {line}
           </p>
         ))}
@@ -103,18 +112,20 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj = groupByFamily(myData, tooltipTitle, left, flow);
+    let groupedObj = groupByFamily(myData, tooltipTitle!, left, flow!);
 
     if (groupedObj && groupedObj.length > 0) {
-      refHtml.current = groupedObj.map((item, i) => {
+      //@ts-ignore
+      //@ts-ignore
+      refHtml.current = groupedObj.map((item, index) => {
         const Icon: any =
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
           <span
-            key={i}
+            key={index}
             className={classNames(
-              i > 0 ? "mt-2 flex items-center" : "flex items-center"
+              index > 0 ? "mt-2 flex items-center" : "flex items-center"
             )}
           >
             <div
@@ -137,10 +148,10 @@ export default function ParameterComponent({
                 {" "}
                 {item.type === "" ? "" : " - "}
                 {item.type.split(", ").length > 2
-                  ? item.type.split(", ").map((el, i) => (
-                      <React.Fragment key={el + i}>
+                  ? item.type.split(", ").map((el, index) => (
+                      <React.Fragment key={el + index}>
                         <span>
-                          {i === item.type.split(", ").length - 1
+                          {index === item.type.split(", ").length - 1
                             ? el
                             : (el += `, `)}
                         </span>
@@ -153,6 +164,7 @@ export default function ParameterComponent({
         );
       });
     } else {
+      //@ts-ignore
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
     }
   }
@@ -212,7 +224,7 @@ export default function ParameterComponent({
               position={left ? Position.Left : Position.Right}
               id={scapedJSONStringfy(id)}
               isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance)
+                isValidConnection(connection, reactFlowInstance!)
               }
               className={classNames(
                 left ? "-ml-0.5 " : "-mr-0.5 ",
@@ -228,9 +240,9 @@ export default function ParameterComponent({
 
         {left === true &&
         type === "str" &&
-        !data.node.template[name].options ? (
+        !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
-            {data.node.template[name].list ? (
+            {data.node?.template[name].list ? (
               <InputListComponent
                 disabled={disabled}
                 value={
@@ -241,7 +253,7 @@ export default function ParameterComponent({
                 }
                 onChange={handleOnNewValue}
               />
-            ) : data.node.template[name].multiline ? (
+            ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
@@ -250,8 +262,8 @@ export default function ParameterComponent({
             ) : (
               <InputComponent
                 disabled={disabled}
-                password={data.node.template[name].password ?? false}
-                value={data.node.template[name].value ?? ""}
+                password={data.node?.template[name].password ?? false}
+                value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
             )}
@@ -260,9 +272,9 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <ToggleShadComponent
               disabled={disabled}
-              enabled={data.node.template[name].value ?? false}
-              setEnabled={(t) => {
-                handleOnNewValue(t);
+              enabled={data.node?.template[name].value ?? false}
+              setEnabled={(isEnabled) => {
+                handleOnNewValue(isEnabled);
               }}
               size="large"
             />
@@ -271,13 +283,13 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <FloatComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node.template[name].options ? (
+          data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name].options}
@@ -288,13 +300,13 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
-              dynamic={data.node.template[name].dynamic ?? false}
+              dynamic={data.node?.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -302,12 +314,12 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <InputFileComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              fileTypes={data.node.template[name].fileTypes}
-              suffixes={data.node.template[name].suffixes}
-              onFileChange={(t: string) => {
-                data.node.template[name].file_path = t;
+              fileTypes={data.node?.template[name].fileTypes}
+              suffixes={data.node?.template[name].suffixes}
+              onFileChange={(filePath: string) => {
+                data.node!.template[name].file_path = filePath;
                 save();
               }}
             ></InputFileComponent>
@@ -316,7 +328,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
             <IntComponent
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>
@@ -329,7 +341,7 @@ export default function ParameterComponent({
               }}
               nodeClass={data.node}
               disabled={disabled}
-              value={data.node.template[name].value ?? ""}
+              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
             />
           </div>

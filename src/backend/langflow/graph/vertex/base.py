@@ -1,5 +1,7 @@
+import ast
+from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
-from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.logger import logger
 from langflow.utils.util import sync_to_async
@@ -21,7 +23,7 @@ class Vertex:
         self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
-        self._built_object = None
+        self._built_object = UnbuiltObject()
         self._built = False
         self.artifacts: Dict[str, Any] = {}
 
@@ -61,7 +63,7 @@ class Vertex:
         )
 
         if self.base_type is None:
-            for base_type, value in ALL_TYPES_DICT.items():
+            for base_type, value in lazy_load_dict.ALL_TYPES_DICT.items():
                 if self.vertex_type in value:
                     self.base_type = base_type
                     break
@@ -100,7 +102,9 @@ class Vertex:
                     params[param_key] = edge.source
 
         for key, value in template_dict.items():
-            if key == "_type" or not value.get("show"):
+            # Skip _type and any value that has show == False and is not code
+            # If we don't want to show code but we want to use it
+            if key == "_type" or (not value.get("show") and key != "code"):
                 continue
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
@@ -112,7 +116,14 @@ class Vertex:
 
                 params[key] = file_path
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
-                params[key] = value.get("value")
+                if value.get("type") == "code":
+                    try:
+                        params[key] = ast.literal_eval(value.get("value"))
+                    except Exception as exc:
+                        logger.debug(f"Error parsing code: {exc}")
+                        params[key] = value.get("value")
+                else:
+                    params[key] = value.get("value")
 
             if not value.get("required") and params.get(key) is None:
                 if value.get("default"):
@@ -235,8 +246,14 @@ class Vertex:
         """
         Checks if the built object is None and raises a ValueError if so.
         """
-        if self._built_object is None:
-            raise ValueError(f"Node type {self.vertex_type} not found")
+        if isinstance(self._built_object, UnbuiltObject):
+            raise ValueError(f"{self.vertex_type}: {self._built_object_repr()}")
+        elif self._built_object is None:
+            message = f"{self.vertex_type} returned None."
+            if self.base_type == "custom_components":
+                message += " Make sure your build method returns a component."
+
+            raise ValueError(message)
 
     def build(self, force: bool = False) -> Any:
         if not self._built or force:
@@ -259,4 +276,8 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return "Built sucessfully ✨" if self._built_object else "Failed to build 😵‍💫"
+        return (
+            "Built sucessfully ✨"
+            if self._built_object is not None
+            else "Failed to build 😵‍💫"
+        )

@@ -9,7 +9,7 @@ export default function NoticeAlert({
   link = "",
   id,
   removeAlert,
-}: NoticeAlertType) {
+}: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {
@@ -47,7 +47,9 @@ export default function NoticeAlert({
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-info-foreground">{title}</p>
+            <p className="text-sm text-info-foreground word-break-break-word">
+              {title}
+            </p>
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {link !== "" ? (
                 <Link

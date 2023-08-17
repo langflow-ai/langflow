@@ -1,5 +1,11 @@
 import _ from "lodash";
-import { Connection, Edge, ReactFlowInstance } from "reactflow";
+import {
+  Connection,
+  Edge,
+  ReactFlowInstance,
+  ReactFlowJsonObject,
+} from "reactflow";
+import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import {
   FlowType,
@@ -23,7 +29,7 @@ export function cleanEdges({
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((e) => e.id !== edge.id);
+      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
     }
     // check if the source and target handle still exists
     if (sourceNode && targetNode) {
@@ -34,10 +40,10 @@ export function cleanEdges({
           scapeJSONParse(targetHandle);
         const field = targetHandleObject.fieldName;
         const id: targetHandleType = {
-          type: targetNode.data.node.template[field]?.type,
+          type: targetNode.data.node!.template[field]?.type,
           fieldName: field,
           id: targetNode.data.id,
-          inputTypes: targetNode.data.node.template[field]?.input_types,
+          inputTypes: targetNode.data.node!.template[field]?.input_types,
         };
         if (scapedJSONStringfy(id) !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -46,7 +52,7 @@ export function cleanEdges({
       if (sourceHandle) {
         const id: sourceHandleType = {
           id: sourceNode.data.id,
-          baseClasses: sourceNode.data.node.base_classes,
+          baseClasses: sourceNode.data.node!.base_classes,
           dataType: sourceNode.data.type,
         };
         if (scapedJSONStringfy(id) !== sourceHandle) {
@@ -63,8 +69,8 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance
 ) {
-  const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
-  const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle);
+  const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
+  const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
   console.log(sourceHandleObject, targetHandleObject);
   if (
     targetHandleObject.inputTypes?.some(
@@ -77,7 +83,7 @@ export function isValidConnection(
     ) ||
     targetHandleObject.type === "str"
   ) {
-    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
+    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -101,7 +107,7 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
+  cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
@@ -134,53 +140,60 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(newFlow, getNodeId) {
+export function updateIds(
+  newFlow: ReactFlowJsonObject,
+  getNodeId: (type: string) => string
+) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n: NodeType) => {
+  newFlow.nodes.forEach((node: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId(n.data.type);
-    idsMap[n.id] = newId;
-    n.id = newId;
-    n.data.id = newId;
+    let newId = getNodeId(node.data.type);
+    idsMap[node.id] = newId;
+    node.id = newId;
+    node.data.id = newId;
     // Add the new node to the list of nodes in state
   });
 
-  newFlow.edges.forEach((e: Edge) => {
-    e.source = idsMap[e.source];
-    e.target = idsMap[e.target];
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(e.sourceHandle);
-    e.sourceHandle = scapedJSONStringfy({
+  newFlow.edges.forEach((edge: Edge) => {
+    edge.source = idsMap[edge.source];
+    edge.target = idsMap[edge.target];
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle!
+    );
+    edge.sourceHandle = scapedJSONStringfy({
       ...sourceHandleObject,
-      id: e.source,
+      id: edge.source,
     });
-    const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle);
-    e.targetHandle = scapedJSONStringfy({
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle!
+    );
+    edge.targetHandle = scapedJSONStringfy({
       ...targetHandleObject,
-      id: e.target,
+      id: edge.target,
     });
-    e.id =
+    edge.id =
       "reactflow__edge-" +
-      e.source +
-      e.sourceHandle +
+      edge.source +
+      edge.sourceHandle +
       "-" +
-      e.target +
-      e.targetHandle;
+      edge.target +
+      edge.targetHandle;
   });
 }
 
-export function buildTweaks(flow) {
-  return flow.data.nodes.reduce((acc, node) => {
+export function buildTweaks(flow: FlowType) {
+  return flow.data!.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
     return acc;
   }, {});
 }
 
 export function validateNode(
-  n: NodeType,
+  node: NodeType,
   reactFlowInstance: ReactFlowInstance
 ): Array<string> {
-  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+  if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
       "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
     ];
@@ -189,7 +202,7 @@ export function validateNode(
   const {
     type,
     node: { template },
-  } = n.data;
+  } = node.data;
 
   return Object.keys(template).reduce(
     (errors: Array<string>, t) =>
@@ -202,10 +215,11 @@ export function validateNode(
           !reactFlowInstance
             .getEdges()
             .some(
-              (e) =>
-                (scapeJSONParse(e.targetHandle) as targetHandleType)
+              (edge) =>
+                (scapeJSONParse(edge.targetHandle!) as targetHandleType)
                   .fieldName === t &&
-                (scapeJSONParse(e.targetHandle) as targetHandleType).id === n.id
+                (scapeJSONParse(edge.targetHandle!) as targetHandleType).id ===
+                  node.id
             )
           ? [
               `${type} is missing ${
@@ -261,23 +275,51 @@ export function updateEdgesHandleIds({
     if (target && targetNode) {
       let field = target.split("|")[1];
       newTarget = {
-        type: targetNode.data.node.template[field].type,
+        type: targetNode.data.node!.template[field].type,
         fieldName: field,
         id: targetNode.data.id,
-        inputTypes: targetNode.data.node.template[field].input_types,
+        inputTypes: targetNode.data.node!.template[field].input_types,
       };
     }
     if (source && sourceNode) {
       newSource = {
         dataType: sourceNode.data.type,
         id: sourceNode.data.id,
-        baseClasses: sourceNode.data.node.base_classes,
+        baseClasses: sourceNode.data.node!.base_classes,
       };
     }
-    edge.sourceHandle = scapedJSONStringfy(newSource);
-    edge.targetHandle = scapedJSONStringfy(newTarget);
+    edge.sourceHandle = scapedJSONStringfy(newSource!);
+    edge.targetHandle = scapedJSONStringfy(newTarget!);
   });
   return newEdges;
+}
+
+export function handleKeyDown(
+  e: React.KeyboardEvent<HTMLInputElement>,
+  inputValue: string | string[] | null,
+  block: string
+) {
+  console.log(e, inputValue, block);
+  //condition to fix bug control+backspace on Windows/Linux
+  if (
+    (typeof inputValue === "string" &&
+      (e.metaKey === true || e.ctrlKey === true) &&
+      e.key === "Backspace" &&
+      (inputValue === block ||
+        inputValue?.charAt(inputValue?.length - 1) === " " ||
+        specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1)))) ||
+    (navigator.userAgent.toUpperCase().includes("MAC") &&
+      e.ctrlKey === true &&
+      e.key === "Backspace")
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  if (e.ctrlKey === true && e.key === "Backspace" && inputValue === block) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 }
 
 export function getConnectedNodes(

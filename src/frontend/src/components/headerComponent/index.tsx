@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
-export default function Header() {
+export default function Header(): JSX.Element {
   const { flows, tabId } = useContext(TabsContext);
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
@@ -34,6 +34,9 @@ export default function Header() {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
+        <Button variant="outline" className="">
+          Sign out
+        </Button>
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}

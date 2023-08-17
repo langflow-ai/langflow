@@ -1,19 +1,15 @@
 from http import HTTPStatus
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 
-from langflow.cache.utils import save_uploaded_file
-from langflow.database.models.flow import Flow
+from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
-from langflow.settings import settings
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
 
 from langflow.interface.custom.custom_component import CustomComponent
 
-from langflow.interface.custom.directory_reader import (
-    CustomComponentPathValueError,
-)
 
 from langflow.api.v1.schemas import (
     ProcessResponse,
@@ -21,7 +17,7 @@ from langflow.api.v1.schemas import (
     CustomComponentCode,
 )
 
-from langflow.api.utils import merge_nested_dicts
+from langflow.api.utils import merge_nested_dicts_with_renaming
 
 from langflow.interface.types import (
     build_langchain_types_dict,
@@ -29,7 +25,7 @@ from langflow.interface.types import (
     build_langchain_custom_component_list_from_path,
 )
 
-from langflow.database.base import get_session
+from langflow.services.utils import get_session
 from sqlmodel import Session
 
 # build router
@@ -38,47 +34,43 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all")
 def get_all():
+    logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
-
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file = {}
-    if settings.components_path:
-        custom_component_dicts = [
-            build_langchain_custom_component_list_from_path(str(path))
-            for path in settings.components_path
-        ]
+    settings_manager = get_settings_manager()
+    if settings_manager.settings.COMPONENTS_PATH:
+        logger.info(
+            f"Building custom components from {settings_manager.settings.COMPONENTS_PATH}"
+        )
+
+        custom_component_dicts = []
+        processed_paths = []
+        for path in settings_manager.settings.COMPONENTS_PATH:
+            if str(path) in processed_paths:
+                continue
+            custom_component_dict = build_langchain_custom_component_list_from_path(
+                str(path)
+            )
+            custom_component_dicts.append(custom_component_dict)
+            processed_paths.append(str(path))
+
+        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
-            custom_components_from_file = merge_nested_dicts(
+            # custom_component_dict is a dict of dicts
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
+            logger.debug(custom_component_dict)
+            custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
-    return merge_nested_dicts(native_components, custom_components_from_file)
 
-
-@router.get("/load_custom_component_from_path")
-def get_load_custom_component_from_path(path: str):
-    try:
-        data = build_langchain_custom_component_list_from_path(path)
-    except CustomComponentPathValueError as err:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": type(err).__name__, "traceback": str(err)},
-        ) from err
-
-    return data
-
-
-@router.get("/load_custom_component_from_path_TEST")
-def get_load_custom_component_from_path_test(path: str):
-    from langflow.interface.custom.directory_reader import (
-        DirectoryReader,
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
     )
-
-    reader = DirectoryReader(path, False)
-    file_list = reader.get_files()
-    data = reader.build_component_menu_list(file_list)
-
-    return reader.filter_loaded_components(data, True)
 
 
 # For backwards compatibility we will keep the old endpoint
@@ -89,6 +81,7 @@ async def process_flow(
     inputs: Optional[dict] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
+    session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     session: Session = Depends(get_session),
 ):
     """
@@ -108,10 +101,10 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        response = process_graph_cached(graph_data, inputs, clear_cache)
-        return ProcessResponse(
-            result=response,
+        response, session_id = process_graph_cached(
+            graph_data, inputs, clear_cache, session_id
         )
+        return ProcessResponse(result=response, session_id=session_id)
     except Exception as e:
         # Log stack trace
         logger.exception(e)

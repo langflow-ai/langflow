@@ -226,7 +226,16 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            template = self._built_object.format(**artifacts)
+            if not hasattr(self._built_object, "template") and hasattr(
+                self._built_object, "prompt"
+            ):
+                template = self._built_object.prompt.template
+            else:
+                template = self._built_object.template
+            for key, value in artifacts.items():
+                if value:
+                    replace_key = "{" + key + "}"
+                    template = template.replace(replace_key, value)
             return (
                 template
                 if isinstance(template, str)

@@ -7,8 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Edge, addEdge } from "reactflow";
+import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
 import ShortUniqueId from "short-unique-id";
+import { skipNodeUpdate } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
@@ -18,13 +19,15 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
+import { tweakType } from "../types/components";
 import {
   FlowType,
+  NodeDataType,
   NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { TabsContextType, TabsState } from "../types/tabs";
+import { TabsContextType, TabsState, errorsVarType } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -82,9 +85,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
   const { templates, reactFlowInstance } = useContext(typesContext);
-  const [lastCopiedSelection, setLastCopiedSelection] = useState(null);
+  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
+    nodes: any;
+    edges: any;
+  } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
-  const [getTweak, setTweak] = useState([]);
+  const [getTweak, setTweak] = useState<tweakType>([]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -139,8 +145,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     //get tabs from db
     return readFlowsFromDatabase();
   }
-  function processDBData(DbData) {
-    DbData.forEach((flow) => {
+  function processDBData(DbData: FlowType[]) {
+    DbData.forEach((flow: FlowType) => {
       try {
         if (!flow.data) {
           return;
@@ -167,16 +173,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateDisplay_name(node: NodeType, template: APIClassType) {
-    node.data.node.display_name = template["display_name"] || node.data.type;
+    node.data.node!.display_name = template["display_name"] || node.data.type;
   }
 
   function updateNodeDocumentation(node: NodeType, template: APIClassType) {
-    node.data.node.documentation = template["documentation"];
+    node.data.node!.documentation = template["documentation"];
   }
 
-  function processFlowNodes(flow) {
+  function processFlowNodes(flow: FlowType) {
     if (!flow.data || !flow.data.nodes) return;
     flow.data.nodes.forEach((node: NodeType) => {
+      if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
@@ -194,7 +201,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
-    node.data.node.base_classes = template["base_classes"];
+    node.data.node!.base_classes = template["base_classes"];
   }
 
   function updateNodeEdges(
@@ -202,10 +209,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     node: NodeType,
     template: APIClassType
   ) {
-    flow.data.edges.forEach((edge) => {
+    flow.data!.edges.forEach((edge) => {
       if (edge.source === node.id) {
         let sourceHandleObject: sourceHandleType = scapeJSONParse(
-          edge.sourceHandle
+          edge.sourceHandle!
         );
         sourceHandleObject.baseClasses = sourceHandleObject.baseClasses.concat(
           template["base_classes"]
@@ -216,17 +223,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function updateNodeDescription(node: NodeType, template: APIClassType) {
-    node.data.node.description = template["description"];
+    node.data.node!.description = template["description"];
   }
 
   function updateNodeTemplate(node: NodeType, template: APIClassType) {
-    node.data.node.template = updateTemplate(
+    node.data.node!.template = updateTemplate(
       template["template"] as unknown as APITemplateType,
-      node.data.node.template as APITemplateType
+      node.data.node!.template as APITemplateType
     );
   }
 
-  function updateStateWithDbData(tabsData) {
+  function updateStateWithDbData(tabsData: FlowType[]) {
     setFlows(tabsData);
   }
 
@@ -257,7 +264,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     link.download = `${
       flowName && flowName != ""
         ? flowName
-        : flows.find((f) => f.id === tabId).name
+        : flows.find((f) => f.id === tabId)!.name
     }.json`;
 
     // simulate a click on the link element to trigger the download
@@ -309,10 +316,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       input.onchange = (e: Event) => {
         // check if the file type is application/json
         if (
-          (e.target as HTMLInputElement).files[0].type === "application/json"
+          (e.target as HTMLInputElement).files![0].type === "application/json"
         ) {
           // get the file from the file input
-          const currentfile = (e.target as HTMLInputElement).files[0];
+          const currentfile = (e.target as HTMLInputElement).files![0];
           // read the file as text
           currentfile.text().then((text) => {
             // parse the text into a JSON object
@@ -332,11 +339,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const input = document.createElement("input");
     input.type = "file";
     // add a change event listener to the file input
-    input.onchange = (e: Event) => {
+    input.onchange = (event: Event) => {
       // check if the file type is application/json
-      if ((e.target as HTMLInputElement).files[0].type === "application/json") {
+      if (
+        (event.target as HTMLInputElement).files![0].type === "application/json"
+      ) {
         // get the file from the file input
-        const file = (e.target as HTMLInputElement).files[0];
+        const file = (event.target as HTMLInputElement).files![0];
         // read the file as text
         const formData = new FormData();
         formData.append("file", file);
@@ -367,69 +376,69 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    */
 
   function paste(
-    selectionInstance,
+    selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let nodes = reactFlowInstance.getNodes();
-    let edges = reactFlowInstance.getEdges();
-    selectionInstance.nodes.forEach((n) => {
-      if (n.position.y < minimumY) {
-        minimumY = n.position.y;
+    let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
+    let edges = reactFlowInstance!.getEdges();
+    selectionInstance.nodes.forEach((node: Node) => {
+      if (node.position.y < minimumY) {
+        minimumY = node.position.y;
       }
-      if (n.position.x < minimumX) {
-        minimumX = n.position.x;
+      if (node.position.x < minimumX) {
+        minimumX = node.position.x;
       }
     });
 
     const insidePosition = position.paneX
-      ? { x: position.paneX + position.x, y: position.paneY + position.y }
-      : reactFlowInstance.project({ x: position.x, y: position.y });
+      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
+      : reactFlowInstance!.project({ x: position.x, y: position.y });
 
-    selectionInstance.nodes.forEach((n: NodeType) => {
+    selectionInstance.nodes.forEach((node: NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId(n.data.type);
-      idsMap[n.id] = newId;
+      let newId = getNodeId(node.data.type);
+      idsMap[node.id] = newId;
 
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
         type: "genericNode",
         position: {
-          x: insidePosition.x + n.position.x - minimumX,
-          y: insidePosition.y + n.position.y - minimumY,
+          x: insidePosition.x + node.position!.x - minimumX,
+          y: insidePosition.y + node.position!.y - minimumY,
         },
         data: {
-          ..._.cloneDeep(n.data),
+          ..._.cloneDeep(node.data),
           id: newId,
         },
       };
 
       // Add the new node to the list of nodes in state
       nodes = nodes
-        .map((e) => ({ ...e, selected: false }))
+        .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    reactFlowInstance.setNodes(nodes);
+    reactFlowInstance!.setNodes(nodes);
 
-    selectionInstance.edges.forEach((e: Edge) => {
-      let source = idsMap[e.source];
-      let target = idsMap[e.target];
+    selectionInstance.edges.forEach((edge: Edge) => {
+      let source = idsMap[edge.source];
+      let target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
-        e.sourceHandle
+        edge.sourceHandle!
       );
       let sourceHandle = scapedJSONStringfy({
         ...sourceHandleObject,
-        id: e.source,
+        id: edge.source,
       });
       const targetHandleObject: targetHandleType = scapeJSONParse(
-        e.targetHandle
+        edge.targetHandle!
       );
       let targetHandle = scapedJSONStringfy({
         ...targetHandleObject,
-        id: e.target,
+        id: edge.target,
       });
       let id =
         "reactflow__edge-" +
@@ -453,24 +462,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           animated: targetHandleObject.type === "Text",
           selected: false,
         },
-        edges.map((e) => ({ ...e, selected: false }))
+        edges.map((edge) => ({ ...edge, selected: false }))
       );
     });
-    reactFlowInstance.setEdges(edges);
+    reactFlowInstance!.setEdges(edges);
   }
 
   const addFlow = async (
     flow?: FlowType,
     newProject?: Boolean
-  ): Promise<String> => {
+  ): Promise<String | undefined> => {
     if (newProject) {
-      let flowData = extractDataFromFlow(flow);
+      let flowData = extractDataFromFlow(flow!);
       if (flowData.description == "") {
         flowData.description = getRandomDescription();
       }
 
       // Create a new flow with a default name if no flow is provided.
-      const newFlow = createNewFlow(flowData, flow);
+      const newFlow = createNewFlow(flowData, flow!);
+      processFlowEdges(newFlow);
+      processFlowNodes(newFlow);
 
       const flowName = addVersionToDuplicates(newFlow, flows);
 
@@ -493,13 +504,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     } else {
       paste(
-        { nodes: flow.data.nodes, edges: flow.data.edges },
+        { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
         { x: 10, y: 10 }
       );
     }
   };
 
-  const extractDataFromFlow = (flow) => {
+  const extractDataFromFlow = (flow: FlowType) => {
     let data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
 
@@ -517,7 +528,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const updateEdges = (edges: Edge[]) => {
     edges.forEach((edge) => {
       const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle
+        edge.targetHandle!
       );
       edge.className =
         (targetHandleObject.type === "Text"
@@ -527,8 +538,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateNodes = (nodes, edges) => {
+  const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
+      if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
@@ -538,7 +550,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
           let sourceHandleObject: sourceHandleType = scapeJSONParse(
-            edge.sourceHandle
+            edge.sourceHandle!
           );
           if (edge.source === node.id) {
             let newSourceHandle = sourceHandleObject;
@@ -555,14 +567,17 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const createNewFlow = (flowData, flow) => ({
+  const createNewFlow = (
+    flowData: { data: ReactFlowJsonObject | null; description: string },
+    flow: FlowType
+  ) => ({
     description: flowData.description,
     name: flow?.name ?? getRandomName(),
     data: flowData.data,
     id: "",
   });
 
-  const addFlowToLocalState = (newFlow) => {
+  const addFlowToLocalState = (newFlow: FlowType) => {
     setFlows((prevState) => {
       return [...prevState, newFlow];
     });
@@ -613,7 +628,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err);
+      setErrorData(err as errorsVarType);
     }
   }
 

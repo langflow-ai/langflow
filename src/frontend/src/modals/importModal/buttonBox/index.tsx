@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { buttonBoxPropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 
 export default function ButtonBox({
@@ -10,16 +10,7 @@ export default function ButtonBox({
   textColor,
   deactivate,
   size,
-}: {
-  onClick: () => void;
-  title: string;
-  description: string;
-  icon: ReactNode;
-  bgColor: string;
-  textColor: string;
-  deactivate?: boolean;
-  size: "small" | "medium" | "big";
-}) {
+}: buttonBoxPropsType): JSX.Element {
   let bigCircle: string;
   let smallCircle: string;
   let titleFontSize: string;
@@ -96,7 +87,7 @@ export default function ButtonBox({
         <div className="mb-auto mt-auto w-full">
           <h3
             className={classNames(
-              "w-full break-words font-semibold text-background truncate-multiline",
+              "w-full font-semibold text-background truncate-multiline word-break-break-word",
               titleFontSize,
               marginTop
             )}

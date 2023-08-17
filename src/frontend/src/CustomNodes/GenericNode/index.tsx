@@ -8,6 +8,7 @@ import { useSSE } from "../../contexts/SSEContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { cleanEdges, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
@@ -20,13 +21,14 @@ export default function GenericNode({
 }: {
   data: NodeDataType;
   selected: boolean;
-}) {
+}): JSX.Element {
   const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
-  const [validationStatus, setValidationStatus] = useState(null);
+  const [validationStatus, setValidationStatus] =
+    useState<validationStatusType | null>(null);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function GenericNode({
           nodes: flow.data.nodes,
         },
         updateEdge: (edge) => {
-          flow.data.edges = edge;
+          flow.data!.edges = edge;
           reactFlowInstance.setEdges(edge);
           updateNodeInternals(data.id);
         },
@@ -77,7 +79,7 @@ export default function GenericNode({
           "generic-node-div"
         )}
       >
-        {data.node.beta && (
+        {data.node?.beta && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>
           </div>
@@ -90,9 +92,9 @@ export default function GenericNode({
               iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
-              <ShadTooltip content={data.node.display_name}>
+              <ShadTooltip content={data.node?.display_name}>
                 <div className="generic-node-tooltip-div text-primary">
-                  {data.node.display_name}
+                  {data.node?.display_name}
                 </div>
               </ShadTooltip>
             </div>
@@ -117,7 +119,9 @@ export default function GenericNode({
                       {typeof validationStatus.params === "string"
                         ? validationStatus.params
                             .split("\n")
-                            .map((line, index) => <div key={index}>{line}</div>)
+                            .map((line: string, index: number) => (
+                              <div key={index}>{line}</div>
+                            ))
                         : ""}
                     </div>
                   )
@@ -155,52 +159,59 @@ export default function GenericNode({
         </div>
 
         <div className="generic-node-desc">
-          <div className="generic-node-desc-text">{data.node.description}</div>
+          <div className="generic-node-desc-text">{data.node?.description}</div>
 
           <>
-            {Object.keys(data.node.template)
-              .filter((t) => t.charAt(0) !== "_")
-              .map((t: string, idx) => (
+            {Object.keys(data.node!.template)
+              .filter((templateField) => templateField.charAt(0) !== "_")
+              .map((templateField: string, idx) => (
                 <div key={idx}>
-                  {data.node.template[t].show &&
-                  !data.node.template[t].advanced ? (
+                  {data.node!.template[templateField].show &&
+                  !data.node!.template[templateField].advanced ? (
                     <ParameterComponent
                       key={scapedJSONStringfy({
-                        inputTypes: data.node.template[t].input_types,
-                        type: data.node.template[t].type,
+                        inputTypes:
+                          data.node!.template[templateField].input_types,
+                        type: data.node!.template[templateField].type,
                         id: data.id,
-                        fieldName: t,
+                        fieldName: templateField,
                       })}
                       data={data}
                       setData={setData}
                       color={
-                        nodeColors[types[data.node.template[t].type]] ??
-                        nodeColors[data.node.template[t].type] ??
+                        nodeColors[
+                          types[data.node?.template[templateField].type!]
+                        ] ??
+                        nodeColors[data.node?.template[templateField].type!] ??
                         nodeColors.unknown
                       }
                       title={
-                        data.node.template[t].display_name
-                          ? data.node.template[t].display_name
-                          : data.node.template[t].name
-                          ? toTitleCase(data.node.template[t].name)
-                          : toTitleCase(t)
+                        data.node?.template[templateField].display_name
+                          ? data.node.template[templateField].display_name
+                          : data.node?.template[templateField].name
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
-                      info={data.node.template[t].info}
-                      name={t}
+                      info={data.node?.template[templateField].info}
+                      name={templateField}
                       tooltipTitle={
-                        data.node.template[t].input_types?.join("\n") ??
-                        data.node.template[t].type
+                        data.node?.template[templateField].input_types?.join(
+                          "\n"
+                        ) ?? data.node?.template[templateField].type
                       }
-                      required={data.node.template[t].required}
+                      required={data.node!.template[templateField].required}
                       id={{
-                        inputTypes: data.node.template[t].input_types,
-                        type: data.node.template[t].type,
+                        inputTypes:
+                          data.node!.template[templateField].input_types,
+                        type: data.node!.template[templateField].type,
                         id: data.id,
-                        fieldName: t,
+                        fieldName: templateField,
                       }}
                       left={true}
-                      type={data.node.template[t].type}
-                      optionalHandle={data.node.template[t].input_types}
+                      type={data.node?.template[templateField].type}
+                      optionalHandle={
+                        data.node?.template[templateField].input_types
+                      }
                     />
                   ) : (
                     <></>
@@ -209,7 +220,7 @@ export default function GenericNode({
               ))}
             <div
               className={classNames(
-                Object.keys(data.node.template).length < 1 ? "hidden" : "",
+                Object.keys(data.node!.template).length < 1 ? "hidden" : "",
                 "flex-max-width justify-center"
               )}
             >
@@ -217,7 +228,7 @@ export default function GenericNode({
             </div>
             <ParameterComponent
               key={scapedJSONStringfy({
-                baseClasses: data.node.base_classes,
+                baseClasses: data.node!.base_classes,
                 id: data.id,
                 dataType: data.type,
               })}
@@ -225,17 +236,17 @@ export default function GenericNode({
               setData={setData}
               color={nodeColors[types[data.type]] ?? nodeColors.unknown}
               title={
-                data.node.output_types && data.node.output_types.length > 0
+                data.node?.output_types && data.node.output_types.length > 0
                   ? data.node.output_types.join("|")
                   : data.type
               }
-              tooltipTitle={data.node.base_classes.join("\n")}
+              tooltipTitle={data.node?.base_classes.join("\n")}
               id={{
-                baseClasses: data.node.base_classes,
+                baseClasses: data.node!.base_classes,
                 id: data.id,
                 dataType: data.type,
               }}
-              type={data.node.base_classes.join("|")}
+              type={data.node?.base_classes.join("|")}
               left={false}
             />
           </>
