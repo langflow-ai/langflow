@@ -34,6 +34,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
+    if (invalidName !== undefined) {
+      if (!nameLists.current.includes(value)) {
+        setInvalidName(false);
+      } else {
+        setInvalidName(true);
+      }
+    }
     if (!nameLists.current.includes(value)) {
       setInvalidName!(false);
     } else {
@@ -43,13 +50,18 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     setCurrentName(value);
   };
 
-  const [desc, setDesc] = useState(
-    flows.find((flow) => flow.id === tabId)?.description
-  );
+  const [currentName, setCurrentName] = useState(name);
+
+  const [currentDescription, setCurrentDescription] = useState(description);
+
+  useEffect(() => {
+    setCurrentName(name);
+    setCurrentDescription(description);
+  }, [name, description]);
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((flow) => flow.id === tabId)!.description = event.target.value;
-    setDesc(flows.find((flow) => flow.id === tabId)?.description);
+    flows.find((f) => f.id === tabId).description = event.target.value;
+    setCurrentDescription(flows.find((f) => f.id === tabId).description);
     setDescription(event.target.value);
   };
 

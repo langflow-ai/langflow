@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -12,16 +12,15 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const ref = useRef();
+  const { setSuccessData } = useContext(alertContext);
   const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
-  const maxLength = 50;
-  const [name, setName] = useState(
-    flows.find((flow) => flow.id === tabId)!.name
-  );
-  const [description, setDescription] = useState(
-    flows.find((flow) => flow.id === tabId)!.description
-  );
+  const flow = flows.find((f) => f.id === tabId);
+  useEffect(() => {
+    setName(flow.name);
+    setDescription(flow.description);
+  }, [flow.name, flow.description]);
+  const [name, setName] = useState(flow.name);
+  const [description, setDescription] = useState(flow.description);
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {

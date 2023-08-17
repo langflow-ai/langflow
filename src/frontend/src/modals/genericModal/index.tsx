@@ -16,6 +16,7 @@ import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { genericModalPropsType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import {
   classNames,
   getRandomKeyByssmm,

@@ -5,6 +5,7 @@ import {
   ReactFlowInstance,
   ReactFlowJsonObject,
 } from "reactflow";
+import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType } from "../types/utils/reactflowUtils";

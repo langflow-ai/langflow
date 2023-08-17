@@ -44,7 +44,13 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({ flow }: { flow: FlowType }): JSX.Element {
+export default function Page({
+  flow,
+  view,
+}: {
+  flow: FlowType;
+  view?: boolean;
+}): JSX.Element {
   let {
     updateFlow,
     uploadFlow,
@@ -424,7 +430,9 @@ export default function Page({ flow }: { flow: FlowType }): JSX.Element {
                     ></Controls>
                   )}
                 </ReactFlow>
-                <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
+                {!view && (
+                  <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
+                )}
               </div>
             ) : (
               <></>
