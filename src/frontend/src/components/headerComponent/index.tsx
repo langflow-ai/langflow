@@ -53,7 +53,7 @@ export default function Header() {
           </Button>
         )}
 
-        {isAdmin && (
+        {isAdmin && !autoLogin && (
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Admin page
           </Button>
