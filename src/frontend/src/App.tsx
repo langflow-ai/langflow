@@ -40,6 +40,7 @@ export default function App() {
     setSuccessOpen,
     setErrorData,
     loading,
+    setLoading
   } = useContext(alertContext);
   const navigate = useNavigate();
 
@@ -143,6 +144,7 @@ export default function App() {
           user['refresh_token'] = "auto";
           login(user['access_token'], user['refresh_token']);
           setAutoLogin(true);
+          setLoading(false);
         }
       }).catch((error) => {
         setAutoLogin(false);
@@ -150,6 +152,7 @@ export default function App() {
           getLoggedUser()
             .then((user) => {
               setUserData(user);
+              setLoading(false);
             })
             .catch((error) => {});
         }
