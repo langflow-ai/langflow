@@ -1,6 +1,7 @@
 from langflow.core.celery_app import celery_app
 from typing import Any, Dict, Optional
 from typing import TYPE_CHECKING
+from celery.exceptions import SoftTimeLimitExceeded
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -11,13 +12,19 @@ def test_celery(word: str) -> str:
     return f"test task return {word}"
 
 
-@celery_app.task
-def build_vertex(vertex: "Vertex") -> "Vertex":
+@celery_app.task(bind=True, soft_time_limit=30, max_retries=3)
+def build_vertex(self, vertex: "Vertex") -> "Vertex":
     """
     Build a vertex
     """
-    vertex.build()
-    return vertex
+    try:
+        vertex.task_id = self.request.id
+        vertex.build()
+        return vertex
+    except SoftTimeLimitExceeded as e:
+        raise self.retry(
+            exc=SoftTimeLimitExceeded("Task took too long"), countdown=2
+        ) from e
 
 
 @celery_app.task(acks_late=True)
