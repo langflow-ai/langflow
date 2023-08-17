@@ -192,6 +192,10 @@
     @apply flex w-full;
   }
 
+  .loading-page-panel {
+    @apply h-full w-full flex justify-center items-center bg-muted;
+  }
+
   .main-page-panel {
     @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
   }

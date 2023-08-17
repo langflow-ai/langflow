@@ -6,6 +6,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
+import Header from "../../components/headerComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 export default function CommunityPage(): JSX.Element {
@@ -42,61 +43,65 @@ export default function CommunityPage(): JSX.Element {
     handleExamples();
   }, []);
   return (
-    <div className="community-page-arrangement">
-      <div className="community-page-nav-arrangement">
-        <span className="community-page-nav-title">
-          <IconComponent name="Users2" className="w-6" />
-          Community Examples
+    <>
+      <Header />
+
+      <div className="community-page-arrangement">
+        <div className="community-page-nav-arrangement">
+          <span className="community-page-nav-title">
+            <IconComponent name="Users2" className="w-6" />
+            Community Examples
+          </span>
+          <div className="community-page-nav-button">
+            <a
+              href="https://github.com/logspace-ai/langflow_examples"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button variant="primary">
+                <IconComponent
+                  name="GithubIcon"
+                  className="main-page-nav-button"
+                />
+                Add Your Example
+              </Button>
+            </a>
+          </div>
+        </div>
+        <span className="community-page-description-text">
+          Discover and learn from shared examples by the Langflow community. We
+          welcome new example contributions that can help our community explore
+          new and powerful features.
         </span>
-        <div className="community-page-nav-button">
-          <a
-            href="https://github.com/logspace-ai/langflow_examples"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Button variant="primary">
-              <IconComponent
-                name="GithubIcon"
-                className="main-page-nav-button"
+        <div className="community-pages-flows-panel">
+          {!loadingExamples &&
+            examples.map((flow, idx) => (
+              <CardComponent
+                key={idx}
+                flow={flow}
+                id={flow.id}
+                button={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="whitespace-nowrap "
+                    onClick={() => {
+                      addFlow(flow, true).then((id) => {
+                        navigate("/flow/" + id);
+                      });
+                    }}
+                  >
+                    <IconComponent
+                      name="GitFork"
+                      className="main-page-nav-button"
+                    />
+                    Fork Example
+                  </Button>
+                }
               />
-              Add Your Example
-            </Button>
-          </a>
+            ))}
         </div>
       </div>
-      <span className="community-page-description-text">
-        Discover and learn from shared examples by the Langflow community. We
-        welcome new example contributions that can help our community explore
-        new and powerful features.
-      </span>
-      <div className="community-pages-flows-panel">
-        {!loadingExamples &&
-          examples.map((flow, idx) => (
-            <CardComponent
-              key={idx}
-              flow={flow}
-              id={flow.id}
-              button={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="whitespace-nowrap "
-                  onClick={() => {
-                    addFlow(flow, true).then((id) => {
-                      navigate("/flow/" + id);
-                    });
-                  }}
-                >
-                  <IconComponent
-                    name="GitFork"
-                    className="main-page-nav-button"
-                  />
-                  Fork Example
-                </Button>
-              }
-            />
-          ))}
-      </div>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
@@ -45,6 +46,9 @@ export default function InputComponent({
             onChange={(e) => {
               onChange(e.target.value);
             }}
+            onKeyDown={(e) => {
+              handleKeyDown(e, value, "");
+            }}
           />
         </Form.Control>
       ) : (
@@ -64,6 +68,9 @@ export default function InputComponent({
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={(e) => {
             onChange(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            handleKeyDown(e, value, "");
           }}
         />
       )}
