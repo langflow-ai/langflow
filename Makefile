@@ -32,18 +32,23 @@ lint:
 	poetry run ruff . --fix
 
 install_frontend:
-		cd src/frontend && npm install;
+	cd src/frontend && npm install;
 
 install_frontendc:
-		cd src/frontend && npm ci;
+	cd src/frontend && npm ci;
 
 run_frontend:
 	cd src/frontend && npm start
 
+setup_devcontainer:
+	make init
+	make build_frontend
+	poetry run langflow --path src/frontend/build
+
 frontend:
 	make install_frontend
 	make run_frontend
-	
+
 frontendc:
 	make install_frontendc
 	make run_frontend
