@@ -332,9 +332,10 @@ export function getConnectedNodes(
 }
 
 export function scapedJSONStringfy(json: object): string {
-  return JSON.stringify(json).replace(/"/g, '\\"');
+  return customStringify(json).replace(/"/g, '\\"');
 }
 export function scapeJSONParse(json: string): any {
+  console.log(json);
   return JSON.parse(json.replace(/\\"/g, '"'));
 }
 
@@ -347,4 +348,29 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
       !edge.sourceHandle.includes("{") ||
       !edge.targetHandle.includes("{")
   );
+}
+
+function customStringify(obj: any) {
+  console.log(obj);
+  if (typeof obj === "undefined") {
+    return "undefined";
+  }
+
+  if (obj === null || typeof obj !== "object") {
+    if (obj instanceof Date) {
+      return `"${obj.toISOString()}"`;
+    }
+    return JSON.stringify(obj);
+  }
+
+  if (Array.isArray(obj)) {
+    const arrayItems = obj.map((item) => customStringify(item)).join(",");
+    return `[${arrayItems}]`;
+  }
+
+  const keys = Object.keys(obj).sort();
+  const keyValuePairs = keys.map(
+    (key) => `"${key}":${customStringify(obj[key])}`
+  );
+  return `{${keyValuePairs.join(",")}}`;
 }
