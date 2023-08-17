@@ -11,3 +11,4 @@ class ServiceType(str, Enum):
     SETTINGS_MANAGER = "settings_manager"
     DATABASE_MANAGER = "database_manager"
     CHAT_MANAGER = "chat_manager"
+    SESSION_MANAGER = "session_manager"
