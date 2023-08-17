@@ -18,7 +18,8 @@ class ServiceManager:
         """
         Registers a new factory.
         """
-        self.factories[service_factory.service_class.name] = service_factory
+        if service_factory.service_class.name not in self.factories:
+            self.factories[service_factory.service_class.name] = service_factory
 
     def get(self, service_name: ServiceType):
         """
@@ -85,3 +86,12 @@ def initialize_services():
     service_manager.register_factory(database_factory.DatabaseManagerFactory())
     service_manager.register_factory(cache_factory.CacheManagerFactory())
     service_manager.register_factory(chat_factory.ChatManagerFactory())
+
+
+def initialize_settings_manager():
+    """
+    Initialize the settings manager.
+    """
+    from langflow.services.settings import factory as settings_factory
+
+    service_manager.register_factory(settings_factory.SettingsManagerFactory())
