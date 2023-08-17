@@ -255,5 +255,10 @@ class CustomComponentVertex(Vertex):
         super().__init__(data, base_type="custom_components", is_task=True)
 
     def _built_object_repr(self):
+        if self.task_id and self.is_task:
+            if task := self.get_task():
+                return str(task.info)
+            else:
+                return f"Task {self.task_id} is not running"
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
