@@ -1,14 +1,21 @@
-import { createContext, ReactNode, useEffect, useState } from "react";
-import { Node } from "reactflow";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { Node, ReactFlowInstance } from "reactflow";
 import { getAll } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
+import { alertContext } from "./alertContext";
 
 //context to share types adn functions from nodes to flow
 
 const initialValue: typesContextType = {
   reactFlowInstance: null,
-  setReactFlowInstance: () => {},
+  setReactFlowInstance: (newState: ReactFlowInstance) => {},
   deleteNode: () => {},
   types: {},
   setTypes: () => {},
@@ -22,13 +29,15 @@ export const typesContext = createContext<typesContextType>(initialValue);
 
 export function TypesProvider({ children }: { children: ReactNode }) {
   const [types, setTypes] = useState({});
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
+  const { setLoading } = useContext(alertContext);
 
   useEffect(() => {
     let delay = 1000; // Start delay of 1 second
-    let intervalId = null;
+    let intervalId: NodeJS.Timer;
     let retryCount = 0; // Count of retry attempts
     const maxRetryCount = 5; // Max retry attempts
 
@@ -40,6 +49,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         const result = await getAll();
         // Make sure to only update the state if the component is still mounted.
         if (isMounted) {
+          setLoading(false);
           setData(result.data);
           setTemplates(
             Object.keys(result.data).reduce((acc, curr) => {
@@ -69,7 +79,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
           );
         }
         // Clear the interval if successful.
-        clearInterval(intervalId);
+        clearInterval(intervalId!);
       } catch (error) {
         console.error("An error has occurred while fetching types.");
       }
@@ -77,23 +87,22 @@ export function TypesProvider({ children }: { children: ReactNode }) {
 
     // Start the initial interval.
     intervalId = setInterval(getTypes, delay);
-
     return () => {
       // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
-      clearInterval(intervalId);
+      clearInterval(intervalId!);
       // Indicate that the component has been unmounted.
       isMounted = false;
     };
   }, []);
 
   function deleteNode(idx: string) {
-    reactFlowInstance.setNodes(
-      reactFlowInstance.getNodes().filter((n: Node) => n.id !== idx)
+    reactFlowInstance!.setNodes(
+      reactFlowInstance!.getNodes().filter((node: Node) => node.id !== idx)
     );
-    reactFlowInstance.setEdges(
-      reactFlowInstance
+    reactFlowInstance!.setEdges(
+      reactFlowInstance!
         .getEdges()
-        .filter((ns) => ns.source !== idx && ns.target !== idx)
+        .filter((edge) => edge.source !== idx && edge.target !== idx)
     );
   }
   return (

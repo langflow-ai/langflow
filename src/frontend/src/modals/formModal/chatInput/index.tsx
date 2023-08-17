@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
+import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 
 export default function ChatInput({
@@ -10,7 +11,7 @@ export default function ChatInput({
   setChatValue,
   inputRef,
   noInput,
-}) {
+}: chatInputType): JSX.Element {
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
@@ -46,8 +47,8 @@ export default function ChatInput({
           }`,
         }}
         value={lockChat ? "Thinking..." : chatValue}
-        onChange={(e) => {
-          setChatValue(e.target.value);
+        onChange={(event): void => {
+          setChatValue(event.target.value);
         }}
         className={classNames(
           lockChat
@@ -75,7 +76,7 @@ export default function ChatInput({
               : "bg-chat-send text-background"
           )}
           disabled={lockChat}
-          onClick={() => sendMessage()}
+          onClick={(): void => sendMessage()}
         >
           {lockChat ? (
             <IconComponent

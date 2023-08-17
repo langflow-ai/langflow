@@ -1,20 +1,25 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { IVarHighlightType } from "../types/components";
+import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  IVarHighlightType,
+  groupedObjType,
+  tweakType,
+} from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
-export function classNames(...classes: Array<string>) {
+export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
 }
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-export function toNormalCase(str: string) {
+export function toNormalCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -36,7 +41,7 @@ export function toNormalCase(str: string) {
     .join(" ");
 }
 
-export function normalCaseToSnakeCase(str: string) {
+export function normalCaseToSnakeCase(str: string): string {
   return str
     .split(" ")
     .map((word, index) => {
@@ -48,7 +53,7 @@ export function normalCaseToSnakeCase(str: string) {
     .join("_");
 }
 
-export function toTitleCase(str: string) {
+export function toTitleCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -75,7 +80,7 @@ export function toTitleCase(str: string) {
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
-export function checkUpperWords(str: string) {
+export function checkUpperWords(str: string): string {
   const words = str.split(" ").map((word) => {
     return upperCaseWords.includes(word.toLowerCase())
       ? word.toUpperCase()
@@ -88,10 +93,23 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
+export function groupByFamily(
+  data: APIDataType,
+  baseClasses: string,
+  left: boolean,
+  flow?: NodeType[]
+): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
-  let arrOfPossibleInputs = [];
-  let arrOfPossibleOutputs = [];
+  let arrOfPossibleInputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
+  let arrOfPossibleOutputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
     "str",
@@ -103,11 +121,14 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
     "int",
   ]);
 
-  const checkBaseClass = (t: any) =>
-    t.type &&
-    t.show &&
-    ((!excludeTypes.has(t.type) && baseClassesSet.has(t.type)) ||
-      (t.input_types && t.input_types.some((x) => baseClassesSet.has(x))));
+  const checkBaseClass = (template: TemplateVariableType) =>
+    template.type &&
+    template.show &&
+    ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
+      (template.input_types &&
+        template.input_types.some((inputType) =>
+          baseClassesSet.has(inputType)
+        )));
 
   if (flow) {
     for (const node of flow) {
@@ -116,27 +137,29 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
-          Object.values(nodeData.node.template).some(checkBaseClass),
+          Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node.base_classes.some((t) => baseClassesSet.has(t)),
+          nodeData.node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
+          ),
       });
     }
   }
 
   for (const [d, nodes] of Object.entries(data)) {
-    let tempInputs = [],
-      tempOutputs = [];
+    let tempInputs: string[] = [],
+      tempOutputs: string[] = [];
 
-    for (const [n, node] of Object.entries(nodes)) {
+    for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
       if (!foundNode) {
         foundNode = {
-          hasBaseClassInTemplate: Object.values(node.template).some(
+          hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node.base_classes.some((t) =>
-            baseClassesSet.has(t)
+          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass)
           ),
         };
         checkedNodes.set(n, foundNode);
@@ -146,7 +169,7 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
     }
 
-    const totalNodes = Object.keys(nodes).length;
+    const totalNodes = Object.keys(nodes!).length;
     if (tempInputs.length)
       arrOfPossibleInputs.push({
         category: d,
@@ -162,22 +185,22 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
   }
 
   return left
-    ? arrOfPossibleOutputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    ? arrOfPossibleOutputs.map((output) => ({
+        family: output.category,
+        type: output.full ? "" : output.nodes.join(", "),
       }))
-    : arrOfPossibleInputs.map((t) => ({
-        family: t.category,
-        type: t.full ? "" : t.nodes.join(", "),
+    : arrOfPossibleInputs.map((input) => ({
+        family: input.category,
+        type: input.full ? "" : input.nodes.join(", "),
       }));
 }
 
-export function buildInputs(tabsState, id) {
+export function buildInputs(tabsState: TabsState, id: string): string {
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
     tabsState[id].formKeysData.input_keys &&
-    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    Object.keys(tabsState[id].formKeysData.input_keys!).length > 0
     ? JSON.stringify(tabsState[id].formKeysData.input_keys)
     : '{"input": "message"}';
 }
@@ -233,7 +256,7 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
   return html;
 }
 
-export function buildTweakObject(tweak) {
+export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
@@ -243,9 +266,30 @@ export function buildTweakObject(tweak) {
       }
     });
   });
-
   const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
+}
+
+/**
+ * Function to get Chat Input Field
+ * @param {FlowType} flow - The current flow.
+ * @param {TabsState} tabsState - The current tabs state.
+ * @returns {string} - The chat input field
+ */
+export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+  let chat_input_field = "text";
+
+  if (
+    tabsState &&
+    tabsState[flow.id] &&
+    tabsState[flow.id].formKeysData &&
+    tabsState[flow.id].formKeysData.input_keys
+  ) {
+    chat_input_field = Object.keys(
+      tabsState[flow.id].formKeysData.input_keys!
+    )[0];
+  }
+  return chat_input_field;
 }
 
 /**
@@ -265,7 +309,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `import requests
 from typing import Optional
 
@@ -317,7 +361,7 @@ export function getCurlCode(
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -343,7 +387,7 @@ export function getPythonCode(
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -364,7 +408,8 @@ flow(inputs)`;
 export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
+  let chat_input_field = getChatInputField(flow, tabsState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -375,13 +420,90 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    tabsState[flow.id] && tabsState[flow.id].formKeysData
+    tabsState![flow.id] && tabsState![flow.id].formKeysData
       ? `chat_inputs='${inputs}'
-  chat_input_field="${
-    Object.keys(tabsState[flow.id].formKeysData.input_keys)[0]
-  }"
+  chat_input_field="${chat_input_field}"
   `
       : ""
-  }host_url="http://localhost:7860" 
+  }host_url="http://localhost:7860"
 ></langflow-chat>`;
+}
+
+export function tabsArray(codes: string[], method: number) {
+  if (!method) return;
+  if (method === 0) {
+    return [
+      {
+        name: "cURL",
+        mode: "bash",
+        image: "https://curl.se/logo/curl-symbol-transparent.png",
+        language: "sh",
+        code: codes[0],
+      },
+      {
+        name: "Python API",
+        mode: "python",
+        image:
+          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+        language: "py",
+        code: codes[1],
+      },
+      {
+        name: "Python Code",
+        mode: "python",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[2],
+      },
+      {
+        name: "Chat Widget HTML",
+        description:
+          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[3],
+      },
+    ];
+  }
+  return [
+    {
+      name: "cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      language: "sh",
+      code: codes[0],
+    },
+    {
+      name: "Python API",
+      mode: "python",
+      image:
+        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+      language: "py",
+      code: codes[1],
+    },
+    {
+      name: "Python Code",
+      mode: "python",
+      language: "py",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      code: codes[2],
+    },
+    {
+      name: "Chat Widget HTML",
+      description:
+        "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+      mode: "html",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[3],
+    },
+    {
+      name: "Tweaks",
+      mode: "python",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[4],
+    },
+  ];
 }

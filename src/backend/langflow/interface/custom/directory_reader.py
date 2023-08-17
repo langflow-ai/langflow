@@ -1,6 +1,7 @@
 import os
 import ast
 import zlib
+from langflow.utils.logger import logger
 
 
 class CustomComponentPathValueError(ValueError):
@@ -74,8 +75,11 @@ class DirectoryReader:
             }
             for menu in data["menu"]
         ]
-        filtred = [menu for menu in items if menu["components"]]
-        return {"menu": filtred}
+        filtered = [menu for menu in items if menu["components"]]
+        logger.debug(
+            f'Filtered components {"with errors" if with_errors else ""}: {filtered}'
+        )
+        return {"menu": filtered}
 
     def validate_code(self, file_content):
         """
@@ -116,7 +120,7 @@ class DirectoryReader:
             file_list.extend(
                 os.path.join(root, filename)
                 for filename in files
-                if filename.endswith(".py")
+                if filename.endswith(".py") and not filename.startswith("__")
             )
         return file_list
 
@@ -148,15 +152,19 @@ class DirectoryReader:
         Check if a specific type hint is used in the
         function definitions within the given code.
         """
-        module = ast.parse(code)
+        try:
+            module = ast.parse(code)
 
-        for node in ast.walk(module):
-            if isinstance(node, ast.FunctionDef):
-                for arg in node.args.args:
-                    if self._is_type_hint_in_arg_annotation(
-                        arg.annotation, type_hint_name
-                    ):
-                        return True
+            for node in ast.walk(module):
+                if isinstance(node, ast.FunctionDef):
+                    for arg in node.args.args:
+                        if self._is_type_hint_in_arg_annotation(
+                            arg.annotation, type_hint_name
+                        ):
+                            return True
+        except SyntaxError:
+            # Returns False if the code is not valid Python
+            return False
         return False
 
     def _is_type_hint_in_arg_annotation(self, annotation, type_hint_name: str) -> bool:
@@ -200,8 +208,13 @@ class DirectoryReader:
             return False, "Syntax error"
         elif not self.validate_build(file_content):
             return False, "Missing build function"
-        elif self.is_type_hint_used_but_not_imported("Optional", file_content):
-            return False, "Type hint 'Optional' is used but not imported in the code."
+        elif self._is_type_hint_used_in_args(
+            "Optional", file_content
+        ) and not self._is_type_hint_imported("Optional", file_content):
+            return (
+                False,
+                "Type hint 'Optional' is used but not imported in the code.",
+            )
         else:
             if self.compress_code_field:
                 file_content = str(StringCompressor(file_content).compress_string())
@@ -213,27 +226,47 @@ class DirectoryReader:
         from the .py files in the directory.
         """
         response = {"menu": []}
+        logger.debug(
+            "-------------------- Building component menu list --------------------"
+        )
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
+            logger.debug(f"Menu name: {menu_name}")
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
+            logger.debug(f"Validation result: {validation_result}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
                 "path": os.path.dirname(file_path),
                 "components": [],
             }
+            component_name = filename.split(".")[0]
+            # This is the name of the file which will be displayed in the UI
+            # We need to change it from snake_case to CamelCase
+
+            # first check if it's already CamelCase
+            if "_" in component_name:
+                component_name_camelcase = " ".join(
+                    word.title() for word in component_name.split("_")
+                )
+            else:
+                component_name_camelcase = component_name
 
             component_info = {
-                "name": filename.split(".")[0],
+                "name": "CustomComponent",
+                "output_types": [component_name_camelcase],
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
             }
             menu_result["components"].append(component_info)
 
+            logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
-
+        logger.debug(
+            "-------------------- Component menu list built --------------------"
+        )
         return response

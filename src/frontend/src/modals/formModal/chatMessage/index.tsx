@@ -9,18 +9,15 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
-import { ChatMessageType } from "../../../types/chat";
+import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
+
 export default function ChatMessage({
   chat,
   lockChat,
   lastMessage,
-}: {
-  chat: ChatMessageType;
-  lockChat: boolean;
-  lastMessage: boolean;
-}) {
+}: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
@@ -57,7 +54,7 @@ export default function ChatMessage({
           <div className="form-modal-chat-text">
             {hidden && chat.thought && chat.thought !== "" && (
               <div
-                onClick={() => setHidden((prev) => !prev)}
+                onClick={(): void => setHidden((prev) => !prev)}
                 className="form-modal-chat-icon-div"
               >
                 <IconComponent
@@ -88,8 +85,8 @@ export default function ChatMessage({
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm, remarkMath]}
                           rehypePlugins={[rehypeMathjax]}
-                          className="markdown prose inline-block break-words text-primary dark:prose-invert
-                      sm:w-[30vw] sm:max-w-[30vw] lg:w-[40vw] lg:max-w-[40vw]"
+                          className="markdown prose min-w-full text-primary word-break-break-word
+                      dark:prose-invert"
                           components={{
                             pre({ node, ...props }) {
                               return <>{props.children}</>;
@@ -187,12 +184,12 @@ export default function ChatMessage({
                   }
                 />
               </button>
-              <span className="prose inline-block break-words text-primary dark:prose-invert">
+              <span className="prose text-primary word-break-break-word dark:prose-invert">
                 {promptOpen
                   ? template?.split("\n")?.map((line, index) => {
                       const regex = /{([^}]+)}/g;
                       let match;
-                      let parts = [];
+                      let parts: Array<JSX.Element | string> = [];
                       let lastIndex = 0;
                       while ((match = regex.exec(line)) !== null) {
                         // Push text up to the match
