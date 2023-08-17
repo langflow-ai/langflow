@@ -15,7 +15,8 @@
 				"actboy168.tasks",
 				"GitHub.copilot",
 				"ms-python.python",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"GitHub.vscode-pull-request-github"
 			]
 		}
 	},
