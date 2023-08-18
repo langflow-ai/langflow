@@ -54,6 +54,7 @@ RUN apt-get update \
     # deps for building python deps
     build-essential
 
+
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 # The --mount will mount the buildx cache directory to where
 # Poetry and Pip store their cache so that they can re-use it
@@ -63,7 +64,7 @@ RUN --mount=type=cache,target=/root/.cache \
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
-COPY ./src/backend ./src/backend
+COPY ./src/backend/langflow/main.py ./src/backend/langflow/main.py
 # Copy README.md to the build context
 COPY README.md .
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
@@ -82,6 +83,7 @@ WORKDIR $PYSETUP_PATH
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
+COPY ./src/backend ./src/backend
 # quicker install as runtime deps are already installed
 RUN --mount=type=cache,target=/root/.cache \
     poetry install --with=dev --extras deploy
