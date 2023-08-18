@@ -137,6 +137,7 @@ class ChatManager(Service):
                 chat_inputs=chat_inputs,
                 websocket=self.active_connections[client_id],
             )
+            self.set_cache(client_id, langchain_object)
         except Exception as e:
             # Log stack trace
             logger.exception(e)

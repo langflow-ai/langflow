@@ -67,14 +67,6 @@ class ServiceManager:
                 f"No factory registered for the service class '{service_name.name}'"
             )
 
-        # if (
-        #     ServiceType.SETTINGS_MANAGER not in self.factories
-        #     and service_name != ServiceType.SETTINGS_MANAGER
-        # ):
-        #     raise ValueError(
-        #         f"Cannot create service '{service_name.name}' before the settings service"
-        #     )
-
     def update(self, service_name: ServiceType):
         """
         Update a service by its name.
@@ -124,3 +116,22 @@ def initialize_settings_manager():
     from langflow.services.settings import factory as settings_factory
 
     service_manager.register_factory(settings_factory.SettingsManagerFactory())
+
+
+def initialize_session_manager():
+    """
+    Initialize the session manager.
+    """
+    from langflow.services.session import factory as session_manager_factory
+    from langflow.services.cache import factory as cache_factory
+
+    initialize_settings_manager()
+
+    service_manager.register_factory(
+        cache_factory.CacheManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+    )
+
+    service_manager.register_factory(
+        session_manager_factory.SessionManagerFactory(),
+        dependencies=[ServiceType.CACHE_MANAGER],
+    )
