@@ -169,7 +169,7 @@ class CustomComponent(Component, extra=Extra.allow):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices_with_caching
+        from langflow.processing.process import build_sorted_vertices
         from langflow.processing.process import process_tweaks
 
         db_manager = get_db_manager()
@@ -179,7 +179,7 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices_with_caching(graph_data)
+        return build_sorted_vertices(graph_data)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         get_session = get_session or session_getter
