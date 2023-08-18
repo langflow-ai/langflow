@@ -56,18 +56,6 @@ def get_all():
 
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
-            # custom_component_dict is a dict of dicts
-            if len(custom_component_dict) > 1:
-                raise ValueError(
-                    f"Custom components must be in a single category. Found {len(custom_component_dict)} categories"
-                )
-            elif len(custom_component_dict) == 0:
-                continue
-
-            category = list(custom_component_dict.keys())[0]
-            logger.info(
-                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
-            )
             logger.debug(custom_component_dict)
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
