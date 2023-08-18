@@ -147,7 +147,7 @@ class Graph:
     def generator_build(self) -> Generator:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.debug("Sorted vertices: %s", sorted_vertices)
+        logger.debug("There are %s vertices in the graph", len(sorted_vertices))
         yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
