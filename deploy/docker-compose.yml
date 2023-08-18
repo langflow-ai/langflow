@@ -17,6 +17,8 @@ services:
       - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
     command: /startup-backend.sh # Fixed the path
+    healthcheck:
+      test: "exit 0"
 
   db:
     image: postgres:15.4
@@ -37,27 +39,35 @@ services:
       - ./pgadmin:/var/lib/pgadmin
 
   queue:
-    image: redis:7.2.0
+    image: redis:6.2.5
     ports:
       - "6379:6379"
+    healthcheck:
+      test: "exit 0"
 
   celeryworker:
     # user: your-non-root-user
     depends_on:
-      - queue
+      queue:
+        condition: service_healthy
     env_file:
       - ./celeryworker.env
     build:
       context: ../
       dockerfile: base.Dockerfile
     command: celery -A langflow.worker.celery_app worker --loglevel=INFO
+    healthcheck:
+      test: "exit 0"
 
   flower:
     # user: your-non-root-user
     networks:
       - default
     depends_on:
-      - queue
+      queue:
+        condition: service_healthy
+      celeryworker:
+        condition: service_healthy
     build:
       context: ../
       dockerfile: base.Dockerfile
@@ -75,7 +85,9 @@ services:
       args:
         - BACKEND_URL=http://backend:7860
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
     env_file:
       - ./frontend.env
     ports:

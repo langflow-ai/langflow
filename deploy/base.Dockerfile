@@ -63,7 +63,6 @@ RUN --mount=type=cache,target=/root/.cache \
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
 COPY ./poetry.lock ./pyproject.toml ./
-COPY ./src/backend ./src/backend
 # Copy README.md to the build context
 COPY ./README.md ./
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
@@ -82,6 +81,7 @@ WORKDIR $PYSETUP_PATH
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
+COPY ./src/backend ./src/backend
 # quicker install as runtime deps are already installed
 RUN --mount=type=cache,target=/root/.cache \
     poetry install --with=dev --extras deploy
