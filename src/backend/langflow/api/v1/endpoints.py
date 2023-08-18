@@ -3,7 +3,7 @@ from typing import Annotated, Optional, Union
 
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.processing.process import process_tweaks
 from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
@@ -26,6 +26,7 @@ from langflow.interface.types import (
 )
 
 from langflow.services.utils import get_session
+from langflow.worker import process_graph_cached_task
 from sqlmodel import Session
 
 # build router
@@ -95,9 +96,9 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        response, session_id = process_graph_cached(
+        response, session_id = process_graph_cached_task.delay(
             graph_data, inputs, clear_cache, session_id
-        )
+        ).get()
         return ProcessResponse(result=response, session_id=session_id)
     except Exception as e:
         # Log stack trace
