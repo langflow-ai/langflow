@@ -196,15 +196,18 @@ export default function GenericModal({
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
                 onBlur={() => {
+                  setValue(inputValue);
+                  setInputValue(inputValue);
                   setIsEdit(false);
                 }}
                 autoFocus
                 onChange={(event) => {
+                  setValue(inputValue);
                   setInputValue(event.target.value);
                   checkVariables(event.target.value);
                 }}
                 placeholder="Type message here."
-                onKeyDown={(e) => {
+                onKeyDown={(e: any) => {
                   handleKeyDown(e, inputValue, "");
                 }}
               />

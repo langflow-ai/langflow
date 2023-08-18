@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { TypeModal } from "../../constants/enums";
 import { postValidatePrompt } from "../../controllers/API";
@@ -32,6 +32,13 @@ export default function PromptAreaComponent({
     }
   }, []);
 
+  const [inputValue, setInputValue] = useState(value);
+
+  useEffect(() => {
+    console.log("value", value);
+    
+  }, [inputValue])
+
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
@@ -41,6 +48,7 @@ export default function PromptAreaComponent({
         modalTitle="Edit Prompt"
         setValue={(value: string) => {
           onChange(value);
+          setInputValue(value);
         }}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
