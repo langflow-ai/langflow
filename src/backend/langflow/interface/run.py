@@ -16,8 +16,8 @@ def build_langchain_object_with_caching(data_graph):
     return graph.build()
 
 
-@Memoize(get_cache_manager=get_cache_manager)
-def build_sorted_vertices_with_caching(data_graph) -> Tuple[Any, Dict]:
+# @Memoize(get_cache_manager=get_cache_manager)
+def build_sorted_vertices(data_graph) -> Tuple[Any, Dict]:
     """
     Build langchain object from data_graph.
     """
@@ -31,6 +31,23 @@ def build_sorted_vertices_with_caching(data_graph) -> Tuple[Any, Dict]:
         if vertex.artifacts:
             artifacts.update(vertex.artifacts)
     return graph.build(), artifacts
+
+    # def build_sorted_vertices_with_caching(data_graph):
+    #     # Build the result if not in cache
+    #     logger.debug("Building langchain object")
+    #     graph = Graph.from_payload(data_graph)
+    #     sorted_vertices = graph.topological_sort()
+    #     artifacts = {}
+    #     for vertex in sorted_vertices:
+    #         vertex.build()
+    #         if vertex.artifacts:
+    #             artifacts.update(vertex.artifacts)
+    #     result = (graph.build(), artifacts)
+
+    # Save to cache
+    # cache_manager.set(session_id, result)
+
+    # return result
 
 
 def build_langchain_object(data_graph):
