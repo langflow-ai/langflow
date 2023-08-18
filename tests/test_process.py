@@ -1,5 +1,5 @@
-from langflow.interface.run import build_sorted_vertices_with_caching
-from langflow.processing.process import load_langchain_object, process_tweaks
+from langflow.processing.process import process_tweaks
+from langflow.services.utils import get_session_manager
 
 
 def test_no_tweaks():
@@ -198,51 +198,50 @@ def test_tweak_not_in_template():
 
 
 def test_load_langchain_object_with_cached_session(client, basic_graph_data):
-    # Build the langchain_object once and get the session_id
-    langchain_object1, artifacts1, session_id1 = load_langchain_object(
-        basic_graph_data, None
+    # Provide a non-existent session_id
+    session_manager = get_session_manager()
+    session_id1 = "non-existent-session-id"
+    langchain_object1, artifacts1 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
-    # Use the same session_id to get the langchain_object again
-    langchain_object2, artifacts2, session_id2 = load_langchain_object(
-        basic_graph_data, session_id1
+    # Use the new session_id to get the langchain_object again
+    langchain_object2, artifacts2 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
 
-    assert session_id1 == session_id2
     assert id(langchain_object1) == id(langchain_object2)
     assert artifacts1 == artifacts2
 
 
 def test_load_langchain_object_with_no_cached_session(client, basic_graph_data):
     # Provide a non-existent session_id
-    langchain_object1, artifacts1, session_id1 = load_langchain_object(
-        basic_graph_data, "non_existent_session"
+    session_manager = get_session_manager()
+    session_id1 = "non-existent-session-id"
+    langchain_object1, artifacts1 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
     # Clear the cache
-    build_sorted_vertices_with_caching.clear_cache(session_id1)
+    session_manager.clear_session(session_id1, basic_graph_data)
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2, session_id2 = load_langchain_object(
-        basic_graph_data, session_id1
+    langchain_object2, artifacts2 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
 
-    assert session_id1 == session_id2
     assert id(langchain_object1) != id(
         langchain_object2
     )  # Since the cache was cleared, objects should be different
 
 
 def test_load_langchain_object_without_session_id(client, basic_graph_data):
-    # Build the langchain_object without providing a session_id
-    langchain_object1, artifacts1, session_id1 = load_langchain_object(
-        basic_graph_data, None
+    # Provide a non-existent session_id
+    session_manager = get_session_manager()
+    session_id1 = None
+    langchain_object1, artifacts1 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
-    # Build the langchain_object again without providing a session_id
-    langchain_object2, artifacts2, session_id2 = load_langchain_object(
-        basic_graph_data, None
+    # Use the new session_id to get the langchain_object again
+    langchain_object2, artifacts2 = session_manager.load_session(
+        session_id1, basic_graph_data
     )
 
-    assert session_id1 == session_id2
-
-    assert id(langchain_object1) == id(
-        langchain_object2
-    )  # Since no session_id was provided, the hash will be based on the graph_data
-    assert artifacts1 == artifacts2
+    assert id(langchain_object1) == id(langchain_object2)
