@@ -31,7 +31,7 @@ def build_template_from_function(
             docs = parse(_class.__doc__)
 
             variables = {"_type": _type}
-            for class_field_items, value in _class.__fields__.items():
+            for class_field_items, value in _class.model_fields.items():
                 if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
@@ -84,8 +84,8 @@ def build_template_from_class(
 
             variables = {"_type": _type}
 
-            if "__fields__" in _class.__dict__:
-                for class_field_items, value in _class.__fields__.items():
+            if "model_fields" in _class.__dict__:
+                for class_field_items, value in _class.model_fields.items():
                     if class_field_items in ["callback_manager"]:
                         continue
                     variables[class_field_items] = {}

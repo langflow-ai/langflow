@@ -33,7 +33,7 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.9.0"
 gunicorn = "^21.1.0"
-langchain = "^0.0.256"
+langchain = "^0.0.268"
 openai = "^0.27.8"
 pandas = "^2.0.0"
 chromadb = "^0.3.21"
@@ -60,7 +60,8 @@ sentence-transformers = { version = "^2.2.2", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^4.11.0"
 python-multipart = "^0.0.6"
-sqlmodel = "^0.0.8"
+# install sqlmodel using https://github.com/honglei/sqlmodel.git
+sqlmodel = { git = "https://github.com/honglei/sqlmodel.git", branch = "main" }
 faiss-cpu = "^1.7.4"
 anthropic = "^0.3.0"
 orjson = "3.9.3"
@@ -82,6 +83,7 @@ passlib = "^1.7.4"
 bcrypt = "^4.0.1"
 python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
+pydantic-settings = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
