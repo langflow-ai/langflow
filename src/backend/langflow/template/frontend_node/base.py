@@ -1,6 +1,6 @@
 from collections import defaultdict
 import re
-from typing import List, Optional
+from typing import ClassVar, DefaultDict, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,10 +15,10 @@ from langflow.utils import constants
 
 
 class FieldFormatters(BaseModel):
-    formatters = {
+    formatters: ClassVar[Dict] = {
         "openai_api_key": field_formatters.OpenAIAPIKeyFormatter(),
     }
-    base_formatters = {
+    base_formatters: ClassVar[Dict] = {
         "kwargs": field_formatters.KwargsFormatter(),
         "optional": field_formatters.RemoveOptionalFormatter(),
         "list": field_formatters.ListTypeFormatter(),
@@ -49,7 +49,7 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     documentation: str = ""
-    custom_fields: defaultdict = defaultdict(list)
+    custom_fields: Optional[DefaultDict[str, List[str]]] = defaultdict(list)
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
     beta: bool = False

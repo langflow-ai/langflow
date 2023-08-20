@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Type
+from typing import ClassVar, Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
@@ -14,7 +14,7 @@ from langflow.custom.customs import get_custom_nodes
 class MemoryCreator(LangChainTypeCreator):
     type_name: str = "memories"
 
-    from_method_nodes = {
+    from_method_nodes: ClassVar[Dict] = {
         "ZepChatMessageHistory": "__init__",
         "SQLiteEntityStore": "__init__",
     }

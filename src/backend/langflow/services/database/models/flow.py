@@ -1,7 +1,6 @@
 # Path: src/backend/langflow/database/models/flow.py
 
 from langflow.services.database.models.base import SQLModelSerializable
-from pydantic import validator
 from sqlmodel import Field, JSON, Column
 from uuid import UUID, uuid4
 from typing import Dict, Optional
@@ -14,8 +13,9 @@ class FlowBase(SQLModelSerializable):
     description: Optional[str] = Field(index=True)
     data: Optional[Dict] = Field(default=None)
 
-    @validator("data")
-    def validate_json(v):
+    @field_validator("data")
+    @classmethod
+    def validate_json(cls, v):
         # dict_keys(['description', 'name', 'id', 'data'])
         if not v:
             return v

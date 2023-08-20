@@ -7,7 +7,8 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, root_validator, validator
+from pydantic_settings import SettingsConfigDict, BaseSettings
+from pydantic import field_validator
 from langflow.utils.logger import logger
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -109,7 +110,7 @@ class Settings(BaseSettings):
 
         return value
 
-    @validator("COMPONENTS_PATH", pre=True)
+    @field_validator("COMPONENTS_PATH", mode="before")
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -141,17 +142,17 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
-    class Config:
-        validate_assignment = True
-        extra = "ignore"
-        env_prefix = "LANGFLOW_"
+    model_config = SettingsConfigDict(
+        validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_"
+    )
 
-    @root_validator(allow_reuse=True)
-    def validate_lists(cls, values):
-        for key, value in values.items():
-            if key != "dev" and not value:
-                values[key] = []
-        return values
+    # @model_validator()
+    # @classmethod
+    # def validate_lists(cls, values):
+    #     for key, value in values.items():
+    #         if key != "dev" and not value:
+    #             values[key] = []
+    #     return values
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
@@ -225,7 +226,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
-            if key not in Settings.__fields__.keys():
+            if key not in Settings.model_fields.keys():
                 raise KeyError(f"Key {key} not found in settings")
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 

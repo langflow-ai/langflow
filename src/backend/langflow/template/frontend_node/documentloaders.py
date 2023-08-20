@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import ClassVar, Dict, Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
@@ -23,7 +23,7 @@ class DocumentLoaderFrontNode(FrontendNode):
         self.base_classes = ["Document"]
         self.output_types = ["Document"]
 
-    file_path_templates = {
+    file_path_templates: ClassVar[Dict] = {
         "AirbyteJSONLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "CoNLLULoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),
         "CSVLoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),

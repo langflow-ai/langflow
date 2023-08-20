@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.services.database.models.flow import FlowCreate, FlowRead
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 import json
 
 
@@ -66,7 +66,8 @@ class ChatResponse(ChatMessage):
     is_bot: bool = True
     files: list = []
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
             raise ValueError("type must be start, stream, end, error, info, or file")
@@ -76,12 +77,13 @@ class ChatResponse(ChatMessage):
 class FileResponse(ChatMessage):
     """File response schema."""
 
-    data: Any
+    data: Any = None
     data_type: str
     type: str = "file"
     is_bot: bool = True
 
-    @validator("data_type")
+    @field_validator("data_type")
+    @classmethod
     def validate_data_type(cls, v):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")

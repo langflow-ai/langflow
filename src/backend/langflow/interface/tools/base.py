@@ -21,6 +21,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import util
 from langflow.utils.util import build_template_from_class
+from langflow.utils.logger import logger
 
 TOOL_INPUTS = {
     "str": TemplateField(
@@ -72,7 +73,11 @@ class ToolCreator(LangChainTypeCreator):
             all_tools = {}
 
             for tool, tool_fcn in ALL_TOOLS_NAMES.items():
-                tool_params = get_tool_params(tool_fcn)
+                try:
+                    tool_params = get_tool_params(tool_fcn)
+                except Exception:
+                    logger.error(f"Error getting params for tool {tool}")
+                    continue
 
                 tool_name = tool_params.get("name") or tool
 

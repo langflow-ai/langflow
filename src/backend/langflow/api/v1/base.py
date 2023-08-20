@@ -1,5 +1,5 @@
 from langflow.template.frontend_node.base import FrontendNode
-from pydantic import BaseModel, validator
+from pydantic import field_validator, BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langchain.prompts import PromptTemplate
@@ -28,11 +28,13 @@ class CodeValidationResponse(BaseModel):
     imports: dict
     function: dict
 
-    @validator("imports")
+    @field_validator("imports")
+    @classmethod
     def validate_imports(cls, v):
         return v or {"errors": []}
 
-    @validator("function")
+    @field_validator("function")
+    @classmethod
     def validate_function(cls, v):
         return v or {"errors": []}
 

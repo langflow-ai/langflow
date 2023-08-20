@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
@@ -9,7 +9,6 @@ from langflow.template.frontend_node.chains import ChainFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 from langchain import chains
-from langchain_experimental.sql import SQLDatabaseChain  # type: ignore
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -22,7 +21,7 @@ class ChainCreator(LangChainTypeCreator):
         return ChainFrontendNode
 
     #! We need to find a better solution for this
-    from_method_nodes = {
+    from_method_nodes: ClassVar[Dict] = {
         "ConversationalRetrievalChain": "from_llm",
         "LLMCheckerChain": "from_llm",
         "SQLDatabaseChain": "from_llm",
@@ -38,7 +37,7 @@ class ChainCreator(LangChainTypeCreator):
             }
             from langflow.interface.chains.custom import CUSTOM_CHAINS
 
-            self.type_dict["SQLDatabaseChain"] = SQLDatabaseChain
+            # self.type_dict["SQLDatabaseChain"] = SQLDatabaseChain
 
             self.type_dict.update(CUSTOM_CHAINS)
             # Filter according to settings.chains
