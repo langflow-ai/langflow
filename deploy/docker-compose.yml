@@ -1,4 +1,4 @@
-version: "3"
+version: "3.3"
 
 services:
   backend:
@@ -10,9 +10,9 @@ services:
       - queue
       - db
     env_file:
-      - ./backend.env
+      - backend.env
     ports:
-      - "7860:7860"
+      - "7860"
     volumes:
       - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
@@ -58,6 +58,8 @@ services:
     command: celery -A langflow.worker.celery_app worker --loglevel=INFO
     healthcheck:
       test: "exit 0"
+    deploy:
+      replicas: 1
 
   flower:
     # user: your-non-root-user
@@ -87,9 +89,32 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-
     env_file:
       - ./frontend.env
     ports:
       - "80:80"
     restart: on-failure
+
+  prometheus:
+    image: prom/prometheus:v2.37.9
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: "exit 0"
+
+  grafana:
+    image: grafana/grafana:8.2.6
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  grafana_data:
