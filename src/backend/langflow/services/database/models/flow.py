@@ -4,13 +4,14 @@ from langflow.services.database.models.base import SQLModelSerializable
 from sqlmodel import Field, JSON, Column
 from uuid import UUID, uuid4
 from typing import Dict, Optional
+from pydantic import field_validator
 
 # if TYPE_CHECKING:
 
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
-    description: Optional[str] = Field(index=True)
+    description: Optional[str] = Field(index=True, default="")
     data: Optional[Dict] = Field(default=None)
 
     @field_validator("data")

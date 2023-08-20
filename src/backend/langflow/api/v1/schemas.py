@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.services.database.models.flow import FlowCreate, FlowRead
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import json
 
 

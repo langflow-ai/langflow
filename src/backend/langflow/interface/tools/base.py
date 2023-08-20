@@ -136,10 +136,15 @@ class ToolCreator(LangChainTypeCreator):
             tool_dict = build_template_from_class(tool_type, OTHER_TOOLS)
             fields = tool_dict["template"]
 
+            # _type is the only key in fields
+            # return None
+            if len(fields) == 1 and "_type" in fields:
+                return None
+
             # Pop unnecessary fields and add name
             fields.pop("_type")  # type: ignore
-            fields.pop("return_direct")  # type: ignore
-            fields.pop("verbose")  # type: ignore
+            fields.pop("return_direct", None)  # type: ignore
+            fields.pop("verbose", None)  # type: ignore
 
             tool_params = {
                 "name": fields.pop("name")["value"],  # type: ignore

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 from pydantic_settings import SettingsConfigDict, BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, validator
 from langflow.utils.logger import logger
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
