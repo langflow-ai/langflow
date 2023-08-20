@@ -1,47 +1,69 @@
-from locust import HttpUser, task, between
+from locust import FastHttpUser, task, between
 import random
+import time
+from rich import print
 
 
-class NameTest(HttpUser):
-    host = "http://localhost:/api/v1"
+class NameTest(FastHttpUser):
+    host = "http://localhost/api/v1"  # make sure the port number is correct
     wait_time = between(1, 5)
 
-    # Read names from the file
     with open("names.txt", "r") as file:
         names = [line.strip() for line in file.readlines()]
 
+    def poll_task(self, task_id, sleep_time=1):
+        while True:
+            with self.rest(
+                "GET",
+                f"/task/{task_id}/status",
+                name="task_status",
+            ) as response:
+                status = response.js.get("status")
+                if status == "SUCCESS":
+                    return response.js.get("result")
+                elif status in ["FAILURE", "REVOKED"]:
+                    raise ValueError(f"Task failed with status: {status}")
+            time.sleep(sleep_time)
+
     @task
     def send_name_and_check(self):
-        # Select a random name or in order from the list
         name = random.choice(self.names)
-        flow_id = "0bc439e4-539c-4b18-9813-92729326b171"  # Replace with the appropriate flow ID
-        random_session_id_with_name = f"{name}-{random.randint(0, 1000000)}"
-        session_id = None
-        # First input
+        flow_id = (
+            "e56cca5e-4bf3-4103-9a18-d55dcea135ec"  # Replace with appropriate flow ID
+        )
+        session_id = f"{name}-{time.time()}"
+
+        def process(flow_id, payload):
+            task_id = None
+            print(f"Processing {payload}")
+            with self.rest(
+                "POST", f"/process/{flow_id}", json=payload, name="process"
+            ) as response:
+                if response.status_code != 200:
+                    response.failure("Process call failed")
+                    raise ValueError("Process call failed")
+                print(response.js)
+                task_id = response.js.get("id")
+                assert task_id, "Inner Task ID not found"
+
+            assert task_id, "Task ID not found"
+            result, session_id = self.poll_task(task_id)
+            print(f"Result for {name}: {result}")
+
+            return result, session_id
+
         payload1 = {
             "inputs": {"text": f"Hello, My name is {name}"},
-            "session_id": random_session_id_with_name,
+            "session_id": session_id,
         }
-        with self.client.post(
-            f"/process/{flow_id}", json=payload1, catch_response=True
-        ) as response:
-            if response.status_code != 200:
-                response.failure(f"Error: {response.json()}")
-            else:
-                response.success()
+        result1, session_id = process(flow_id, payload1)
 
-                session_id = response.json().get("session_id")
-                print(f"Session ID: {session_id}")
+        payload2 = {
+            "inputs": {
+                "text": "What is my name? Please, answer like this: Your name is <name>"
+            },
+            "session_id": session_id,
+        }
+        result2, session_id = process(flow_id, payload2)
 
-        if not session_id:
-            raise ValueError("Session ID not found")
-
-        # Second input
-        payload2 = {"inputs": {"text": "What is my name?"}, "session_id": session_id}
-        with self.client.post(
-            f"/process/{flow_id}", json=payload2, catch_response=True
-        ) as response2:
-            if name not in response2.text:
-                response2.failure(f"Error {name} not in response: {response2.json()}")
-            else:
-                response2.success()
+        assert f"Your name is {name}" in result2, "Name not found in response"
