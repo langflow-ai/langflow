@@ -108,7 +108,7 @@ def session_fixture():
         yield session
 
 
-@pytest.fixture(name="client")
+@pytest.fixture(name="client", scope="function", autouse=True)
 def client_fixture(session: Session):
     def get_session_override():
         return session
