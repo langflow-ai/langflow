@@ -84,8 +84,8 @@ def build_template_from_class(
 
             variables = {"_type": _type}
 
-            if "model_fields" in _class.__dict__:
-                for class_field_items, value in _class.model_fields.items():
+            if "__fields__" in _class.__dict__:
+                for class_field_items, value in _class.__fields__.items():
                     if class_field_items in ["callback_manager"]:
                         continue
                     variables[class_field_items] = {}
@@ -296,7 +296,8 @@ def get_type(value: Any) -> Union[str, type]:
     Returns:
         The type value.
     """
-    _type = value["type"]
+    # get "type" or "annotation" from the value
+    _type = value.get("type") or value.get("annotation")
 
     return _type if isinstance(_type, str) else _type.__name__
 

@@ -22,7 +22,7 @@ class Component(BaseModel):
     ] = "The name of the entrypoint function must be provided."
 
     code: Optional[str] = None
-    function_entrypoint_name: ClassVar[Dict] = "build"
+    _function_entrypoint_name: str = "build"
     field_config: dict = {}
 
     def __init__(self, **data):
@@ -39,7 +39,7 @@ class Component(BaseModel):
                 detail={"error": self.ERROR_CODE_NULL, "traceback": ""},
             )
 
-        if not self.function_entrypoint_name:
+        if not self._function_entrypoint_name:
             raise ComponentFunctionEntrypointNameNullError(
                 status_code=400,
                 detail={
@@ -48,7 +48,7 @@ class Component(BaseModel):
                 },
             )
 
-        return validate.create_function(self.code, self.function_entrypoint_name)
+        return validate.create_function(self.code, self._function_entrypoint_name)
 
     def build_template_config(self, attributes) -> dict:
         template_config = {}
