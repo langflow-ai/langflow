@@ -335,7 +335,7 @@ export function scapedJSONStringfy(json: object): string {
   return customStringify(json).replace(/"/g, '\\"');
 }
 export function scapeJSONParse(json: string): any {
-  console.log(json);
+  console.log(json, json.replace(/\\"/g, '"'));
   return JSON.parse(json.replace(/\\"/g, '"'));
 }
 
@@ -350,10 +350,10 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
   );
 }
 
-function customStringify(obj: any) {
+function customStringify(obj: any): string {
   console.log(obj);
   if (typeof obj === "undefined") {
-    return "undefined";
+    return '"undefined"';
   }
 
   if (obj === null || typeof obj !== "object") {
