@@ -87,21 +87,18 @@ def initialize_services():
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.settings import factory as settings_factory
-    from langflow.services.session import factory as session_manager_factory
+    from langflow.services.auth import factory as auth_factory
 
     service_manager.register_factory(settings_factory.SettingsManagerFactory())
+    service_manager.register_factory(
+        auth_factory.AuthManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+    )
     service_manager.register_factory(
         database_factory.DatabaseManagerFactory(),
         dependencies=[ServiceType.SETTINGS_MANAGER],
     )
-    service_manager.register_factory(
-        cache_factory.CacheManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
-    )
+    service_manager.register_factory(cache_factory.CacheManagerFactory())
     service_manager.register_factory(chat_factory.ChatManagerFactory())
-    service_manager.register_factory(
-        session_manager_factory.SessionManagerFactory(),
-        dependencies=[ServiceType.CACHE_MANAGER],
-    )
 
     # Test cache connection
     service_manager.get(ServiceType.CACHE_MANAGER)
