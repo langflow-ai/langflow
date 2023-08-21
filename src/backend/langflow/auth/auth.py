@@ -1,6 +1,11 @@
 from uuid import UUID
 from typing import Annotated
 from jose import JWTError, jwt
+from langflow.services.database.models.user import (
+    User,
+    get_user_by_id,
+    get_user_by_username,
+)
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
@@ -9,10 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from langflow.services.utils import get_settings_manager, get_session
 
-from langflow.database.models.user import (
-    User,
-    get_user_by_id,
-    get_user_by_username,
+from langflow.services.database.models.user import (
     update_user_last_login_at,
 )
 
@@ -35,8 +37,8 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             token,
-            settings_manager.settings.SECRET_KEY,
-            algorithms=[settings_manager.settings.ALGORITHM],
+            settings_manager.auth_settings.SECRET_KEY,
+            algorithms=[settings_manager.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
@@ -77,21 +79,23 @@ def create_token(data: dict, expires_delta: timedelta):
 
     return jwt.encode(
         to_encode,
-        settings_manager.settings.SECRET_KEY,
-        algorithm=settings_manager.settings.ALGORITHM,
+        settings_manager.auth_settings.SECRET_KEY,
+        algorithm=settings_manager.auth_settings.ALGORITHM,
     )
 
 
 def create_super_user(db: Session = Depends(get_session)) -> User:
     settings_manager = get_settings_manager()
 
-    super_user = get_user_by_username(db, settings_manager.settings.FIRST_SUPERUSER)
+    super_user = get_user_by_username(
+        db, settings_manager.auth_settings.FIRST_SUPERUSER
+    )
 
     if not super_user:
         super_user = User(
-            username=settings_manager.settings.FIRST_SUPERUSER,
+            username=settings_manager.auth_settings.FIRST_SUPERUSER,
             password=get_password_hash(
-                settings_manager.settings.FIRST_SUPERUSER_PASSWORD
+                settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
             ),
             is_superuser=True,
             is_active=True,
@@ -147,7 +151,7 @@ def create_user_tokens(
     settings_manager = get_settings_manager()
 
     access_token_expires = timedelta(
-        minutes=settings_manager.settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings_manager.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token = create_token(
         data={"sub": str(user_id)},
@@ -155,7 +159,7 @@ def create_user_tokens(
     )
 
     refresh_token_expires = timedelta(
-        minutes=settings_manager.settings.REFRESH_TOKEN_EXPIRE_MINUTES
+        minutes=settings_manager.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
@@ -179,8 +183,8 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
     try:
         payload = jwt.decode(
             refresh_token,
-            settings_manager.settings.SECRET_KEY,
-            algorithms=[settings_manager.settings.ALGORITHM],
+            settings_manager.auth_settings.SECRET_KEY,
+            algorithms=[settings_manager.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore

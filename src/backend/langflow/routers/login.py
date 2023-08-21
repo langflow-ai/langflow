@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow.services.utils import get_session
-from langflow.database.models.token import Token
+from langflow.services.database.models import Token
 from langflow.auth.auth import (
     authenticate_user,
     create_user_tokens,
@@ -36,7 +36,7 @@ async def login_to_get_access_token(
 async def auto_login(db: Session = Depends(get_session)):
     settings_manager = get_settings_manager()
 
-    if settings_manager.settings.AUTO_LOGIN:
+    if settings_manager.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
     raise HTTPException(

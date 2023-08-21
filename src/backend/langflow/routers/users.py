@@ -1,4 +1,11 @@
 from uuid import UUID
+from langflow.services.database.models.user import (
+    User,
+    UserAddModel,
+    UserListModel,
+    UserPatchModel,
+    UsersResponse,
+)
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -8,12 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.services.utils import get_session
 from langflow.auth.auth import get_current_active_user, get_password_hash
-from langflow.database.models.user import (
-    User,
-    UserAddModel,
-    UserListModel,
-    UserPatchModel,
-    UsersResponse,
+from langflow.services.database.models.user import (
     update_user,
 )
 
