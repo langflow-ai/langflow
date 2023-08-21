@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.services.utils import get_session
-from langflow.auth.auth import get_current_active_user, get_password_hash
+from langflow.services.auth.utils import get_current_active_user, get_password_hash
 from langflow.services.database.models.user import (
     update_user,
 )

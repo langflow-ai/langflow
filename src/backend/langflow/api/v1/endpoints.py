@@ -59,6 +59,8 @@ def get_all():
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
             # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
             category = list(custom_component_dict.keys())[0]
             logger.info(
                 f"Loading {len(custom_component_dict[category])} component(s) from category {category}"

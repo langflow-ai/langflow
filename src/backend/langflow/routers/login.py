@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow.services.utils import get_session
 from langflow.services.database.models import Token
-from langflow.auth.auth import (
+from langflow.services.auth.utils import (
     authenticate_user,
     create_user_tokens,
     create_refresh_token,
