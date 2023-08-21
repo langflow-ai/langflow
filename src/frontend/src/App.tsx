@@ -143,6 +143,7 @@ export default function App() {
         if(user && user['access_token']){
           user['refresh_token'] = "auto";
           login(user['access_token'], user['refresh_token']);
+          setUserData(user);
           setAutoLogin(true);
           setLoading(false);
         }

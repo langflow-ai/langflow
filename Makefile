@@ -32,10 +32,10 @@ lint:
 	poetry run ruff . --fix
 
 install_frontend:
-	cd src/frontend && npm install;
+	cd src/frontend && npm install
 
 install_frontendc:
-	cd src/frontend && rm -rf node_modules package-lock.json && npm install;
+	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
 run_frontend:
 	cd src/frontend && npm start

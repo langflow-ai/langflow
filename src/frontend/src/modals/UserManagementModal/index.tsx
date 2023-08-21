@@ -31,7 +31,7 @@ export default function UserManagementModal({
   const [password, setPassword] = useState(data?.password ?? "");
   const [username, setUserName] = useState(data?.username ?? "");
   const [confirmPassword, setConfirmPassword] = useState(data?.password ?? "");
-  const [isDisabled, setIsDisabled] = useState(data?.is_active ?? false);
+  const [isActive, setIsActive] = useState(data?.is_active ?? false);
   const [isSuperUser, setIsSuperUser] = useState(data?.is_superuser ?? false);
   const [inputState, setInputState] = useState<UserInputType>(CONTROL_NEW_USER);
   const { userData } = useContext(AuthContext);
@@ -47,7 +47,7 @@ export default function UserManagementModal({
       resetForm();
     } else {
       handleInput({ target: { name: "username", value: username } });
-      handleInput({ target: { name: "is_active", value: isDisabled } });
+      handleInput({ target: { name: "is_active", value: isActive } });
       handleInput({ target: { name: "is_superuser", value: isSuperUser } });
     }
   }, [open]);
@@ -230,17 +230,17 @@ export default function UserManagementModal({
               <Form.Field name="is_active">
                 <div>
                   <Form.Label className="data-[invalid]:label-invalid mr-3">
-                    Disabled
+                    Active
                   </Form.Label>
                   <Form.Control asChild>
                     <Checkbox
-                      value={isDisabled}
-                      checked={isDisabled}
+                      value={isActive}
+                      checked={isActive}
                       id="is_active"
                       className="relative top-0.5"
                       onCheckedChange={(value) => {
                         handleInput({ target: { name: "is_active", value } });
-                        setIsDisabled(value);
+                        setIsActive(value);
                       }}
                     />
                   </Form.Control>

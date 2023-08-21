@@ -362,7 +362,7 @@ export default function AdminPage() {
                                     title="Edit"
                                     titleHeader={`${user.id}`}
                                     cancelText="Cancel"
-                                    confirmationText="Edit"
+                                    confirmationText="Save"
                                     icon={"UserPlus2"}
                                     data={user}
                                     index={index}
