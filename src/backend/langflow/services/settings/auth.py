@@ -2,6 +2,8 @@ from typing import Optional
 import secrets
 
 from pydantic import BaseSettings
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer
 
 
 class AuthSettings(BaseSettings):
@@ -22,6 +24,9 @@ class AuthSettings(BaseSettings):
     AUTO_LOGIN: bool = True
     FIRST_SUPERUSER: str = "langflow"
     FIRST_SUPERUSER_PASSWORD: str = "langflow"
+
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
     class Config:
         validate_assignment = True
