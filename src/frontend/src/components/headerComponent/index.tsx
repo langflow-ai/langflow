@@ -18,19 +18,8 @@ export default function Header(): JSX.Element {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
-  const { logout, autoLogin, isAdmin, setIsAdmin } = useContext(AuthContext);
+  const { logout, autoLogin, isAdmin, stars } = useContext(AuthContext);
   const navigate = useNavigate();
-
-  const [stars, setStars] = useState(null);
-
-  // Get and set numbers of stars on header
-  useEffect(() => {
-    async function fetchStars() {
-      const starsCount = await getRepoStars("logspace-ai", "langflow");
-      setStars(starsCount);
-    }
-    fetchStars();
-  }, []);
 
   return (
     <div className="header-arrangement">

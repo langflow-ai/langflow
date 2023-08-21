@@ -15,4 +15,6 @@ export type AuthContextType = {
   authenticationErrorCount: number;
   autoLogin: boolean;
   setAutoLogin: (autoLogin: boolean) => void;
+  stars: number;
+  setStars: (stars: number) => void;
 };
