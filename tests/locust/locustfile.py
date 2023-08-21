@@ -2,6 +2,7 @@ from locust import FastHttpUser, task, between
 import random
 import time
 from rich import print
+import os
 
 
 class NameTest(FastHttpUser):
@@ -28,9 +29,7 @@ class NameTest(FastHttpUser):
     @task
     def send_name_and_check(self):
         name = random.choice(self.names)
-        flow_id = (
-            "e56cca5e-4bf3-4103-9a18-d55dcea135ec"  # Replace with appropriate flow ID
-        )
+        flow_id = os.getenv("FLOW_ID")
         session_id = f"{name}-{time.time()}"
 
         def process(flow_id, payload):
