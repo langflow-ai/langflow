@@ -1,8 +1,8 @@
-version: "3.3"
+version: "3.8"
 
 services:
   proxy:
-    image: traefik:v2.2
+    image: traefik:v3.0
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
       - default
@@ -73,12 +73,14 @@ services:
       dockerfile: base.Dockerfile
     # user: your-non-root-user # Make sure your Dockerfile creates this user
     depends_on:
-      - queue
-      - db
+      db:
+        condition: service_healthy
+      queue:
+        condition: service_healthy
     env_file:
       - backend.env
-    ports:
-      - "7860"
+    # ports:
+    #   - 7860
     volumes:
       - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
@@ -104,6 +106,8 @@ services:
       placement:
         constraints:
           - node.labels.${STACK_NAME?Variable not set}.app-db-data == true
+    healthcheck:
+      test: "exit 0"
 
   pgadmin:
     image: dpage/pgadmin4
@@ -113,7 +117,8 @@ services:
     env_file:
       - ./pgadmin.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./pgadmin:/var/lib/pgadmin
     deploy:
@@ -132,8 +137,8 @@ services:
 
   queue:
     image: redis:6.2.5
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - 6379:6379
     healthcheck:
       test: "exit 0"
 
@@ -166,8 +171,7 @@ services:
       - ./flower.env
     environment:
       - CELERY_BROKER_URL='redis://$${LANGFLOW_REDIS_PASSWORD:+default:$${LANGFLOW_REDIS_PASSWORD}@}$${LANGFLOW_REDIS_HOST}:$${LANGFLOW_REDIS_PORT}/$${LANGFLOW_REDIS_DB}'
-    ports:
-      - "5555:5555"
+      - FLOWER_PORT=5555
     deploy:
       labels:
         - traefik.enable=true
@@ -208,8 +212,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    ports:
-      - "9090:9090"
+    # ports:
+    #   - 9090:9090
     healthcheck:
       test: "exit 0"
     deploy:
@@ -224,8 +228,8 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - 3000:3000
     volumes:
       - grafana_data:/var/lib/grafana
     deploy:
