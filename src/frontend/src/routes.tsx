@@ -88,9 +88,9 @@ const Router = () => {
       <Route
         path="/admin"
         element={
-          <ProtectedAdminRoute>
+
             <AdminPage />
-          </ProtectedAdminRoute>
+
         }
       />
 
