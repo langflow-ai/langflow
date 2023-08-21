@@ -299,7 +299,6 @@ export function handleKeyDown(
   inputValue: string | string[] | null,
   block: string
 ) {
-  console.log(e, inputValue, block);
   //condition to fix bug control+backspace on Windows/Linux
   if (
     (typeof inputValue === "string" &&
@@ -332,11 +331,10 @@ export function getConnectedNodes(
 }
 
 export function scapedJSONStringfy(json: object): string {
-  return customStringify(json).replace(/"/g, '\\"');
+  return customStringify(json).replace(/"/g, "œ");
 }
 export function scapeJSONParse(json: string): any {
-  console.log(json, json.replace(/\\"/g, '"'));
-  return JSON.parse(json.replace(/\\"/g, '"'));
+  return JSON.parse(json.replace(/œ/g, '"'));
 }
 
 // this function receives an array of edges and return true if any of the handles are not a json string
@@ -350,10 +348,9 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
   );
 }
 
-function customStringify(obj: any): string {
-  console.log(obj);
+export function customStringify(obj: any): string {
   if (typeof obj === "undefined") {
-    return '"undefined"';
+    return "null";
   }
 
   if (obj === null || typeof obj !== "object") {
