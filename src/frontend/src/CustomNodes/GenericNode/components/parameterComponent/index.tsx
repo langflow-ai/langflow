@@ -333,6 +333,8 @@ export default function ParameterComponent({
             <PromptAreaComponent
               field_name={name}
               setNodeClass={(nodeClass) => {
+                console.log(nodeClass);
+                
                 data.node = nodeClass;
               }}
               nodeClass={data.node}
