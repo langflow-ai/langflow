@@ -15,7 +15,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "make setup_devcontainer",
+  "postCreateCommand": "make install_frontend && make install_backend",
 
   "containerEnv": {
     "POETRY_VIRTUALENVS_IN_PROJECT": "true"
