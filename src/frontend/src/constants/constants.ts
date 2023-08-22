@@ -619,4 +619,4 @@ export function tabsArray(codes: string[], method: number) {
 export const BASE_URL_API = "http://localhost:7860/";
 
 export const SIGN_UP_SUCCESS =
-  "Congratulations on signing up! Your account is currently awaiting activation by our admin team.";
+  "Account created! Await admin activation. ";
