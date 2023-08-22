@@ -29,16 +29,21 @@ def get_langfuse_callback():
     if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
         logger.debug("Langfuse credentials found")
         try:
-            from langfuse.callback import CallbackHandler
+            from langfuse.callback import CallbackHandler  # type: ignore
 
             return CallbackHandler(
                 public_key=settings.LANGFUSE_PUBLIC_KEY,
                 secret_key=settings.LANGFUSE_SECRET_KEY,
                 host=settings.LANGFUSE_HOST,
             )
-
+        except ImportError as exc:
+            raise ImportError(
+                "Error importing langfuse callback. "
+                "Please install langfuse with `pip install langfuse`"
+            ) from exc
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
+
     return None
 
 
