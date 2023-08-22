@@ -337,7 +337,9 @@ def build_valid_menu(valid_components):
         valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
-            logger.debug(f"Building component: {component}")
+            logger.debug(
+                f"Building component: {component.get('name'), component.get('output_types')}"
+            )
             try:
                 component_name = component["name"]
                 component_code = component["code"]
