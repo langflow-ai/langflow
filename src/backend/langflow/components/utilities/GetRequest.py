@@ -35,7 +35,7 @@ class GetRequest(CustomComponent):
         self, session: requests.Session, url: str, headers: Optional[dict], timeout: int
     ) -> Document:
         try:
-            response = session.get(url, headers=headers, timeout=timeout)
+            response = session.get(url, headers=headers, timeout=int(timeout))
             try:
                 response_json = response.json()
                 result = orjson_dumps(response_json, indent_2=False)
