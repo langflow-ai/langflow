@@ -12,6 +12,7 @@ import asyncio
 from typing import Any, Dict, List
 
 from langflow.cache.flow import InMemoryCache
+import orjson
 
 
 class ChatHistory(Subject):
