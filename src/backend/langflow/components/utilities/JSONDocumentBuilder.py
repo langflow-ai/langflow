@@ -31,4 +31,12 @@ class JSONDocumentBuilder(CustomComponent):
         key: str,
         document: Document,
     ) -> Document:
-        return Document(page_content={key: document.page_content})
+        documents = None
+        if isinstance(document, list):
+            documents = [
+                Document(page_content={key: doc.page_content}) for doc in document
+            ]
+        else:
+            documents = Document(page_content={key: document.page_content})
+        self.repr_value = documents
+        return documents
