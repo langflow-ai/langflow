@@ -214,9 +214,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         let sourceHandleObject: sourceHandleType = scapeJSONParse(
           edge.sourceHandle!
         );
-        sourceHandleObject.baseClasses = sourceHandleObject.baseClasses.concat(
-          template["base_classes"]
-        );
+        sourceHandleObject.baseClasses = template["base_classes"];
         edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
       }
     });
@@ -513,7 +511,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const extractDataFromFlow = (flow: FlowType) => {
     let data = flow?.data ? flow.data : null;
     const description = flow?.description ? flow.description : "";
-
     if (data) {
       processFlowEdges(flow);
       processFlowNodes(flow);

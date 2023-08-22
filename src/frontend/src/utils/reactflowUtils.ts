@@ -71,7 +71,6 @@ export function isValidConnection(
 ) {
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
-  console.log(sourceHandleObject, targetHandleObject);
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType
@@ -283,9 +282,9 @@ export function updateEdgesHandleIds({
     }
     if (source && sourceNode) {
       newSource = {
-        dataType: sourceNode.data.type,
         id: sourceNode.data.id,
         baseClasses: sourceNode.data.node!.base_classes,
+        dataType: sourceNode.data.type,
       };
     }
     edge.sourceHandle = scapedJSONStringfy(newSource!);
@@ -334,7 +333,8 @@ export function scapedJSONStringfy(json: object): string {
   return customStringify(json).replace(/"/g, "œ");
 }
 export function scapeJSONParse(json: string): any {
-  return JSON.parse(json.replace(/œ/g, '"'));
+  let parsed = json.replace(/œ/g, '"');
+  return JSON.parse(parsed);
 }
 
 // this function receives an array of edges and return true if any of the handles are not a json string
