@@ -59,12 +59,12 @@ class PostRequest(CustomComponent):
         document: Document,
         url: str,
         headers: Optional[dict] = None,
-    ) -> Document:
+    ) -> list[Document]:
         if headers is None:
             headers = {}
 
         if not isinstance(document, list) and isinstance(document, Document):
-            document = [document]
+            document: list[Document] = [document]
         else:
             raise ValueError("document must be a Document or a list of Documents")
 
