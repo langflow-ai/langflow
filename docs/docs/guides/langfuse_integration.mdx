@@ -1,35 +1,49 @@
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import ReactPlayer from "react-player";
-
 # Integrating Langfuse with Langflow
+
+## Introduction
+
+Langfuse is an open-source tracing and analytics tool designed for LLM applications. Integrating Langfuse with Langflow provides detailed production traces and granular insights into quality, cost, and latency. This integration allows you to monitor and debug your Langflow's chat or APIs easily.
 
 ## Step-by-Step Instructions
 
 ### Step 1: Create a Langfuse account
 
-1. Go to [https://langfuse.com](https://langfuse.com) and click on the "Sign In" button in the top right corner.
+1. Go to [Langfuse](https://langfuse.com) and click on the "Sign In" button in the top right corner.
 2. Click on the "Sign Up" button and create an account.
-3. Click on "Settings" and then on "Create new API keys"
+3. Once logged in, click on "Settings" and then on "Create new API keys."
 4. Copy the Public key and the Secret Key and save them somewhere safe.
-   {/* Add env variables LANGFLOW_LANGFUSE_SECRET_KEY, LANGFLOW_LANGFUSE_PUBLIC_KEY and LANGFLOW_LANGFUSE_HOST to pass to CallbackHandler */}
+   {/* Add these keys to your environment variables in the following step. */}
 
 ### Step 2: Set up Langfuse in Langflow
 
-1. Export the environment variables LANGFLOW_LANGFUSE_SECRET_KEY, LANGFLOW_LANGFUSE_PUBLIC_KEY with the values from step 1.
+1. **Export the Environment Variables**: You'll need to export the environment variables `LANGFLOW_LANGFUSE_SECRET_KEY` and `LANGFLOW_LANGFUSE_PUBLIC_KEY` with the values obtained in Step 1.
 
-You can do this by executing the following commands in your terminal:
+   You can do this by executing the following commands in your terminal:
 
-```bash
-export LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key>
-export LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key>
-```
+   ```bash
+   export LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key>
+   export LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key>
+   ```
 
-or by running the Langflow CLI command:
+   Alternatively, you can run the Langflow CLI command:
 
-```bash
-LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key> LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key> langflow
-```
+   ```bash
+   LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key> LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key> langflow
+   ```
 
-That's it! Now, whenever you use Langflow's chat feature, you will be able to see the tracing of your conversations in Langfuse.
+   If you are self-hosting Langfuse, you can also set the environment variable `LANGFLOW_LANGFUSE_HOST` to point to your Langfuse instance. By default, Langfuse points to the cloud instance at `https://cloud.langfuse.com`.
+
+2. **Verify Integration**: Ensure that the environment variables are set correctly by checking their existence in your environment, for example by running:
+
+   ```bash
+   echo $LANGFLOW_LANGFUSE_SECRET_KEY
+   echo $LANGFLOW_LANGFUSE_PUBLIC_KEY
+   ```
+
+3. **Monitor Langflow**: Now, whenever you use Langflow's chat or API, you will be able to see the tracing of your conversations in Langfuse. If you have any issues with the integration, consult the [Langfuse documentation](<link to specific troubleshooting section>) or contact their support.
+
+That's it! You have successfully integrated Langfuse with Langflow, enhancing observability and debugging capabilities for your LLM application.
+
+---
+
+Note: For more details or customized configurations, please refer to the official [Langfuse documentation](https://langfuse.com/docs/integrations/langchain).
