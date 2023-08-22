@@ -9,7 +9,6 @@ from langflow.utils.logger import logger
 
 
 import asyncio
-import json
 from typing import Any, Dict, List
 
 from langflow.cache.flow import InMemoryCache
@@ -186,7 +185,7 @@ class ChatManager:
             while True:
                 json_payload = await websocket.receive_json()
                 try:
-                    payload = json.loads(json_payload)
+                    payload = orjson.loads(json_payload)
                 except TypeError:
                     payload = json_payload
                 if "clear_history" in payload:
