@@ -1,20 +1,25 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { IVarHighlightType } from "../types/components";
+import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  IVarHighlightType,
+  groupedObjType,
+  tweakType,
+} from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
 import { TabsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
-export function classNames(...classes: Array<string>) {
+export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
 }
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-export function toNormalCase(str: string) {
+export function toNormalCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -36,7 +41,7 @@ export function toNormalCase(str: string) {
     .join(" ");
 }
 
-export function normalCaseToSnakeCase(str: string) {
+export function normalCaseToSnakeCase(str: string): string {
   return str
     .split(" ")
     .map((word, index) => {
@@ -48,7 +53,7 @@ export function normalCaseToSnakeCase(str: string) {
     .join("_");
 }
 
-export function toTitleCase(str: string) {
+export function toTitleCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
@@ -75,7 +80,7 @@ export function toTitleCase(str: string) {
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
-export function checkUpperWords(str: string) {
+export function checkUpperWords(str: string): string {
   const words = str.split(" ").map((word) => {
     return upperCaseWords.includes(word.toLowerCase())
       ? word.toUpperCase()
@@ -88,10 +93,23 @@ export function checkUpperWords(str: string) {
 export const isWrappedWithClass = (event: any, className: string | undefined) =>
   event.target.closest(`.${className}`);
 
-export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
+export function groupByFamily(
+  data: APIDataType,
+  baseClasses: string,
+  left: boolean,
+  flow?: NodeType[]
+): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
-  let arrOfPossibleInputs = [];
-  let arrOfPossibleOutputs = [];
+  let arrOfPossibleInputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
+  let arrOfPossibleOutputs: Array<{
+    category: string;
+    nodes: string[];
+    full: boolean;
+  }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
     "str",
@@ -103,7 +121,7 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
     "int",
   ]);
 
-  const checkBaseClass = (template: any) =>
+  const checkBaseClass = (template: TemplateVariableType) =>
     template.type &&
     template.show &&
     ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
@@ -119,10 +137,10 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
-          Object.values(nodeData.node.template).some(checkBaseClass),
+          Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node.base_classes.some((baseClass) =>
+          nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ),
       });
@@ -130,17 +148,17 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
   }
 
   for (const [d, nodes] of Object.entries(data)) {
-    let tempInputs = [],
-      tempOutputs = [];
+    let tempInputs: string[] = [],
+      tempOutputs: string[] = [];
 
-    for (const [n, node] of Object.entries(nodes)) {
+    for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
       if (!foundNode) {
         foundNode = {
-          hasBaseClassInTemplate: Object.values(node.template).some(
+          hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node.base_classes.some((baseClass) =>
+          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ),
         };
@@ -151,7 +169,7 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
     }
 
-    const totalNodes = Object.keys(nodes).length;
+    const totalNodes = Object.keys(nodes!).length;
     if (tempInputs.length)
       arrOfPossibleInputs.push({
         category: d,
@@ -177,12 +195,12 @@ export function groupByFamily(data, baseClasses, left, flow?: NodeType[]) {
       }));
 }
 
-export function buildInputs(tabsState, id) {
+export function buildInputs(tabsState: TabsState, id: string): string {
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
     tabsState[id].formKeysData.input_keys &&
-    Object.keys(tabsState[id].formKeysData.input_keys).length > 0
+    Object.keys(tabsState[id].formKeysData.input_keys!).length > 0
     ? JSON.stringify(tabsState[id].formKeysData.input_keys)
     : '{"input": "message"}';
 }
@@ -238,7 +256,7 @@ export function varHighlightHTML({ name }: IVarHighlightType): string {
   return html;
 }
 
-export function buildTweakObject(tweak) {
+export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
       for (let kp in el[key]) {
@@ -248,7 +266,6 @@ export function buildTweakObject(tweak) {
       }
     });
   });
-
   const tweakString = JSON.stringify(tweak.at(-1), null, 2);
   return tweakString;
 }
@@ -263,12 +280,13 @@ export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
   let chat_input_field = "text";
 
   if (
+    tabsState &&
     tabsState[flow.id] &&
     tabsState[flow.id].formKeysData &&
     tabsState[flow.id].formKeysData.input_keys
   ) {
     chat_input_field = Object.keys(
-      tabsState[flow.id].formKeysData.input_keys
+      tabsState[flow.id].formKeysData.input_keys!
     )[0];
   }
   return chat_input_field;
@@ -291,7 +309,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `import requests
 from typing import Optional
 
@@ -343,7 +361,7 @@ export function getCurlCode(
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -369,7 +387,7 @@ export function getPythonCode(
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -390,7 +408,7 @@ flow(inputs)`;
 export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(tabsState, flow.id);
+  const inputs = buildInputs(tabsState!, flow.id);
   let chat_input_field = getChatInputField(flow, tabsState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
@@ -402,7 +420,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    tabsState[flow.id] && tabsState[flow.id].formKeysData
+    tabsState![flow.id] && tabsState![flow.id].formKeysData
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `

@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
@@ -14,7 +15,7 @@ export default function InputComponent({
   editNode = false,
   placeholder = "Type something...",
   className,
-}: InputComponentType) {
+}: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
 
   // Clear component state
@@ -39,11 +40,14 @@ export default function InputComponent({
               editNode ? " input-edit-node " : "",
               password && editNode ? "pr-8" : "",
               password && !editNode ? "pr-10" : "",
-              className
+              className!
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
               onChange(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              handleKeyDown(e, value, "");
             }}
           />
         </Form.Control>
@@ -59,11 +63,14 @@ export default function InputComponent({
             editNode ? " input-edit-node " : "",
             password && editNode ? "pr-8" : "",
             password && !editNode ? "pr-10" : "",
-            className
+            className!
           )}
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={(e) => {
             onChange(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            handleKeyDown(e, value, "");
           }}
         />
       )}
@@ -74,7 +81,8 @@ export default function InputComponent({
               ? "input-component-true-button"
               : "input-component-false-button"
           )}
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
             setPwdVisible(!pwdVisible);
           }}
         >

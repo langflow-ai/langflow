@@ -1,10 +1,14 @@
 import * as Form from "@radix-ui/react-form";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
+import { getLoggedUser, onLogin } from "../../controllers/API";
+import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
   loginInputStateType,
@@ -15,12 +19,47 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
+  const { login, getAuthentication, setUserData } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { setErrorData } = useContext(alertContext);
 
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
+
+  function signIn() {
+    const user: LoginType = {
+      username: username,
+      password: password,
+    };
+    onLogin(user)
+      .then((user) => {
+        login(user.access_token, user.refresh_token);
+        getUser();
+        navigate("/");
+      })
+      .catch((error) => {
+        setErrorData({
+          title: "Error signing in",
+          list: [error["response"]["data"]["detail"]],
+        });
+      });
+  }
+
+  function getUser() {
+    if (getAuthentication()) {
+      setTimeout(() => {
+        getLoggedUser()
+          .then((user) => {
+            setUserData(user);
+          })
+          .catch((error) => {});
+      }, 1000);
+    }
+  }
+
   return (
     <Form.Root
       onSubmit={(event) => {
@@ -28,7 +67,7 @@ export default function LoginPage(): JSX.Element {
           event.preventDefault();
           return;
         }
-
+        signIn();
         const data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
@@ -92,7 +131,7 @@ export default function LoginPage(): JSX.Element {
             </Form.Submit>
           </div>
           <div className="w-full">
-            <Link to="">
+            <Link to="/signup">
               <Button className="w-full" variant="outline">
                 Don't have an account?&nbsp;<b>Sign Up</b>
               </Button>

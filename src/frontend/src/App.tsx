@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -9,10 +9,12 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
+import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
+import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
+import { autoLogin, getLoggedUser } from "./controllers/API";
 import Router from "./routes";
 
 export default function App() {
@@ -25,6 +27,7 @@ export default function App() {
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
   const { hardReset } = useContext(TabsContext);
+
   const {
     errorData,
     errorOpen,
@@ -35,7 +38,11 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    setErrorData,
+    loading,
+    setLoading
   } = useContext(alertContext);
+  const navigate = useNavigate();
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -49,6 +56,7 @@ export default function App() {
   const isLoginPage = location.pathname.includes("login");
   const isAdminPage = location.pathname.includes("admin");
   const isSignUpPage = location.pathname.includes("signup");
+  const isLocalHost = window.location.href.includes("localhost");
 
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -125,6 +133,37 @@ export default function App() {
     );
   };
 
+  //this function is to get the user logged in when the page is refreshed
+  const { setUserData, getAuthentication, login, setAutoLogin, logout } =
+    useContext(AuthContext);
+
+  useEffect(() => {
+    setTimeout(() => {
+      autoLogin().then((user) => {
+        if(user && user['access_token']){
+          user['refresh_token'] = "auto";
+          login(user['access_token'], user['refresh_token']);
+          setUserData(user);
+          setAutoLogin(true);
+          setLoading(false);
+        }
+      }).catch((error) => {
+        setAutoLogin(false);
+        if (getAuthentication() && !isLoginPage) {
+          getLoggedUser()
+            .then((user) => {
+              setUserData(user);
+              setLoading(false);
+            })
+            .catch((error) => {});
+        }
+        else{
+          setLoading(false);
+        }
+      });
+    }, 500);
+  }, []);
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
@@ -137,8 +176,15 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {!isLoginPage && !isSignUpPage && <Header />}
-        <Router />
+        {loading ? (
+          <div className="loading-page-panel">
+            <LoadingComponent remSize={50} />
+          </div>
+        ) : (
+          <>
+            <Router />
+          </>
+        )}
       </ErrorBoundary>
       <div></div>
       <div className="app-div" style={{ zIndex: 999 }}>

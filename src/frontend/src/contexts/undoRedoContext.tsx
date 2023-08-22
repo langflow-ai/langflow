@@ -6,25 +6,14 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Edge, Node, useReactFlow } from "reactflow";
+import { useReactFlow } from "reactflow";
+import {
+  HistoryItem,
+  UseUndoRedoOptions,
+  undoRedoContextType,
+} from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
 import { TabsContext } from "./tabsContext";
-
-type undoRedoContextType = {
-  undo: () => void;
-  redo: () => void;
-  takeSnapshot: () => void;
-};
-
-type UseUndoRedoOptions = {
-  maxHistorySize: number;
-  enableShortcuts: boolean;
-};
-
-type HistoryItem = {
-  nodes: Node[];
-  edges: Edge[];
-};
 
 const initialValue = {
   undo: () => {},

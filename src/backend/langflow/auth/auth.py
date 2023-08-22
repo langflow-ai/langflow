@@ -7,9 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from datetime import datetime, timedelta, timezone
 
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_manager, get_session
 
-from langflow.services.utils import get_session
 from langflow.database.models.user import (
     User,
     get_user_by_id,
@@ -83,24 +82,63 @@ def create_token(data: dict, expires_delta: timedelta):
     )
 
 
-def create_user_longterm_token(
-    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
-) -> dict:
+def create_super_user(db: Session = Depends(get_session)) -> User:
+    settings_manager = get_settings_manager()
+
+    super_user = get_user_by_username(db, settings_manager.settings.FIRST_SUPERUSER)
+
+    if not super_user:
+        super_user = User(
+            username=settings_manager.settings.FIRST_SUPERUSER,
+            password=get_password_hash(
+                settings_manager.settings.FIRST_SUPERUSER_PASSWORD
+            ),
+            is_superuser=True,
+            is_active=True,
+            last_login_at=None,
+        )
+
+        db.add(super_user)
+        db.commit()
+        db.refresh(super_user)
+
+    return super_user
+
+
+def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
+    super_user = create_super_user(db)
+
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
-        data={"sub": str(user_id)},
+        data={"sub": str(super_user.id)},
         expires_delta=access_token_expires_longterm,
     )
 
     # Update: last_login_at
-    if update_last_login:
-        update_user_last_login_at(user_id, db)
+    update_user_last_login_at(super_user.id, db)
 
     return {
         "access_token": access_token,
         "refresh_token": None,
         "token_type": "bearer",
     }
+
+
+def create_user_api_key(user_id: UUID) -> dict:
+    access_token = create_token(
+        data={"sub": str(user_id), "role": "api_key"},
+        expires_delta=timedelta(days=365 * 2),
+    )
+
+    return {"api_key": access_token}
+
+
+def get_user_id_from_token(token: str) -> UUID:
+    try:
+        user_id = jwt.get_unverified_claims(token)["sub"]
+        return UUID(user_id)
+    except (KeyError, JWTError, ValueError):
+        return UUID(int=0)
 
 
 def create_user_tokens(

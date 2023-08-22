@@ -17,7 +17,7 @@ import {
 import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
-export default function ExtraSidebar() {
+export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
@@ -28,7 +28,7 @@ export default function ExtraSidebar() {
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
-  ) {
+  ): void {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
     crt.style.position = "absolute";
@@ -59,7 +59,7 @@ export default function ExtraSidebar() {
   const flow = flows.find((flow) => flow.id === tabId);
   useEffect(() => {
     // show components with error on load
-    let errors = [];
+    let errors: string[] = [];
     Object.keys(templates).forEach((component) => {
       if (templates[component].error) {
         errors.push(component);
@@ -120,7 +120,7 @@ export default function ExtraSidebar() {
                 "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
               }
               onClick={(event) => {
-                saveFlow(flow);
+                saveFlow(flow!);
                 setSuccessData({ title: "Changes saved successfully" });
               }}
             >
