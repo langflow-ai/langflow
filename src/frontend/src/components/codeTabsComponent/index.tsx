@@ -277,9 +277,13 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList![
-                                                          index
-                                                        ].data.node.template[
+                                                        newInputList!.find(
+                                                          (obj) =>
+                                                            obj.data.node
+                                                              .template[
+                                                              templateField
+                                                            ]
+                                                        )!.data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
@@ -326,9 +330,13 @@ export default function CodeTabsComponent({
                                                           setData((old) => {
                                                             let newInputList =
                                                               cloneDeep(old);
-                                                            newInputList![
-                                                              index
-                                                            ].data.node.template[
+                                                            newInputList!.find(
+                                                              (obj) =>
+                                                                obj.data.node
+                                                                  .template[
+                                                                  templateField
+                                                                ]
+                                                            )!.data.node.template[
                                                               templateField
                                                             ].value = target;
                                                             return newInputList;
@@ -371,9 +379,13 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList![
-                                                          index
-                                                        ].data.node.template[
+                                                        newInputList!.find(
+                                                          (obj) =>
+                                                            obj.data.node
+                                                              .template[
+                                                              templateField
+                                                            ]
+                                                        )!.data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
@@ -404,9 +416,13 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList![
-                                                        index
-                                                      ].data.node.template[
+                                                      newInputList!.find(
+                                                        (obj) =>
+                                                          obj.data.node
+                                                            .template[
+                                                            templateField
+                                                          ]
+                                                      )!.data.node.template[
                                                         templateField
                                                       ].value = e;
                                                       return newInputList;
@@ -495,9 +511,13 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList![
-                                                        index
-                                                      ].data.node.template[
+                                                      newInputList!.find(
+                                                        (obj) =>
+                                                          obj.data.node
+                                                            .template[
+                                                            templateField
+                                                          ]
+                                                      )!.data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
@@ -531,9 +551,13 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList![
-                                                        index
-                                                      ].data.node.template[
+                                                      newInputList!.find(
+                                                        (obj) =>
+                                                          obj.data.node
+                                                            .template[
+                                                            templateField
+                                                          ]
+                                                      )!.data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
@@ -583,9 +607,14 @@ export default function CodeTabsComponent({
                                                     setData((old) => {
                                                       let newInputList =
                                                         cloneDeep(old);
-                                                      newInputList![
-                                                        index
-                                                      ].data.node.template[
+
+                                                      newInputList!.find(
+                                                        (obj) =>
+                                                          obj.data.node
+                                                            .template[
+                                                            templateField
+                                                          ]
+                                                      )!.data.node.template[
                                                         templateField
                                                       ].value = target;
                                                       return newInputList;
@@ -638,9 +667,13 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList![
-                                                          index
-                                                        ].data.node.template[
+                                                        newInputList!.find(
+                                                          (obj) =>
+                                                            obj.data.node
+                                                              .template[
+                                                              templateField
+                                                            ]
+                                                        )!.data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
@@ -693,9 +726,13 @@ export default function CodeTabsComponent({
                                                       setData((old) => {
                                                         let newInputList =
                                                           cloneDeep(old);
-                                                        newInputList![
-                                                          index
-                                                        ].data.node.template[
+                                                        newInputList!.find(
+                                                          (obj) =>
+                                                            obj.data.node
+                                                              .template[
+                                                              templateField
+                                                            ]
+                                                        )!.data.node.template[
                                                           templateField
                                                         ].value = target;
                                                         return newInputList;
