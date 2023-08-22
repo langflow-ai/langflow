@@ -63,8 +63,10 @@ class PostRequest(CustomComponent):
         if headers is None:
             headers = {}
 
-        if not isinstance(document, list):
+        if not isinstance(document, list) and isinstance(document, Document):
             document = [document]
+        else:
+            raise ValueError("document must be a Document or a list of Documents")
 
         with requests.Session() as session:
             documents = [
