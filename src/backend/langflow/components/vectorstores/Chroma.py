@@ -105,5 +105,5 @@ class ChromaComponent(CustomComponent):
             )
 
         return Chroma(
-            persist_directory=persist_directory,
+            persist_directory=persist_directory, client_settings=chroma_settings
         )

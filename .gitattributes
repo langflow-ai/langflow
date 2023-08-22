@@ -16,6 +16,7 @@
 *.yml text
 *.yaml text
 *.Dockerfile text
+Dockerfile text
 
 # Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf
