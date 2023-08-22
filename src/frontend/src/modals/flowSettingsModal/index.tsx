@@ -28,7 +28,6 @@ export default function FlowSettingsModal({
     savedFlow!.name = name;
     savedFlow!.description = description;
     saveFlow(savedFlow!);
-    setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }
   return (
