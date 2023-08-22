@@ -6,7 +6,7 @@ from typing import Optional
 
 
 class PostRequest(CustomComponent):
-    display_name: str = "Post Request"
+    display_name: str = "POST Request"
     description: str = "Make a POST request to the given URL."
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.langflow.org/components/utilities#post-request"
