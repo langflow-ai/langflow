@@ -84,6 +84,7 @@ bcrypt = "^4.0.1"
 python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
 pydantic-settings = "^2.0.3"
+zep-python = {version = "^1.1.0a0", allow-prereleases = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

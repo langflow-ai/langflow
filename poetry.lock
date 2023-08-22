@@ -7353,6 +7353,21 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [[package]]
+name = "zep-python"
+version = "1.1.0a0"
+description = "Zep stores, manages, enriches, indexes, and searches long-term memory for conversational AI applications. This is the Python client for the Zep service."
+optional = false
+python-versions = ">=3.8.1,<4"
+files = [
+    {file = "zep_python-1.1.0a0-py3-none-any.whl", hash = "sha256:2856e70f9e11ca9d1e1c210bf532ea9288b6a4cc9f2435bc7b84cf6de5ee5c34"},
+    {file = "zep_python-1.1.0a0.tar.gz", hash = "sha256:19537fe6780c88f2558e890f0a26657b3201d6ea9b568fba0cf7aa634b77c1fc"},
+]
+
+[package.dependencies]
+httpx = ">=0.24.0,<0.25.0"
+pydantic = ">=1.10.7"
+
+[[package]]
 name = "zipp"
 version = "3.16.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -7433,4 +7448,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "95ac4e1ab2cab8b0cf3bc152296a72a3b6892dd66a1fa14d6661cfdfc0365d86"
+content-hash = "dc36c07f18b2d7045af0901307877809196ab4becf8c7e5b7ab2ca85c404bb21"
