@@ -67,4 +67,6 @@ class GetRequest(CustomComponent):
             headers = {}
         if not isinstance(url, list):
             url = [url]
-        return [self.get_document(u, headers) for u in url]
+        documents = [self.get_document(u, headers) for u in url]
+        self.repr_value = documents
+        return documents
