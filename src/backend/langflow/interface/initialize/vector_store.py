@@ -11,6 +11,8 @@ from langchain.vectorstores import (
 
 import os
 
+import orjson
+
 
 def docs_in_params(params: dict) -> bool:
     """Check if params has documents OR texts and one of them is not an empty list,
