@@ -9,6 +9,7 @@ class PostRequest(CustomComponent):
     display_name: str = "Post Request"
     description: str = "Make a POST request to the given URL."
     output_types: list[str] = ["Document"]
+    documentation: str = "https://docs.langflow.org/components/utilities#post-request"
     beta = True
     field_config = {
         "url": {"display_name": "URL", "info": "The URL to make the request to."},

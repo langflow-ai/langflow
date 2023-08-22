@@ -6,9 +6,10 @@ from typing import Optional
 
 
 class GetRequest(CustomComponent):
-    display_name: str = "Get Request"
+    display_name: str = "GET Request"
     description: str = "Make a GET request to the given URL."
     output_types: list[str] = ["Document"]
+    documentation: str = "https://docs.langflow.org/components/utilities#get-request"
     beta = True
     field_config = {
         "url": {
