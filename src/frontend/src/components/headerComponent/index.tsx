@@ -26,6 +26,17 @@ export default function Header(): JSX.Element {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
+        {location.pathname === "/admin" && (
+          <Button
+            onClick={() => {
+              navigate("/");
+            }}
+            variant="outline"
+            className=""
+          >
+            Main page
+          </Button>
+        )}
         {autoLogin === false && (
           <Button
             onClick={() => {
@@ -39,7 +50,7 @@ export default function Header(): JSX.Element {
           </Button>
         )}
 
-        {isAdmin && !autoLogin && (
+        {isAdmin && !autoLogin && location.pathname !== "/admin" && (
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Admin page
           </Button>

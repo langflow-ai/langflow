@@ -26,6 +26,7 @@ import {
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { UserInputType } from "../../types/components";
+import Header from "../../components/headerComponent";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -183,6 +184,7 @@ export default function AdminPage() {
 
   return (
     <>
+      <Header />
       {userData && (
         <div className="main-page-panel">
           <div className="m-auto flex h-full flex-row justify-center">
