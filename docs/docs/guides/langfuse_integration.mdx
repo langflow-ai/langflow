@@ -1,0 +1,35 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# Integrating Langfuse with Langflow
+
+## Step-by-Step Instructions
+
+### Step 1: Create a Langfuse account
+
+1. Go to [https://langfuse.com](https://langfuse.com) and click on the "Sign In" button in the top right corner.
+2. Click on the "Sign Up" button and create an account.
+3. Click on "Settings" and then on "Create new API keys"
+4. Copy the Public key and the Secret Key and save them somewhere safe.
+   {/* Add env variables LANGFLOW_LANGFUSE_SECRET_KEY, LANGFLOW_LANGFUSE_PUBLIC_KEY and LANGFLOW_LANGFUSE_HOST to pass to CallbackHandler */}
+
+### Step 2: Set up Langfuse in Langflow
+
+1. Export the environment variables LANGFLOW_LANGFUSE_SECRET_KEY, LANGFLOW_LANGFUSE_PUBLIC_KEY with the values from step 1.
+
+You can do this by executing the following commands in your terminal:
+
+```bash
+export LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key>
+export LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key>
+```
+
+or by running the Langflow CLI command:
+
+```bash
+LANGFLOW_LANGFUSE_SECRET_KEY=<your secret key> LANGFLOW_LANGFUSE_PUBLIC_KEY=<your public key> langflow
+```
+
+That's it! Now, whenever you use Langflow's chat feature, you will be able to see the tracing of your conversations in Langfuse.
