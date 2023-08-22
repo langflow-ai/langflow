@@ -16,12 +16,12 @@ Make a GET request to the given URL.
 
 **Params**
 
-- **URL:** The URL to make the request to.
+- **URL:** The URL to make the request to. There can be more than one URL, in which case the request will be made to each URL in order.
 - **Headers:** A dictionary of headers to send with the request.
 
 **Output**
 
-- **Document:** The JSON response from the request as a Document.
+- **List of Documents:** A list of Documents containing the JSON response from each request.
 
 ### POST Request
 
@@ -48,4 +48,4 @@ Build a Document containing a JSON object using a key and another Document page 
 
 **Output**
 
-- **Document:** The Document containing the JSON object.
+- **List of Documents:** A list containing the Document with the JSON object.
