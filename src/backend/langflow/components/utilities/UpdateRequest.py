@@ -5,8 +5,8 @@ from langchain.schema import Document
 from langflow.database.models.base import orjson_dumps
 
 
-class PatchRequest(CustomComponent):
-    display_name: str = "Patch Request"
+class UpdateRequest(CustomComponent):
+    display_name: str = "Update Request"
     description: str = "Make a PATCH request to the given URL."
     output_types: list[str] = ["Document"]
     beta = True
@@ -19,17 +19,32 @@ class PatchRequest(CustomComponent):
         },
         "code": {"show": False},
         "document": {"display_name": "Document"},
+        "method": {
+            "display_name": "Method",
+            "field_type": "str",
+            "info": "The HTTP method to use.",
+            "options": ["PATCH", "PUT"],
+            "value": "PATCH",
+        },
     }
 
-    def patch_document(
+    def update_document(
         self,
         session: requests.Session,
         document: Document,
         url: str,
         headers: Optional[dict] = None,
+        method: str = "PATCH",
     ) -> Document:
         try:
-            response = session.patch(url, headers=headers, data=document.page_content)
+            if method == "PATCH":
+                response = session.patch(
+                    url, headers=headers, data=document.page_content
+                )
+            elif method == "PUT":
+                response = session.put(url, headers=headers, data=document.page_content)
+            else:
+                raise ValueError(f"Unsupported method: {method}")
             try:
                 response_json = response.json()
                 result = orjson_dumps(response_json, indent_2=False)
@@ -52,6 +67,7 @@ class PatchRequest(CustomComponent):
 
     def build(
         self,
+        method: str,
         document: Document,
         url: str,
         headers: Optional[dict] = None,
@@ -70,7 +86,8 @@ class PatchRequest(CustomComponent):
 
         with requests.Session() as session:
             documents = [
-                self.patch_document(session, doc, url, headers) for doc in documents
+                self.update_document(session, doc, url, headers, method)
+                for doc in documents
             ]
             self.repr_value = documents
         return documents
