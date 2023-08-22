@@ -1,10 +1,51 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Utilities
 
 <Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
+  <p>
+    We appreciate your understanding as we polish our documentation – it may
+    contain some rough edges. Share your feedback or report issues to help us
+    improve! 🛠️📝
+  </p>
 </Admonition>
 
+### Get Request
+
+Make a GET request to the given URL.
+
+**Params**
+
+- **URL:** The URL to make the request to.
+- **Headers:** A dictionary of headers to send with the request.
+
+**Output**
+
+- **Document:** The JSON response from the request as a Document.
+
+### POST Request
+
+Make a POST request to the given URL.
+
+**Params**
+
+- **URL:** The URL to make the request to.
+- **Headers:** A dictionary of headers to send with the request.
+- **Document:** The Document containing a JSON object to send with the request.
+
+**Output**
+
+- **Document:** The JSON response from the request as a Document.
+
+### JSON Document Builder
+
+Build a Document containing a JSON object using a key and another Document page content.
+
+**Params**
+
+- **Key:** The key to use for the JSON object.
+- **Document:** The Document page to use for the JSON object.
+
+**Output**
+
+- **Document:** The Document containing the JSON object.
