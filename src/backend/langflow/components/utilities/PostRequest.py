@@ -23,29 +23,27 @@ class PostRequest(CustomComponent):
 
     def post_document(
         self,
+        session: requests.Session,
         document: Document,
         url: str,
         headers: Optional[dict] = None,
     ) -> Document:
         try:
-            with requests.Session() as session:
-                response = session.post(
-                    url, headers=headers, data=document.page_content
-                )
-                try:
-                    response_json = response.json()
-                    result = orjson_dumps(response_json, indent_2=False)
-                except Exception:
-                    result = response.text
-                self.repr_value = result
-                return Document(
-                    page_content=result,
-                    metadata={
-                        "source": url,
-                        "headers": headers,
-                        "status_code": response,
-                    },
-                )
+            response = session.post(url, headers=headers, data=document.page_content)
+            try:
+                response_json = response.json()
+                result = orjson_dumps(response_json, indent_2=False)
+            except Exception:
+                result = response.text
+            self.repr_value = result
+            return Document(
+                page_content=result,
+                metadata={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": response,
+                },
+            )
         except Exception as exc:
             return Document(
                 page_content=str(exc),
@@ -67,6 +65,10 @@ class PostRequest(CustomComponent):
 
         if not isinstance(document, list):
             document = [document]
-        documents = [self.post_document(doc, url, headers) for doc in document]
-        self.repr_value = documents
+
+        with requests.Session() as session:
+            documents = [
+                self.post_document(session, doc, url, headers) for doc in document
+            ]
+            self.repr_value = documents
         return documents
