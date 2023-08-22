@@ -40,6 +40,12 @@ install_frontendc:
 run_frontend:
 	cd src/frontend && npm start
 
+run_cli:
+	poetry run langflow --path src/frontend/build
+
+run_cli_debug:
+	poetry run langflow --path src/frontend/build --log-level debug
+
 setup_devcontainer:
 	make init
 	make build_frontend
