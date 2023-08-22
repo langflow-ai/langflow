@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.interface.custom.utils import extract_inner_type
 
 from langflow.utils import validate
 
@@ -122,6 +123,10 @@ class CustomComponent(Component, extra=Extra.allow):
         return_type = build_method["return_type"]
         if not return_type:
             return []
+        # If list or List is in the return type, then we remove it and return the inner type
+        if return_type.startswith("list") or return_type.startswith("List"):
+            return_type = extract_inner_type(return_type)
+
         # If the return type is not a Union, then we just return it as a list
         if "Union" not in return_type:
             return [return_type] if return_type in self.return_type_valid_list else []
