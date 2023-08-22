@@ -7,15 +7,54 @@ from typing import Optional
 
 class PostRequest(CustomComponent):
     display_name: str = "Post Request"
-    description: str = "Make a POST request to the given URL"
+    description: str = "Make a POST request to the given URL."
     output_types: list[str] = ["Document"]
     beta = True
     field_config = {
-        "url": {"display_name": "URL"},
-        "headers": {"display_name": "Headers", "field_type": "code"},
+        "url": {"display_name": "URL", "info": "The URL to make the request to."},
+        "headers": {
+            "display_name": "Headers",
+            "field_type": "code",
+            "info": "The headers to send with the request.",
+        },
         "code": {"show": False},
         "document": {"display_name": "Document"},
     }
+
+    def post_document(
+        self,
+        document: Document,
+        url: str,
+        headers: Optional[dict] = None,
+    ) -> Document:
+        try:
+            with requests.Session() as session:
+                response = session.post(
+                    url, headers=headers, data=document.page_content
+                )
+                try:
+                    response_json = response.json()
+                    result = orjson_dumps(response_json, indent_2=False)
+                except Exception:
+                    result = response.text
+                self.repr_value = result
+                return Document(
+                    page_content=result,
+                    metadata={
+                        "source": url,
+                        "headers": headers,
+                        "status_code": response,
+                    },
+                )
+        except Exception as exc:
+            return Document(
+                page_content=str(exc),
+                metadata={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": 500,
+                },
+            )
 
     def build(
         self,
@@ -25,7 +64,9 @@ class PostRequest(CustomComponent):
     ) -> Document:
         if headers is None:
             headers = {}
-        with requests.post(url, headers=headers, json=document.page_content) as result:
-            result = result.json()
-            self.repr_value = result
-            return Document(page_content=orjson_dumps(result))
+
+        if not isinstance(document, list):
+            document = [document]
+        documents = [self.post_document(doc, url, headers) for doc in document]
+        self.repr_value = documents
+        return documents
