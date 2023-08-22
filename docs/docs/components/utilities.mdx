@@ -37,6 +37,21 @@ Make a POST request to the given URL.
 
 - **Document:** The JSON response from the request as a Document.
 
+### Update Request
+
+Make a PATCH or PUT request to the given URL.
+
+**Params**
+
+- **URL:** The URL to make the request to.
+- **Headers:** A dictionary of headers to send with the request.
+- **Document:** The Document containing a JSON object to send with the request.
+- **Method:** The HTTP method to use for the request. Can be either `PATCH` or `PUT`.
+
+**Output**
+
+- **Document:** The JSON response from the request as a Document.
+
 ### JSON Document Builder
 
 Build a Document containing a JSON object using a key and another Document page content.
