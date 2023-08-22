@@ -30,7 +30,8 @@
 				"sourcery.sourcery",
 				"eamodio.gitlens",
 				"ms-vscode.makefile-tools",
-				"GitHub.vscode-pull-request-github"
+				"GitHub.vscode-pull-request-github",
+				"ms-azuretools.vscode-docker"
 			]}
 	}
 
