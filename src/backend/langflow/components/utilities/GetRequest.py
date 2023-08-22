@@ -23,6 +23,12 @@ class GetRequest(CustomComponent):
             "info": "The headers to send with the request.",
         },
         "code": {"show": False},
+        "timeout": {
+            "display_name": "Timeout",
+            "field_type": "int",
+            "info": "The timeout to use for the request.",
+            "value": 5,
+        },
     }
 
     def get_document(
