@@ -31,7 +31,7 @@ class GetRequest(CustomComponent):
             response = session.get(url, headers=headers, timeout=timeout)
             try:
                 response_json = response.json()
-                result = orjson_dumps(response_json, indent=2)
+                result = orjson_dumps(response_json, indent_2=False)
             except Exception:
                 result = response.text
             self.repr_value = result
@@ -59,11 +59,11 @@ class GetRequest(CustomComponent):
         url: str,
         headers: Optional[dict] = None,
         timeout: int = 5,
-    ) -> Document:
+    ) -> list[Document]:
         if headers is None:
             headers = {}
         if not isinstance(url, list):
-            url = [url]
+            url: list[str] = [url]
         with requests.Session() as session:
             documents = [self.get_document(session, u, headers, timeout) for u in url]
             self.repr_value = documents
