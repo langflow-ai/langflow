@@ -42,6 +42,7 @@ module.exports = {
         "components/text-splitters",
         "components/toolkits",
         "components/tools",
+        "components/utilities",
         "components/vector-stores",
         "components/wrappers",
       ],

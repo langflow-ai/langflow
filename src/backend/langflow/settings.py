@@ -1,5 +1,6 @@
 import contextlib
 import json
+import orjson
 import os
 from typing import Optional, List
 from pathlib import Path
@@ -126,7 +127,7 @@ class Settings(BaseSettings):
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = json.loads(str(value))
+                    value = orjson.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
                         if isinstance(item, Path):
