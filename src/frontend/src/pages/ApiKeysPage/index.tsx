@@ -18,6 +18,7 @@ import SecretKeyModal from "../../modals/SecretKeyModal";
 
 import moment from "moment";
 import { ApiKey } from "../../types/components";
+import Header from "../../components/headerComponent";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -80,6 +81,8 @@ export default function ApiKeysPage() {
 
   return (
     <>
+      <Header />
+
       {userData && (
         <div className="main-page-panel">
           <div className="m-auto flex h-full flex-row justify-center">
