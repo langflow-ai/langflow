@@ -51,7 +51,7 @@ export default function Header(): JSX.Element {
           </Button>
         )}
 
-        {isAdmin && !autoLogin && (
+        {isAdmin && !autoLogin && location.pathname !== "/admin" && (
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Admin page
           </Button>
