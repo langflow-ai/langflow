@@ -81,8 +81,7 @@ export default function ApiKeysPage() {
 
   return (
     <>
-      <Header />
-
+    <Header></Header>
       {userData && (
         <div className="main-page-panel">
           <div className="m-auto flex h-full flex-row justify-center">
