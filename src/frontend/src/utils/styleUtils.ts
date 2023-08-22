@@ -19,6 +19,8 @@ import {
   Edit,
   Eraser,
   ExternalLink,
+  Eye,
+  EyeOff,
   File,
   FileDown,
   FileSearch,
@@ -33,6 +35,7 @@ import {
   HelpCircle,
   Home,
   Info,
+  Key,
   Laptop2,
   Layers,
   Lightbulb,
@@ -60,6 +63,7 @@ import {
   Trash2,
   Undo,
   Upload,
+  UserCog2,
   UserMinus2,
   UserPlus2,
   Users2,
@@ -97,6 +101,7 @@ import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
+import { iconsType } from "../types/components";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -178,7 +183,7 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Other",
 };
 
-export const nodeIconsLucide = {
+export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,
@@ -289,4 +294,8 @@ export const nodeIconsLucide = {
   ChevronsLeft,
   FaGithub,
   FaApple,
+  EyeOff,
+  Eye,
+  UserCog2,
+  Key
 };

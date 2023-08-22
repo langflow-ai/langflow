@@ -34,11 +34,23 @@ lint:
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendc:
+	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+
 run_frontend:
 	cd src/frontend && npm start
 
+setup_devcontainer:
+	make init
+	make build_frontend
+	poetry run langflow --path src/frontend/build
+
 frontend:
 	make install_frontend
+	make run_frontend
+
+frontendc:
+	make install_frontendc
 	make run_frontend
 
 install_backend:

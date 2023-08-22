@@ -9,7 +9,7 @@ export default function NoticeAlert({
   link = "",
   id,
   removeAlert,
-}: NoticeAlertType) {
+}: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {

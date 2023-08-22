@@ -12,12 +12,12 @@ export default function AccordionComponent({
   children,
   open = [],
   keyValue,
-}: AccordionComponentType) {
+}: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
     open.length === 0 ? "" : getOpenAccordion()
   );
 
-  function getOpenAccordion() {
+  function getOpenAccordion(): string {
     let value = "";
     open.forEach((el) => {
       if (el == trigger) {
@@ -28,9 +28,16 @@ export default function AccordionComponent({
     return value;
   }
 
-  function handleClick() {
-    value === "" ? setValue(keyValue) : setValue("");
+  function handleClick(): void {
+    value === "" ? setValue(keyValue!) : setValue("");
   }
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Backspace") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
 
   return (
     <>
@@ -39,8 +46,9 @@ export default function AccordionComponent({
         className="w-full"
         value={value}
         onValueChange={setValue}
+        onKeyDown={handleKeyDown}
       >
-        <AccordionItem value={keyValue} className="border-b">
+        <AccordionItem value={keyValue!} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();

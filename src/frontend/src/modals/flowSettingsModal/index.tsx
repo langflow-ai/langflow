@@ -1,37 +1,33 @@
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
   open,
   setOpen,
-}: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}) {
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const ref = useRef();
-  const { flows, tabId, updateFlow, setTabsState, saveFlow } =
-    useContext(TabsContext);
-  const maxLength = 50;
-  const [name, setName] = useState(
-    flows.find((flow) => flow.id === tabId).name
-  );
-  const [description, setDescription] = useState(
-    flows.find((flow) => flow.id === tabId).description
-  );
+}: FlowSettingsPropsType): JSX.Element {
+  const { setSuccessData } = useContext(alertContext);
+  const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
+  const flow = flows.find((f) => f.id === tabId);
+  useEffect(() => {
+    setName(flow.name);
+    setDescription(flow.description);
+  }, [flow.name, flow.description]);
+  const [name, setName] = useState(flow.name);
+  const [description, setDescription] = useState(flow.description);
   const [invalidName, setInvalidName] = useState(false);
 
-  function handleClick() {
+  function handleClick(): void {
     let savedFlow = flows.find((flow) => flow.id === tabId);
-    savedFlow.name = name;
-    savedFlow.description = description;
-    saveFlow(savedFlow);
+    savedFlow!.name = name;
+    savedFlow!.description = description;
+    saveFlow(savedFlow!);
     setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }
@@ -51,7 +47,6 @@ export default function FlowSettingsModal({
           tabId={tabId}
           setName={setName}
           setDescription={setDescription}
-          updateFlow={updateFlow}
         />
       </BaseModal.Content>
 
