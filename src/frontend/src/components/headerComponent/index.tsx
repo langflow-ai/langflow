@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
@@ -7,7 +7,6 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getRepoStars } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -128,18 +127,17 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-          {!autoLogin && (
-            <button
-              onClick={() => {
-                navigate("/account/api-keys");
-              }}
-            >
-              <IconComponent
-                name="Key"
-                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
-              />
-            </button>
-          )}
+
+          <button
+            onClick={() => {
+              navigate("/account/api-keys");
+            }}
+          >
+            <IconComponent
+              name="Key"
+              className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+            />
+          </button>
         </div>
       </div>
     </div>
