@@ -20,7 +20,7 @@ class CustomComponent(Component, extra=Extra.allow):
     function_entrypoint_name = "build"
     function: Optional[Callable] = None
     return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
-    repr_value: Optional[str] = ""
+    repr_value: Optional[Any] = ""
 
     def __init__(self, **data):
         super().__init__(**data)
