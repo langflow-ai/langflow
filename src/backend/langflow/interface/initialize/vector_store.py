@@ -1,4 +1,3 @@
-import json
 from typing import Any, Callable, Dict, Type
 from langchain.vectorstores import (
     Pinecone,
@@ -92,7 +91,7 @@ def initialize_weaviate(class_object: Type[Weaviate], params: dict):
         import weaviate  # type: ignore
 
         client_kwargs_json = params.get("client_kwargs", "{}")
-        client_kwargs = json.loads(client_kwargs_json)
+        client_kwargs = orjson.loads(client_kwargs_json)
         client_params = {
             "url": params.get("weaviate_url"),
         }
