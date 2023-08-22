@@ -15,26 +15,26 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "make install_frontend && make install_backend",
+  "postCreateCommand": "make setup_devcontainer",
 
   "containerEnv": {
     "POETRY_VIRTUALENVS_IN_PROJECT": "true"
   },
 
   // Configure tool-specific properties.
-  "customizations": {
-    "vscode": {
+	"customizations": {
+		"vscode": {
       "extensions": [
-        "actboy168.tasks",
-        "GitHub.copilot",
-        "ms-python.python",
-        "sourcery.sourcery",
-        "eamodio.gitlens",
-        "ms-vscode.makefile-tools",
-        "GitHub.vscode-pull-request-github"
-      ]
-    }
-  }
+				"actboy168.tasks",
+				"GitHub.copilot",
+				"ms-python.python",
+				"sourcery.sourcery",
+				"eamodio.gitlens",
+				"ms-vscode.makefile-tools",
+				"GitHub.vscode-pull-request-github",
+				"ms-azuretools.vscode-docker"
+			]}
+	}
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"

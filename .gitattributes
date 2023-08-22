@@ -7,10 +7,16 @@
 *.h text
 *.py text
 *.js text
-*.ts text
 *.jsx text
+*.ts text
+*.tsx text
 *.md text
 *.mdx text
+*.svg text
+*.yml text
+*.yaml text
+*.Dockerfile text
+Dockerfile text
 
 # Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf
@@ -18,3 +24,6 @@
 # Denote all files that are truly binary and should not be modified.
 *.png binary
 *.jpg binary
+*.ico binary
+*.gif binary
+*.mp4 binary
