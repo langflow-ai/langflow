@@ -196,7 +196,7 @@ export default function AdminPage() {
                       Welcome back!
                     </h2>
                     <p className="text-muted-foreground">
-                      Here&apos;s a list of all users!
+                    Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.
                     </p>
                   </div>
                   <div className="flex items-center space-x-2"></div>

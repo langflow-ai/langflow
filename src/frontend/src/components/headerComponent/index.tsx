@@ -26,34 +26,37 @@ export default function Header(): JSX.Element {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        {location.pathname === "/admin" && (
-          <Button
-            onClick={() => {
-              navigate("/");
-            }}
-            variant="outline"
-            className=""
-          >
-            Main page
-          </Button>
-        )}
+
         {autoLogin === false && (
-          <Button
+          <a
             onClick={() => {
               logout();
               navigate("/login");
             }}
-            variant="outline"
-            className=""
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
           >
             Sign out
-          </Button>
+          </a>
+        )}
+
+        {location.pathname === "/admin" && (
+          <a
+            onClick={() => {
+              navigate("/");
+            }}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+          >
+            Home
+          </a>
         )}
 
         {isAdmin && !autoLogin && location.pathname !== "/admin" && (
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <a
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            onClick={() => navigate("/admin")}
+          >
             Admin page
-          </Button>
+          </a>
         )}
 
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
@@ -138,17 +141,18 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-
-          <button
-            onClick={() => {
-              navigate("/account/api-keys");
-            }}
-          >
-            <IconComponent
-              name="Key"
-              className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
-            />
-          </button>
+          {!autoLogin && (
+            <button
+              onClick={() => {
+                navigate("/account/api-keys");
+              }}
+            >
+              <IconComponent
+                name="Key"
+                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+              />
+            </button>
+          )}
         </div>
       </div>
     </div>
