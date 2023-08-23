@@ -38,11 +38,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const { setLoading } = useContext(alertContext);
 
   useEffect(() => {
-    let delay = 1000; // Start delay of 1 second
-    let intervalId = null;
-    let retryCount = 0; // Count of retry attempts
-    const maxRetryCount = 5; // Max retry attempts
-
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
     let isMounted = true;
 
@@ -85,22 +80,13 @@ export function TypesProvider({ children }: { children: ReactNode }) {
               }, {})
           );
         }
-        // Clear the interval if successful.
-        clearInterval(intervalId);
       } catch (error) {
         console.error("An error has occurred while fetching types.");
       }
     }
 
     // Start the initial interval.
-    intervalId = setInterval(getTypes, delay);
-
-    return () => {
-      // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
-      clearInterval(intervalId);
-      // Indicate that the component has been unmounted.
-      isMounted = false;
-    };
+    getTypes();
   }, []);
 
   function deleteNode(idx: string) {
