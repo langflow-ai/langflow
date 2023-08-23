@@ -104,14 +104,9 @@ async def stream_build(flow_id: str):
                 return
 
             logger.debug("Building langchain object")
-            try:
-                # Some error could happen when building the graph
-                graph = Graph.from_payload(graph_data)
-            except Exception as exc:
-                logger.exception(exc)
-                error_message = str(exc)
-                yield str(StreamData(event="error", data={"error": error_message}))
-                return
+
+            # Some error could happen when building the graph
+            graph = Graph.from_payload(graph_data)
 
             number_of_nodes = len(graph.nodes)
             flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
@@ -126,7 +121,9 @@ async def stream_build(flow_id: str):
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
-                    logger.debug(f"Output: {params}")
+                    logger.debug(
+                        f"Output: {params[:100]}{'...' if len(params) > 100 else ''}"
+                    )
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response
