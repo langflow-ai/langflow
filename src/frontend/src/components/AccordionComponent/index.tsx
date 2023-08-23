@@ -33,10 +33,10 @@ export default function AccordionComponent({
   }
 
   const handleKeyDown = (event) => {
-    if (event.key === "Backspace") {
+    /* if (event.key === "Backspace") {
       event.preventDefault();
       event.stopPropagation();
-    }
+    } */
   };
 
   return (
