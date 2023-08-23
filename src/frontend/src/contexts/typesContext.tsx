@@ -44,11 +44,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     async function getTypes(): Promise<void> {
       try {
         const result = await getAll();
-        if (result?.status !== 200) {
-          let health = await getHealth().catch((e) => {
-            setFetchError(true);
-          });
-        }
         // Make sure to only update the state if the component is still mounted.
         if (isMounted && result?.status === 200) {
           setLoading(false);
@@ -82,10 +77,13 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("An error has occurred while fetching types.");
+        await getHealth().catch((e) => {
+          console.log("entrou");
+          setFetchError(true);
+        });
       }
     }
 
-    // Start the initial interval.
     getTypes();
   }, []);
 
