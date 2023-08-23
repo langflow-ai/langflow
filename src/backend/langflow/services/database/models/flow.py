@@ -6,8 +6,6 @@ from uuid import UUID, uuid4
 from typing import Dict, Optional
 from pydantic import field_validator
 
-# if TYPE_CHECKING:
-
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
