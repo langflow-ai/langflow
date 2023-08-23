@@ -104,6 +104,15 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         # This runs when first sending the prompt
         # to the LLM, adding it will send the final prompt
         # to the frontend
+        if "Prompt after formatting" in text:
+            text = text.replace("Prompt after formatting", "")
+            resp = ChatResponse(
+                message="",
+                type="stream",
+                intermediate_steps="",
+                prompt=text,
+            )
+            await self.websocket.send_json(resp.dict())
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"

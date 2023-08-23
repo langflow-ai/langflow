@@ -61,6 +61,7 @@ class ChatResponse(ChatMessage):
     """Chat response schema."""
 
     intermediate_steps: str
+    prompt: Optional[str] = ""
     type: str
     is_bot: bool = True
     files: list = []
