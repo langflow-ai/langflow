@@ -60,6 +60,11 @@ export default function BuildTrigger({
           ],
         });
       }
+      if (errors.length === 0 && allNodesValid) {
+        setSuccessData({
+          title: "Code is ready to run",
+        });
+      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
