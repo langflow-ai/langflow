@@ -68,7 +68,7 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData, setSuccessData  } = useContext(alertContext);
 
   const [tabId, setTabId] = useState("");
 
@@ -579,6 +579,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
+        setSuccessData({ title: "Changes saved successfully" });
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
