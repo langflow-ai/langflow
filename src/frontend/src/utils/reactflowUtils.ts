@@ -247,7 +247,6 @@ export function handleKeyDown(
   inputValue: string | string[] | null,
   block: string
 ) {
-  console.log(e, inputValue, block);
   //condition to fix bug control+backspace on Windows/Linux
   if (
     (typeof inputValue === "string" &&
