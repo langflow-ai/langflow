@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
+import MarketplacePage from "./pages/MarketplacePage";
 import ViewPage from "./pages/ViewPage";
 
 const Router = () => {
@@ -9,6 +10,7 @@ const Router = () => {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/community" element={<CommunityPage />} />
+      <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/flow/:id/">
         <Route path="" element={<FlowPage />} />
         <Route path="view" element={<ViewPage />} />

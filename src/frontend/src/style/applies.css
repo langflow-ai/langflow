@@ -221,7 +221,7 @@
   }
 
   .community-page-arrangement {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto custom-scroll scroll-reserve-space bg-muted px-16;
   }
 
   .community-page-nav-arrangement {
@@ -237,11 +237,11 @@
   }
 
   .community-page-description-text {
-    @apply flex w-[70%] px-6 pb-8 text-muted-foreground;
+    @apply flex w-[80%] px-6 pb-8 text-muted-foreground;
   }
 
   .community-pages-flows-panel {
-    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
+    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
     @apply relative flex w-96 flex-col justify-center rounded-lg bg-background;
@@ -535,6 +535,9 @@
   }
   .input-component-false-button {
     @apply input-component-button px-4;
+  }
+  .input-component-icon-svg {
+    @apply side-bar-button-size absolute bottom-2.5 right-3;
   }
   .input-component-true-svg {
     @apply side-bar-button-size absolute bottom-0.5 right-2;

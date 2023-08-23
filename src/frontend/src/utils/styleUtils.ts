@@ -52,6 +52,7 @@ import {
   Search,
   Settings2,
   Sparkles,
+  StoreIcon,
   SunIcon,
   TerminalSquare,
   Trash2,
@@ -126,6 +127,37 @@ export const gradients = [
   "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
 ];
 
+// tailwind to right gradients from 500 to 700 shades
+export const tagGradients = [
+  "bg-gradient-to-r from-gray-100 to-gray-200",
+  "bg-gradient-to-r from-red-100 to-red-200",
+  "bg-gradient-to-r from-yellow-100 to-yellow-200",
+  "bg-gradient-to-r from-green-100 to-green-200",
+  "bg-gradient-to-r from-blue-100 to-blue-200",
+  "bg-gradient-to-r from-indigo-100 to-indigo-200",
+  "bg-gradient-to-r from-purple-100 to-purple-200",
+  "bg-gradient-to-r from-pink-100 to-pink-200",
+  "bg-gradient-to-r from-rose-100 to-rose-200",
+  "bg-gradient-to-r from-fuchsia-100 to-fuchsia-200",
+  "bg-gradient-to-r from-cyan-100 to-cyan-200",
+  "bg-gradient-to-r from-emerald-100 to-emerald-200",
+];
+
+export const tagText = [
+  "text-gray-900",
+  "text-red-900",
+  "text-yellow-900",
+  "text-green-900",
+  "text-blue-900",
+  "text-indigo-900",
+  "text-purple-900",
+  "text-pink-900",
+  "text-rose-900",
+  "text-fuchsia-900",
+  "text-cyan-900",
+  "text-emerald-900",
+];
+
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   llms: "#6344BE",
@@ -173,6 +205,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide = {
+  Store: StoreIcon,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,

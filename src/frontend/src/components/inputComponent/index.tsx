@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
+import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 
 export default function InputComponent({
@@ -9,6 +10,8 @@ export default function InputComponent({
   onChange,
   disabled,
   password,
+  placeholder,
+  icon,
   editNode = false,
 }: InputComponentType) {
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -31,7 +34,13 @@ export default function InputComponent({
           password && editNode ? "pr-8" : "",
           password && !editNode ? "pr-10" : ""
         )}
-        placeholder={password && editNode ? "Key" : "Type something..."}
+        placeholder={
+          password && editNode
+            ? "Key"
+            : placeholder
+            ? placeholder
+            : "Type something..."
+        }
         onChange={(e) => {
           onChange(e.target.value);
         }}
@@ -96,6 +105,11 @@ export default function InputComponent({
               </svg>
             ))}
         </button>
+      )}
+      {icon && (
+        <div className="input-component-button">
+          <IconComponent name={icon} className="input-component-icon-svg" />
+        </div>
       )}
     </div>
   );

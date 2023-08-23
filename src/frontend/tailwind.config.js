@@ -194,6 +194,9 @@ module.exports = {
           },
           cursor: "auto",
         },
+        ".scroll-reserve-space": {
+          scrollbarGutter: "stable",
+        },
         ".dark .theme-attribution .react-flow__attribution": {
           backgroundColor: "rgba(255, 255, 255, 0.2)",
           padding: "0px 5px",

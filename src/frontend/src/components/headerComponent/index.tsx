@@ -76,6 +76,18 @@ export default function Header() {
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
+        <Link to="/marketplace">
+          <Button
+            className="gap-2"
+            variant={
+              location.pathname === "/marketplace" ? "primary" : "secondary"
+            }
+            size="sm"
+          >
+            <IconComponent name="Store" className="h-4 w-4" />
+            <div className="flex-1">Marketplace</div>
+          </Button>
+        </Link>
       </div>
       <div className="header-end-division">
         <div className="header-end-display">

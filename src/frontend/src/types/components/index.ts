@@ -8,8 +8,10 @@ export type InputComponentType = {
   onChange: (value: string) => void;
   password: boolean;
   editNode?: boolean;
+  placeholder?: string;
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
+  icon?: string;
 };
 export type ToggleComponentType = {
   enabled: boolean;

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Bootstrap",
+    "description": "The most popular HTML, CSS, and JavaScript framework for developing responsive, mobile first projects on the web.",
+    "id": "oiehjfoiw42332wegwefwefwefwefhergoiw",
+    "creator": "markotto",
+    "creatorId": "owefhowuiheg",
+    "creatorImageUrl": "https://avatars0.githubusercontent.com/u/98681?s=460&v=4",
+    "imageUrl": "https://cdn.worldvectorlogo.com/logos/bootstrap-4.svg",
+    "category": "Agent",
+    "downloads": "1231231",
+    "usesNumber": "1920342",
+    "tags": ["css", "bootstrap", "javascript"],
+    "isFree": true
+  },
+  {
+    "name": "React",
+    "description": "A declarative, efficient, and flexible JavaScript library for building user interfaces.",
+    "id": "oiehjfoiwhersesdfsdf324ghergoiw",
+    "creator": "markzuckerberg",
+    "creatorId": "owefhowdfgwgiheg",
+    "creatorImageUrl": "https://avatars0.githubusercontent.com/u/69631?s=460&v=4",
+    "imageUrl": "https://cdn.worldvectorlogo.com/logos/react-1.svg",
+    "category": "Vector Store",
+    "downloads": "1254231",
+    "usesNumber": "34520342",
+    "tags": ["javascript", "react", "ui"],
+    "isFree": true
+  },
+  {
+    "name": "Angular",
+    "description": "One framework. Mobile & desktop.",
+    "id": "oiehjfoiwheresfsesefsefgoiw",
+    "creator": "lucaseduoli",
+    "creatorId": "owefhowuiheg",
+    "creatorImageUrl": "https://avatars.githubusercontent.com/u/62335616?s=48&v=4",
+    "imageUrl": "https://cdn.worldvectorlogo.com/logos/angular-icon-1.svg",
+    "category": "Tool",
+    "downloads": "1341231",
+    "usesNumber": "540342",
+    "tags": ["javascript", "angular", "declarative"],
+    "isFree": false
+  },
+  {
+    "name": "Vue",
+    "description": "The Progressive JavaScript Framework.",
+    "id": "oiehjfsdfoisdfsdfsefsefwhergoiw",
+    "creator": "marquinhosdopneu",
+    "creatorId": "owefhowuiheg",
+    "creatorImageUrl": "https://avatars.githubusercontent.com/u/67133227?s=48&v=4",
+    "imageUrl": "https://cdn.worldvectorlogo.com/logos/vue-9.svg",
+    "category": "Chain",
+    "downloads": "123231",
+    "usesNumber": "40342",
+    "tags": ["javascript", "vue", "frontend"],
+    "isFree": false
+  }
+]
