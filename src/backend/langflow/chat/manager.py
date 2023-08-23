@@ -187,7 +187,9 @@ class ChatManager:
                 json_payload = await websocket.receive_json()
                 try:
                     payload = orjson.loads(json_payload)
-                except TypeError:
+                # except TypeError or JSONDecodeError how?
+                except Exception as exc:
+                    logger.error(f"Error decoding JSON: {exc}")
                     payload = json_payload
                 if "clear_history" in payload:
                     self.chat_history.history[client_id] = []
@@ -199,7 +201,7 @@ class ChatManager:
 
         except Exception as exc:
             # Handle any exceptions that might occur
-            logger.error(f"Error handling websocket: {exc}")
+            logger.exception(f"Error handling websocket: {exc}")
             await self.close_connection(
                 client_id=client_id,
                 code=status.WS_1011_INTERNAL_ERROR,
