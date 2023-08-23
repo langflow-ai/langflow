@@ -1889,18 +1889,18 @@ grpc = ["grpcio (>=1.44.0,<2.0.0.dev0)"]
 
 [[package]]
 name = "gotrue"
-version = "1.0.2"
+version = "1.0.4"
 description = "Python Client Library for GoTrue"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "gotrue-1.0.2-py3-none-any.whl", hash = "sha256:5377e7fd316b77df7be9e0c3c017d338bed2ba2e95a99fb44374b523d167ec65"},
-    {file = "gotrue-1.0.2.tar.gz", hash = "sha256:9ad9b2536ca68676cf37dc663b64f259956826075e80a9cb3f5a3ba150355811"},
+    {file = "gotrue-1.0.4-py3-none-any.whl", hash = "sha256:f016f5e317a21e55dfcee00fb360f2c7a33c5b87a38601e7b9e65cb898bcf7bb"},
+    {file = "gotrue-1.0.4.tar.gz", hash = "sha256:2686c93b798fb2d3b120f067d21e66bb803b013ee6ab6fb7783093102f74603a"},
 ]
 
 [package.dependencies]
 httpx = ">=0.23,<0.25"
-pydantic = ">=1.10.0,<2.0.0"
+pydantic = ">=1.10,<3"
 
 [[package]]
 name = "greenlet"
@@ -3308,13 +3308,13 @@ files = [
 
 [[package]]
 name = "metaphor-python"
-version = "0.1.15"
+version = "0.1.16"
 description = "A Python package for the Metaphor API."
 optional = false
 python-versions = "*"
 files = [
-    {file = "metaphor-python-0.1.15.tar.gz", hash = "sha256:66e324377af7df4799b845fe8de4f81393db48baa76db59308f7eebec2ba9421"},
-    {file = "metaphor_python-0.1.15-py3-none-any.whl", hash = "sha256:e9efe6ccd175d67b08331955c0290ff1fe83bb4c43e80a88a154e254bf47aaf4"},
+    {file = "metaphor-python-0.1.16.tar.gz", hash = "sha256:c26c3e8a37ef1b195073d556c929180c2b1acf7590a801da8d1b9afbdd82dd8f"},
+    {file = "metaphor_python-0.1.16-py3-none-any.whl", hash = "sha256:f3989a679f888cc0374593ab5e5a82b0f121c90b14d6eb5b813e861990dbb13b"},
 ]
 
 [package.dependencies]
@@ -5792,53 +5792,62 @@ files = [
 
 [[package]]
 name = "safetensors"
-version = "0.3.2"
+version = "0.3.3"
 description = "Fast and Safe Tensor serialization"
 optional = true
 python-versions = "*"
 files = [
-    {file = "safetensors-0.3.2-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:b6a66989075c2891d743153e8ba9ca84ee7232c8539704488f454199b8b8f84d"},
-    {file = "safetensors-0.3.2-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:670d6bc3a3b377278ce2971fa7c36ebc0a35041c4ea23b9df750a39380800195"},
-    {file = "safetensors-0.3.2-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:7f80af7e4ab3188daaff12d43d078da3017a90d732d38d7af4eb08b6ca2198a5"},
-    {file = "safetensors-0.3.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cbb44e140bf2aeda98d9dde669dbec15f7b77f96a9274469b91a6cf4bcc5ec3b"},
-    {file = "safetensors-0.3.2-cp310-cp310-win32.whl", hash = "sha256:2961c1243fd0da46aa6a1c835305cc4595486f8ac64632a604d0eb5f2de76175"},
-    {file = "safetensors-0.3.2-cp310-cp310-win_amd64.whl", hash = "sha256:c813920482c337d1424d306e1b05824a38e3ef94303748a0a287dea7a8c4f805"},
-    {file = "safetensors-0.3.2-cp311-cp311-macosx_10_11_universal2.whl", hash = "sha256:707df34bd9b9047e97332136ad98e57028faeccdb9cfe1c3b52aba5964cc24bf"},
-    {file = "safetensors-0.3.2-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:becc5bb85b2947eae20ed23b407ebfd5277d9a560f90381fe2c42e6c043677ba"},
-    {file = "safetensors-0.3.2-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:54ad6af663e15e2b99e2ea3280981b7514485df72ba6d014dc22dae7ba6a5e6c"},
-    {file = "safetensors-0.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ada0fac127ff8fb04834da5c6d85a8077e6a1c9180a11251d96f8068db922a17"},
-    {file = "safetensors-0.3.2-cp311-cp311-win32.whl", hash = "sha256:155b82dbe2b0ebff18cde3f76b42b6d9470296e92561ef1a282004d449fa2b4c"},
-    {file = "safetensors-0.3.2-cp311-cp311-win_amd64.whl", hash = "sha256:a86428d196959619ce90197731be9391b5098b35100a7228ef4643957648f7f5"},
-    {file = "safetensors-0.3.2-cp37-cp37m-macosx_11_0_x86_64.whl", hash = "sha256:c1f8ab41ed735c5b581f451fd15d9602ff51aa88044bfa933c5fa4b1d0c644d1"},
-    {file = "safetensors-0.3.2-cp37-cp37m-macosx_13_0_x86_64.whl", hash = "sha256:bc9cfb3c9ea2aec89685b4d656f9f2296f0f0d67ecf2bebf950870e3be89b3db"},
-    {file = "safetensors-0.3.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3d7d70d48585fe8df00725aa788f2e64fd24a4c9ae07cd6be34f6859d0f89a9c"},
-    {file = "safetensors-0.3.2-cp37-cp37m-win32.whl", hash = "sha256:6ff59bc90cdc857f68b1023be9085fda6202bbe7f2fd67d06af8f976d6adcc10"},
-    {file = "safetensors-0.3.2-cp37-cp37m-win_amd64.whl", hash = "sha256:8b05c93da15fa911763a89281906ca333ed800ab0ef1c7ce53317aa1a2322f19"},
-    {file = "safetensors-0.3.2-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:8969cfd9e8d904e8d3c67c989e1bd9a95e3cc8980d4f95e4dcd43c299bb94253"},
-    {file = "safetensors-0.3.2-cp38-cp38-macosx_13_0_x86_64.whl", hash = "sha256:f54148ac027556eb02187e9bc1556c4d916c99ca3cb34ca36a7d304d675035c1"},
-    {file = "safetensors-0.3.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:aa98f49e95f02eb750d32c4947e7d5aa43883149ebd0414920866446525b70f0"},
-    {file = "safetensors-0.3.2-cp38-cp38-win32.whl", hash = "sha256:33409df5e28a83dc5cc5547a3ac17c0f1b13a1847b1eb3bc4b3be0df9915171e"},
-    {file = "safetensors-0.3.2-cp38-cp38-win_amd64.whl", hash = "sha256:e04a7cbbb3856159ab99e3adb14521544f65fcb8548cce773a1435a0f8d78d27"},
-    {file = "safetensors-0.3.2-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:7c864cf5dcbfb608c5378f83319c60cc9c97263343b57c02756b7613cd5ab4dd"},
-    {file = "safetensors-0.3.2-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:14e8c19d6dc51d4f70ee33c46aff04c8ba3f95812e74daf8036c24bc86e75cae"},
-    {file = "safetensors-0.3.2-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:fafd95e5ef41e8f312e2a32b7031f7b9b2a621b255f867b221f94bb2e9f51ae8"},
-    {file = "safetensors-0.3.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:87ff0024ef2e5722a79af24688ce4a430f70601d0cf712a744105ed4b8f67ba5"},
-    {file = "safetensors-0.3.2-cp39-cp39-win32.whl", hash = "sha256:827af9478b78977248ba93e2fd97ea307fb63f463f80cef4824460f8c2542a52"},
-    {file = "safetensors-0.3.2-cp39-cp39-win_amd64.whl", hash = "sha256:9b09f27c456efa301f98681ea14b12f81f2637889f6336223ccab71e42c34541"},
-    {file = "safetensors-0.3.2.tar.gz", hash = "sha256:2dbd34554ed3b99435a0e84df077108f5334c8336b5ed9cb8b6b98f7b10da2f6"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_10_11_x86_64.whl", hash = "sha256:92e4d0c8b2836120fddd134474c5bda8963f322333941f8b9f643e5b24f041eb"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:3dcadb6153c42addc9c625a622ebde9293fabe1973f9ef31ba10fb42c16e8536"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:08f26b61e1b0a14dc959aa9d568776bd038805f611caef1de04a80c468d4a7a4"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:17f41344d9a075f2f21b289a49a62e98baff54b5754240ba896063bce31626bf"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:f1045f798e1a16a6ced98d6a42ec72936d367a2eec81dc5fade6ed54638cd7d2"},
+    {file = "safetensors-0.3.3-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:eaf0e4bc91da13f21ac846a39429eb3f3b7ed06295a32321fa3eb1a59b5c70f3"},
+    {file = "safetensors-0.3.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a07121f427e646a50d18c1be0fa1a2cbf6398624c31149cd7e6b35486d72189e"},
+    {file = "safetensors-0.3.3-cp310-cp310-win32.whl", hash = "sha256:a85e29cbfddfea86453cc0f4889b4bcc6b9c155be9a60e27be479a34e199e7ef"},
+    {file = "safetensors-0.3.3-cp311-cp311-macosx_11_0_universal2.whl", hash = "sha256:cbc3312f134baf07334dd517341a4b470b2931f090bd9284888acb7dfaf4606f"},
+    {file = "safetensors-0.3.3-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:d15030af39d5d30c22bcbc6d180c65405b7ea4c05b7bab14a570eac7d7d43722"},
+    {file = "safetensors-0.3.3-cp311-cp311-macosx_12_0_universal2.whl", hash = "sha256:f84a74cbe9859b28e3d6d7715ac1dd3097bebf8d772694098f6d42435245860c"},
+    {file = "safetensors-0.3.3-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:10d637423d98ab2e6a4ad96abf4534eb26fcaf8ca3115623e64c00759374e90d"},
+    {file = "safetensors-0.3.3-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:3b46f5de8b44084aff2e480874c550c399c730c84b2e8ad1bddb062c94aa14e9"},
+    {file = "safetensors-0.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3e8fdf7407dba44587ed5e79d5de3533d242648e1f2041760b21474bd5ea5c8c"},
+    {file = "safetensors-0.3.3-cp311-cp311-win32.whl", hash = "sha256:7d3b744cee8d7a46ffa68db1a2ff1a1a432488e3f7a5a97856fe69e22139d50c"},
+    {file = "safetensors-0.3.3-cp37-cp37m-macosx_10_11_x86_64.whl", hash = "sha256:2fff5b19a1b462c17322998b2f4b8bce43c16fe208968174d2f3a1446284ceed"},
+    {file = "safetensors-0.3.3-cp37-cp37m-macosx_11_0_x86_64.whl", hash = "sha256:41adb1d39e8aad04b16879e3e0cbcb849315999fad73bc992091a01e379cb058"},
+    {file = "safetensors-0.3.3-cp37-cp37m-macosx_12_0_x86_64.whl", hash = "sha256:0f2b404250b3b877b11d34afcc30d80e7035714a1116a3df56acaca6b6c00096"},
+    {file = "safetensors-0.3.3-cp37-cp37m-macosx_13_0_x86_64.whl", hash = "sha256:b43956ef20e9f4f2e648818a9e7b3499edd6b753a0f5526d4f6a6826fbee8446"},
+    {file = "safetensors-0.3.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1c32ee08f61cea56a5d62bbf94af95df6040c8ab574afffaeb7b44ae5da1e9e3"},
+    {file = "safetensors-0.3.3-cp37-cp37m-win32.whl", hash = "sha256:351600f367badd59f7bfe86d317bb768dd8c59c1561c6fac43cafbd9c1af7827"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:8530399666748634bc0b301a6a5523756931b0c2680d188e743d16304afe917a"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:9d741c1f1621e489ba10aa3d135b54202684f6e205df52e219d5eecd673a80c9"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_12_0_arm64.whl", hash = "sha256:0c345fd85b4d2093a5109596ff4cd9dfc2e84992e881b4857fbc4a93a3b89ddb"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_12_0_x86_64.whl", hash = "sha256:69ccee8d05f55cdf76f7e6c87d2bdfb648c16778ef8acfd2ecc495e273e9233e"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_13_0_arm64.whl", hash = "sha256:c08a9a4b7a4ca389232fa8d097aebc20bbd4f61e477abc7065b5c18b8202dede"},
+    {file = "safetensors-0.3.3-cp38-cp38-macosx_13_0_x86_64.whl", hash = "sha256:a002868d2e3f49bbe81bee2655a411c24fa1f8e68b703dec6629cb989d6ae42e"},
+    {file = "safetensors-0.3.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6ab43aeeb9eadbb6b460df3568a662e6f1911ecc39387f8752afcb6a7d96c087"},
+    {file = "safetensors-0.3.3-cp38-cp38-win32.whl", hash = "sha256:f2f59fce31dd3429daca7269a6b06f65e6547a0c248f5116976c3f1e9b73f251"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_10_11_x86_64.whl", hash = "sha256:59a596b3225c96d59af412385981f17dd95314e3fffdf359c7e3f5bb97730a19"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:82a16e92210a6221edd75ab17acdd468dd958ef5023d9c6c1289606cc30d1479"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:98a929e763a581f516373ef31983ed1257d2d0da912a8e05d5cd12e9e441c93a"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_12_0_x86_64.whl", hash = "sha256:12b83f1986cd16ea0454c636c37b11e819d60dd952c26978310a0835133480b7"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:f439175c827c2f1bbd54df42789c5204a10983a30bc4242bc7deaf854a24f3f0"},
+    {file = "safetensors-0.3.3-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:0085be33b8cbcb13079b3a8e131656e05b0bc5e6970530d4c24150f7afd76d70"},
+    {file = "safetensors-0.3.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad3cc8006e7a86ee7c88bd2813ec59cd7cc75b03e6fa4af89b9c7b235b438d68"},
+    {file = "safetensors-0.3.3-cp39-cp39-win32.whl", hash = "sha256:ab29f54c6b8c301ca05fa014728996bd83aac6e21528f893aaf8945c71f42b6d"},
+    {file = "safetensors-0.3.3.tar.gz", hash = "sha256:edb7072d788c4f929d0f5735d3a2fb51e5a27f833587828583b7f5747af1a2b8"},
 ]
 
 [package.extras]
 all = ["black (==22.3)", "click (==8.0.4)", "flake8 (>=3.8.3)", "flax (>=0.6.3)", "h5py (>=3.7.0)", "huggingface-hub (>=0.12.1)", "isort (>=5.5.4)", "jax (>=0.3.25)", "jaxlib (>=0.3.25)", "numpy (>=1.21.6)", "paddlepaddle (>=2.4.1)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "setuptools-rust (>=1.5.2)", "tensorflow (==2.11.0)", "torch (>=1.10)"]
 dev = ["black (==22.3)", "click (==8.0.4)", "flake8 (>=3.8.3)", "flax (>=0.6.3)", "h5py (>=3.7.0)", "huggingface-hub (>=0.12.1)", "isort (>=5.5.4)", "jax (>=0.3.25)", "jaxlib (>=0.3.25)", "numpy (>=1.21.6)", "paddlepaddle (>=2.4.1)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "setuptools-rust (>=1.5.2)", "tensorflow (==2.11.0)", "torch (>=1.10)"]
-jax = ["flax (>=0.6.3)", "jax (>=0.3.25)", "jaxlib (>=0.3.25)"]
+jax = ["flax (>=0.6.3)", "jax (>=0.3.25)", "jaxlib (>=0.3.25)", "numpy (>=1.21.6)"]
 numpy = ["numpy (>=1.21.6)"]
-paddlepaddle = ["paddlepaddle (>=2.4.1)"]
+paddlepaddle = ["numpy (>=1.21.6)", "paddlepaddle (>=2.4.1)"]
 pinned-tf = ["tensorflow (==2.11.0)"]
 quality = ["black (==22.3)", "click (==8.0.4)", "flake8 (>=3.8.3)", "isort (>=5.5.4)"]
-tensorflow = ["tensorflow (>=2.11.0)"]
+tensorflow = ["numpy (>=1.21.6)", "tensorflow (>=2.11.0)"]
 testing = ["h5py (>=3.7.0)", "huggingface-hub (>=0.12.1)", "numpy (>=1.21.6)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "setuptools-rust (>=1.5.2)"]
-torch = ["torch (>=1.10)"]
+torch = ["numpy (>=1.21.6)", "torch (>=1.10)"]
 
 [[package]]
 name = "scikit-learn"
