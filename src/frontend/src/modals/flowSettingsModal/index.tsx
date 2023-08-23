@@ -12,7 +12,6 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { setSuccessData } = useContext(alertContext);
   const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
@@ -28,7 +27,6 @@ export default function FlowSettingsModal({
     savedFlow!.name = name;
     savedFlow!.description = description;
     saveFlow(savedFlow!);
-    setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }
   return (

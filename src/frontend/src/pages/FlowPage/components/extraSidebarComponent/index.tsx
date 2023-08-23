@@ -21,7 +21,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
   const isPending = tabsState[tabId]?.isPending;
@@ -121,7 +121,6 @@ export default function ExtraSidebar(): JSX.Element {
               }
               onClick={(event) => {
                 saveFlow(flow!);
-                setSuccessData({ title: "Changes saved successfully" });
               }}
             >
               <IconComponent

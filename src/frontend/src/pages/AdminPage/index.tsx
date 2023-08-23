@@ -133,8 +133,6 @@ export default function AdminPage() {
 
     updateUser(userId, userEdit)
       .then((res) => {
-        console.log(res);
-
         resetFilter();
         setSuccessData({
           title: "Success! User edited!",
