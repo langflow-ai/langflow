@@ -134,7 +134,7 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login, setAutoLogin, logout } =
+  const { setUserData, getAuthentication, login, setAutoLogin, logout, setIsAdmin } =
     useContext(AuthContext);
 
   useEffect(() => {
@@ -154,6 +154,8 @@ export default function App() {
             .then((user) => {
               setUserData(user);
               setLoading(false);
+              const isSuperUser = user.is_superuser;
+              setIsAdmin(isSuperUser);
             })
             .catch((error) => {});
         }
