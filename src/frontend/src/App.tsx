@@ -13,6 +13,7 @@ import LoadingComponent from "./components/loadingComponent";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
+import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
     setSuccessOpen,
     loading,
   } = useContext(alertContext);
+  const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -137,7 +139,11 @@ export default function App() {
       >
         {loading ? (
           <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
+            {fetchError ? (
+              <div>There was an error on the backend</div>
+            ) : (
+              <LoadingComponent remSize={50} />
+            )}
           </div>
         ) : (
           <>
