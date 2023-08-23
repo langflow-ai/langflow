@@ -34,6 +34,7 @@ import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { unselectAllNodes } from "../../utils/reactflowUtils";
 import { typesContext } from "../../contexts/typesContext";
+import { alertContext } from "../../contexts/alertContext";
 
 export default function CodeTabsComponent({
   flow,
@@ -48,6 +49,7 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
+  const { isTweakPage, setIsTweakPage } = useContext(alertContext);
 
   useEffect(() => {
     if (flow && flow["data"]!["nodes"]) {
@@ -62,6 +64,10 @@ export default function CodeTabsComponent({
         reactFlowInstance?.setNodes(nodes);
       }
     });
+
+    return () => {
+      if (isTweakPage) setIsTweakPage(false);
+    };
   }, [])
 
   const copyToClipboard = () => {

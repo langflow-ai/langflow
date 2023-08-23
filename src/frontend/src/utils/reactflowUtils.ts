@@ -5,15 +5,12 @@ import {
   Node,
   ReactFlowInstance,
   ReactFlowJsonObject,
-  useNodesState,
 } from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
 import { cleanEdgesType, unselectAllNodesType } from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
-import { useContext } from "react";
-import { typesContext } from "../contexts/typesContext";
 
 export function cleanEdges({
   flow: { edges, nodes },
