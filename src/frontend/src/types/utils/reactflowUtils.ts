@@ -1,4 +1,4 @@
-import { Edge } from "reactflow";
+import { Edge, Node } from "reactflow";
 import { NodeType } from "../flow";
 
 export type cleanEdgesType = {
@@ -7,4 +7,9 @@ export type cleanEdgesType = {
     nodes: NodeType[];
   };
   updateEdge: (edge: Edge[]) => void;
+};
+
+export type unselectAllNodesType = {
+  updateNodes: (nodes: Node[]) => void,
+  data: Node[] | null
 };

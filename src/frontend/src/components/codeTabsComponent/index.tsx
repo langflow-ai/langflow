@@ -32,6 +32,8 @@ import { darkContext } from "../../contexts/darkContext";
 import { codeTabsPropsType } from "../../types/components";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
+import { unselectAllNodes } from "../../utils/reactflowUtils";
+import { typesContext } from "../../contexts/typesContext";
 
 export default function CodeTabsComponent({
   flow,
@@ -45,12 +47,22 @@ export default function CodeTabsComponent({
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
+  const { reactFlowInstance } = useContext(typesContext);
 
   useEffect(() => {
     if (flow && flow["data"]!["nodes"]) {
       setData(flow["data"]!["nodes"]);
     }
   }, [flow]);
+  
+  useEffect(() => {
+    unselectAllNodes({
+      data,
+      updateNodes: (nodes) => {
+        reactFlowInstance?.setNodes(nodes);
+      }
+    });
+  }, [])
 
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
