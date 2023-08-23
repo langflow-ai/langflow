@@ -11,6 +11,7 @@ from fastapi import WebSocket
 
 from langchain.schema import AgentAction, LLMResult, AgentFinish
 from langflow.utils.logger import logger
+from langflow.utils.util import remove_ansi_escape_codes
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py
@@ -105,7 +106,8 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         # to the LLM, adding it will send the final prompt
         # to the frontend
         if "Prompt after formatting" in text:
-            text = text.replace("Prompt after formatting", "")
+            text = text.replace("Prompt after formatting:\n", "")
+            text = remove_ansi_escape_codes(text)
             resp = ChatResponse(
                 message="",
                 type="stream",

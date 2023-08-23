@@ -12,6 +12,10 @@ from langflow.utils.logger import logger
 from multiprocess import cpu_count  # type: ignore
 
 
+def remove_ansi_escape_codes(text):
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+
+
 def build_template_from_function(
     name: str, type_to_loader_dict: Dict, add_function: bool = False
 ):
