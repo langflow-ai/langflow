@@ -1,6 +1,6 @@
 import ast
-import json
 from typing import Optional
+from langflow.services.database.models.base import orjson_dumps
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -22,4 +22,4 @@ class UtilitiesFrontendNode(FrontendNode):
 
         if isinstance(field.value, dict):
             field.field_type = "code"
-            field.value = json.dumps(field.value, indent=4)
+            field.value = orjson_dumps(field.value)

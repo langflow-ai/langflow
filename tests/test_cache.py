@@ -1,4 +1,6 @@
 import json
+from langflow.services.database.models.base import orjson_dumps
+import orjson
 from langflow.graph import Graph
 
 import pytest
@@ -63,9 +65,9 @@ def test_cache_size_limit(basic_data_graph):
         nodes = modified_data_graph["nodes"]
         node_id = nodes[0]["id"]
         # Now we replace all instances ode node_id with a new id in the json
-        json_string = json.dumps(modified_data_graph)
+        json_string = orjson_dumps(modified_data_graph)
         modified_json_string = json_string.replace(node_id, f"{node_id}_{i}")
-        modified_data_graph_new_id = json.loads(modified_json_string)
+        modified_data_graph_new_id = orjson.loads(modified_json_string)
         build_langchain_object_with_caching(modified_data_graph_new_id)
 
     assert len(build_langchain_object_with_caching.cache) == 10
