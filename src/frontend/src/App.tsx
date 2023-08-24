@@ -9,7 +9,12 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
+import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
+import {
+  FETCH_ERROR_DESCRIPION,
+  FETCH_ERROR_MESSAGE,
+} from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
@@ -140,7 +145,10 @@ export default function App() {
         {loading ? (
           <div className="loading-page-panel">
             {fetchError ? (
-              <div>There was an error on the backend</div>
+              <FetchErrorComponent
+                description={FETCH_ERROR_DESCRIPION}
+                message={FETCH_ERROR_MESSAGE}
+              ></FetchErrorComponent>
             ) : (
               <LoadingComponent remSize={50} />
             )}
