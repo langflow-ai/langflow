@@ -1,6 +1,6 @@
 import contextlib
 import json
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 import orjson
 from typing import Any, Dict, List
 

@@ -15,6 +15,10 @@
 *.svg text
 *.yml text
 *.yaml text
+*.xml text
+*.csv text
+*.json text
+*.sh text
 *.Dockerfile text
 Dockerfile text
 

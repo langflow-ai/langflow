@@ -1,5 +1,5 @@
 import json
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 import orjson
 from langflow.graph import Graph
 
