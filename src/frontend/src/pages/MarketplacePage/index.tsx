@@ -91,6 +91,7 @@ export default function MarketplacePage() {
                       : nodeColors[i],
                   }}
                 >
+                  <IconComponent name={i} className="mr-1.5 w-4" />
                   {nodeNames[i]}
                 </Badge>
               )
