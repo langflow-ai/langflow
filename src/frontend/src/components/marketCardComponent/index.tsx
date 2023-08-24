@@ -1,6 +1,12 @@
 import { useContext } from "react";
 import { TabsContext } from "../../contexts/tabsContext";
-import { gradients, tagGradients, tagText } from "../../utils/styleUtils";
+import {
+  gradients,
+  nodeColors,
+  nodeNames,
+  tagGradients,
+  tagText,
+} from "../../utils/styleUtils";
 import { nFormatter } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Badge } from "../ui/badge";
@@ -52,6 +58,16 @@ export const MarketCardComponent = ({
             <IconComponent name="Download" className="h-3 w-3" />
             {nFormatter(data.downloads, 2)}
           </div>
+          <div
+            className={
+              "absolute left-0 top-0 flex items-center gap-2 rounded-br-lg p-1 px-2 text-xs text-background"
+            }
+            style={{ backgroundColor: nodeColors[data.category] }}
+          >
+            <IconComponent name={data.category} className="h-3 w-3" />
+            {nodeNames[data.category]}
+          </div>
+
           <img className={"h-20 w-20 rounded-full"} src={data.imageUrl}></img>
         </div>
         <CardHeader>
