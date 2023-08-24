@@ -8,7 +8,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict
 from appdirs import user_cache_dir
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 
 CACHE: Dict[str, Any] = {}
 

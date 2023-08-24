@@ -1,4 +1,4 @@
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 import orjson
 import pytest
 
