@@ -21,7 +21,8 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
-  const { setSuccessData, setErrorData, setIsTweakPage } = useContext(alertContext);
+  const { setSuccessData, setErrorData, setIsTweakPage } =
+    useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
   const isPending = tabsState[tabId]?.isPending;
