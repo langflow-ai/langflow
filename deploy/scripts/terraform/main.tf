@@ -89,4 +89,18 @@ resource "aws_security_group" "swarm-sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [aws_subnet.swarm-public-subnet.cidr_block] 
+  }
+
+  egress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [aws_subnet.swarm-public-subnet.cidr_block]
+  }
 }
