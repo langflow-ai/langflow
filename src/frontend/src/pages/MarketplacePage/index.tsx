@@ -1,15 +1,18 @@
 import { useState } from "react";
 
 import Fuse from "fuse.js";
-import Select from "react-select";
+import { cloneDeep } from "lodash";
+import tinycolor from "tinycolor2";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { MarketCardComponent } from "../../components/marketCardComponent";
+import { Badge } from "../../components/ui/badge";
+import { nodeColors, nodeNames } from "../../utils/styleUtils";
 import data from "./data.json";
+
 export default function MarketplacePage() {
-  const [filteredTags, setFilteredTags] = useState([]);
-  const [filteredCategories, setFilteredCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState(new Set());
   const [searchData, setSearchData] = useState(data);
   const searchItem = (query) => {
     if (!query) {
@@ -31,15 +34,6 @@ export default function MarketplacePage() {
     }
   };
 
-  const handleChangeCategories = (e) => {
-    setFilteredCategories(e);
-  };
-
-  const handleChangeTags = (e) => {
-    setFilteredTags(e);
-  };
-  console.log(filteredCategories);
-
   return (
     <>
       <Header />
@@ -57,8 +51,8 @@ export default function MarketplacePage() {
           explore new and powerful features.
         </span>
         <div className="flex w-full flex-col gap-4 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex w-96 items-center gap-4">
+          <div className="flex items-center justify-center gap-4">
+            <div className="w-[45%]">
               <InputComponent
                 icon="Search"
                 placeholder="Search Components"
@@ -67,59 +61,47 @@ export default function MarketplacePage() {
                 password={false}
               />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="w-72">
-                <Select
-                  isMulti
-                  value={filteredCategories}
-                  onChange={handleChangeCategories}
-                  placeholder="Filter by category"
-                  className="text-sm"
-                  options={
-                    searchData
-                      ? Array.from(
-                          new Set(
-                            searchData.map((item) => ({
-                              value: item.category,
-                              label: item.category,
-                            }))
-                          )
-                        )
-                      : []
-                  }
-                />
-              </div>
-              <div className="w-72">
-                <Select
-                  isMulti
-                  placeholder="Filter by tags"
-                  value={filteredTags}
-                  onChange={handleChangeTags}
-                  className="text-sm"
-                  options={
-                    searchData
-                      ? Array.from(
-                          new Set(searchData.map((item) => item.tags).flat())
-                        ).map((item) => ({ value: item, label: item }))
-                      : []
-                  }
-                />
-              </div>
-            </div>
           </div>
-          <div className="community-pages-flows-panel">
+          <div className="flex items-center justify-center gap-4">
+            {Array.from(new Set(searchData.map((i) => i.category))).map(
+              (i, idx) => (
+                <Badge
+                  onClick={() => {
+                    filteredCategories.has(i)
+                      ? setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.delete(i);
+                          return newFilteredCategories;
+                        })
+                      : setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.add(i);
+                          return newFilteredCategories;
+                        });
+                  }}
+                  size="md"
+                  variant="inherit"
+                  className="cursor-pointer"
+                  style={{
+                    color: filteredCategories.has(i)
+                      ? tinycolor(nodeColors[i]).lighten(50).toString()
+                      : tinycolor(nodeColors[i]).darken(20).toString(),
+                    backgroundColor: !filteredCategories.has(i)
+                      ? tinycolor(nodeColors[i]).lighten(38).toString()
+                      : nodeColors[i],
+                  }}
+                >
+                  {nodeNames[i]}
+                </Badge>
+              )
+            )}
+          </div>
+          <div className="community-pages-flows-panel mt-6">
             {searchData
               .filter(
                 (f) =>
-                  filteredTags.length === 0 ||
-                  filteredTags
-                    .map((x) => x.value)
-                    .every((x) => f.tags.includes(x))
-              )
-              .filter(
-                (f) =>
-                  filteredCategories.length === 0 ||
-                  filteredCategories.map((x) => x.value).includes(f.category)
+                  Array.from(filteredCategories).length === 0 ||
+                  filteredCategories.has(f.category)
               )
               .map((item, idx) => (
                 <MarketCardComponent key={idx} data={item} onAdd={() => {}} />

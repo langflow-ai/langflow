@@ -17,6 +17,7 @@ const badgeVariants = cva(
         outline: "text-foreground",
         free: "bg-green-100 text-green-800 border-none",
         paid: "bg-blue-100 text-blue-800 border-none",
+        inherit: "border-none",
       },
       size: {
         sm: "h-4 text-xs",
