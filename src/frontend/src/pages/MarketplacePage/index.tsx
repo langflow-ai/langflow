@@ -13,8 +13,10 @@ import data from "./data.json";
 
 export default function MarketplacePage() {
   const [filteredCategories, setFilteredCategories] = useState(new Set());
+  const [inputText, setInputText] = useState("");
   const [searchData, setSearchData] = useState(data);
   const searchItem = (query) => {
+    setInputText(query);
     if (!query) {
       setSearchData(data);
       return;
@@ -57,7 +59,7 @@ export default function MarketplacePage() {
                 icon="Search"
                 placeholder="Search Components"
                 onChange={(e) => searchItem(e)}
-                value=""
+                value={inputText}
                 password={false}
               />
             </div>
