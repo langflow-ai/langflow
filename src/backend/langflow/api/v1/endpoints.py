@@ -58,12 +58,9 @@ def get_all():
 
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
-            # custom_component_dict is a dict of dicts
-            category = list(custom_component_dict.keys())[0]
-            logger.info(
-                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            logger.debug(
+                {key: len(value) for key, value in custom_component_dict.items()}
             )
-            logger.debug(custom_component_dict)
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )

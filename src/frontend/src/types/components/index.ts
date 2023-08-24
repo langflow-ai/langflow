@@ -508,3 +508,7 @@ export type validationStatusType = {
   progress: number;
   valid: boolean;
 };
+export type fetchErrorComponentType = {
+  message: string;
+  description: string;
+};
