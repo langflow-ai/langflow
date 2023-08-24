@@ -1,4 +1,5 @@
-import json
+from langflow.services.database.models.base import orjson_dumps
+import orjson
 import pytest
 
 from uuid import UUID, uuid4
@@ -16,7 +17,7 @@ def json_style():
     # color: str = Field(index=True)
     # emoji: str = Field(index=False)
     # flow_id: UUID = Field(default=None, foreign_key="flow.id")
-    return json.dumps(
+    return orjson_dumps(
         {
             "color": "red",
             "emoji": "👍",
@@ -25,7 +26,7 @@ def json_style():
 
 
 def test_create_flow(client: TestClient, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
@@ -41,7 +42,7 @@ def test_create_flow(client: TestClient, json_flow: str):
 
 
 def test_read_flows(client: TestClient, json_flow: str):
-    flow_data = json.loads(json_flow)
+    flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
@@ -61,7 +62,7 @@ def test_read_flows(client: TestClient, json_flow: str):
 
 
 def test_read_flow(client: TestClient, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
@@ -76,7 +77,7 @@ def test_read_flow(client: TestClient, json_flow: str):
 
 
 def test_update_flow(client: TestClient, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
 
     flow = FlowCreate(name="Test Flow", description="description", data=data)
@@ -97,7 +98,7 @@ def test_update_flow(client: TestClient, json_flow: str):
 
 
 def test_delete_flow(client: TestClient, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict())
@@ -108,7 +109,7 @@ def test_delete_flow(client: TestClient, json_flow: str):
 
 
 def test_create_flows(client: TestClient, session: Session, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
@@ -133,7 +134,7 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str):
 
 
 def test_upload_file(client: TestClient, session: Session, json_flow: str):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
@@ -142,7 +143,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str):
             FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
-    file_contents = json.dumps(flow_list.dict())
+    file_contents = orjson_dumps(flow_list.dict())
     response = client.post(
         "api/v1/flows/upload/",
         files={"file": ("examples.json", file_contents, "application/json")},
@@ -161,7 +162,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str):
 
 
 def test_download_file(client: TestClient, session: Session, json_flow):
-    flow = json.loads(json_flow)
+    flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
     flow_list = FlowListCreate(
@@ -202,7 +203,7 @@ def test_get_nonexistent_flow(client: TestClient):
 
 
 def test_update_flow_idempotency(client: TestClient, json_flow: str):
-    flow_data = json.loads(json_flow)
+    flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow_data = FlowCreate(name="Test Flow", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow_data.dict())
@@ -214,7 +215,7 @@ def test_update_flow_idempotency(client: TestClient, json_flow: str):
 
 
 def test_update_nonexistent_flow(client: TestClient, json_flow: str):
-    flow_data = json.loads(json_flow)
+    flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     uuid = uuid4()
     updated_flow = FlowCreate(

@@ -77,7 +77,7 @@ class DirectoryReader:
         ]
         filtered = [menu for menu in items if menu["components"]]
         logger.debug(
-            f'Filtered components {"with errors" if with_errors else ""}: {filtered}'
+            f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}'
         )
         return {"menu": filtered}
 

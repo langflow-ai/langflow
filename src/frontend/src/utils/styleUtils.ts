@@ -59,6 +59,7 @@ import {
   TerminalSquare,
   Trash2,
   Undo,
+  Unplug,
   Upload,
   UserMinus2,
   UserPlus2,
@@ -290,4 +291,5 @@ export const nodeIconsLucide: iconsType = {
   ChevronsLeft,
   FaGithub,
   FaApple,
+  Unplug,
 };

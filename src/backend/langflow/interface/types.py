@@ -190,17 +190,16 @@ def build_frontend_node(custom_component: CustomComponent):
 
 def update_attributes(frontend_node, template_config):
     """Update the display name and description of a frontend node"""
-    if "display_name" in template_config:
-        frontend_node["display_name"] = template_config["display_name"]
-
-    if "description" in template_config:
-        frontend_node["description"] = template_config["description"]
-
-    if "beta" in template_config:
-        frontend_node["beta"] = template_config["beta"]
-
-    if "documentation" in template_config:
-        frontend_node["documentation"] = template_config["documentation"]
+    attributes = [
+        "display_name",
+        "description",
+        "beta",
+        "documentation",
+        "output_types",
+    ]
+    for attribute in attributes:
+        if attribute in template_config:
+            frontend_node[attribute] = template_config[attribute]
 
 
 def build_field_config(custom_component: CustomComponent):
@@ -338,7 +337,9 @@ def build_valid_menu(valid_components):
         valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
-            logger.debug(f"Building component: {component}")
+            logger.debug(
+                f"Building component: {component.get('name'), component.get('output_types')}"
+            )
             try:
                 component_name = component["name"]
                 component_code = component["code"]

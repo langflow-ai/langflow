@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Node, ReactFlowInstance } from "reactflow";
-import { getAll } from "../controllers/API";
+import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
 import { alertContext } from "./alertContext";
@@ -23,6 +23,8 @@ const initialValue: typesContextType = {
   setTemplates: () => {},
   data: {},
   setData: () => {},
+  setFetchError: () => {},
+  fetchError: false,
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -33,14 +35,10 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
+  const [fetchError, setFetchError] = useState(false);
   const { setLoading } = useContext(alertContext);
 
   useEffect(() => {
-    let delay = 1000; // Start delay of 1 second
-    let intervalId: NodeJS.Timer;
-    let retryCount = 0; // Count of retry attempts
-    const maxRetryCount = 5; // Max retry attempts
-
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
     let isMounted = true;
 
@@ -48,7 +46,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       try {
         const result = await getAll();
         // Make sure to only update the state if the component is still mounted.
-        if (isMounted) {
+        if (isMounted && result?.status === 200) {
           setLoading(false);
           setData(result.data);
           setTemplates(
@@ -78,21 +76,15 @@ export function TypesProvider({ children }: { children: ReactNode }) {
               }, {})
           );
         }
-        // Clear the interval if successful.
-        clearInterval(intervalId!);
       } catch (error) {
         console.error("An error has occurred while fetching types.");
+        await getHealth().catch((e) => {
+          setFetchError(true);
+        });
       }
     }
 
-    // Start the initial interval.
-    intervalId = setInterval(getTypes, delay);
-    return () => {
-      // This will clear the interval when the component unmounts, or when the dependencies of the useEffect hook change.
-      clearInterval(intervalId!);
-      // Indicate that the component has been unmounted.
-      isMounted = false;
-    };
+    getTypes();
   }, []);
 
   function deleteNode(idx: string) {
@@ -117,6 +109,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         templates,
         data,
         setData,
+        fetchError,
+        setFetchError,
       }}
     >
       {children}
