@@ -9,9 +9,9 @@ export default function IconComponent({
   const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
   return (
     <TargetIcon
-      strokeWidth={1.5}
       className={className}
       style={{ color: iconColor }}
+      stroke-width={1.5}
     />
   );
 }

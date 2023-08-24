@@ -3,7 +3,7 @@
 {
   "name": "Langflow Demo Container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.10-bullseye",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10",
   "features": {
     "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {},
@@ -16,8 +16,7 @@
         "GitHub.copilot",
         "ms-python.python",
         "eamodio.gitlens",
-        "GitHub.vscode-pull-request-github",
-        "ms-azuretools.vscode-docker"
+        "GitHub.vscode-pull-request-github"
       ]
     }
   },
