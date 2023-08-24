@@ -15,11 +15,11 @@ export default function FlowSettingsModal({
   const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
-    setName(flow.name);
-    setDescription(flow.description);
-  }, [flow.name, flow.description]);
-  const [name, setName] = useState(flow.name);
-  const [description, setDescription] = useState(flow.description);
+    setName(flow!.name);
+    setDescription(flow!.description);
+  }, [flow!.name, flow!.description]);
+  const [name, setName] = useState(flow!.name);
+  const [description, setDescription] = useState(flow!.description);
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
