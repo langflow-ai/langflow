@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain.schema import Document
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 import requests
 from typing import Optional
 
