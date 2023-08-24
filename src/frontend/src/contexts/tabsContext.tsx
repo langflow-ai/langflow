@@ -30,6 +30,7 @@ import {
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
+import { AxiosError } from "axios";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -602,7 +603,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err as errorsVarType);
+      setErrorData({title: "Error while saving changes",list:[(err as AxiosError).message]});
     }
   }
 
