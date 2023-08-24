@@ -1,6 +1,4 @@
-type LoadingComponentProps = {
-  remSize: number;
-};
+import { LoadingComponentProps } from "../../types/components";
 
 export default function LoadingComponent({ remSize }: LoadingComponentProps) {
   return (

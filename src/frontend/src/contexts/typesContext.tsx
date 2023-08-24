@@ -78,7 +78,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("An error has occurred while fetching types.");
         await getHealth().catch((e) => {
-          console.log("entrou");
           setFetchError(true);
         });
       }
