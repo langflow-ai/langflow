@@ -56,6 +56,7 @@ import {
   TerminalSquare,
   Trash2,
   Undo,
+  Unplug,
   Upload,
   Users2,
   Variable,
@@ -275,4 +276,5 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  Unplug,
 };
