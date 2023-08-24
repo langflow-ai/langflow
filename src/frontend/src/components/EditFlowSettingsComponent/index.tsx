@@ -67,7 +67,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   }, [name, description]);
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    flows.find((f) => f.id === tabId).description = event.target.value;
     setCurrentDescription(flows.find((f) => f.id === tabId).description);
     setDescription(event.target.value);
   };
