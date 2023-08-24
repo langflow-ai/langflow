@@ -289,6 +289,11 @@ export function updateEdgesHandleIds({
     }
     edge.sourceHandle = scapedJSONStringfy(newSource!);
     edge.targetHandle = scapedJSONStringfy(newTarget!);
+    const newData = {
+      sourceHandle: scapeJSONParse(edge.sourceHandle),
+      targetHandle: scapeJSONParse(edge.targetHandle),
+    };
+    edge.data = newData;
   });
   return newEdges;
 }
