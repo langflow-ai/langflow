@@ -203,6 +203,10 @@ export default function Page({
         addEdge(
           {
             ...params,
+            data: {
+              targetHandle: scapeJSONParse(params.targetHandle!),
+              sourceHandle: scapeJSONParse(params.sourceHandle!),
+            },
             style: { stroke: "#555" },
             className:
               ((scapeJSONParse(params.targetHandle!) as targetHandleType)
