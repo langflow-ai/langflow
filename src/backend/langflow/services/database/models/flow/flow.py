@@ -6,8 +6,6 @@ from sqlmodel import Field, JSON, Column
 from uuid import UUID, uuid4
 from typing import Dict, Optional
 
-# if TYPE_CHECKING:
-
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
@@ -16,7 +14,6 @@ class FlowBase(SQLModelSerializable):
 
     @validator("data")
     def validate_json(v):
-        # dict_keys(['description', 'name', 'id', 'data'])
         if not v:
             return v
         if not isinstance(v, dict):
