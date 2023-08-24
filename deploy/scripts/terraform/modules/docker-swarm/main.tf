@@ -20,10 +20,22 @@ resource "aws_instance" "manager" {
                 #!/bin/bash
                 sudo yum update -y
                 sudo yum install -y docker
+                sudo yum install -y nc
                 sudo service docker start
                 sudo usermod -a -G docker ec2-user
                 sudo chkconfig docker on
-                docker swarm init --advertise-addr $(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+
+                # Fetch instance metadata with token
+                TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+                IP_ADDR=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/local-ipv4)
+
+                docker swarm init --advertise-addr $IP_ADDR
+
+                # Create a script to get the join token
+                echo 'docker swarm join-token worker -q' > get_token.sh
+                chmod +x get_token.sh
+                while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; ./get_token.sh; } | nc -l 8080; done &
+
                 EOT
 
   tags = {
@@ -41,14 +53,15 @@ resource "aws_instance" "worker" {
   associate_public_ip_address = true
 
   user_data = <<-EOT
-                #!/bin/bash
-                sudo yum update -y
-                sudo yum install -y docker
-                sudo service docker start
-                sudo usermod -a -G docker ec2-user
-                sudo chkconfig docker on
-                docker swarm join --token $(curl -s http://${aws_instance.manager.0.public_ip}:8080/token) ${aws_instance.manager.0.private_ip}:2377
-                EOT
+            #!/bin/bash
+            MANAGER_IP="${aws_instance.manager.0.private_ip}"
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo service docker start
+            sudo usermod -a -G docker ec2-user
+            sudo chkconfig docker on
+            docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) $MANAGER_IP:2377
+            EOT
 
   tags = {
     Name = "worker-${count.index}"
