@@ -1,5 +1,7 @@
 from typing import List
 from uuid import UUID
+from fastapi.encoders import jsonable_encoder
+
 from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.services.database.models.flow import (
@@ -10,12 +12,11 @@ from langflow.services.database.models.flow import (
 )
 from langflow.services.utils import get_session
 from langflow.services.utils import get_settings_manager
+import orjson
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
 
 from fastapi import File, UploadFile
-import json
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -105,7 +106,7 @@ async def upload_file(
 ):
     """Upload flows from a file."""
     contents = await file.read()
-    data = json.loads(contents)
+    data = orjson.loads(contents)
     if "flows" in data:
         flow_list = FlowListCreate(**data)
     else:

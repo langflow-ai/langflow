@@ -16,6 +16,8 @@ export type typesContextType = {
   setTemplates: (newState: {}) => void;
   data: APIDataType;
   setData: (newState: {}) => void;
+  fetchError: boolean;
+  setFetchError: (newState: boolean) => void;
 };
 
 export type alertContextType = {

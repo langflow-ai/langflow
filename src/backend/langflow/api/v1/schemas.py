@@ -2,8 +2,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from langflow.services.database.models.flow import FlowCreate, FlowRead
+from langflow.services.database.models.base import orjson_dumps
+
 from pydantic import BaseModel, Field, validator
-import json
 
 
 class BuildStatus(Enum):
@@ -116,7 +117,9 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
+        return (
+            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        )
 
 
 class CustomComponentCode(BaseModel):
