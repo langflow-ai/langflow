@@ -31,3 +31,4 @@ Dockerfile text
 *.gif binary
 *.mp4 binary
 *.svg binary
+*.csv binary
