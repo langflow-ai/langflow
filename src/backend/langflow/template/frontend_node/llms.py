@@ -1,5 +1,5 @@
 from typing import Optional
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
