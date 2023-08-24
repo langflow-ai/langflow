@@ -27,6 +27,10 @@ export default function Header(): JSX.Element {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
+
+        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
+          <MenuBar flows={flows} tabId={tabId} />
+        )}
         {location.pathname === "/admin" && (
           <Button
             onClick={() => {
@@ -55,10 +59,6 @@ export default function Header(): JSX.Element {
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Admin page
           </Button>
-        )}
-
-        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
-          <MenuBar flows={flows} tabId={tabId} />
         )}
       </div>
       <div className="round-button-div">
