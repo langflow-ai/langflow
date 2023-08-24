@@ -10,6 +10,6 @@ export type cleanEdgesType = {
 };
 
 export type unselectAllNodesType = {
-  updateNodes: (nodes: Node[]) => void,
-  data: Node[] | null
+  updateNodes: (nodes: Node[]) => void;
+  data: Node[] | null;
 };

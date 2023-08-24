@@ -9,7 +9,10 @@ import {
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
-import { cleanEdgesType, unselectAllNodesType } from "../types/utils/reactflowUtils";
+import {
+  cleanEdgesType,
+  unselectAllNodesType,
+} from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 
 export function cleanEdges({

@@ -27,7 +27,7 @@ const initialValue: alertContextType = {
   clearNotificationList: () => {},
   removeFromNotificationList: () => {},
   isTweakPage: false,
-  setIsTweakPage: () => {}, 
+  setIsTweakPage: () => {},
 };
 
 export const alertContext = createContext<alertContextType>(initialValue);
