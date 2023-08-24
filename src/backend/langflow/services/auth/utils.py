@@ -4,8 +4,8 @@ from jose import JWTError, jwt
 from typing import Annotated
 from uuid import UUID
 from langflow.services.auth.service import AuthManager
-from langflow.services.database.models.user import (
-    User,
+from langflow.services.database.models.user.user import User
+from langflow.services.database.models.user.utils import (
     get_user_by_id,
     get_user_by_username,
     update_user_last_login_at,
