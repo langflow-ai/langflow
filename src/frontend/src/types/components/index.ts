@@ -171,3 +171,11 @@ export type IconComponentProps = {
 export interface languageMap {
   [key: string]: string | undefined;
 }
+export type fetchErrorComponentType = {
+  message: string;
+  description: string;
+};
+
+export type LoadingComponentProps = {
+  remSize: number;
+};
