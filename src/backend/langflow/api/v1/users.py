@@ -1,10 +1,10 @@
 from uuid import UUID
+from langflow.api.v1.schemas import UsersResponse
 from langflow.services.database.models.user import (
     User,
-    UserAddModel,
-    UserListModel,
-    UserPatchModel,
-    UsersResponse,
+    UserCreate,
+    UserRead,
+    UserUpdate,
 )
 
 from sqlalchemy import func
@@ -15,16 +15,16 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.services.utils import get_session
 from langflow.services.auth.utils import get_current_active_user, get_password_hash
-from langflow.services.database.models.user import (
+from langflow.services.database.models.user.utils import (
     update_user,
 )
 
 router = APIRouter(tags=["Login"])
 
 
-@router.post("/user", response_model=UserListModel)
+@router.post("/user", response_model=UserRead)
 def add_user(
-    user: UserAddModel,
+    user: UserCreate,
     db: Session = Depends(get_session),
 ) -> User:
     """
@@ -44,7 +44,7 @@ def add_user(
     return new_user
 
 
-@router.get("/user", response_model=UserListModel)
+@router.get("/user", response_model=UserRead)
 def read_current_user(current_user: User = Depends(get_current_active_user)) -> User:
     """
     Retrieve the current user's data.
@@ -70,14 +70,14 @@ def read_all_users(
 
     return UsersResponse(
         total_count=total_count,  # type: ignore
-        users=[UserListModel(**dict(user.User)) for user in users],
+        users=[UserRead(**dict(user.User)) for user in users],
     )
 
 
-@router.patch("/user/{user_id}", response_model=UserListModel)
+@router.patch("/user/{user_id}", response_model=UserRead)
 def patch_user(
     user_id: UUID,
-    user: UserPatchModel,
+    user: UserUpdate,
     _: Session = Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ) -> User:
