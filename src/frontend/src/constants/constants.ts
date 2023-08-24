@@ -615,6 +615,9 @@ export function tabsArray(codes: string[], method: number) {
     },
   ];
 }
+export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
+export const FETCH_ERROR_DESCRIPION =
+  "Check if everything is working properly and try again.";
 
 export const BASE_URL_API = "http://localhost:7860/";
 
