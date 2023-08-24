@@ -62,7 +62,7 @@ export default function BuildTrigger({
       }
       if (errors.length === 0 && allNodesValid) {
         setSuccessData({
-          title: "Code is ready to run",
+          title: "Flow is ready to run",
         });
       }
     } catch (error) {
