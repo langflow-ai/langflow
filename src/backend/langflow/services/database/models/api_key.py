@@ -2,27 +2,23 @@ from sqlmodel import Field
 from uuid import UUID, uuid4
 from typing import Optional
 from datetime import datetime
-from langflow.services.database.models.base import SQLModelSerializable, SQLModel
+from langflow.services.database.models.base import SQLModelSerializable
 
 
 class ApiKeyBase(SQLModelSerializable):
     api_key: str = Field(index=True, unique=True)
-    name: str = Field()
+    name: Optional[str] = Field(index=True)
     create_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = Field()
+    last_used_at: Optional[datetime] = Field(default=None)
 
 
 class ApiKey(ApiKeyBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
 
 
-class ApiKeyCreate(SQLModel):
-    name: str = Field()
+class ApiKeyCreate(ApiKeyBase):
+    pass
 
 
-class ApiKeyRead(SQLModel):
-    id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-    api_key: str = Field(index=True, unique=True)
-    name: str = Field()
-    create_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = Field()
+class ApiKeyRead(ApiKeyBase):
+    id: UUID
