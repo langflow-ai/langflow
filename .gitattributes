@@ -12,7 +12,6 @@
 *.tsx text
 *.md text
 *.mdx text
-*.svg text
 *.yml text
 *.yaml text
 *.xml text
@@ -31,3 +30,4 @@ Dockerfile text
 *.ico binary
 *.gif binary
 *.mp4 binary
+*.svg binary
