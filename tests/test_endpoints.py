@@ -1,3 +1,5 @@
+from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.api_key.api_key import ApiKey
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
@@ -81,6 +83,49 @@ PROMPT_REQUEST = {
         },
     },
 }
+
+
+@pytest.fixture
+def created_api_key(active_user):
+    hashed = get_password_hash("random_key")
+    return ApiKey(
+        name="test_api_key",
+        user_id=active_user.id,
+        api_key="random_key",
+        hashed_api_key=hashed,
+    )
+
+
+def test_process_flow(client, mocker, created_api_key):
+    # Mock de process_graph_cached
+    mock_process_graph_cached = mocker.patch(
+        "langflow.processing.process.process_graph_cached", autospec=True
+    )
+
+    # Defina o valor de retorno para o mock
+    mock_process_graph_cached.return_value = ("result_mock", "session_id_mock")
+
+    api_key = created_api_key.api_key
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    # Dummy POST data
+    post_data = {
+        "inputs": {"key": "value"},
+        "tweaks": None,
+        "clear_cache": False,
+        "session_id": None,
+    }
+
+    # Make the request to the FastAPI TestClient
+    response = client.post("api/v1/process/flow_test", headers=headers, json=post_data)
+
+    # Check the response
+    assert response.status_code == 200
+    assert response.json()["result"] == "result_mock"
+    assert response.json()["session_id"] == "session_id_mock"
+
+    # Ensure mock was called once
+    mock_process_graph_cached.assert_called_once()
 
 
 def test_get_all(client: TestClient, logged_in_headers):

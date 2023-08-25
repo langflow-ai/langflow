@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from typing import Annotated, Coroutine
 from uuid import UUID
 from langflow.services.auth.service import AuthManager
+from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.user.user import User
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -11,7 +12,7 @@ from langflow.services.database.models.user.crud import (
     update_user_last_login_at,
 )
 from langflow.services.utils import get_session, get_settings_manager
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 async def auth_scheme_dependency(request: Request):
@@ -55,6 +56,14 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+
+async def validate_api_key(
+    token: Annotated[str, Depends(auth_scheme_dependency)],
+    db: Session = Depends(get_session),
+) -> bool:
+    hashed_api_key = get_password_hash(token)
+    return db.exec(select(ApiKey).where(ApiKey.hashed_api_key == hashed_api_key)).one_or_none()  # type: ignore
 
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
