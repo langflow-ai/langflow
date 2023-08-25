@@ -3,7 +3,7 @@ import orjson
 import pytest
 
 from uuid import UUID, uuid4
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
 from fastapi.testclient import TestClient
 
