@@ -14,12 +14,12 @@ from langflow.services.utils import get_session, get_settings_manager
 from sqlmodel import Session
 
 
-def auth_scheme_dependency(request: Request):
+async def auth_scheme_dependency(request: Request):
     settings_manager = (
         get_settings_manager()
     )  # Assuming get_settings_manager is defined
 
-    return AuthManager(settings_manager).run_oauth2_scheme(request)
+    return await AuthManager(settings_manager).run_oauth2_scheme(request)
 
 
 async def get_current_user(
