@@ -83,8 +83,8 @@ PROMPT_REQUEST = {
 }
 
 
-def test_get_all(client: TestClient):
-    response = client.get("api/v1/all")
+def test_get_all(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     # We need to test the custom nodes

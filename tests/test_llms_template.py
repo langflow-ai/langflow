@@ -2,9 +2,9 @@ from fastapi.testclient import TestClient
 from langflow.services.utils import get_settings_manager
 
 
-def test_llms_settings(client: TestClient):
+def test_llms_settings(client: TestClient, logged_in_headers):
     settings_manager = get_settings_manager()
-    response = client.get("api/v1/all")
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     llms = json_response["llms"]
@@ -103,8 +103,8 @@ def test_llms_settings(client: TestClient):
 #     }
 
 
-def test_openai(client: TestClient):
-    response = client.get("api/v1/all")
+def test_openai(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
@@ -369,8 +369,8 @@ def test_openai(client: TestClient):
     }
 
 
-def test_chat_open_ai(client: TestClient):
-    response = client.get("api/v1/all")
+def test_chat_open_ai(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     language_models = json_response["llms"]
