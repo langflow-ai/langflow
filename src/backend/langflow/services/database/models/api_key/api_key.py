@@ -17,7 +17,9 @@ class ApiKeyBase(SQLModelSerializable):
 
 class ApiKey(ApiKeyBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+
     api_key: str = Field(index=True, unique=True)
+    hashed_api_key: str = Field(index=True)
     # User relationship
     user_id: UUID = Field(index=True, foreign_key="user.id")
     user: "User" = Relationship(back_populates="api_keys")
