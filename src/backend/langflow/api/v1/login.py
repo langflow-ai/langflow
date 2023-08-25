@@ -13,7 +13,7 @@ from langflow.services.auth.utils import (
 
 from langflow.services.utils import get_settings_manager
 
-router = APIRouter()
+router = APIRouter(tags=["Login"])
 
 
 @router.post("/login", response_model=Token)
