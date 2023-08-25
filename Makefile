@@ -27,7 +27,8 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-	poetry run mypy .
+# skip .venv folder
+	poetry run mypy --exclude .venv .
 	poetry run black . --check
 	poetry run ruff . --fix
 
