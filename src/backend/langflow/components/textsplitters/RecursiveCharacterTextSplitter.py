@@ -36,11 +36,11 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: Document,
-        separators: Optional[str] = None,
+        documents: list[Document],
+        separators: Optional[list[str]] = None,
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
-    ) -> Document:
+    ) -> list[Document]:
         """
         Split text into chunks of a specified length.
 
@@ -63,14 +63,10 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
             separators = [x.encode().decode("unicode-escape") for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints
-        try:
+        if isinstance(chunk_size, str):
             chunk_size = int(chunk_size)
+        if isinstance(chunk_overlap, str):
             chunk_overlap = int(chunk_overlap)
-        except Exception as e:
-            raise ValueError(
-                "chunk_size and chunk_overlap must be integers."
-                " Received chunk_size={chunk_size} and chunk_overlap={chunk_overlap}."
-            ) from e
         splitter = RecursiveCharacterTextSplitter(
             separators=separators,
             chunk_size=chunk_size,
