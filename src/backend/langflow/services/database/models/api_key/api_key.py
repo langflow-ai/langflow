@@ -32,7 +32,7 @@ class ApiKeyCreate(ApiKeyBase):
 
 class UnmaskedApiKeyRead(ApiKeyBase):
     id: UUID
-    api_key: str = Field(index=True, unique=True)
+    api_key: str = Field()
     user_id: UUID = Field()
 
 
