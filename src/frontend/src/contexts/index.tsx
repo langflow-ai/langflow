@@ -9,11 +9,14 @@ import { LocationProvider } from "./locationContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
+import { BrowserRouter } from "react-router-dom";
+import { ApiInterceptor } from "../controllers/API/api";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
     <>
+    <BrowserRouter>
       <AuthProvider>
         <TooltipProvider>
           <ReactFlowProvider>
@@ -21,6 +24,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
               <TypesProvider>
                 <LocationProvider>
                   <AlertProvider>
+                  <ApiInterceptor />
                     <SSEProvider>
                       <TabsProvider>
                         <UndoRedoProvider>{children}</UndoRedoProvider>
@@ -33,6 +37,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
           </ReactFlowProvider>
         </TooltipProvider>
       </AuthProvider>
+      </BrowserRouter>
     </>
   );
 }

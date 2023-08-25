@@ -17,7 +17,8 @@ export default function Header(): JSX.Element {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
-  const { logout, autoLogin, isAdmin, stars } = useContext(AuthContext);
+  const { logout, autoLogin, isAdmin } = useContext(AuthContext);
+  const { stars } = useContext(darkContext);
   const navigate = useNavigate();
 
   return (
