@@ -16,10 +16,8 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
-import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
-import { autoLogin, getLoggedUser } from "./controllers/API";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
@@ -46,7 +44,7 @@ export default function App() {
     setSuccessOpen,
     setErrorData,
     loading,
-    setLoading
+    setLoading,
   } = useContext(alertContext);
   const navigate = useNavigate();
   const { fetchError } = useContext(typesContext);
@@ -59,11 +57,6 @@ export default function App() {
       id: string;
     }>
   >([]);
-
-  const isLoginPage = location.pathname.includes("login");
-  const isAdminPage = location.pathname.includes("admin");
-  const isSignUpPage = location.pathname.includes("signup");
-  const isLocalHost = window.location.href.includes("localhost");
 
   // Use effect hook to update alertsList when a new alert is added
   useEffect(() => {
@@ -139,39 +132,6 @@ export default function App() {
       prevAlertsList.filter((alert) => alert.id !== id)
     );
   };
-
-  //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login, setAutoLogin, logout, setIsAdmin } =
-    useContext(AuthContext);
-
-  useEffect(() => {
-    setTimeout(() => {
-      autoLogin().then((user) => {
-        if(user && user['access_token']){
-          user['refresh_token'] = "auto";
-          login(user['access_token'], user['refresh_token']);
-          setUserData(user);
-          setAutoLogin(true);
-          setLoading(false);
-        }
-      }).catch((error) => {
-        setAutoLogin(false);
-        if (getAuthentication() && !isLoginPage) {
-          getLoggedUser()
-            .then((user) => {
-              setUserData(user);
-              setLoading(false);
-              const isSuperUser = user.is_superuser;
-              setIsAdmin(isSuperUser);
-            })
-            .catch((error) => {});
-        }
-        else{
-          setLoading(false);
-        }
-      });
-    }, 500);
-  }, []);
 
   return (
     //need parent component with width and height

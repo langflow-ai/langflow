@@ -41,6 +41,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const { getAuthentication } = useContext(AuthContext);
 
   useEffect(() => {
+    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (getAuthentication() === true) {
       getTypes();
     }

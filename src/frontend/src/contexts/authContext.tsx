@@ -1,8 +1,9 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
-import { getLoggedUser, getRepoStars } from "../controllers/API";
+import { autoLogin as autoLoginApi, getLoggedUser } from "../controllers/API";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
+import { alertContext } from "./alertContext";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
@@ -25,13 +26,17 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
-  const [accessToken, setAccessToken] = useState<string | null>(cookies.get("access_token"));
-  const [refreshToken, setRefreshToken] = useState<string | null>(cookies.get("refresh_token"));
+  const [accessToken, setAccessToken] = useState<string | null>(
+    cookies.get("access_token")
+  );
+  const [refreshToken, setRefreshToken] = useState<string | null>(
+    cookies.get("refresh_token")
+  );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
-
+  const { setLoading } = useContext(alertContext);
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token");
     if (storedAccessToken) {
@@ -39,6 +44,35 @@ export function AuthProvider({ children }): React.ReactElement {
     }
   }, []);
 
+  useEffect(() => {
+    const isLoginPage = location.pathname.includes("login");
+
+    autoLoginApi()
+      .then((user) => {
+        if (user && user["access_token"]) {
+          user["refresh_token"] = "auto";
+          login(user["access_token"], user["refresh_token"]);
+          setUserData(user);
+          setAutoLogin(true);
+          setLoading(false);
+        }
+      })
+      .catch((error) => {
+        setAutoLogin(false);
+        if (getAuthentication() && !isLoginPage) {
+          getLoggedUser()
+            .then((user) => {
+              setUserData(user);
+              setLoading(false);
+              const isSuperUser = user.is_superuser;
+              setIsAdmin(isSuperUser);
+            })
+            .catch((error) => {});
+        } else {
+          setLoading(false);
+        }
+      });
+  }, []);
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_token");

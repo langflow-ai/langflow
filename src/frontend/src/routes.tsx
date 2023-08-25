@@ -106,9 +106,9 @@ const Router = () => {
         <Route
           path="api-keys"
           element={
-            <ProtectedAdminRoute>
+            <ProtectedRoute>
               <ApiKeysPage />
-            </ProtectedAdminRoute>
+            </ProtectedRoute>
           }
         ></Route>
       </Route>
