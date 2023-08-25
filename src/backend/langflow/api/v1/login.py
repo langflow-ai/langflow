@@ -9,6 +9,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
     create_refresh_token,
     create_user_longterm_token,
+    get_current_active_user,
 )
 
 from langflow.services.utils import get_settings_manager
@@ -49,7 +50,9 @@ async def auto_login(db: Session = Depends(get_session)):
 
 
 @router.post("/refresh")
-async def refresh_token(token: str):
+async def refresh_token(
+    token: str, current_user: Session = Depends(get_current_active_user)
+):
     if token:
         return create_refresh_token(token)
     else:
