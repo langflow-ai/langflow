@@ -187,7 +187,7 @@ class ChatManager:
                 json_payload = await websocket.receive_json()
                 try:
                     payload = orjson.loads(json_payload)
-                except TypeError:
+                except Exception:
                     payload = json_payload
                 if "clear_history" in payload:
                     self.chat_history.history[client_id] = []
