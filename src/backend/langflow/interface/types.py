@@ -103,6 +103,7 @@ def add_new_custom_field(
     # if it is, update the value
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
+    field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
@@ -113,7 +114,9 @@ def add_new_custom_field(
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
-    field_config["is_list"] = is_list or field_config.get("is_list", False)
+    field_config["is_list"] = (
+        is_list or field_config.get("is_list", False) or field_contains_list
+    )
 
     if "name" in field_config:
         warnings.warn(
@@ -175,7 +178,7 @@ def extract_type_from_optional(field_type):
     Returns:
     str: The extracted type, or an empty string if no type was found.
     """
-    match = re.search(r"\[(.*?)\]", field_type)
+    match = re.search(r"\[(.*?)\]$", field_type)
     return match[1] if match else None
 
 
