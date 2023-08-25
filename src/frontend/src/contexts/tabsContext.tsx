@@ -30,6 +30,7 @@ import {
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { typesContext } from "./typesContext";
+import { AxiosError } from "axios";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -68,7 +69,7 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData, setSuccessData  } = useContext(alertContext);
 
   const [tabId, setTabId] = useState("");
 
@@ -579,6 +580,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
+        setSuccessData({ title: "Changes saved successfully" });
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
@@ -601,7 +603,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err as errorsVarType);
+      setErrorData({title: "Error while saving changes",list:[(err as AxiosError).message]});
     }
   }
 

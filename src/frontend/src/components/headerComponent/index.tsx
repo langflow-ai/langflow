@@ -1,9 +1,10 @@
 import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getRepoStars } from "../../controllers/API";
@@ -17,28 +18,47 @@ export default function Header(): JSX.Element {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
+  const { logout, autoLogin, isAdmin, stars } = useContext(AuthContext);
+  const navigate = useNavigate();
 
-  const [stars, setStars] = useState(null);
-
-  // Get and set numbers of stars on header
-  useEffect(() => {
-    async function fetchStars() {
-      const starsCount = await getRepoStars("logspace-ai", "langflow");
-      setStars(starsCount);
-    }
-    fetchStars();
-  }, []);
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <Button variant="outline" className="">
-          Sign out
-        </Button>
+
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
+        )}
+        {location.pathname === "/admin" && (
+          <Button
+            onClick={() => {
+              navigate("/");
+            }}
+            variant="outline"
+            className=""
+          >
+            Main page
+          </Button>
+        )}
+        {autoLogin === false && (
+          <Button
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+            variant="outline"
+            className=""
+          >
+            Sign out
+          </Button>
+        )}
+
+        {isAdmin && !autoLogin && location.pathname !== "/admin" && (
+          <Button variant="outline" onClick={() => navigate("/admin")}>
+            Admin page
+          </Button>
         )}
       </div>
       <div className="round-button-div">
@@ -119,6 +139,18 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
+          {!autoLogin && (
+            <button
+              onClick={() => {
+                navigate("/account/api-keys");
+              }}
+            >
+              <IconComponent
+                name="Key"
+                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+              />
+            </button>
+          )}
         </div>
       </div>
     </div>

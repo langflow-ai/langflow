@@ -1,7 +1,14 @@
 import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
+import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
-import { APIObjectType, sendAllProps } from "../../types/api/index";
+import {
+  APIObjectType,
+  LoginType,
+  Users,
+  sendAllProps,
+} from "../../types/api/index";
+import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import {
   APIClassType,
@@ -346,3 +353,153 @@ export async function postCustomComponent(
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`/api/v1/custom_component`, { code });
 }
+
+export async function onLogin(user: LoginType) {
+  try {
+    const response = await api.post(
+      `${BASE_URL_API}login`,
+      new URLSearchParams({
+        username: user.username,
+        password: user.password,
+      }).toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    if (response.status === 200) {
+      const data = response.data;
+      return data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function autoLogin() {
+  try {
+    const response = await api.get(`${BASE_URL_API}auto_login`);
+
+    if (response.status === 200) {
+      const data = response.data;
+      return data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function renewAccessToken(token: string) {
+  try {
+    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getLoggedUser(): Promise<Users> {
+  try {
+    const res = await api.get(`${BASE_URL_API}user`);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function addUser(user: UserInputType): Promise<Users> {
+  try {
+    const res = await api.post(`${BASE_URL_API}user`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getUsersPage(
+  skip: number,
+  limit: number
+): Promise<[Users]> {
+  try {
+    const res = await api.get(
+      `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function deleteUser(user_id: string) {
+  try {
+    const res = await api.delete(`${BASE_URL_API}user/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function updateUser(user_id: string, user: Users) {
+  try {
+    const res = await api.patch(`${BASE_URL_API}user/${user_id}`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getApiKey(user_id: String) {
+  try {
+    const res = await api.get(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function createApiKey(user_id: string) {
+  try {
+    const res = await api.post(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+
+export async function deleteApiKey(user_id: string) {
+  try {
+    const res = await api.delete(`${BASE_URL_API}api_key/${user_id}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+

@@ -3,6 +3,7 @@ import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { SSEProvider } from "./SSEContext";
 import { AlertProvider } from "./alertContext";
+import { AuthProvider } from "./authContext";
 import { DarkProvider } from "./darkContext";
 import { LocationProvider } from "./locationContext";
 import { TabsProvider } from "./tabsContext";
@@ -13,23 +14,25 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
     <>
-      <TooltipProvider>
-        <ReactFlowProvider>
-          <DarkProvider>
-            <AlertProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <ReactFlowProvider>
+            <DarkProvider>
               <TypesProvider>
                 <LocationProvider>
-                  <SSEProvider>
-                    <TabsProvider>
-                      <UndoRedoProvider>{children}</UndoRedoProvider>
-                    </TabsProvider>
-                  </SSEProvider>
+                  <AlertProvider>
+                    <SSEProvider>
+                      <TabsProvider>
+                        <UndoRedoProvider>{children}</UndoRedoProvider>
+                      </TabsProvider>
+                    </SSEProvider>
+                  </AlertProvider>
                 </LocationProvider>
               </TypesProvider>
-            </AlertProvider>
-          </DarkProvider>
-        </ReactFlowProvider>
-      </TooltipProvider>
+            </DarkProvider>
+          </ReactFlowProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </>
   );
 }
