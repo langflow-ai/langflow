@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -24,6 +24,10 @@ export default function PaginatorComponent({
   );
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    setMaxPageIndex(Math.ceil(totalRowsCount / size));
+  }, [totalRowsCount]);
+  
   return (
     <>
       <div className="flex items-center justify-between px-2">
