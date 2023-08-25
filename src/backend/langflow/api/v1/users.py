@@ -14,15 +14,19 @@ from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.services.utils import get_session
-from langflow.services.auth.utils import get_current_active_user, get_password_hash
+from langflow.services.auth.utils import (
+    get_current_active_superuser,
+    get_current_active_user,
+    get_password_hash,
+)
 from langflow.services.database.models.user.utils import (
     update_user,
 )
 
-router = APIRouter(tags=["Login"])
+router = APIRouter(tags=["Users"])
 
 
-@router.post("/user", response_model=UserRead)
+@router.post("/user", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
     db: Session = Depends(get_session),
@@ -30,7 +34,7 @@ def add_user(
     """
     Add a new user to the database.
     """
-    new_user = User(**user.dict())
+    new_user = User.from_orm(user)
     try:
         new_user.password = get_password_hash(user.password)
 
@@ -45,7 +49,9 @@ def add_user(
 
 
 @router.get("/user", response_model=UserRead)
-def read_current_user(current_user: User = Depends(get_current_active_user)) -> User:
+def read_current_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
     """
     Retrieve the current user's data.
     """
@@ -56,7 +62,7 @@ def read_current_user(current_user: User = Depends(get_current_active_user)) -> 
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_user),
+    current_user: Session = Depends(get_current_active_superuser),
     db: Session = Depends(get_session),
 ) -> UsersResponse:
     """
@@ -90,12 +96,21 @@ def patch_user(
 @router.delete("/user/{user_id}")
 def delete_user(
     user_id: UUID,
-    _: Session = Depends(get_current_active_user),
+    current_user: Session = Depends(get_current_active_superuser),
     db: Session = Depends(get_session),
 ) -> dict:
     """
     Delete a user from the database.
     """
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=400, detail="You can't delete your own user account"
+        )
+    elif not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403, detail="You don't have the permission to delete this user"
+        )
+
     user_db = db.query(User).filter(User.id == user_id).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
