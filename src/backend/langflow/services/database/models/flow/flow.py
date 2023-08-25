@@ -2,9 +2,12 @@
 
 from langflow.services.database.models.base import SQLModelSerializable
 from pydantic import validator
-from sqlmodel import Field, JSON, Column
+from sqlmodel import Field, JSON, Column, Relationship
 from uuid import UUID, uuid4
-from typing import Dict, Optional
+from typing import Dict, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.user import User
 
 
 class FlowBase(SQLModelSerializable):
@@ -31,14 +34,17 @@ class FlowBase(SQLModelSerializable):
 class Flow(FlowBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    user_id: UUID = Field(index=True, foreign_key="user.id")
+    user: "User" = Relationship(back_populates="flows")
 
 
 class FlowCreate(FlowBase):
-    pass
+    user_id: Optional[UUID] = None
 
 
 class FlowRead(FlowBase):
     id: UUID
+    user_id: UUID = Field()
 
 
 class FlowUpdate(SQLModelSerializable):
