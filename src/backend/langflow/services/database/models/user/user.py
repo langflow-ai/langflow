@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key import ApiKey
+    from langflow.services.database.models.flow import Flow
 
 
 class User(SQLModelSerializable, table=True):
@@ -20,6 +21,7 @@ class User(SQLModelSerializable, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field()
     api_keys: list["ApiKey"] = Relationship(back_populates="user")
+    flows: list["Flow"] = Relationship(back_populates="user")
 
 
 class UserCreate(SQLModel):
