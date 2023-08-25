@@ -128,7 +128,7 @@ export default function ApiKeysPage() {
                       <Table className={"table-fixed bg-muted outline-1"}>
                         <TableHeader
                           className={
-                            loadingKeys 
+                            loadingKeys
                               ? "hidden"
                               : "table-fixed bg-muted outline-1"
                           }
@@ -179,7 +179,11 @@ export default function ApiKeysPage() {
                                   <TableCell className="truncate py-2">
                                     {moment(api_keys.last_used_at).format(
                                       "YYYY-MM-DD HH:mm"
-                                    )}
+                                    ) === "Invalid date"
+                                      ? "-"
+                                      : moment(api_keys.last_used_at).format(
+                                          "YYYY-MM-DD HH:mm"
+                                        )}
                                   </TableCell>
                                   <TableCell className="flex w-[100px] py-2 text-right">
                                     <div className="flex">
