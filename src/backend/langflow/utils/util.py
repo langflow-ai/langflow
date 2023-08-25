@@ -2,7 +2,7 @@ import re
 import inspect
 import importlib
 from functools import wraps
-from typing import Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union
 
 from docstring_parser import parse  # type: ignore
 
@@ -10,6 +10,7 @@ from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 from langflow.utils.logger import logger
 from multiprocess import cpu_count  # type: ignore
+from langchain.schema import Document
 
 
 def build_template_from_function(
@@ -462,3 +463,12 @@ def get_number_of_workers(workers=None):
         workers = (cpu_count() * 2) + 1
     logger.debug(f"Number of workers: {workers}")
     return workers
+
+
+def build_loader_repr_from_documents(documents: List[Document]) -> str:
+    if documents:
+        avg_length = sum(len(doc.page_content) for doc in documents) / len(documents)
+        return f"""{len(documents)} documents
+        \nAvg. Document Length (characters): {int(avg_length)}
+        Documents: {documents[:3]}..."""
+    return "0 documents"
