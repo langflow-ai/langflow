@@ -113,16 +113,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
-    getTabsDataFromDB().then((DbData) => {
-      if (DbData && Object.keys(templates).length > 0) {
-        try {
-          processDBData(DbData);
-          updateStateWithDbData(DbData);
-        } catch (e) {
-          console.error(e);
+    setTimeout(() => {
+      getTabsDataFromDB().then((DbData) => {
+        if (DbData && Object.keys(templates).length > 0) {
+          try {
+            processDBData(DbData);
+            updateStateWithDbData(DbData);
+          } catch (e) {
+            console.error(e);
+          }
         }
-      }
-    });
+      });
+    }, 2000);
   }
 
   useEffect(() => {

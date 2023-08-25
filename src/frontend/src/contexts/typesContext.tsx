@@ -39,6 +39,9 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const { setLoading } = useContext(alertContext);
 
   useEffect(() => {
+
+    setTimeout(() => {
+      
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
     let isMounted = true;
 
@@ -85,6 +88,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
 
     getTypes();
+    }, 2000);
+
   }, []);
 
   function deleteNode(idx: string) {
