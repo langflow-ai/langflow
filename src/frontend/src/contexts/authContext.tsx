@@ -47,14 +47,6 @@ export function AuthProvider({ children }): React.ReactElement {
     fetchStars();
   }, []);
 
-  useEffect(() => {
-    if (accessToken) {
-      getLoggedUser().then((user) => {
-        const isSuperUser = user.is_superuser;
-        setIsAdmin(isSuperUser);
-      });
-    }
-  }, [accessToken, isAdmin]);
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_token");

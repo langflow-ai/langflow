@@ -103,9 +103,5 @@ function ApiInterceptor() {
   return null;
 }
 
-// Function to sleep for a given duration in milliseconds
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export { ApiInterceptor, api };
