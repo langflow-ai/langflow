@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import _ from "lodash";
 import {
   ReactNode,
@@ -21,7 +22,7 @@ import {
 import { APIClassType, APITemplateType } from "../types/api";
 import { tweakType } from "../types/components";
 import { FlowType, NodeDataType, NodeType } from "../types/flow";
-import { TabsContextType, TabsState, errorsVarType } from "../types/tabs";
+import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   updateIds,
@@ -29,8 +30,8 @@ import {
 } from "../utils/reactflowUtils";
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
+import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
-import { AxiosError } from "axios";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -69,7 +70,9 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData, setSuccessData  } = useContext(alertContext);
+  const { setErrorData, setNoticeData, setSuccessData } =
+    useContext(alertContext);
+  const { getAuthentication } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
 
@@ -113,7 +116,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
-    setTimeout(() => {
       getTabsDataFromDB().then((DbData) => {
         if (DbData && Object.keys(templates).length > 0) {
           try {
@@ -124,20 +126,22 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           }
         }
       });
-    }, 2000);
   }
 
   useEffect(() => {
-    // get data from db
-    //get tabs locally saved
-    // let tabsData = getLocalStorageTabsData();
-    refreshFlows();
-  }, [templates]);
+    if (getAuthentication() === true) {
+      // get data from db
+      //get tabs locally saved
+      // let tabsData = getLocalStorageTabsData();
+      refreshFlows();
+    }
+  }, [templates, getAuthentication()]);
 
   function getTabsDataFromDB() {
     //get tabs from db
     return readFlowsFromDatabase();
   }
+
   function processDBData(DbData: FlowType[]) {
     DbData.forEach((flow: FlowType) => {
       try {
@@ -605,7 +609,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData({title: "Error while saving changes",list:[(err as AxiosError).message]});
+      setErrorData({
+        title: "Error while saving changes",
+        list: [(err as AxiosError).message],
+      });
     }
   }
 

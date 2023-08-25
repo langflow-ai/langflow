@@ -24,13 +24,13 @@ const initialValue: AuthContextType = {
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const cookies = new Cookies();
+  const [accessToken, setAccessToken] = useState<string | null>(cookies.get("access_token"));
+  const [refreshToken, setRefreshToken] = useState<string | null>(cookies.get("refresh_token"));
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
-  const cookies = new Cookies();
 
   useEffect(() => {
     const storedAccessToken = cookies.get("access_token");
