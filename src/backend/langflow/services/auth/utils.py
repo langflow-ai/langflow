@@ -1,28 +1,30 @@
-from uuid import UUID
-from typing import Annotated
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, status
 from datetime import datetime, timedelta, timezone
-
-from langflow.services.utils import get_settings_manager, get_session
-
-from langflow.database.models.user import (
-    User,
+from fastapi import Depends, HTTPException, Request, status
+from jose import JWTError, jwt
+from typing import Annotated, Coroutine
+from uuid import UUID
+from langflow.services.auth.service import AuthManager
+from langflow.services.database.models.user.user import User
+from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
     update_user_last_login_at,
 )
+from langflow.services.utils import get_session, get_settings_manager
+from sqlmodel import Session
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+def auth_scheme_dependency(request: Request):
+    settings_manager = (
+        get_settings_manager()
+    )  # Assuming get_settings_manager is defined
+
+    return AuthManager(settings_manager).run_oauth2_scheme(request)
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_session)
+    token: Annotated[str, Depends(auth_scheme_dependency)],
+    db: Session = Depends(get_session),
 ) -> User:
     settings_manager = get_settings_manager()
 
@@ -32,11 +34,14 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    if isinstance(token, Coroutine):
+        token = await token
+
     try:
         payload = jwt.decode(
             token,
-            settings_manager.settings.SECRET_KEY,
-            algorithms=[settings_manager.settings.ALGORITHM],
+            settings_manager.auth_settings.SECRET_KEY,
+            algorithms=[settings_manager.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
@@ -47,25 +52,39 @@ async def get_current_user(
         raise credentials_exception from e
 
     user = get_user_by_id(db, user_id)  # type: ignore
-    if user is None:
+    if user is None or not user.is_active:
         raise credentials_exception
     return user
 
 
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
-):
+def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
+def get_current_active_superuser(
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    if not current_user.is_active:
+        raise HTTPException(status_code=401, detail="Inactive user")
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=400, detail="The user doesn't have enough privileges"
+        )
+    return current_user
+
+
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    settings_manager = get_settings_manager()
+    return settings_manager.auth_settings.pwd_context.verify(
+        plain_password, hashed_password
+    )
 
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    settings_manager = get_settings_manager()
+    return settings_manager.auth_settings.pwd_context.hash(password)
 
 
 def create_token(data: dict, expires_delta: timedelta):
@@ -77,21 +96,23 @@ def create_token(data: dict, expires_delta: timedelta):
 
     return jwt.encode(
         to_encode,
-        settings_manager.settings.SECRET_KEY,
-        algorithm=settings_manager.settings.ALGORITHM,
+        settings_manager.auth_settings.SECRET_KEY,
+        algorithm=settings_manager.auth_settings.ALGORITHM,
     )
 
 
 def create_super_user(db: Session = Depends(get_session)) -> User:
     settings_manager = get_settings_manager()
 
-    super_user = get_user_by_username(db, settings_manager.settings.FIRST_SUPERUSER)
+    super_user = get_user_by_username(
+        db, settings_manager.auth_settings.FIRST_SUPERUSER
+    )
 
     if not super_user:
         super_user = User(
-            username=settings_manager.settings.FIRST_SUPERUSER,
+            username=settings_manager.auth_settings.FIRST_SUPERUSER,
             password=get_password_hash(
-                settings_manager.settings.FIRST_SUPERUSER_PASSWORD
+                settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
             ),
             is_superuser=True,
             is_active=True,
@@ -147,7 +168,7 @@ def create_user_tokens(
     settings_manager = get_settings_manager()
 
     access_token_expires = timedelta(
-        minutes=settings_manager.settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings_manager.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token = create_token(
         data={"sub": str(user_id)},
@@ -155,7 +176,7 @@ def create_user_tokens(
     )
 
     refresh_token_expires = timedelta(
-        minutes=settings_manager.settings.REFRESH_TOKEN_EXPIRE_MINUTES
+        minutes=settings_manager.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
@@ -179,8 +200,8 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
     try:
         payload = jwt.decode(
             refresh_token,
-            settings_manager.settings.SECRET_KEY,
-            algorithms=[settings_manager.settings.ALGORITHM],
+            settings_manager.auth_settings.SECRET_KEY,
+            algorithms=[settings_manager.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
