@@ -10,6 +10,7 @@ import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
 import { BrowserRouter } from "react-router-dom";
+import { ApiInterceptor } from "../controllers/API/api";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -23,6 +24,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
               <TypesProvider>
                 <LocationProvider>
                   <AlertProvider>
+                  <ApiInterceptor />
                     <SSEProvider>
                       <TabsProvider>
                         <UndoRedoProvider>{children}</UndoRedoProvider>
