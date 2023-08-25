@@ -106,7 +106,7 @@ export default function ApiKeysPage() {
                 {keysList.current.length === 0 && !loadingKeys && (
                   <>
                     <div className="flex items-center justify-between">
-                      <h2>There's no users registered :)</h2>
+                      <h2>This user does not have any keys assigned at the moment.</h2>
                     </div>
                   </>
                 )}
