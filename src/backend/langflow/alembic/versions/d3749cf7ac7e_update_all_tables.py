@@ -39,7 +39,6 @@ def upgrade() -> None:
         op.add_column(
             "flow", sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False)
         )
-    with contextlib.suppress(sa.exc.OperationalError):
         op.create_index(op.f("ix_flow_user_id"), "flow", ["user_id"], unique=False)
         op.create_foreign_key(None, "flow", "user", ["user_id"], ["id"])
     # ### end Alembic commands ###
