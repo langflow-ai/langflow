@@ -26,6 +26,7 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
+import { AuthContext } from "../../contexts/authContext";
 
 export default function FormModal({
   flow,
@@ -60,6 +61,7 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
+  const {accessToken} = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
@@ -160,7 +162,7 @@ export default function FormModal({
       }, 1000);
     }
   }
-
+  //TODO improve check of user authentication 
   function getWebSocketUrl(
     chatId: string,
     isDevelopment: boolean = false
@@ -173,7 +175,7 @@ export default function FormModal({
 
     return `${
       isDevelopment ? "ws" : webSocketProtocol
-    }://${host}${chatEndpoint}`;
+    }://${host}${chatEndpoint}?token=${accessToken}`;
   }
 
   function handleWsMessage(data: any) {

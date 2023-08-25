@@ -36,7 +36,7 @@ export default function ApiKeysPage() {
   function getKeys() {
     setLoadingKeys(true);
     if (userData) {
-      getApiKey(userData.id)
+      getApiKey()
         .then((keys: [ApiKey]) => {
           keysList.current = keys["api_keys"];
           setUserId(keys["user_id"]);
@@ -196,6 +196,7 @@ export default function ApiKeysPage() {
                                       data={api_keys.id}
                                       index={index}
                                       onConfirm={(index, keys) => {
+                                        console.log(keys);
                                         handleDeleteKey(keys);
                                       }}
                                     >
