@@ -40,7 +40,7 @@ def create_api_key(user_id: str):
     return {
         "user_id": user_id,
         "name": "my api-key 01",
-        "api_key": "lf-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YTBmODM1ZS0yMTQxLTQ2YWItYmQ4NS0yMWEzMjQ1MTE2ZDAiLCJleHAiOjE2OTIyMTUwMTN9.c_s0ZPRtjSI9yUrhi8ACIwyXf0feRLYfaeIZEbRVKQg",
+        "api_key": "lf-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YTBmODM1ZS0yMTQxLTQ2YWItYmQ4NS0yMWEzMjQ1MTE2ZDAiLCJleHAiOjE2OTIyMTUwMTN9.c_s0ZPRtjSI9yUrhi8ACIwyXf0feRLYfaeIZEbRVKQg",  # noqa
     }
 
 
