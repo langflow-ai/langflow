@@ -27,6 +27,9 @@ def upgrade() -> None:
         op.create_table(
             "apikey",
             sa.Column("api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column(
+                "hashed_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False
+            ),
             sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("create_at", sa.DateTime(), nullable=False),
             sa.Column("last_used_at", sa.DateTime(), nullable=True),
