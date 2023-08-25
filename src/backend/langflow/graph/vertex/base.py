@@ -138,7 +138,7 @@ class Vertex:
         Initiate the build process.
         """
         logger.debug(f"Building {self.vertex_type}")
-        self._build_each_node_in_params_dict(user_id)
+        self._build_each_node_in_params_dict()
         self._get_and_instantiate_class(user_id)
         self._validate_built_object()
 
