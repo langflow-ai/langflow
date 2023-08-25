@@ -100,6 +100,7 @@ types-appdirs = "^1.4.3.5"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
+pytest-mock = "^3.11.1"
 
 
 [tool.poetry.extras]
