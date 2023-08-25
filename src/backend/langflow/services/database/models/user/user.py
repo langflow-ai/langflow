@@ -1,10 +1,13 @@
 from langflow.services.database.models.base import SQLModel, SQLModelSerializable
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.api_key import ApiKey
 
 
 class User(SQLModelSerializable, table=True):
@@ -16,6 +19,7 @@ class User(SQLModelSerializable, table=True):
     create_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field()
+    api_keys: list["ApiKey"] = Relationship(back_populates="user")
 
 
 class UserCreate(SQLModel):
