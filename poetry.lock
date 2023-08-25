@@ -4195,7 +4195,7 @@ files = [
 name = "pillow"
 version = "10.0.0"
 description = "Python Imaging Library (Fork)"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "Pillow-10.0.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:1f62406a884ae75fb2f818694469519fb685cc7eaff05d3451a9ebe55c646891"},
@@ -7467,4 +7467,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "1effd07e35ba89cc3971f027218032e24e7816d93bccb7fd6470cc56acc04418"
+content-hash = "36e1f79f4e6d2e55b652d10e43ccde639714ffff2965fa52b466bd854259ebf6"
