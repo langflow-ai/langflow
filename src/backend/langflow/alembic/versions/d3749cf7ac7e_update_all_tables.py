@@ -27,19 +27,21 @@ def upgrade() -> None:
         op.add_column(
             "apikey", sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False)
         )
+        op.create_index(op.f("ix_apikey_user_id"), "apikey", ["user_id"], unique=False)
+        op.create_foreign_key(None, "apikey", "user", ["user_id"], ["id"])
     with contextlib.suppress(sa.exc.OperationalError):
         op.alter_column("apikey", "name", existing_type=sa.VARCHAR(), nullable=True)
-    with contextlib.suppress(sa.exc.OperationalError):
         op.create_index(op.f("ix_apikey_name"), "apikey", ["name"], unique=False)
-    op.create_index(op.f("ix_apikey_user_id"), "apikey", ["user_id"], unique=False)
-    op.create_foreign_key(None, "apikey", "user", ["user_id"], ["id"])
+
     with contextlib.suppress(sa.exc.OperationalError):
         op.drop_column("apikey", "create_at")
-    op.add_column(
-        "flow", sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False)
-    )
-    op.create_index(op.f("ix_flow_user_id"), "flow", ["user_id"], unique=False)
-    op.create_foreign_key(None, "flow", "user", ["user_id"], ["id"])
+    with contextlib.suppress(sa.exc.OperationalError):
+        op.add_column(
+            "flow", sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False)
+        )
+    with contextlib.suppress(sa.exc.OperationalError):
+        op.create_index(op.f("ix_flow_user_id"), "flow", ["user_id"], unique=False)
+        op.create_foreign_key(None, "flow", "user", ["user_id"], ["id"])
     # ### end Alembic commands ###
 
 
