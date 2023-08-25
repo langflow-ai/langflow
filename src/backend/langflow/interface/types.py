@@ -5,6 +5,7 @@ from langflow.api.utils import merge_nested_dicts_with_renaming
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
@@ -84,6 +85,8 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 
 
 def process_type(field_type: str):
+    if field_type.startswith("list") or field_type.startswith("List"):
+        return extract_inner_type(field_type)
     return "prompt" if field_type == "Prompt" else field_type
 
 
