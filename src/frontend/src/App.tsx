@@ -9,12 +9,18 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
+import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
+import {
+  FETCH_ERROR_DESCRIPION,
+  FETCH_ERROR_MESSAGE,
+} from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
 import { autoLogin, getLoggedUser } from "./controllers/API";
+import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
 export default function App() {
@@ -43,6 +49,7 @@ export default function App() {
     setLoading
   } = useContext(alertContext);
   const navigate = useNavigate();
+  const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -134,7 +141,7 @@ export default function App() {
   };
 
   //this function is to get the user logged in when the page is refreshed
-  const { setUserData, getAuthentication, login, setAutoLogin, logout } =
+  const { setUserData, getAuthentication, login, setAutoLogin, logout, setIsAdmin } =
     useContext(AuthContext);
 
   useEffect(() => {
@@ -154,6 +161,8 @@ export default function App() {
             .then((user) => {
               setUserData(user);
               setLoading(false);
+              const isSuperUser = user.is_superuser;
+              setIsAdmin(isSuperUser);
             })
             .catch((error) => {});
         }
@@ -178,7 +187,14 @@ export default function App() {
       >
         {loading ? (
           <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
+            {fetchError ? (
+              <FetchErrorComponent
+                description={FETCH_ERROR_DESCRIPION}
+                message={FETCH_ERROR_MESSAGE}
+              ></FetchErrorComponent>
+            ) : (
+              <LoadingComponent remSize={50} />
+            )}
           </div>
         ) : (
           <>

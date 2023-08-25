@@ -1,9 +1,11 @@
 from http import HTTPStatus
 from typing import Annotated, Optional, Union
+from langflow.services.auth.utils import get_current_active_user
 
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.database.models.user.user import User
 from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
@@ -33,7 +35,7 @@ router = APIRouter(tags=["Base"])
 
 
 @router.get("/all")
-def get_all():
+def get_all(current_user: User = Depends(get_current_active_user)):
     logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
@@ -59,11 +61,12 @@ def get_all():
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
             # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
             category = list(custom_component_dict.keys())[0]
             logger.info(
                 f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
             )
-            logger.debug(custom_component_dict)
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )

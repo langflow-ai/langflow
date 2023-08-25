@@ -62,6 +62,7 @@ import {
   TerminalSquare,
   Trash2,
   Undo,
+  Unplug,
   Upload,
   UserCog2,
   UserMinus2,
@@ -297,5 +298,6 @@ export const nodeIconsLucide: iconsType = {
   EyeOff,
   Eye,
   UserCog2,
-  Key
+  Key,
+  Unplug,
 };
