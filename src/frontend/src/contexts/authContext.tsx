@@ -19,8 +19,6 @@ const initialValue: AuthContextType = {
   authenticationErrorCount: 0,
   autoLogin: false,
   setAutoLogin: () => {},
-  stars: 0,
-  setStars: (stars) => 0,
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -32,7 +30,6 @@ export function AuthProvider({ children }): React.ReactElement {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
-  const [stars, setStars] = useState<number>(0);
   const cookies = new Cookies();
 
   useEffect(() => {
@@ -40,11 +37,6 @@ export function AuthProvider({ children }): React.ReactElement {
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
-    async function fetchStars() {
-      const starsCount = await getRepoStars("logspace-ai", "langflow");
-      setStars(starsCount);
-    }
-    fetchStars();
   }, []);
 
 
@@ -100,8 +92,6 @@ export function AuthProvider({ children }): React.ReactElement {
     // !! to convert string to boolean
     <AuthContext.Provider
       value={{
-        stars,
-        setStars,
         isAdmin,
         setIsAdmin,
         isAuthenticated: !!accessToken,
