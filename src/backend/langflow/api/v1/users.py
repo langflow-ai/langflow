@@ -19,7 +19,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
     get_password_hash,
 )
-from langflow.services.database.models.user.utils import (
+from langflow.services.database.models.user.crud import (
     update_user,
 )
 

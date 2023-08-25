@@ -5,7 +5,7 @@ from typing import Annotated, Coroutine
 from uuid import UUID
 from langflow.services.auth.service import AuthManager
 from langflow.services.database.models.user.user import User
-from langflow.services.database.models.user.utils import (
+from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
     update_user_last_login_at,

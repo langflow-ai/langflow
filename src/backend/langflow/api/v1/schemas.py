@@ -1,7 +1,8 @@
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from langflow.services.database.models.api_key import ApiKeyRead
+from uuid import UUID
+from langflow.services.database.models.api_key.api_key import ApiKeyRead
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from pydantic import BaseModel, Field, validator
@@ -138,12 +139,24 @@ class ComponentListRead(BaseModel):
     flows: List[FlowRead]
 
 
-class ApiKeyResponse(BaseModel):
-    total_count: int
-    user_id: str
-    api_keys: List[ApiKeyRead]
-
-
 class UsersResponse(BaseModel):
     total_count: int
     users: List[UserRead]
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    api_key: str
+    name: str
+    created_at: str
+    last_used_at: str
+
+
+class ApiKeysResponse(BaseModel):
+    total_count: int
+    user_id: UUID
+    api_keys: List[ApiKeyRead]
+
+
+class CreateApiKeyRequest(BaseModel):
+    name: str
