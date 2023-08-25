@@ -96,7 +96,7 @@ def patch_user(
 @router.delete("/user/{user_id}")
 def delete_user(
     user_id: UUID,
-    current_user: Session = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_session),
 ) -> dict:
     """

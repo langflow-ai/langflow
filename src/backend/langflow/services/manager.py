@@ -1,5 +1,5 @@
 from langflow.services.schema import ServiceType
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from langflow.services.factory import ServiceFactory
@@ -16,7 +16,9 @@ class ServiceManager:
         self.dependencies = {}
 
     def register_factory(
-        self, service_factory: "ServiceFactory", dependencies: List[ServiceType] = None
+        self,
+        service_factory: "ServiceFactory",
+        dependencies: Optional[List[ServiceType]] = None,
     ):
         """
         Registers a new factory with dependencies.

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
-from typing import Annotated
+from typing import Annotated, Coroutine
 from uuid import UUID
 from langflow.services.auth.service import AuthManager
 from langflow.services.database.models.user.user import User
@@ -11,7 +11,7 @@ from langflow.services.database.models.user.utils import (
     update_user_last_login_at,
 )
 from langflow.services.utils import get_session, get_settings_manager
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
 
 def auth_scheme_dependency(request: Request):
@@ -33,9 +33,13 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if isinstance(token, Coroutine):
+        token = await token
+
     try:
         payload = jwt.decode(
-            await token,
+            token,
             settings_manager.auth_settings.SECRET_KEY,
             algorithms=[settings_manager.auth_settings.ALGORITHM],
         )

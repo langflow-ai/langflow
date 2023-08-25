@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Union
 from uuid import UUID
 from fastapi import Depends, HTTPException
 from langflow.services.database.models.user.user import User, UserUpdate
@@ -10,11 +11,11 @@ from sqlmodel import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 
-def get_user_by_username(db: Session, username: str) -> User:
+def get_user_by_username(db: Session, username: str) -> Union[User, None]:
     return db.query(User).filter(User.username == username).first()
 
 
-def get_user_by_id(db: Session, id: UUID) -> User:
+def get_user_by_id(db: Session, id: UUID) -> Union[User, None]:
     return db.query(User).filter(User.id == id).first()
 
 
