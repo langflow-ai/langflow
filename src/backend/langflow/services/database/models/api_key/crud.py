@@ -11,14 +11,14 @@ from langflow.services.database.models.api_key import (
 )
 
 
-def get_api_keys(session: Session, user_id: str) -> List[UnmaskedApiKeyRead]:
+def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
     query = select(ApiKey).where(ApiKey.user_id == user_id)
     api_keys = session.exec(query).all()
     return [ApiKeyRead.from_orm(api_key) for api_key in api_keys]
 
 
 def create_api_key(
-    session: Session, api_key_create: ApiKeyCreate, user_id: str
+    session: Session, api_key_create: ApiKeyCreate, user_id: UUID
 ) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = secrets.token_urlsafe(32)
@@ -26,7 +26,8 @@ def create_api_key(
     # hash the API key
     hashed_api_key = get_password_hash(generated_api_key)
     # Use the generated key to create the ApiKey object
-    api_key = ApiKey(api_key=hashed_api_key, **api_key_create.dict(), user_id=user_id)
+
+    api_key = ApiKey(api_key=hashed_api_key, name=api_key_create.name, user_id=user_id)
 
     session.add(api_key)
     session.commit()
