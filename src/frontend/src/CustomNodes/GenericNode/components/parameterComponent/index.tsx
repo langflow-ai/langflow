@@ -31,6 +31,7 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
+import KeypairListComponent from "../../../../components/keypairListComponent";
 
 export default function ParameterComponent({
   left,
@@ -92,6 +93,22 @@ export default function ParameterComponent({
     });
     renderTooltips();
   };
+
+  const [arrayOfObjects, setArrayOfObjects] = useState([
+    { key1: "value1", key2: "value2" },
+    { key3: "value3", key4: "value4" },
+    { key5: "value5", key6: "value6" },
+  ])
+
+
+  const handleOnNewValueTest = (newValue): void => {
+    let newData = cloneDeep(arrayOfObjects);
+    newData = newValue;
+    setArrayOfObjects(newData);
+  };
+
+
+
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -341,7 +358,19 @@ export default function ParameterComponent({
               onChange={handleOnNewValue}
             />
           </div>
-        ) : (
+        )
+        : left === true && type === "keypair" ? (
+          <div className="mt-2 w-full">
+          <KeypairListComponent
+          disabled={disabled}
+          value={
+            arrayOfObjects
+          }
+          onChange={handleOnNewValueTest}
+        />
+          </div>
+        )
+        : (
           <></>
         )}
       </>
