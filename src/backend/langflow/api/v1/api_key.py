@@ -1,7 +1,11 @@
+from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends
-from langflow.api.v1.schemas import ApiKeysResponse, CreateApiKeyRequest
+from langflow.api.v1.schemas import ApiKeysResponse
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.api_key.api_key import UnmaskedApiKeyRead
+from langflow.services.database.models.api_key.api_key import (
+    ApiKeyCreate,
+    UnmaskedApiKeyRead,
+)
 
 # Assuming you have these methods in your service layer
 from langflow.services.database.models.api_key.crud import (
@@ -26,15 +30,14 @@ def get_api_keys_route(
         user_id = current_user.id
         keys = get_api_keys(db, user_id)
 
-        result = {"total_count": len(keys), "user_id": user_id, "api_keys": keys}
-        return ApiKeysResponse(**result)
+        return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/api_key", response_model=UnmaskedApiKeyRead)
 def create_api_key_route(
-    req: CreateApiKeyRequest,
+    req: ApiKeyCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ):
@@ -47,7 +50,7 @@ def create_api_key_route(
 
 @router.delete("/api_key/{api_key_id}")
 def delete_api_key_route(
-    api_key_id: str,
+    api_key_id: UUID,
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ):
