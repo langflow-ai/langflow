@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from typing import Annotated
 from uuid import UUID
@@ -14,12 +14,12 @@ from langflow.services.utils import get_session, get_settings_manager
 from sqlalchemy.orm import Session
 
 
-def auth_scheme_dependency(*args, **kwargs):
+def auth_scheme_dependency(request: Request):
     settings_manager = (
         get_settings_manager()
     )  # Assuming get_settings_manager is defined
 
-    return AuthManager(settings_manager).run_oauth2_scheme(*args, **kwargs)
+    return AuthManager(settings_manager).run_oauth2_scheme(request)
 
 
 async def get_current_user(
@@ -35,7 +35,7 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(
-            token,
+            await token,
             settings_manager.auth_settings.SECRET_KEY,
             algorithms=[settings_manager.auth_settings.ALGORITHM],
         )
@@ -48,16 +48,26 @@ async def get_current_user(
         raise credentials_exception from e
 
     user = get_user_by_id(db, user_id)  # type: ignore
-    if user is None:
+    if user is None or not user.is_active:
         raise credentials_exception
     return user
 
 
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
-):
+def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+def get_current_active_superuser(
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    if not current_user.is_active:
+        raise HTTPException(status_code=401, detail="Inactive user")
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=400, detail="The user doesn't have enough privileges"
+        )
     return current_user
 
 
