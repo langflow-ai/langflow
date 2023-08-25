@@ -58,4 +58,4 @@ def delete_api_key_route(
         delete_api_key(db, api_key_id)
         return {"detail": "API Key deleted"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
