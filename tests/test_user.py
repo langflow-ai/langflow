@@ -4,42 +4,7 @@ from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user.user import User
 from langflow.services.utils import get_settings_manager
 import pytest
-from langflow.services.database.models.user import UserCreate, UserUpdate
-
-
-@pytest.fixture
-def test_user(client):
-    user_data = UserCreate(
-        username="testuser",
-        password="testpassword",
-    )
-    response = client.post("/api/v1/user", json=user_data.dict())
-    return response.json()
-
-
-@pytest.fixture(scope="function")
-def active_user(session):
-    user = User(
-        username="activeuser",
-        password=get_password_hash(
-            "testpassword"
-        ),  # Assuming password needs to be hashed
-        is_active=True,
-        is_superuser=False,
-    )
-    session.add(user)
-    session.commit()
-    return user
-
-
-@pytest.fixture
-def logged_in_headers(client, active_user):
-    login_data = {"username": active_user.username, "password": "testpassword"}
-    response = client.post("/api/v1/login", data=login_data)
-    assert response.status_code == 200
-    tokens = response.json()
-    a_token = tokens["access_token"]
-    return {"Authorization": f"Bearer {a_token}"}
+from langflow.services.database.models.user import UserUpdate
 
 
 @pytest.fixture
