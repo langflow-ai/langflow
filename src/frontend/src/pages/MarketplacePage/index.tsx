@@ -2,13 +2,12 @@ import { useState } from "react";
 
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
-import tinycolor from "tinycolor2";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { MarketCardComponent } from "../../components/marketCardComponent";
 import { Badge } from "../../components/ui/badge";
-import { nodeColors, nodeNames } from "../../utils/styleUtils";
+import { classNames } from "../../utils/utils";
 import data from "./data.json";
 
 export default function MarketplacePage() {
@@ -65,7 +64,7 @@ export default function MarketplacePage() {
             </div>
           </div>
           <div className="flex items-center justify-center gap-4">
-            {Array.from(new Set(searchData.map((i) => i.category))).map(
+            {Array.from(new Set(searchData.map((i) => i.type))).map(
               (i, idx) => (
                 <Badge
                   onClick={() => {
@@ -81,20 +80,17 @@ export default function MarketplacePage() {
                           return newFilteredCategories;
                         });
                   }}
+                  variant="gray"
                   size="md"
-                  variant="inherit"
-                  className="cursor-pointer"
-                  style={{
-                    color: filteredCategories.has(i)
-                      ? tinycolor(nodeColors[i]).lighten(50).toString()
-                      : tinycolor(nodeColors[i]).darken(20).toString(),
-                    backgroundColor: !filteredCategories.has(i)
-                      ? tinycolor(nodeColors[i]).lighten(38).toString()
-                      : nodeColors[i],
-                  }}
+                  className={classNames(
+                    "cursor-pointer border-none",
+                    filteredCategories.has(i)
+                      ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                      : ""
+                  )}
                 >
                   <IconComponent name={i} className="mr-1.5 w-4" />
-                  {nodeNames[i]}
+                  {i}
                 </Badge>
               )
             )}
@@ -104,7 +100,7 @@ export default function MarketplacePage() {
               .filter(
                 (f) =>
                   Array.from(filteredCategories).length === 0 ||
-                  filteredCategories.has(f.category)
+                  filteredCategories.has(f.type)
               )
               .map((item, idx) => (
                 <MarketCardComponent key={idx} data={item} onAdd={() => {}} />

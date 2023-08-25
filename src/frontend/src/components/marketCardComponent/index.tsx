@@ -21,13 +21,14 @@ export const MarketCardComponent = ({
     name: string;
     description: string;
     id: string;
-    creator: string;
-    creatorId: string;
-    creatorImageUrl: string;
     imageUrl: string;
-    tags: string[];
-    category: string;
-    usesNumber: string;
+    creator: {
+      name: string;
+      id: string;
+      imageUrl: string;
+    };
+    categories: string[];
+    type: string;
     downloads: string;
     isFree: boolean;
   };
@@ -70,18 +71,17 @@ export const MarketCardComponent = ({
             <CardTitle className="card-component-title-display text-xl">
               <span className="card-component-title-size flex items-center gap-2">
                 {data.name}{" "}
-                <IconComponent name={data.category} className="h-5 w-5" />
+                {data.categories.map((category) => (
+                  <IconComponent name={category} className="h-5 w-5" />
+                ))}
               </span>
             </CardTitle>
-            <span className="text-xs">
-              by
-              <span className="ml-1.5 inline-flex items-center text-sm">
-                {data.creator}
-                <img
-                  className="ml-1 h-4 w-4 rounded-full"
-                  src={data.creatorImageUrl}
-                />
-              </span>
+            <span className="inline-flex items-center text-sm">
+              <img
+                className="mr-2 h-4 w-4 rounded-full"
+                src={data.creator.imageUrl}
+              />
+              {data.creator.name}
             </span>
           </div>
           <CardDescription className="card-component-desc">

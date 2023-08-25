@@ -27,9 +27,11 @@ import {
   Gift,
   GitFork,
   GithubIcon,
+  GroupIcon,
   Hammer,
   HelpCircle,
   Home,
+  InfinityIcon,
   Info,
   Laptop2,
   Layers,
@@ -61,6 +63,7 @@ import {
   Users2,
   Variable,
   Wand2,
+  WorkflowIcon,
   Wrench,
   X,
   XCircle,
@@ -205,6 +208,9 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide = {
+  Component: InfinityIcon,
+  Bundle: GroupIcon,
+  Flow: WorkflowIcon,
   Store: StoreIcon,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
