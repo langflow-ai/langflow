@@ -45,7 +45,7 @@ async def async_client() -> AsyncGenerator:
 
 
 # Create client fixture for FastAPI
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def client():
     from langflow.main import create_app
 
