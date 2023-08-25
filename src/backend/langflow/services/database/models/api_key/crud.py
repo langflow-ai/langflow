@@ -37,7 +37,9 @@ def create_api_key(
     session.add(api_key)
     session.commit()
     session.refresh(api_key)
-    return UnmaskedApiKeyRead.from_orm(api_key)
+    unmasked = UnmaskedApiKeyRead.from_orm(api_key)
+    unmasked.api_key = generated_api_key
+    return unmasked
 
 
 def delete_api_key(session: Session, api_key_id: UUID) -> None:
