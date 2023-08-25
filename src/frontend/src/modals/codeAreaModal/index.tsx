@@ -40,7 +40,6 @@ export default function CodeAreaModal({
     if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
-    if (!isTweakPage) processCode();
   }, []);
 
   function processNonDynamicField() {
