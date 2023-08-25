@@ -72,7 +72,7 @@ export default function SecretKeyModal({
   };
 
   function handleAddNewKey() {
-    createApiKey(data)
+    createApiKey(apiKeyName)
       .then((res) => {
         setApiKeyValue(res["api_key"]);
       })
