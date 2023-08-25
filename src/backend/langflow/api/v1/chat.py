@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
     WebSocket,
     WebSocketException,
     status,
@@ -12,9 +13,11 @@ from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, St
 
 from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.utils import get_session
 from langflow.utils.logger import logger
 from cachetools import LRUCache
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -23,10 +26,16 @@ flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 @router.websocket("/chat/{client_id}")
 async def chat(
-    client_id: str, websocket: WebSocket, current_user=Depends(get_current_active_user)
+    client_id: str,
+    websocket: WebSocket,
+    token: str = Query(...),
+    db: Session = Depends(get_session),
 ):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user(token, db)
+        if not user.is_active:
+            raise HTTPException(status_code=401, detail="Invalid token")
         chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
