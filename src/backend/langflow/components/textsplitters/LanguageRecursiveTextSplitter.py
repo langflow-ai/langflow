@@ -8,7 +8,7 @@ from langflow.utils.util import build_loader_repr_from_documents
 class LanguageRecursiveTextSplitterComponent(CustomComponent):
     display_name: str = "Language Recursive Text Splitter"
     description: str = "Split text into chunks of a specified length based on language."
-    documentation: str = "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    documentation: str = "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
 
     def build_config(self):
         options = [x.value for x in Language]
@@ -46,11 +46,11 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: Document,
+        documents: list[Document],
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
         separator_type: Optional[str] = "Python",
-    ) -> Document:
+    ) -> list[Document]:
         """
         Split text into chunks of a specified length.
 
@@ -66,14 +66,11 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
         from langchain.text_splitter import RecursiveCharacterTextSplitter
 
         # Make sure chunk_size and chunk_overlap are ints
-        try:
+        if isinstance(chunk_size, str):
             chunk_size = int(chunk_size)
+        if isinstance(chunk_overlap, str):
             chunk_overlap = int(chunk_overlap)
-        except Exception as e:
-            raise ValueError(
-                "chunk_size and chunk_overlap must be integers."
-                " Received chunk_size={chunk_size} and chunk_overlap={chunk_overlap}."
-            ) from e
+
         splitter = RecursiveCharacterTextSplitter.from_language(
             language=Language(separator_type),
             chunk_size=chunk_size,
