@@ -508,6 +508,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/validate/code",
   "/api/v1/custom_component",
   "/api/v1/validate/prompt",
+  "http://localhost:7860/login",
 ];
 
 export const skipNodeUpdate = ["CustomComponent"];
@@ -522,6 +523,18 @@ export const CONTROL_LOGIN_STATE = {
   username: "",
   password: "",
 };
+
+export const CONTROL_NEW_USER = {
+  username: "",
+  password: "",
+  is_active: false,
+  is_superuser: false,
+};
+
+export const CONTROL_NEW_API_KEY = {
+  apikeyname: "",
+};
+
 export const tabsCode = [];
 
 export function tabsArray(codes: string[], method: number) {
@@ -602,3 +615,11 @@ export function tabsArray(codes: string[], method: number) {
     },
   ];
 }
+export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
+export const FETCH_ERROR_DESCRIPION =
+  "Check if everything is working properly and try again.";
+
+export const BASE_URL_API = "http://localhost:7860/";
+
+export const SIGN_UP_SUCCESS =
+  "Account created! Await admin activation. ";

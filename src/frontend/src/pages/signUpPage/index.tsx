@@ -1,11 +1,17 @@
 import * as Form from "@radix-ui/react-form";
-import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { FormEvent, useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { CONTROL_INPUT_STATE } from "../../constants/constants";
 import {
+  CONTROL_INPUT_STATE,
+  SIGN_UP_SUCCESS,
+} from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
+import { addUser } from "../../controllers/API";
+import {
+  UserInputType,
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
@@ -15,12 +21,42 @@ export default function SignUp(): JSX.Element {
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
   const { password, cnfPassword, username } = inputState;
+  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const navigate = useNavigate();
 
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
+
+  function handleSignup(): void {
+    const { username, password } = inputState;
+    const newUser: UserInputType = {
+      username,
+      password,
+    };
+    addUser(newUser)
+      .then((user) => {
+        setSuccessData({
+          title: SIGN_UP_SUCCESS,
+        });
+        navigate("/login");
+      })
+      .catch((error) => {
+        const {
+          response: {
+            data: { detail },
+          },
+        } = error;
+        setErrorData({
+          title: "Error signing up",
+          list: [detail[0].msg],
+        });
+        return;
+      });
+  }
+
   return (
     <Form.Root
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
@@ -120,7 +156,14 @@ export default function SignUp(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full">Sign up</Button>
+              <Button
+                className="mr-3 mt-6 w-full"
+                onClick={() => {
+                  handleSignup();
+                }}
+              >
+                Sign up
+              </Button>
             </Form.Submit>
           </div>
           <div className="w-full">

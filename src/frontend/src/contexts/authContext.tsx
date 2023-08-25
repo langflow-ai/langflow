@@ -1,44 +1,87 @@
 import { createContext, useEffect, useState } from "react";
-import { AuthContextType, userData } from "../types/contexts/auth";
+import Cookies from "universal-cookie";
+import { getLoggedUser, getRepoStars } from "../controllers/API";
+import { Users } from "../types/api";
+import { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
+  isAdmin: false,
+  setIsAdmin: () => false,
   isAuthenticated: false,
   accessToken: null,
+  refreshToken: null,
   login: () => {},
   logout: () => {},
   refreshAccessToken: () => Promise.resolve(),
   userData: null,
   setUserData: () => {},
+  getAuthentication: () => false,
+  authenticationErrorCount: 0,
+  autoLogin: false,
+  setAutoLogin: () => {},
+  stars: 0,
+  setStars: (stars) => 0,
 };
 
-const AuthContext = createContext<AuthContextType>(initialValue);
+export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<userData | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [userData, setUserData] = useState<Users | null>(null);
+  const [autoLogin, setAutoLogin] = useState<boolean>(false);
+  const [stars, setStars] = useState<number>(0);
+  const cookies = new Cookies();
 
   useEffect(() => {
-    const storedAccessToken = localStorage.getItem("access_token");
+    const storedAccessToken = cookies.get("access_token");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
+    async function fetchStars() {
+      const starsCount = await getRepoStars("logspace-ai", "langflow");
+      setStars(starsCount);
+    }
+    fetchStars();
   }, []);
 
+  useEffect(() => {
+    if (accessToken) {
+      getLoggedUser().then((user) => {
+        const isSuperUser = user.is_superuser;
+        setIsAdmin(isSuperUser);
+      });
+    }
+  }, [accessToken, isAdmin]);
+
+  function getAuthentication() {
+    const storedRefreshToken = cookies.get("refresh_token");
+    const storedAccess = cookies.get("access_token");
+    const auth = storedAccess && storedRefreshToken ? true : false;
+    return auth;
+  }
+
   function login(newAccessToken: string, refreshToken: string) {
-    localStorage.setItem("access_token", newAccessToken);
+    cookies.set("access_token", newAccessToken, { path: "/" });
+    cookies.set("refresh_token", refreshToken, { path: "/" });
     setAccessToken(newAccessToken);
-    // Store refreshToken if needed
+    setRefreshToken(refreshToken);
+    setIsAuthenticated(true);
   }
 
   function logout() {
-    localStorage.removeItem("access_token");
-    // Clear refreshToken if used
+    cookies.remove("access_token", { path: "/" });
+    cookies.remove("refresh_token", { path: "/" });
+    setUserData(null);
     setAccessToken(null);
+    setRefreshToken(null);
+    setIsAuthenticated(false);
   }
 
   async function refreshAccessToken(refreshToken: string) {
     try {
-      // Call your API to refresh the access token using the refresh token
       const response = await fetch("/api/refresh-token", {
         method: "POST",
         headers: {
@@ -50,6 +93,9 @@ export function AuthProvider({ children }): React.ReactElement {
       if (response.ok) {
         const data = await response.json();
         login(data.accessToken, refreshToken);
+        getLoggedUser().then((user) => {
+          console.log("oi");
+        });
       } else {
         logout();
       }
@@ -62,13 +108,22 @@ export function AuthProvider({ children }): React.ReactElement {
     // !! to convert string to boolean
     <AuthContext.Provider
       value={{
+        stars,
+        setStars,
+        isAdmin,
+        setIsAdmin,
         isAuthenticated: !!accessToken,
         accessToken,
+        refreshToken,
         login,
         logout,
         refreshAccessToken,
         setUserData,
         userData,
+        getAuthentication,
+        authenticationErrorCount: 0,
+        setAutoLogin,
+        autoLogin,
       }}
     >
       {children}

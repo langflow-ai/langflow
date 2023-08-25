@@ -1,5 +1,7 @@
 import contextlib
 import json
+from langflow.services.database.models.base import orjson_dumps
+import orjson
 from typing import Any, Dict, List
 
 from langchain.agents import ZeroShotAgent
@@ -95,9 +97,11 @@ def format_content(variable):
 
 def try_to_load_json(content):
     with contextlib.suppress(json.JSONDecodeError):
-        content = json.loads(content)
+        content = orjson.loads(content)
         if isinstance(content, list):
             content = ",".join([str(item) for item in content])
+        else:
+            content = orjson_dumps(content)
     return content
 
 
