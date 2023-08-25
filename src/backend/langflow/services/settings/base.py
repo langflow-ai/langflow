@@ -1,8 +1,8 @@
 import contextlib
 import json
+import orjson
 import os
 from shutil import copy2
-import secrets
 from typing import Optional, List
 from pathlib import Path
 
@@ -40,24 +40,6 @@ class Settings(BaseSettings):
     CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
-
-    # Login settings
-    SECRET_KEY: str = secrets.token_hex(32)
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
-
-    # API Key to execute /process endpoint
-    API_KEY_SECRET_KEY: Optional[
-        str
-    ] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
-    API_KEY_ALGORITHM: str = "HS256"
-
-    # If AUTO_LOGIN = True
-    # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
-    FIRST_SUPERUSER: str = "langflow"
-    FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
@@ -194,7 +176,7 @@ class Settings(BaseSettings):
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = json.loads(str(value))
+                    value = orjson.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
                         if isinstance(item, Path):

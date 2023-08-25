@@ -1,19 +1,20 @@
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from langflow.services.utils import get_session
-from langflow.database.models.token import Token
-from langflow.auth.auth import (
+from langflow.api.v1.schemas import Token
+from langflow.services.auth.utils import (
     authenticate_user,
     create_user_tokens,
     create_refresh_token,
     create_user_longterm_token,
+    get_current_active_user,
 )
 
 from langflow.services.utils import get_settings_manager
 
-router = APIRouter()
+router = APIRouter(tags=["Login"])
 
 
 @router.post("/login", response_model=Token)
@@ -36,7 +37,7 @@ async def login_to_get_access_token(
 async def auto_login(db: Session = Depends(get_session)):
     settings_manager = get_settings_manager()
 
-    if settings_manager.settings.AUTO_LOGIN:
+    if settings_manager.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
     raise HTTPException(
@@ -49,7 +50,9 @@ async def auto_login(db: Session = Depends(get_session)):
 
 
 @router.post("/refresh")
-async def refresh_token(token: str):
+async def refresh_token(
+    token: str, current_user: Session = Depends(get_current_active_user)
+):
     if token:
         return create_refresh_token(token)
     else:

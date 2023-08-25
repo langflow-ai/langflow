@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
@@ -7,7 +7,6 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getRepoStars } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -44,22 +43,35 @@ export default function Header(): JSX.Element {
           </Button>
         )}
         {autoLogin === false && (
-          <Button
+          <a
             onClick={() => {
               logout();
               navigate("/login");
             }}
-            variant="outline"
-            className=""
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
           >
             Sign out
-          </Button>
+          </a>
+        )}
+
+        {location.pathname === "/admin" && (
+          <a
+            onClick={() => {
+              navigate("/");
+            }}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+          >
+            Home
+          </a>
         )}
 
         {isAdmin && !autoLogin && location.pathname !== "/admin" && (
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <a
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            onClick={() => navigate("/admin")}
+          >
             Admin page
-          </Button>
+          </a>
         )}
       </div>
       <div className="round-button-div">

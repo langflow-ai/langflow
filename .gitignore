@@ -253,3 +253,4 @@ langflow.db
 .docusaurus/
 
 /tmp/*
+src/backend/langflow/frontend/

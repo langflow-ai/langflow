@@ -24,7 +24,6 @@ function ApiInterceptor() {
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
           const refreshToken = cookies.get("refresh_token");
-
           if (refreshToken) {
             authenticationErrorCount = authenticationErrorCount + 1;
             if (authenticationErrorCount > 3) {
@@ -103,9 +102,5 @@ function ApiInterceptor() {
   return null;
 }
 
-// Function to sleep for a given duration in milliseconds
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export { ApiInterceptor, api };
