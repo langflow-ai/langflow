@@ -106,7 +106,7 @@ export default function ApiKeysPage() {
                 {keysList.current.length === 0 && !loadingKeys && (
                   <>
                     <div className="flex items-center justify-between">
-                      <h2>There's no users registered :)</h2>
+                      <h2>This user does not have any keys assigned at the moment.</h2>
                     </div>
                   </>
                 )}
@@ -131,7 +131,6 @@ export default function ApiKeysPage() {
                         }
                       >
                         <TableRow>
-                          <TableHead className="h-10">Id</TableHead>
                           <TableHead className="h-10">Name</TableHead>
                           <TableHead className="h-10">Key</TableHead>
                           <TableHead className="h-10">Created</TableHead>
@@ -154,13 +153,6 @@ export default function ApiKeysPage() {
                           {keysList.current.map(
                             (api_keys: ApiKey, index: number) => (
                               <TableRow key={index}>
-                                <TableCell className="truncate py-2">
-                                  <ShadTooltip content={api_keys.id}>
-                                    <span className="cursor-default">
-                                      {api_keys.id}
-                                    </span>
-                                  </ShadTooltip>
-                                </TableCell>
                                 <TableCell className="truncate py-2">
                                   <ShadTooltip content={api_keys.name}>
                                     <span className="cursor-default">
