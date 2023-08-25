@@ -31,6 +31,10 @@ def create_app():
         allow_headers=["*"],
     )
 
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+
     app.include_router(router)
 
     app.on_event("startup")(initialize_services)
