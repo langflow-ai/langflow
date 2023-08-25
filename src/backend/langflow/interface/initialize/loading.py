@@ -1,6 +1,6 @@
 import json
 import orjson
-from typing import Any, Callable, Dict, Sequence, Type
+from typing import Any, Callable, Dict, Sequence, Type, TYPE_CHECKING
 
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
@@ -36,8 +36,13 @@ from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
 from langflow.utils.logger import logger
 
+if TYPE_CHECKING:
+    from langflow import CustomComponent
 
-def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
+
+def instantiate_class(
+    node_type: str, base_type: str, params: Dict, user_id=None
+) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
@@ -48,7 +53,9 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return custom_node(**params)
     logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
-    return instantiate_based_on_type(class_object, base_type, node_type, params)
+    return instantiate_based_on_type(
+        class_object, base_type, node_type, params, user_id=user_id
+    )
 
 
 def convert_params_to_sets(params):
@@ -75,7 +82,7 @@ def convert_kwargs(params):
     return params
 
 
-def instantiate_based_on_type(class_object, base_type, node_type, params):
+def instantiate_based_on_type(class_object, base_type, node_type, params, user_id):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -109,19 +116,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return instantiate_custom_component(node_type, class_object, params)
+        return instantiate_custom_component(node_type, class_object, params, user_id)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def instantiate_custom_component(node_type, class_object, params):
+def instantiate_custom_component(node_type, class_object, params, user_id):
     # we need to make a copy of the params because we will be
     # modifying it
     params_copy = params.copy()
-    class_object = get_function_custom(params_copy.pop("code"))
-    custom_component = class_object()
+    class_object: "CustomComponent" = get_function_custom(params_copy.pop("code"))
+    custom_component = class_object(user_id=user_id)
     built_object = custom_component.build(**params_copy)
     return built_object, {"repr": custom_component.custom_repr()}
 
