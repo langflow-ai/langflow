@@ -170,7 +170,7 @@ def test_user(client):
 
 
 @pytest.fixture(scope="function")
-def active_user(session):
+def active_user(client, session):
     user = User(
         username="activeuser",
         password=get_password_hash(
