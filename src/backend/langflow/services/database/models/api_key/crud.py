@@ -24,17 +24,20 @@ def create_api_key(
     generated_api_key = secrets.token_urlsafe(32)
 
     # hash the API key
-    hashed_api_key = get_password_hash(generated_api_key)
+    hashed = get_password_hash(generated_api_key)
     # Use the generated key to create the ApiKey object
-
-    api_key = ApiKey(api_key=hashed_api_key, name=api_key_create.name, user_id=user_id)
+    masked_api_key = f"{'*' * 10}{generated_api_key[-4:]}"
+    api_key = ApiKey(
+        api_key=masked_api_key,
+        hashed_api_key=hashed,
+        name=api_key_create.name,
+        user_id=user_id,
+    )
 
     session.add(api_key)
     session.commit()
     session.refresh(api_key)
-    unmasked = UnmaskedApiKeyRead.from_orm(api_key)
-    unmasked.api_key = generated_api_key
-    return unmasked
+    return UnmaskedApiKeyRead.from_orm(api_key)
 
 
 def delete_api_key(session: Session, api_key_id: UUID) -> None:
