@@ -78,7 +78,7 @@ export default function CodeAreaModal({
       })
       .catch((_) => {
         setErrorData({
-          title: "There is something wrong with this code, please review it",
+          title: "Unfortunately, we were unable to test your code. Kindly review your internet connection and try again.",
         });
       });
   }
