@@ -1,49 +1,58 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Depends
+from langflow.api.v1.schemas import ApiKeysResponse, CreateApiKeyRequest
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.api_key.api_key import UnmaskedApiKeyRead
+
+# Assuming you have these methods in your service layer
+from langflow.services.database.models.api_key.crud import (
+    get_api_keys,
+    create_api_key,
+    delete_api_key,
+)
+from langflow.services.database.models.user.user import User
+from langflow.services.utils import get_session
+from sqlmodel import Session
 
 
 router = APIRouter(tags=["APIKey"])
 
 
-@router.get("/api_key/{user_id}")
-def get_api_key(user_id: str):
-    return {
-        "total_count": 3,
-        "user_id": user_id,
-        "api_keys": [
-            {
-                "id": "4425707e-cce4-4d1b-a54e-bd2632064657",
-                "api_key": "lf-...abcd",
-                "name": "my api_key name - 01",
-                "created_at": "2023-08-15T19:28:40.019613",
-                "last_used_at": "2023-08-16T18:38:20.875210",
-            },
-            {
-                "id": "6fb7282b-9f2e-4efe-9bda-0c3d8f899473",
-                "api_key": "lf-...abcd",
-                "name": "my api_key name - 02",
-                "created_at": "2023-08-15T19:41:30.077942",
-                "last_used_at": "2023-08-15T19:45:32.067899",
-            },
-            {
-                "id": "c55f3b32-4920-42b6-a5cd-698b4251806e",
-                "api_key": "lf-...abcd",
-                "name": "my api_key name - 03",
-                "created_at": "2023-08-15T20:29:40.577808",
-                "last_used_at": "2023-08-15T20:29:40.577816",
-            },
-        ],
-    }
+@router.get("/api_key", response_model=ApiKeysResponse)
+def get_api_keys_route(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    try:
+        user_id = current_user.id
+        keys = get_api_keys(db, user_id)
+
+        result = {"total_count": len(keys), "user_id": user_id, "api_keys": keys}
+        return ApiKeysResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/api_key/{user_id}")
-def create_api_key(user_id: str):
-    return {
-        "user_id": user_id,
-        "name": "my api-key 01",
-        "api_key": "lf-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YTBmODM1ZS0yMTQxLTQ2YWItYmQ4NS0yMWEzMjQ1MTE2ZDAiLCJleHAiOjE2OTIyMTUwMTN9.c_s0ZPRtjSI9yUrhi8ACIwyXf0feRLYfaeIZEbRVKQg",  # noqa
-    }
+@router.post("/api_key", response_model=UnmaskedApiKeyRead)
+def create_api_key_route(
+    req: CreateApiKeyRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_session),
+):
+    try:
+        user_id = current_user.id
+        return create_api_key(db, req, user_id=user_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.delete("/api_key/{api_key_id}")
-def delete_api_key(api_key_id: str):
-    return {"detail": "API Key deleted"}
+def delete_api_key_route(
+    api_key_id: str,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_session),
+):
+    try:
+        delete_api_key(db, api_key_id)
+        return {"detail": "API Key deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
