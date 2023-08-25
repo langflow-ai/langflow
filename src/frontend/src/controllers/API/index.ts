@@ -25,7 +25,7 @@ import {
  * @returns {Promise<AxiosResponse<APIObjectType>>} A promise that resolves to an AxiosResponse containing all the objects.
  */
 export async function getAll(): Promise<AxiosResponse<APIObjectType>> {
-  return await api.get(`/api/v1/all`);
+  return await api.get(`${BASE_URL_API}all`);
 }
 
 const GITHUB_API_URL = "https://api.github.com";
@@ -47,13 +47,13 @@ export async function getRepoStars(owner: string, repo: string) {
  * @returns {AxiosResponse<any>} The API response.
  */
 export async function sendAll(data: sendAllProps) {
-  return await api.post(`/api/v1/predict`, data);
+  return await api.post(`${BASE_URL_API}predict`, data);
 }
 
 export async function postValidateCode(
   code: string
 ): Promise<AxiosResponse<errorsTypeAPI>> {
-  return await api.post("/api/v1/validate/code", { code });
+  return await api.post(`${BASE_URL_API}validate/code`, { code });
 }
 
 /**
@@ -68,7 +68,7 @@ export async function postValidatePrompt(
   template: string,
   frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await api.post("/api/v1/validate/prompt", {
+  return await api.post(`${BASE_URL_API}validate/prompt`, {
     name: name,
     template: template,
     frontend_node: frontend_node,
@@ -112,7 +112,7 @@ export async function saveFlowToDatabase(newFlow: {
   style?: FlowStyleType;
 }): Promise<FlowType> {
   try {
-    const response = await api.post("/api/v1/flows/", {
+    const response = await api.post(`${BASE_URL_API}flows/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
@@ -138,7 +138,7 @@ export async function updateFlowInDatabase(
   updatedFlow: FlowType
 ): Promise<FlowType> {
   try {
-    const response = await api.patch(`/api/v1/flows/${updatedFlow.id}`, {
+    const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
       name: updatedFlow.name,
       data: updatedFlow.data,
       description: updatedFlow.description,
@@ -162,7 +162,7 @@ export async function updateFlowInDatabase(
  */
 export async function readFlowsFromDatabase() {
   try {
-    const response = await api.get("/api/v1/flows/");
+    const response = await api.get(`${BASE_URL_API}flows/`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -175,7 +175,7 @@ export async function readFlowsFromDatabase() {
 
 export async function downloadFlowsFromDatabase() {
   try {
-    const response = await api.get("/api/v1/flows/download/");
+    const response = await api.get(`${BASE_URL_API}flows/download/`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -188,7 +188,7 @@ export async function downloadFlowsFromDatabase() {
 
 export async function uploadFlowsToDatabase(flows: FormData) {
   try {
-    const response = await api.post(`/api/v1/flows/upload/`, flows);
+    const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
 
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -209,7 +209,7 @@ export async function uploadFlowsToDatabase(flows: FormData) {
  */
 export async function deleteFlowFromDatabase(flowId: string) {
   try {
-    const response = await api.delete(`/api/v1/flows/${flowId}`);
+    const response = await api.delete(`${BASE_URL_API}flows/${flowId}`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -229,7 +229,7 @@ export async function deleteFlowFromDatabase(flowId: string) {
  */
 export async function getFlowFromDatabase(flowId: number) {
   try {
-    const response = await api.get(`/api/v1/flows/${flowId}`);
+    const response = await api.get(`${BASE_URL_API}flows/${flowId}`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -248,7 +248,7 @@ export async function getFlowFromDatabase(flowId: number) {
  */
 export async function getFlowStylesFromDatabase() {
   try {
-    const response = await api.get("/api/v1/flow_styles/");
+    const response = await api.get(`${BASE_URL_API}flow_styles/`);
     if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -268,7 +268,7 @@ export async function getFlowStylesFromDatabase() {
  */
 export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
   try {
-    const response = await api.post("/api/v1/flow_styles/", flowStyle, {
+    const response = await api.post(`${BASE_URL_API}flow_styles/`, flowStyle, {
       headers: {
         accept: "application/json",
         "Content-Type": "application/json",
@@ -291,7 +291,7 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  const respnose = await api.get("/api/v1/version");
+  const respnose = await api.get(`${BASE_URL_API}version`);
   return respnose.data;
 }
 
@@ -313,7 +313,7 @@ export async function getHealth() {
 export async function getBuildStatus(
   flowId: string
 ): Promise<BuildStatusTypeAPI> {
-  return await api.get(`/api/v1/build/${flowId}/status`);
+  return await api.get(`${BASE_URL_API}build/${flowId}/status`);
 }
 
 //docs for postbuildinit
@@ -326,7 +326,7 @@ export async function getBuildStatus(
 export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
-  return await api.post(`/api/v1/build/init/${flow.id}`, flow);
+  return await api.post(`${BASE_URL_API}build/init/${flow.id}`, flow);
 }
 
 // fetch(`/upload/${id}`, {
@@ -344,14 +344,14 @@ export async function uploadFile(
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
-  return await api.post(`/api/v1/upload/${id}`, formData);
+  return await api.post(`${BASE_URL_API}upload/${id}`, formData);
 }
 
 export async function postCustomComponent(
   code: string,
   apiClass: APIClassType
 ): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`/api/v1/custom_component`, { code });
+  return await api.post(`${BASE_URL_API}custom_component`, { code });
 }
 
 export async function onLogin(user: LoginType) {
