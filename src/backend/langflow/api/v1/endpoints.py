@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from typing import Annotated, Optional, Union
-from langflow.services.auth.utils import get_current_active_user, validate_api_key
+from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -77,22 +77,27 @@ def get_all(current_user: User = Depends(get_current_active_user)):
 
 
 # For backwards compatibility we will keep the old endpoint
-@router.post("/predict/{flow_id}", response_model=ProcessResponse)
-@router.post("/process/{flow_id}", response_model=ProcessResponse)
+@router.post(
+    "/predict/{flow_id}",
+    response_model=ProcessResponse,
+    dependencies=[Depends(api_key_security)],
+)
+@router.post(
+    "/process/{flow_id}",
+    response_model=ProcessResponse,
+    dependencies=[Depends(api_key_security)],
+)
 async def process_flow(
+    session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[dict] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    session: Session = Depends(get_session),
-    valid: bool = Depends(validate_api_key),
 ):
     """
     Endpoint to process an input with a given flow_id.
     """
-    if not valid:
-        raise HTTPException(status_code=401, detail="Invalid API key")
 
     try:
         flow = session.get(Flow, flow_id)

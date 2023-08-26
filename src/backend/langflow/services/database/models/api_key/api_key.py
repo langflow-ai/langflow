@@ -13,13 +13,14 @@ class ApiKeyBase(SQLModelSerializable):
     name: Optional[str] = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_used_at: Optional[datetime] = Field(default=None)
+    total_uses: int = Field(default=0)
+    is_active: bool = Field(default=True)
 
 
 class ApiKey(ApiKeyBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
 
     api_key: str = Field(index=True, unique=True)
-    hashed_api_key: str = Field(index=True)
     # User relationship
     user_id: UUID = Field(index=True, foreign_key="user.id")
     user: "User" = Relationship(back_populates="api_keys")
@@ -44,4 +45,4 @@ class ApiKeyRead(ApiKeyBase):
     @validator("api_key", always=True)
     def mask_api_key(cls, v):
         # This validator will always run, and will mask the API key
-        return f"{'*' * 8}{v[-4:]}"
+        return f"{v[:2]}{'*' * (len(v) - 4)}{v[-2:]}"
