@@ -18,10 +18,10 @@ from langflow.services.utils import get_session
 from sqlmodel import Session
 
 
-router = APIRouter(tags=["APIKey"])
+router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
-@router.get("/api_key", response_model=ApiKeysResponse)
+@router.get("/", response_model=ApiKeysResponse)
 def get_api_keys_route(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
@@ -35,7 +35,7 @@ def get_api_keys_route(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/api_key", response_model=UnmaskedApiKeyRead)
+@router.post("/", response_model=UnmaskedApiKeyRead)
 def create_api_key_route(
     req: ApiKeyCreate,
     current_user: User = Depends(get_current_active_user),
@@ -48,7 +48,7 @@ def create_api_key_route(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.delete("/api_key/{api_key_id}")
+@router.delete("//{api_key_id}")
 def delete_api_key_route(
     api_key_id: UUID,
     current_user=Depends(get_current_active_user),
