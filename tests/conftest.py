@@ -6,6 +6,7 @@ from langflow.api.v1.flows import get_session
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.flow.flow import Flow
 from langflow.services.database.models.user.user import User, UserCreate
 import pytest
 from fastapi.testclient import TestClient
@@ -192,3 +193,18 @@ def logged_in_headers(client, active_user):
     tokens = response.json()
     a_token = tokens["access_token"]
     return {"Authorization": f"Bearer {a_token}"}
+
+
+@pytest.fixture
+def flow(client, json_flow: str, session, active_user):
+    from langflow.services.database.models.flow.flow import FlowCreate
+
+    loaded_json = json.loads(json_flow)
+    flow_data = FlowCreate(
+        name="test_flow", data=loaded_json.get("data"), user_id=active_user.id
+    )
+    flow = Flow(**flow_data.dict())
+    session.add(flow)
+    session.commit()
+
+    return flow
