@@ -3,7 +3,6 @@ import secrets
 
 from pydantic import BaseSettings
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 
 
 class AuthSettings(BaseSettings):
@@ -27,7 +26,6 @@ class AuthSettings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{API_V1_STR}/login")
 
     class Config:
         validate_assignment = True
