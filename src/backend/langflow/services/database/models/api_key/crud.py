@@ -1,7 +1,8 @@
+import datetime
 import secrets
+import threading
 from uuid import UUID
 from typing import List
-from langflow.services.auth.utils import get_password_hash
 from sqlmodel import Session, select
 from langflow.services.database.models.api_key import (
     ApiKey,
@@ -21,15 +22,10 @@ def create_api_key(
     session: Session, api_key_create: ApiKeyCreate, user_id: UUID
 ) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
-    generated_api_key = secrets.token_urlsafe(32)
+    generated_api_key = f"lf-{secrets.token_urlsafe(32)}"
 
-    # hash the API key
-    hashed = get_password_hash(generated_api_key)
-    # Use the generated key to create the ApiKey object
-    masked_api_key = f"{'*' * 10}{generated_api_key[-4:]}"
     api_key = ApiKey(
-        api_key=masked_api_key,
-        hashed_api_key=hashed,
+        api_key=generated_api_key,
         name=api_key_create.name,
         user_id=user_id,
     )
@@ -48,3 +44,30 @@ def delete_api_key(session: Session, api_key_id: UUID) -> None:
         raise ValueError("API Key not found")
     session.delete(api_key)
     session.commit()
+
+
+def check_key(session: Session, api_key: str) -> bool:
+    """Check if the API key is valid."""
+    query = select(ApiKey).where(ApiKey.api_key == api_key)
+    api_key = session.exec(query).first()
+    if api_key is None:
+        return False
+
+    threading.Thread(
+        target=update_total_uses,
+        args=(
+            session,
+            api_key,
+        ),
+    ).start()
+    return True
+
+
+def update_total_uses(session, api_key: ApiKey):
+    """Update the total uses and last used at."""
+    api_key.total_uses += 1
+    api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+    session.add(api_key)
+    session.commit()
+    session.refresh(api_key)
+    return api_key
