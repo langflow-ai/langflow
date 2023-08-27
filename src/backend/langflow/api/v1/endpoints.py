@@ -8,8 +8,8 @@ from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
 from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
-
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
+import sqlalchemy as sa
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -116,6 +116,18 @@ async def process_flow(
             graph_data, inputs, clear_cache, session_id
         )
         return ProcessResponse(result=response, session_id=session_id)
+    except sa.exc.StatementError as exc:
+        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
+        if "badly formed hexadecimal UUID string" in str(exc):
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except ValueError as exc:
+        if f"Flow {flow_id} not found" in str(exc):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+            )
     except Exception as e:
         # Log stack trace
         logger.exception(e)
