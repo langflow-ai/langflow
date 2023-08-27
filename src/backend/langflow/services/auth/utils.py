@@ -134,18 +134,20 @@ def create_token(data: dict, expires_delta: timedelta):
     )
 
 
-def create_super_user(db: Session = Depends(get_session)) -> User:
+def create_super_user(
+    db: Session = Depends(get_session), username: str = None, password: str = None
+) -> User:
     settings_manager = get_settings_manager()
 
     super_user = get_user_by_username(
-        db, settings_manager.auth_settings.FIRST_SUPERUSER
+        db, username or settings_manager.auth_settings.FIRST_SUPERUSER
     )
 
     if not super_user:
         super_user = User(
-            username=settings_manager.auth_settings.FIRST_SUPERUSER,
+            username=username or settings_manager.auth_settings.FIRST_SUPERUSER,
             password=get_password_hash(
-                settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
+                password or settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
             ),
             is_superuser=True,
             is_active=True,
