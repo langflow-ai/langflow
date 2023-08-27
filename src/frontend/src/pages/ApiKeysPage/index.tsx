@@ -103,15 +103,18 @@ export default function ApiKeysPage() {
                   <div className="flex items-center space-x-2"></div>
                 </div>
 
-                {keysList.current.length === 0 && !loadingKeys && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <h2>
-                        This user does not have any keys assigned at the moment.
-                      </h2>
-                    </div>
-                  </>
-                )}
+                {keysList.current &&
+                  keysList.current.length === 0 &&
+                  !loadingKeys && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <h2>
+                          This user does not have any keys assigned at the
+                          moment.
+                        </h2>
+                      </div>
+                    </>
+                  )}
                 <>
                   {loadingKeys && (
                     <div>
@@ -124,103 +127,105 @@ export default function ApiKeysPage() {
                       (loadingKeys ? " border-0" : "")
                     }
                   >
-                    {keysList.current.length > 0 && !loadingKeys && (
-                      <Table className={"table-fixed bg-muted outline-1"}>
-                        <TableHeader
-                          className={
-                            loadingKeys
-                              ? "hidden"
-                              : "table-fixed bg-muted outline-1"
-                          }
-                        >
-                          <TableRow>
-                            <TableHead className="h-10">Name</TableHead>
-                            <TableHead className="h-10">Key</TableHead>
-                            <TableHead className="h-10">Created</TableHead>
-                            <TableHead className="flex h-10 items-center">
-                              Last Used
-                              <ShadTooltip
-                                side="top"
-                                content={lastUsedMessage()}
-                              >
-                                <div>
-                                  <IconComponent
-                                    name="Info"
-                                    className="ml-1 h-3 w-3"
-                                  />
-                                </div>
-                              </ShadTooltip>
-                            </TableHead>
-                            <TableHead className="h-10 w-[100px]  text-right"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        {!loadingKeys && (
-                          <TableBody>
-                            {keysList.current.map(
-                              (api_keys: ApiKey, index: number) => (
-                                <TableRow key={index}>
-                                  <TableCell className="truncate py-2">
-                                    <ShadTooltip content={api_keys.name}>
+                    {keysList.current &&
+                      keysList.current.length > 0 &&
+                      !loadingKeys && (
+                        <Table className={"table-fixed bg-muted outline-1"}>
+                          <TableHeader
+                            className={
+                              loadingKeys
+                                ? "hidden"
+                                : "table-fixed bg-muted outline-1"
+                            }
+                          >
+                            <TableRow>
+                              <TableHead className="h-10">Name</TableHead>
+                              <TableHead className="h-10">Key</TableHead>
+                              <TableHead className="h-10">Created</TableHead>
+                              <TableHead className="flex h-10 items-center">
+                                Last Used
+                                <ShadTooltip
+                                  side="top"
+                                  content={lastUsedMessage()}
+                                >
+                                  <div>
+                                    <IconComponent
+                                      name="Info"
+                                      className="ml-1 h-3 w-3"
+                                    />
+                                  </div>
+                                </ShadTooltip>
+                              </TableHead>
+                              <TableHead className="h-10 w-[100px]  text-right"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          {!loadingKeys && (
+                            <TableBody>
+                              {keysList.current.map(
+                                (api_keys: ApiKey, index: number) => (
+                                  <TableRow key={index}>
+                                    <TableCell className="truncate py-2">
+                                      <ShadTooltip content={api_keys.name}>
+                                        <span className="cursor-default">
+                                          {api_keys.name}
+                                        </span>
+                                      </ShadTooltip>
+                                    </TableCell>
+                                    <TableCell className="truncate py-2">
                                       <span className="cursor-default">
-                                        {api_keys.name}
+                                        {api_keys.api_key}
                                       </span>
-                                    </ShadTooltip>
-                                  </TableCell>
-                                  <TableCell className="truncate py-2">
-                                    <span className="cursor-default">
-                                      {api_keys.api_key}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="truncate py-2 ">
-                                    {moment(api_keys.created_at).format(
-                                      "YYYY-MM-DD HH:mm"
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="truncate py-2">
-                                    {moment(api_keys.last_used_at).format(
-                                      "YYYY-MM-DD HH:mm"
-                                    ) === "Invalid date"
-                                      ? "-"
-                                      : moment(api_keys.last_used_at).format(
-                                          "YYYY-MM-DD HH:mm"
-                                        )}
-                                  </TableCell>
-                                  <TableCell className="flex w-[100px] py-2 text-right">
-                                    <div className="flex">
-                                      <ConfirmationModal
-                                        title="Delete"
-                                        titleHeader="Delete User"
-                                        modalContentTitle="Attention!"
-                                        modalContent="Are you sure you want to delete this key? This action cannot be undone."
-                                        cancelText="Cancel"
-                                        confirmationText="Delete"
-                                        icon={"UserMinus2"}
-                                        data={api_keys.id}
-                                        index={index}
-                                        onConfirm={(index, keys) => {
-                                          console.log(keys);
-                                          handleDeleteKey(keys);
-                                        }}
-                                      >
-                                        <ShadTooltip
-                                          content="Delete"
-                                          side="top"
+                                    </TableCell>
+                                    <TableCell className="truncate py-2 ">
+                                      {moment(api_keys.created_at).format(
+                                        "YYYY-MM-DD HH:mm"
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="truncate py-2">
+                                      {moment(api_keys.last_used_at).format(
+                                        "YYYY-MM-DD HH:mm"
+                                      ) === "Invalid date"
+                                        ? "-"
+                                        : moment(api_keys.last_used_at).format(
+                                            "YYYY-MM-DD HH:mm"
+                                          )}
+                                    </TableCell>
+                                    <TableCell className="flex w-[100px] py-2 text-right">
+                                      <div className="flex">
+                                        <ConfirmationModal
+                                          title="Delete"
+                                          titleHeader="Delete User"
+                                          modalContentTitle="Attention!"
+                                          modalContent="Are you sure you want to delete this key? This action cannot be undone."
+                                          cancelText="Cancel"
+                                          confirmationText="Delete"
+                                          icon={"UserMinus2"}
+                                          data={api_keys.id}
+                                          index={index}
+                                          onConfirm={(index, keys) => {
+                                            console.log(keys);
+                                            handleDeleteKey(keys);
+                                          }}
                                         >
-                                          <IconComponent
-                                            name="Trash2"
-                                            className="ml-2 h-4 w-4 cursor-pointer"
-                                          />
-                                        </ShadTooltip>
-                                      </ConfirmationModal>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            )}
-                          </TableBody>
-                        )}
-                      </Table>
-                    )}
+                                          <ShadTooltip
+                                            content="Delete"
+                                            side="top"
+                                          >
+                                            <IconComponent
+                                              name="Trash2"
+                                              className="ml-2 h-4 w-4 cursor-pointer"
+                                            />
+                                          </ShadTooltip>
+                                        </ConfirmationModal>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              )}
+                            </TableBody>
+                          )}
+                        </Table>
+                      )}
                   </div>
 
                   <div className="flex items-center justify-between">
