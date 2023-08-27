@@ -101,6 +101,7 @@ types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
 pytest-mock = "^3.11.1"
+pytest-xdist = "^3.3.1"
 
 
 [tool.poetry.extras]

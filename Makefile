@@ -19,7 +19,7 @@ coverage:
 		--cov-report term-missing:skip-covered
 
 tests:
-	poetry run pytest tests
+	poetry run pytest tests -n auto
 
 format:
 	poetry run black .
