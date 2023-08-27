@@ -1,8 +1,9 @@
 import sys
 import time
 import httpx
-from langflow.services.manager import initialize_settings_manager
-from langflow.services.utils import get_settings_manager
+from langflow.services.database.utils import session_getter
+from langflow.services.manager import initialize_services, initialize_settings_manager
+from langflow.services.utils import get_db_manager, get_settings_manager
 from langflow.utils.util import get_number_of_workers
 from multiprocess import Process  # type: ignore
 import platform
@@ -310,6 +311,24 @@ def run_langflow(host, port, log_level, options, app):
     except Exception as e:
         logger.exception(e)
         sys.exit(1)
+
+
+@app.command()
+def superuser(
+    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+):
+    initialize_services()
+    db_manager = get_db_manager()
+    with session_getter(db_manager) as session:
+        from langflow.services.auth.utils import create_super_user
+
+        if create_super_user(session, username, password):
+            typer.echo("Superuser created successfully.")
+        else:
+            typer.echo("Superuser creation failed.")
 
 
 def main():
