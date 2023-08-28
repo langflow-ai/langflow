@@ -18,7 +18,7 @@ export default function InputListComponent({
     }
   }, [disabled]);
 
-  //Sometimes value is a string, but the InputListComponent expects an array, so we need to convert it when it's a string to an array with the string inside it to avoid errors
+  // In certain cases, the value might be in string format, whereas the InputListComponent specifically requires an array format. To ensure smooth operation and prevent potential errors, it's crucial that we handle the conversion from a string to an array with the string as its element.
   typeof value === 'string' ? value = [value] : value = value;
 
   return (
