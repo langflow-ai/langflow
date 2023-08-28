@@ -31,8 +31,8 @@ def get_api_keys_route(
         keys = get_api_keys(db, user_id)
 
         return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/", response_model=UnmaskedApiKeyRead)

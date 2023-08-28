@@ -85,7 +85,6 @@ def get_all(current_user: User = Depends(get_current_active_user)):
 @router.post(
     "/process/{flow_id}",
     response_model=ProcessResponse,
-    dependencies=[Depends(api_key_security)],
 )
 async def process_flow(
     session: Annotated[Session, Depends(get_session)],
@@ -94,13 +93,21 @@ async def process_flow(
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
+    api_key=Depends(api_key_security),
 ):
     """
     Endpoint to process an input with a given flow_id.
     """
 
     try:
-        flow = session.get(Flow, flow_id)
+        api_key_user = api_key.user
+        # Get the flow that matches the flow_id and belongs to the user
+        flow = (
+            session.query(Flow)
+            .filter(Flow.id == flow_id)
+            .filter(Flow.user_id == api_key_user.id)
+            .first()
+        )
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
 
@@ -120,14 +127,18 @@ async def process_flow(
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-            )
+            ) from exc
     except Exception as e:
         # Log stack trace
         logger.exception(e)
