@@ -2,7 +2,7 @@ import datetime
 import secrets
 import threading
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from sqlmodel import Session, select
 from langflow.services.database.models.api_key import (
     ApiKey,
@@ -46,21 +46,21 @@ def delete_api_key(session: Session, api_key_id: UUID) -> None:
     session.commit()
 
 
-def check_key(session: Session, api_key: str) -> bool:
+def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
     """Check if the API key is valid."""
     query = select(ApiKey).where(ApiKey.api_key == api_key)
-    api_key = session.exec(query).first()
-    if api_key is None:
-        return False
+    api_key_object: Optional[ApiKey] = session.exec(query).first()
+    if api_key_object is None:
+        return api_key_object
 
     threading.Thread(
         target=update_total_uses,
         args=(
             session,
-            api_key,
+            api_key_object,
         ),
     ).start()
-    return True
+    return api_key_object.user
 
 
 def update_total_uses(session, api_key: ApiKey):
