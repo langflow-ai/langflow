@@ -29,9 +29,7 @@ export default function ApiKeysPage() {
   const keysList = useRef([]);
 
   useEffect(() => {
-    setTimeout(() => {
       getKeys();
-    }, 500);
   }, [userData]);
 
   function getKeys() {
@@ -231,9 +229,7 @@ export default function ApiKeysPage() {
                         confirmationText="Create secret key"
                         icon={"Key"}
                         data={userId}
-                        onCloseModal={() => {
-                          getKeys();
-                        }}
+                        onCloseModal={getKeys}
                       >
                         <Button>
                           <IconComponent name="Plus" className="mr-1 h-5 w-5" />
