@@ -265,6 +265,9 @@ def format_dict(
 
         _type: Union[str, type] = get_type(value)
 
+        if "BaseModel" in _type:
+            continue
+
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
