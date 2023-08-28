@@ -33,8 +33,11 @@ def initialize_database():
             session.execute("DROP TABLE alembic_version")
         database_manager.run_migrations()
     except Exception as exc:
-        logger.error(f"Error running migrations: {exc}")
-        raise RuntimeError("Error running migrations") from exc
+        # if the exception involves tables already existing
+        # we can ignore it
+        if "already exists" not in str(exc):
+            logger.error(f"Error running migrations: {exc}")
+            raise RuntimeError("Error running migrations") from exc
     database_manager.create_db_and_tables()
     logger.debug("Database initialized")
 
