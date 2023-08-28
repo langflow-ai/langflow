@@ -21,7 +21,7 @@ class AgentVertex(Vertex):
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    def build(self, force: bool = False, user_id=None) -> Any:
+    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             self._set_tools_and_chains()
             # First, build the tools
@@ -49,7 +49,7 @@ class LLMVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="llms")
 
-    def build(self, force: bool = False, user_id=None) -> Any:
+    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
         # or time to load. So we only load them when we need them.ß
         if self.vertex_type == self.built_node_type:
@@ -77,7 +77,7 @@ class WrapperVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
-    def build(self, force: bool = False, user_id=None) -> Any:
+    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
@@ -148,14 +148,16 @@ class ChainVertex(Vertex):
     def build(
         self,
         force: bool = False,
-        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
         user_id=None,
+        *args,
+        **kwargs,
     ) -> Any:
         if not self._built or force:
             # Check if the chain requires a PromptVertex
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
                     # Build the PromptVertex, passing the tools if available
+                    tools = kwargs.get("tools", None)
                     self.params[key] = value.build(tools=tools, force=force)
 
             self._build(user_id=user_id)
@@ -170,8 +172,10 @@ class PromptVertex(Vertex):
     def build(
         self,
         force: bool = False,
-        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
         user_id=None,
+        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
+        *args,
+        **kwargs,
     ) -> Any:
         if not self._built or force:
             if (
