@@ -95,7 +95,7 @@ def serve_on_jcloud():
 
 
 @app.command()
-def serve(
+def run(
     host: str = typer.Option(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
@@ -326,7 +326,16 @@ def superuser(
         from langflow.services.auth.utils import create_super_user
 
         if create_super_user(session, username, password):
+            # Verify that the superuser was created
+            from langflow.services.database.models.user.user import User
+
+            user = session.query(User).filter(User.username == username).first()
+            if user is None:
+                typer.echo("Superuser creation failed.")
+                return
+
             typer.echo("Superuser created successfully.")
+
         else:
             typer.echo("Superuser creation failed.")
 
