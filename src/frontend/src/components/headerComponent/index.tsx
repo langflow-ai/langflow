@@ -31,17 +31,6 @@ export default function Header(): JSX.Element {
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
-        {location.pathname === "/admin" && (
-          <Button
-            onClick={() => {
-              navigate("/");
-            }}
-            variant="outline"
-            className=" text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer "
-          >
-            Home
-          </Button>
-        )}
         {autoLogin === false && (
           <Button
             onClick={() => {
