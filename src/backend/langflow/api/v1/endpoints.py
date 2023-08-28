@@ -100,6 +100,11 @@ async def process_flow(
     """
 
     try:
+        if api_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API Key",
+            )
         api_key_user = api_key.user
         # Get the flow that matches the flow_id and belongs to the user
         flow = (
