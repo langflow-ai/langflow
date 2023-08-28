@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
-from typing import Annotated, Coroutine
+from typing import Annotated, Coroutine, Optional
 from uuid import UUID
+from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.user import User
 from langflow.services.database.models.user.crud import (
@@ -31,8 +32,9 @@ async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-):
+) -> Optional[ApiKey]:
     settings_manager = get_settings_manager()
+    result = None
     if settings_manager.auth_settings.AUTO_LOGIN:
         return settings_manager.auth_settings.API_KEY_SECRET_KEY
 
@@ -42,12 +44,14 @@ async def api_key_security(
             detail="An API key must be passed as query or header",
         )
 
-    elif query_param and check_key(db, query_param):
-        return query_param
+    elif query_param:
+        result = check_key(db, query_param)
 
-    elif header_param and check_key(db, header_param):
-        return header_param
+    else:
+        result = check_key(db, header_param)
 
+    if result:
+        return result
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
