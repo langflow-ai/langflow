@@ -37,41 +37,44 @@ export default function Header(): JSX.Element {
               navigate("/");
             }}
             variant="outline"
-            className=""
+            className=" text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer "
           >
             Main page
           </Button>
         )}
         {autoLogin === false && (
-          <a
+          <Button
             onClick={() => {
               logout();
               navigate("/login");
             }}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
+            variant="outline"
           >
             Sign out
-          </a>
+          </Button>
         )}
 
         {location.pathname === "/admin" && (
-          <a
+          <Button
             onClick={() => {
               navigate("/");
             }}
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            variant="outline"
           >
             Home
-          </a>
+          </Button>
         )}
 
         {isAdmin && !autoLogin && location.pathname !== "/admin" && (
-          <a
+          <Button
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
             onClick={() => navigate("/admin")}
+            variant="outline"
           >
             Admin page
-          </a>
+          </Button>
         )}
       </div>
       <div className="round-button-div">
