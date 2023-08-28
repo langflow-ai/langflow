@@ -39,45 +39,51 @@ def upgrade() -> None:
             for fk in inspector.get_foreign_keys("flow")
         ]
 
-    op.create_table(
-        "user",
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-        sa.Column("username", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("password", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False),
-        sa.Column("is_superuser", sa.Boolean(), nullable=False),
-        sa.Column("create_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.Column("last_login_at", sa.DateTime(), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("id"),
-    )
-    with op.batch_alter_table("user", schema=None) as batch_op:
-        batch_op.create_index(batch_op.f("ix_user_username"), ["username"], unique=True)
-
-    op.create_table(
-        "apikey",
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("last_used_at", sa.DateTime(), nullable=True),
-        sa.Column("total_uses", sa.Integer(), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-        sa.Column("api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["user.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("id"),
-    )
-    with op.batch_alter_table("apikey", schema=None) as batch_op:
-        batch_op.create_index(batch_op.f("ix_apikey_api_key"), ["api_key"], unique=True)
-        batch_op.create_index(batch_op.f("ix_apikey_name"), ["name"], unique=False)
-        batch_op.create_index(
-            batch_op.f("ix_apikey_user_id"), ["user_id"], unique=False
+    if "user" not in existing_tables:
+        op.create_table(
+            "user",
+            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("username", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("password", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("is_active", sa.Boolean(), nullable=False),
+            sa.Column("is_superuser", sa.Boolean(), nullable=False),
+            sa.Column("create_at", sa.DateTime(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), nullable=False),
+            sa.Column("last_login_at", sa.DateTime(), nullable=True),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("id"),
         )
+        with op.batch_alter_table("user", schema=None) as batch_op:
+            batch_op.create_index(
+                batch_op.f("ix_user_username"), ["username"], unique=True
+            )
+
+    if "apikey" not in existing_tables:
+        op.create_table(
+            "apikey",
+            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("last_used_at", sa.DateTime(), nullable=True),
+            sa.Column("total_uses", sa.Integer(), nullable=False),
+            sa.Column("is_active", sa.Boolean(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.ForeignKeyConstraint(
+                ["user_id"],
+                ["user.id"],
+            ),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("id"),
+        )
+        with op.batch_alter_table("apikey", schema=None) as batch_op:
+            batch_op.create_index(
+                batch_op.f("ix_apikey_api_key"), ["api_key"], unique=True
+            )
+            batch_op.create_index(batch_op.f("ix_apikey_name"), ["name"], unique=False)
+            batch_op.create_index(
+                batch_op.f("ix_apikey_user_id"), ["user_id"], unique=False
+            )
     if "flow" not in existing_tables:
         op.create_table(
             "flow",
