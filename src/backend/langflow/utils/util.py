@@ -5,13 +5,9 @@ from functools import wraps
 from typing import Optional, Dict, Any, Union
 
 from docstring_parser import parse
-from langflow.__main__ import console  # type: ignore
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.utils.logger import logger
-from multiprocess import cpu_count  # type: ignore
-from rich.table import Table  # type: ignore
 
 
 def build_template_from_function(
@@ -460,29 +456,3 @@ def add_options_to_field(
         value["options"] = options_map[class_name]
         value["list"] = True
         value["value"] = options_map[class_name][0]
-
-
-def get_number_of_workers(workers=None):
-    if workers == -1 or workers is None:
-        workers = (cpu_count() * 2) + 1
-    logger.debug(f"Number of workers: {workers}")
-    return workers
-
-
-def display_results(results):
-    """
-    Display the results of the migration.
-    """
-    for table_results in results:
-        table = Table(title=f"Migration {table_results.table_name}")
-        table.add_column("Name")
-        table.add_column("Type")
-        table.add_column("Status")
-
-        for result in table_results.results:
-            status = "Success" if result.success else "Failure"
-            color = "green" if result.success else "red"
-            table.add_row(result.name, result.type, f"[{color}]{status}[/{color}]")
-
-        console.print(table)
-        console.print()  # Print a new line

@@ -4,9 +4,8 @@ import httpx
 from langflow.services.database.utils import session_getter
 from langflow.services.manager import initialize_services, initialize_settings_manager
 from langflow.services.utils import get_db_manager, get_settings_manager
-from langflow.utils.util import get_number_of_workers
-from langflow.utils.util import display_results
-from multiprocess import Process  # type: ignore
+
+from multiprocess import Process, cpu_count  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
@@ -14,6 +13,7 @@ import socket
 from rich.panel import Panel
 from rich import box
 from rich import print as rprint
+from rich.table import Table
 import typer
 from langflow.main import setup_app
 from langflow.utils.logger import configure, logger
@@ -25,6 +25,32 @@ from rich.console import Console
 console = Console()
 
 app = typer.Typer()
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers
+
+
+def display_results(results):
+    """
+    Display the results of the migration.
+    """
+    for table_results in results:
+        table = Table(title=f"Migration {table_results.table_name}")
+        table.add_column("Name")
+        table.add_column("Type")
+        table.add_column("Status")
+
+        for result in table_results.results:
+            status = "Success" if result.success else "Failure"
+            color = "green" if result.success else "red"
+            table.add_row(result.name, result.type, f"[{color}]{status}[/{color}]")
+
+        console.print(table)
+        console.print()  # Print a new line
 
 
 def update_settings(

@@ -89,7 +89,7 @@ def setup_app(
 
 if __name__ == "__main__":
     import uvicorn
-    from langflow.utils.util import get_number_of_workers
+    from langflow.__main__ import get_number_of_workers
 
     configure()
     uvicorn.run(
