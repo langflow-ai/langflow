@@ -147,7 +147,6 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
-        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",

@@ -199,7 +199,6 @@ export default function ApiKeysPage() {
                                           data={api_keys.id}
                                           index={index}
                                           onConfirm={(index, keys) => {
-                                            console.log(keys);
                                             handleDeleteKey(keys);
                                           }}
                                         >
