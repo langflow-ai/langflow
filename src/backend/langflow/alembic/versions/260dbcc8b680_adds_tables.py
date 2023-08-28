@@ -26,6 +26,15 @@ def upgrade() -> None:
     inspector = Inspector.from_engine(conn)
     # List existing tables
     existing_tables = inspector.get_table_names()
+    # Drop 'flowstyle' table if it exists
+    # and other related indices
+    if "flowstyle" in existing_tables:
+        op.drop_table("flowstyle")
+    if "ix_flowstyle_flow_id" in [
+        index["name"] for index in inspector.get_indexes("flowstyle")
+    ]:
+        op.drop_index("ix_flowstyle_flow_id", table_name="flowstyle")
+
     existing_indices_flow = []
     existing_fks_flow = []
     if "flow" in existing_tables:
@@ -159,4 +168,10 @@ def downgrade() -> None:
             batch_op.drop_index(batch_op.f("ix_user_username"))
 
         op.drop_table("user")
+
+    if "flowstyle" in existing_tables:
+        op.drop_table("flowstyle")
+
+    if "component" in existing_tables:
+        op.drop_table("component")
     # ### end Alembic commands ###
