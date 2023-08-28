@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, Optional, Union
+from typing import Annotated, Any, Optional, Union
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 from langflow.services.cache.utils import save_uploaded_file
@@ -40,7 +40,7 @@ def get_all(current_user: User = Depends(get_current_active_user)):
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
-    custom_components_from_file = {}
+    custom_components_from_file: dict[str, Any] = {}
     settings_manager = get_settings_manager()
     if settings_manager.settings.COMPONENTS_PATH:
         logger.info(
@@ -93,19 +93,19 @@ async def process_flow(
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    api_key=Depends(api_key_security),
+    api_key_user: User = Depends(api_key_security),
 ):
     """
     Endpoint to process an input with a given flow_id.
     """
 
     try:
-        if api_key is None:
+        if api_key_user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid API Key",
             )
-        api_key_user = api_key.user
+
         # Get the flow that matches the flow_id and belongs to the user
         flow = (
             session.query(Flow)
