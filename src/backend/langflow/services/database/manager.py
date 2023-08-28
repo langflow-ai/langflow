@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 from langflow.services.base import Service
+from langflow.services.database.utils import Result, TableResults
 from langflow.services.utils import get_settings_manager
 from sqlalchemy import inspect
 import sqlalchemy as sa
@@ -99,6 +100,40 @@ class DatabaseManager(Service):
         alembic_cfg.set_main_option("script_location", str(self.script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
         command.upgrade(alembic_cfg, "head")
+
+    def run_migrations_test(self):
+        # This method is used for testing purposes only
+        # We will check that all models are in the database
+        # and that the database is up to date with all columns
+        sql_models = [models.Flow, models.User, models.ApiKey]
+        results = []
+        for sql_model in sql_models:
+            results.append(
+                TableResults(sql_model.__tablename__, self.check_table(sql_model))
+            )
+        return results
+
+    def check_table(self, model):
+        results = []
+        inspector = inspect(self.engine)
+        table_name = model.__tablename__
+        expected_columns = list(model.__fields__.keys())
+        try:
+            available_columns = [
+                col["name"] for col in inspector.get_columns(table_name)
+            ]
+            results.append(Result(name=table_name, type="table", success=True))
+        except sa.exc.NoSuchTableError:
+            logger.error(f"Missing table: {table_name}")
+            results.append(Result(name=table_name, type="table", success=False))
+
+        for column in expected_columns:
+            if column not in available_columns:
+                logger.error(f"Missing column: {column} in table {table_name}")
+                results.append(Result(name=column, type="column", success=False))
+            else:
+                results.append(Result(name=column, type="column", success=True))
+        return results
 
     def create_db_and_tables(self):
         logger.debug("Creating database and tables")

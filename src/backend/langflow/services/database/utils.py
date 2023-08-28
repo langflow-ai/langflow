@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from langflow.utils.logger import logger
 from contextlib import contextmanager
@@ -53,3 +54,16 @@ def session_getter(db_manager: "DatabaseManager"):
         raise
     finally:
         session.close()
+
+
+@dataclass
+class Result:
+    name: str
+    type: str
+    success: bool
+
+
+@dataclass
+class TableResults:
+    table_name: str
+    results: list[Result]
