@@ -27,17 +27,18 @@ def upgrade() -> None:
     # List existing tables
     existing_tables = inspector.get_table_names()
     existing_indices_flow = []
+    existing_fks_flow = []
     if "flow" in existing_tables:
         existing_indices_flow = [
             index["name"] for index in inspector.get_indexes("flow")
         ]
-    # Existing foreign keys for the 'flow' table, if it exists
-    existing_fks_flow = []
-    if "flow" in existing_tables:
+        # Existing foreign keys for the 'flow' table, if it exists
         existing_fks_flow = [
             fk["referred_table"] + "." + fk["referred_columns"][0]
             for fk in inspector.get_foreign_keys("flow")
         ]
+        # Now check if the columns user_id exists in the 'flow' table
+        # If it does not exist, we need to create the foreign key
 
     if "user" not in existing_tables:
         op.create_table(
@@ -99,17 +100,29 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("id"),
         )
-    elif "user.id" not in existing_fks_flow:
-        with op.batch_alter_table("flow") as batch_op:
-            batch_op.create_foreign_key("fk_flow_user_id", "user", ["user_id"], ["id"])
     # Conditionally create indices for 'flow' table
+    # if _alembic_tmp_flow exists, then we need to drop it first
+    if "_alembic_tmp_flow" in existing_tables:
+        op.drop_table("_alembic_tmp_flow")
     with op.batch_alter_table("flow", schema=None) as batch_op:
+        flow_columns = [col["name"] for col in inspector.get_columns("flow")]
+        if "user_id" not in flow_columns:
+            batch_op.add_column(
+                sa.Column(
+                    "user_id",
+                    sqlmodel.sql.sqltypes.GUID(),
+                    nullable=True,  # This should be False, but we need to allow NULL values for now
+                )
+            )
+        if "user.id" not in existing_fks_flow:
+            batch_op.create_foreign_key("fk_flow_user_id", "user", ["user_id"], ["id"])
         if "ix_flow_description" not in existing_indices_flow:
             batch_op.create_index(
                 batch_op.f("ix_flow_description"), ["description"], unique=False
             )
         if "ix_flow_name" not in existing_indices_flow:
             batch_op.create_index(batch_op.f("ix_flow_name"), ["name"], unique=False)
+    with op.batch_alter_table("flow", schema=None) as batch_op:
         if "ix_flow_user_id" not in existing_indices_flow:
             batch_op.create_index(
                 batch_op.f("ix_flow_user_id"), ["user_id"], unique=False
