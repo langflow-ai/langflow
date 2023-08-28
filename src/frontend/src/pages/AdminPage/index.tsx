@@ -4,7 +4,6 @@ import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
-import Header from "../../components/headerComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -27,6 +26,8 @@ import {
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { UserInputType } from "../../types/components";
+import Header from "../../components/headerComponent";
+import { Users } from "../../types/api";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -88,7 +89,7 @@ export default function AdminPage() {
     if (input === "") {
       setFilterUserList(userList.current);
     } else {
-      const filteredList = userList.current.filter((user) =>
+      const filteredList = userList.current.filter((user:Users) =>
         user.username.toLowerCase().includes(input.toLowerCase())
       );
       setFilterUserList(filteredList);
@@ -182,6 +183,7 @@ export default function AdminPage() {
 
   return (
     <>
+    <div className="flex flex-col">
       <Header />
       {userData && (
         <div className="main-page-panel">
@@ -278,7 +280,7 @@ export default function AdminPage() {
                       </TableHeader>
                       {!loadingUsers && (
                         <TableBody>
-                          {filterUserList.map((user, index) => (
+                          {filterUserList.map((user:UserInputType, index) => (
                             <TableRow key={index}>
                               <TableCell className="truncate py-2 font-medium">
                                 <ShadTooltip content={user.id}>
@@ -424,6 +426,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }
