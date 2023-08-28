@@ -163,7 +163,7 @@ export async function updateFlowInDatabase(
 export async function readFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/`);
-    if (response.status !== 200) {
+    if (response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.data;
@@ -176,7 +176,7 @@ export async function readFlowsFromDatabase() {
 export async function downloadFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/download/`);
-    if (response.status !== 200) {
+    if (response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     return response.data;
