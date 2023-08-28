@@ -273,7 +273,7 @@ export default function UserManagementModal({
           </div>
 
           <div className="float-right">
-          <Button
+            <Button
               variant="outline"
               onClick={() => {
                 setOpen(false);
@@ -286,7 +286,6 @@ export default function UserManagementModal({
             <Form.Submit asChild>
               <Button className="mt-8">{confirmationText}</Button>
             </Form.Submit>
-
           </div>
         </Form.Root>
       </BaseModal.Content>

@@ -31,28 +31,31 @@ export default function Header(): JSX.Element {
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
-        {autoLogin === false && (
+        {!autoLogin && location.pathname !== `/flow/${tabId}` && (
           <Button
             onClick={() => {
               logout();
               navigate("/login");
             }}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
+            className="mx-5 cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             variant="outline"
           >
             Sign out
           </Button>
         )}
 
-        {isAdmin && !autoLogin && location.pathname !== "/admin" && (
-          <Button
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
-            onClick={() => navigate("/admin")}
-            variant="outline"
-          >
-            Admin page
-          </Button>
-        )}
+        {isAdmin &&
+          !autoLogin &&
+          location.pathname !== "/admin" &&
+          location.pathname !== `/flow/${tabId}` && (
+            <Button
+              className="cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              onClick={() => navigate("/admin")}
+              variant="outline"
+            >
+              Admin page
+            </Button>
+          )}
       </div>
       <div className="round-button-div">
         <Link to="/">

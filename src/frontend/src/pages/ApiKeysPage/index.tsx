@@ -18,8 +18,14 @@ import SecretKeyModal from "../../modals/SecretKeyModal";
 
 import moment from "moment";
 import Header from "../../components/headerComponent";
+import {
+  API_PAGE_PARAGRAPH_1,
+  API_PAGE_PARAGRAPH_2,
+  API_PAGE_USER_KEYS,
+  LAST_USED_SPAN_1,
+  LAST_USED_SPAN_2,
+} from "../../constants/constants";
 import { ApiKey } from "../../types/components";
-import { API_PAGE_PARAGRAPH_1, API_PAGE_PARAGRAPH_2, API_PAGE_USER_KEYS, LAST_USED_SPAN_1, LAST_USED_SPAN_2 } from "../../constants/constants";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -29,7 +35,7 @@ export default function ApiKeysPage() {
   const keysList = useRef([]);
 
   useEffect(() => {
-      getKeys();
+    getKeys();
   }, [userData]);
 
   function getKeys() {
@@ -71,7 +77,8 @@ export default function ApiKeysPage() {
     return (
       <div className="text-xs">
         <span>
-          {LAST_USED_SPAN_1}<br></br> {LAST_USED_SPAN_2}
+          {LAST_USED_SPAN_1}
+          <br></br> {LAST_USED_SPAN_2}
         </span>
       </div>
     );
@@ -91,7 +98,8 @@ export default function ApiKeysPage() {
                       API keys
                     </h2>
                     <p className="text-muted-foreground">
-                      {API_PAGE_PARAGRAPH_1}<br />
+                      {API_PAGE_PARAGRAPH_1}
+                      <br />
                       {API_PAGE_PARAGRAPH_2}
                     </p>
                   </div>
@@ -103,9 +111,7 @@ export default function ApiKeysPage() {
                   !loadingKeys && (
                     <>
                       <div className="flex items-center justify-between">
-                        <h2>
-                          {API_PAGE_USER_KEYS}
-                        </h2>
+                        <h2>{API_PAGE_USER_KEYS}</h2>
                       </div>
                     </>
                   )}

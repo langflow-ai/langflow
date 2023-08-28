@@ -21,7 +21,7 @@ export default function SecretKeyModal({
   children,
   icon,
   data,
-  onCloseModal
+  onCloseModal,
 }: ApiKeyType) {
   const Icon: any = nodeIconsLucide[icon];
   const [open, setOpen] = useState(false);
@@ -44,8 +44,7 @@ export default function SecretKeyModal({
     if (open) {
       setRenderKey(false);
       resetForm();
-    }
-    else{
+    } else {
       onCloseModal();
     }
   }, [open]);

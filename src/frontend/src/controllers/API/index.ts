@@ -478,9 +478,9 @@ export async function getApiKey() {
   }
 }
 
-export async function createApiKey(name:string) {
+export async function createApiKey(name: string) {
   try {
-    const res = await api.post(`${BASE_URL_API}api_key`,{name});
+    const res = await api.post(`${BASE_URL_API}api_key`, { name });
     if (res.status === 200) {
       return res.data;
     }
@@ -489,7 +489,6 @@ export async function createApiKey(name:string) {
     throw error;
   }
 }
-
 
 export async function deleteApiKey(api_key: string) {
   try {
@@ -502,4 +501,3 @@ export async function deleteApiKey(api_key: string) {
     throw error;
   }
 }
-
