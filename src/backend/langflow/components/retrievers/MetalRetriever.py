@@ -1,7 +1,8 @@
 from typing import Optional
 from langflow import CustomComponent
 from langchain.retrievers import MetalRetriever
-from langchain.schema.retriever import BaseRetriever
+from langchain.schema import BaseRetriever
+from metal_sdk.metal import Metal
 
 
 class MetalRetrieverComponent(CustomComponent):
@@ -20,4 +21,8 @@ class MetalRetrieverComponent(CustomComponent):
     def build(
         self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None
     ) -> BaseRetriever:
-        return MetalRetriever(api_key, client_id, index_id, params=params)
+        try:
+            metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
+        except Exception as e:
+            raise ValueError("Could not connect to Metal API.") from e
+        return MetalRetriever(client=metal, params=params or {})
