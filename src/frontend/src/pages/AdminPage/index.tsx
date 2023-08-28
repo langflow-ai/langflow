@@ -183,6 +183,7 @@ export default function AdminPage() {
 
   return (
     <>
+    <div className="flex flex-col">
       <Header />
       {userData && (
         <div className="main-page-panel">
@@ -423,6 +424,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }
