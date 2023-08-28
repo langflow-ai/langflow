@@ -363,6 +363,7 @@ export default function ParameterComponent({
           <div className="mt-2 w-full">
           <KeypairListComponent
           disabled={disabled}
+          editNode={false}
           value={
             arrayOfObjects
           }

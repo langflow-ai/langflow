@@ -8,6 +8,7 @@ import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
+import KeypairListComponent from "../../components/keypairListComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
@@ -77,6 +78,18 @@ const EditNodeModal = forwardRef(
     useEffect(() => {
       setMyData(data); // reset data to what it is on node when opening modal
     }, [modalOpen]);
+
+    const [arrayOfObjects, setArrayOfObjects] = useState([
+      { key1: "value1", key2: "value2" },
+      { key3: "value3", key4: "value4" },
+      { key5: "value5", key6: "value6" },
+    ]);
+
+    const handleOnNewValueTest = (newValue): void => {
+      let newData = cloneDeep(arrayOfObjects);
+      newData = newValue;
+      setArrayOfObjects(newData);
+    };
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
@@ -334,6 +347,16 @@ const EditNodeModal = forwardRef(
                                     onChange={(value: string | string[]) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
+                                  />
+                                </div>
+                              ) : myData.node?.template[templateParam].type ===
+                                "keypair" ? (
+                                <div className="mt-2 w-full">
+                                  <KeypairListComponent
+                                    disabled={disabled}
+                                    value={arrayOfObjects}
+                                    onChange={handleOnNewValueTest}
+                                    editNode={true}
                                   />
                                 </div>
                               ) : myData.node?.template[templateParam].type ===
