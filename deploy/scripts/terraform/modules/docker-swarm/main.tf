@@ -20,7 +20,10 @@ resource "aws_instance" "manager" {
                 #!/bin/bash
                 sudo yum update -y
                 sudo yum install -y docker
+                sudo yum install -y git
                 sudo yum install -y nc
+                sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
                 sudo service docker start
                 sudo usermod -a -G docker ec2-user
                 sudo chkconfig docker on
@@ -34,7 +37,10 @@ resource "aws_instance" "manager" {
                 # Create a script to get the join token
                 echo 'docker swarm join-token worker -q' > get_token.sh
                 chmod +x get_token.sh
-                while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; ./get_token.sh; } | nc -l 8080; done &
+                timeout 5m bash -c "while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; ./get_token.sh; } | nc -l 8080; done" &
+
+                git clone https://github.com/logspace-ai/langflow.git
+                git checkout celery
 
                 EOT
 
