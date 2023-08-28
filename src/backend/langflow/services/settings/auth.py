@@ -21,7 +21,7 @@ class AuthSettings(BaseSettings):
 
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
+    AUTO_LOGIN: bool = False
     FIRST_SUPERUSER: str = "langflow"
     FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
