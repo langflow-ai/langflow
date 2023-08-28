@@ -23,7 +23,7 @@ def test_components_path(runner, client, default_settings):
 
     result = runner.invoke(
         app,
-        ["--components-path", str(temp_dir), *default_settings],
+        ["serve", "--components-path", str(temp_dir), *default_settings],
     )
     assert result.exit_code == 0, result.stdout
     settings_manager = utils.get_settings_manager()
