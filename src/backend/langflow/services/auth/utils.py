@@ -36,7 +36,11 @@ async def api_key_security(
     settings_manager = get_settings_manager()
     result = None
     if settings_manager.auth_settings.AUTO_LOGIN:
-        return settings_manager.auth_settings.API_KEY_SECRET_KEY
+        # Get the first user
+        settings_manager.auth_settings.FIRST_SUPERUSER
+        result = get_user_by_username(
+            db, settings_manager.auth_settings.FIRST_SUPERUSER
+        )
 
     elif not query_param and not header_param:
         raise HTTPException(
@@ -50,13 +54,15 @@ async def api_key_security(
     else:
         result = check_key(db, header_param)
 
-    if result:
-        return result
-    else:
+    if not result:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing API key",
         )
+    if isinstance(result, ApiKey):
+        return result.user
+    elif isinstance(result, User):
+        return result
 
 
 async def get_current_user(
@@ -139,7 +145,9 @@ def create_token(data: dict, expires_delta: timedelta):
 
 
 def create_super_user(
-    db: Session = Depends(get_session), username: str = None, password: str = None
+    db: Session = Depends(get_session),
+    username: Optional[str] = None,
+    password: Optional[str] = None,
 ) -> User:
     settings_manager = get_settings_manager()
 

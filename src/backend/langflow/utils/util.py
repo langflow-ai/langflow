@@ -10,7 +10,7 @@ from langflow.__main__ import console  # type: ignore
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 from langflow.utils.logger import logger
-from multiprocess import cpu_count
+from multiprocess import cpu_count  # type: ignore
 from rich.table import Table  # type: ignore
 
 
@@ -267,7 +267,7 @@ def format_dict(
 
         _type: Union[str, type] = get_type(value)
 
-        if "BaseModel" in _type:
+        if "BaseModel" in str(_type):
             continue
 
         _type = remove_optional_wrapper(_type)
