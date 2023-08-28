@@ -181,7 +181,7 @@ export default function ApiKeysPage() {
                                       {moment(api_keys.last_used_at).format(
                                         "YYYY-MM-DD HH:mm"
                                       ) === "Invalid date"
-                                        ? "-"
+                                        ? "Never"
                                         : moment(api_keys.last_used_at).format(
                                             "YYYY-MM-DD HH:mm"
                                           )}
