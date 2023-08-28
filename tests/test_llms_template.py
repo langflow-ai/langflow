@@ -542,8 +542,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
     }
     assert template["_type"] == "ChatOpenAI"
     assert (
-        model["description"]
-        == "Wrapper around OpenAI Chat large language models."  # noqa E501
+        model["description"] == "`OpenAI` Chat large language models API."  # noqa E501
     )
     assert set(model["base_classes"]) == {
         "BaseLLM",
