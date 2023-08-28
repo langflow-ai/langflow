@@ -39,7 +39,7 @@ export default function Header(): JSX.Element {
             variant="outline"
             className=" text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer "
           >
-            Main page
+            Home
           </Button>
         )}
         {autoLogin === false && (
@@ -52,18 +52,6 @@ export default function Header(): JSX.Element {
             variant="outline"
           >
             Sign out
-          </Button>
-        )}
-
-        {location.pathname === "/admin" && (
-          <Button
-            onClick={() => {
-              navigate("/");
-            }}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
-            variant="outline"
-          >
-            Home
           </Button>
         )}
 
