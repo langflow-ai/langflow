@@ -50,17 +50,15 @@ def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
     """Check if the API key is valid."""
     query = select(ApiKey).where(ApiKey.api_key == api_key)
     api_key_object: Optional[ApiKey] = session.exec(query).first()
-    if api_key_object is None:
-        return api_key_object
-
-    threading.Thread(
-        target=update_total_uses,
-        args=(
-            session,
-            api_key_object,
-        ),
-    ).start()
-    return api_key_object.user
+    if api_key_object is not None:
+        threading.Thread(
+            target=update_total_uses,
+            args=(
+                session,
+                api_key_object,
+            ),
+        ).start()
+    return api_key_object
 
 
 def update_total_uses(session, api_key: ApiKey):
