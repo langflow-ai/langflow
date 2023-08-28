@@ -14,6 +14,11 @@ def initialize_database():
 
     database_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     try:
+        database_manager.check_schema_health()
+    except Exception as exc:
+        logger.error(f"Error checking schema health: {exc}")
+        raise RuntimeError("Error checking schema health") from exc
+    try:
         database_manager.run_migrations()
     except CommandError as exc:
         if "Can't locate revision identified by" not in str(exc):
