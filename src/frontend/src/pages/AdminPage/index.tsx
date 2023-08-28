@@ -27,6 +27,7 @@ import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { UserInputType } from "../../types/components";
 import Header from "../../components/headerComponent";
+import { Users } from "../../types/api";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -88,7 +89,7 @@ export default function AdminPage() {
     if (input === "") {
       setFilterUserList(userList.current);
     } else {
-      const filteredList = userList.current.filter((user) =>
+      const filteredList = userList.current.filter((user:Users) =>
         user.username.toLowerCase().includes(input.toLowerCase())
       );
       setFilterUserList(filteredList);
@@ -276,7 +277,7 @@ export default function AdminPage() {
                       </TableHeader>
                       {!loadingUsers && (
                         <TableBody>
-                          {filterUserList.map((user, index) => (
+                          {filterUserList.map((user:UserInputType, index) => (
                             <TableRow key={index}>
                               <TableCell className="truncate py-2 font-medium">
                                 <ShadTooltip content={user.id}>
