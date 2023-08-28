@@ -623,3 +623,13 @@ export const BASE_URL_API = "/api/v1/";
 
 export const SIGN_UP_SUCCESS =
   "Account created! Await admin activation. ";
+
+export const API_PAGE_PARAGRAPH_1 = "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.";
+
+export const API_PAGE_PARAGRAPH_2 = "Do not share your API key with others, or expose it in the browser or other client-side code.";
+
+export const API_PAGE_USER_KEYS = "This user does not have any keys assigned at the moment."
+
+export const LAST_USED_SPAN_1 = "The last time this key was used.";
+
+export const LAST_USED_SPAN_2 = "Accurate to within the hour from the most recent usage.";

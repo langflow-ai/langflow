@@ -19,6 +19,7 @@ import SecretKeyModal from "../../modals/SecretKeyModal";
 import moment from "moment";
 import Header from "../../components/headerComponent";
 import { ApiKey } from "../../types/components";
+import { API_PAGE_PARAGRAPH_1, API_PAGE_PARAGRAPH_2, API_PAGE_USER_KEYS, LAST_USED_SPAN_1, LAST_USED_SPAN_2 } from "../../constants/constants";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -72,8 +73,7 @@ export default function ApiKeysPage() {
     return (
       <div className="text-xs">
         <span>
-          The last time this key was used.<br></br> Accurate to within the hour
-          from the most recent usage.
+          {LAST_USED_SPAN_1}<br></br> {LAST_USED_SPAN_2}
         </span>
       </div>
     );
@@ -93,11 +93,8 @@ export default function ApiKeysPage() {
                       API keys
                     </h2>
                     <p className="text-muted-foreground">
-                      Your secret API keys are listed below. Please note that we
-                      do not display your secret API keys again after you
-                      generate them.<br></br>
-                      Do not share your API key with others, or expose it in the
-                      browser or other client-side code.
+                      {API_PAGE_PARAGRAPH_1}<br />
+                      {API_PAGE_PARAGRAPH_2}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2"></div>
@@ -109,8 +106,7 @@ export default function ApiKeysPage() {
                     <>
                       <div className="flex items-center justify-between">
                         <h2>
-                          This user does not have any keys assigned at the
-                          moment.
+                          {API_PAGE_USER_KEYS}
                         </h2>
                       </div>
                     </>
