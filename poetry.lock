@@ -3281,6 +3281,21 @@ files = [
 ]
 
 [[package]]
+name = "metal-sdk"
+version = "2.0.2"
+description = "SDK for getmetal.io"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "metal_sdk-2.0.2-py3-none-any.whl", hash = "sha256:a5a95fb3796979085965667ffc41fd9eeddc87b60671619671a0eaebd0bec4a1"},
+    {file = "metal_sdk-2.0.2.tar.gz", hash = "sha256:e5e35d230f00b1b838cfcffbcb7042f450b23b59448f37bdd385761871a1490d"},
+]
+
+[package.dependencies]
+httpx = "*"
+typing-extensions = "*"
+
+[[package]]
 name = "metaphor-python"
 version = "0.1.16"
 description = "A Python package for the Metaphor API."
@@ -7467,4 +7482,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "36e1f79f4e6d2e55b652d10e43ccde639714ffff2965fa52b466bd854259ebf6"
+content-hash = "35b3782f944eff6bd6676ea060b36adb51ee78e19c5ef4d8a2c08c163f87ce9a"
