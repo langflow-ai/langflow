@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import Header from "../../components/headerComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -26,7 +27,6 @@ import {
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { UserInputType } from "../../types/components";
-import Header from "../../components/headerComponent";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -194,7 +194,9 @@ export default function AdminPage() {
                       Welcome back!
                     </h2>
                     <p className="text-muted-foreground">
-                    Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.
+                      Navigate through this section to efficiently oversee all
+                      application users. From here, you can seamlessly manage
+                      user accounts.
                     </p>
                   </div>
                   <div className="flex items-center space-x-2"></div>

@@ -98,7 +98,6 @@ export function AuthProvider({ children }): React.ReactElement {
     setIsAuthenticated(false);
   }
 
-
   return (
     // !! to convert string to boolean
     <AuthContext.Provider

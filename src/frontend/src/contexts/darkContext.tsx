@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState } from "react";
-import { darkContextType } from "../types/typesContext";
 import { getRepoStars } from "../controllers/API";
+import { darkContextType } from "../types/typesContext";
 
 const initialValue = {
   dark: {},

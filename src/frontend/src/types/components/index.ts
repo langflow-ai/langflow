@@ -276,7 +276,6 @@ export type ApiKeyType = {
   icon: string;
   data?: any;
   onCloseModal: () => void;
-
 };
 
 export type ApiKeyInputType = {

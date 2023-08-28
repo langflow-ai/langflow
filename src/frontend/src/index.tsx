@@ -1,10 +1,8 @@
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import ContextWrapper from "./contexts";
 import reportWebVitals from "./reportWebVitals";
 
-import { ApiInterceptor } from "./controllers/API/api";
 // @ts-ignore
 import "./style/index.css";
 // @ts-ignore
@@ -17,7 +15,7 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <ContextWrapper>
-      <App />
+    <App />
   </ContextWrapper>
 );
 reportWebVitals();

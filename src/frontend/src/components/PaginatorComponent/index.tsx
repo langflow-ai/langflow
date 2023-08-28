@@ -27,7 +27,7 @@ export default function PaginatorComponent({
   useEffect(() => {
     setMaxPageIndex(Math.ceil(totalRowsCount / size));
   }, [totalRowsCount]);
-  
+
   return (
     <>
       <div className="flex items-center justify-between px-2">
