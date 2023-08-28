@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
-from typing import Annotated, Coroutine, Optional
+from typing import Annotated, Coroutine, Optional, Union
 from uuid import UUID
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
@@ -32,9 +32,9 @@ async def api_key_security(
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
-) -> Optional[ApiKey]:
+) -> Optional[User]:
     settings_manager = get_settings_manager()
-    result = None
+    result: Optional[Union[ApiKey, User]] = None
     if settings_manager.auth_settings.AUTO_LOGIN:
         # Get the first user
         settings_manager.auth_settings.FIRST_SUPERUSER

@@ -258,9 +258,9 @@ class Vertex:
 
             raise ValueError(message)
 
-    def build(self, force: bool = False, user_id=None) -> Any:
+    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
-            self._build(user_id)
+            self._build(user_id, *args, **kwargs)
 
         return self._built_object
 
