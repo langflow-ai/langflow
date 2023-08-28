@@ -39,10 +39,10 @@ class UnmaskedApiKeyRead(ApiKeyBase):
 
 class ApiKeyRead(ApiKeyBase):
     id: UUID
-    api_key: str = Field(index=True, unique=True)
+    api_key: str = Field()
     user_id: UUID = Field()
 
     @validator("api_key", always=True)
     def mask_api_key(cls, v):
         # This validator will always run, and will mask the API key
-        return f"{v[:2]}{'*' * (len(v) - 4)}{v[-2:]}"
+        return f"{v[:8]}{'*' * (len(v) - 8)}"
