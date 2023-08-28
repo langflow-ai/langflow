@@ -102,6 +102,8 @@ def upgrade() -> None:
         )
     # Conditionally create indices for 'flow' table
     # if _alembic_tmp_flow exists, then we need to drop it first
+    # This is to deal with SQLite not being able to ROLLBACK
+    # for some unknown reason
     if "_alembic_tmp_flow" in existing_tables:
         op.drop_table("_alembic_tmp_flow")
     with op.batch_alter_table("flow", schema=None) as batch_op:
