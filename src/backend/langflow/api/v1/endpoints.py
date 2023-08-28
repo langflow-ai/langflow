@@ -93,14 +93,14 @@ async def process_flow(
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    api_key_user: User =Depends(api_key_security),
+    api_key_user: User = Depends(api_key_security),
 ):
     """
     Endpoint to process an input with a given flow_id.
     """
 
     try:
-        if api_key_user is None
+        if api_key_user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid API Key",
