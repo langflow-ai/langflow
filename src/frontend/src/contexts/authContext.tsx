@@ -91,6 +91,7 @@ export function AuthProvider({ children }): React.ReactElement {
   function logout() {
     cookies.remove("access_token", { path: "/" });
     cookies.remove("refresh_token", { path: "/" });
+    setIsAdmin(false);
     setUserData(null);
     setAccessToken(null);
     setRefreshToken(null);
