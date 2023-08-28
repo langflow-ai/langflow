@@ -5,6 +5,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.manager import initialize_services, initialize_settings_manager
 from langflow.services.utils import get_db_manager, get_settings_manager
 from langflow.utils.util import get_number_of_workers
+from langflow.utils.util import display_results
 from multiprocess import Process  # type: ignore
 import platform
 from pathlib import Path
@@ -18,6 +19,10 @@ from langflow.main import setup_app
 from langflow.utils.logger import configure, logger
 import webbrowser
 from dotenv import load_dotenv
+
+from rich.console import Console
+
+console = Console()
 
 app = typer.Typer()
 
@@ -338,6 +343,16 @@ def superuser(
 
         else:
             typer.echo("Superuser creation failed.")
+
+
+@app.command()
+def migration(test: bool = typer.Option(False, help="Run migrations in test mode.")):
+    initialize_services()
+    db_manager = get_db_manager()
+    if not test:
+        db_manager.run_migrations()
+    results = db_manager.run_migrations_test()
+    display_results(results)
 
 
 def main():
