@@ -18,6 +18,8 @@ export default function InputListComponent({
     }
   }, [disabled]);
 
+  typeof value === 'string' ? value = [value] : value = value;
+
   return (
     <div
       className={classNames(
