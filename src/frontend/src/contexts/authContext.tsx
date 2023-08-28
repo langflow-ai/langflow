@@ -13,7 +13,6 @@ const initialValue: AuthContextType = {
   refreshToken: null,
   login: () => {},
   logout: () => {},
-  refreshAccessToken: () => Promise.resolve(),
   userData: null,
   setUserData: () => {},
   getAuthentication: () => false,
@@ -98,29 +97,6 @@ export function AuthProvider({ children }): React.ReactElement {
     setIsAuthenticated(false);
   }
 
-  async function refreshAccessToken(refreshToken: string) {
-    try {
-      const response = await fetch("/api/refresh-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        login(data.accessToken, refreshToken);
-        getLoggedUser().then((user) => {
-          console.log("oi");
-        });
-      } else {
-        logout();
-      }
-    } catch (error) {
-      logout();
-    }
-  }
 
   return (
     // !! to convert string to boolean
@@ -133,7 +109,6 @@ export function AuthProvider({ children }): React.ReactElement {
         refreshToken,
         login,
         logout,
-        refreshAccessToken,
         setUserData,
         userData,
         getAuthentication,

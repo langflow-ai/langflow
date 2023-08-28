@@ -8,7 +8,6 @@ export type AuthContextType = {
   refreshToken: string | null;
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
-  refreshAccessToken: (refreshToken: string) => Promise<void>;
   userData: Users | null;
   setUserData: (userData: Users | null) => void;
   getAuthentication: () => boolean;

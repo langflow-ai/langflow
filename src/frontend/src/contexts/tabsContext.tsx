@@ -122,7 +122,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
             processDBData(DbData);
             updateStateWithDbData(DbData);
           } catch (e) {
-            console.error(e);
           }
         }
       });
@@ -152,7 +151,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         processFlowEdges(flow);
         processFlowNodes(flow);
       } catch (e) {
-        console.error(e);
       }
     });
   }
@@ -486,7 +484,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         return id;
       } catch (error) {
         // Handle the error if needed
-        console.error("Error while adding flow:", error);
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
