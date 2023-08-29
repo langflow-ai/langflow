@@ -1,12 +1,13 @@
 import { useState } from "react";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
+import { dropdownButtonPropsType } from "../../types/components";
 
 export default function DropdownButton({
   firstButtonName,
   onFirstBtnClick,
   options,
-}): JSX.Element {
+}: dropdownButtonPropsType): JSX.Element {
   const [showOptions, setShowOptions] = useState(false);
 
   return (

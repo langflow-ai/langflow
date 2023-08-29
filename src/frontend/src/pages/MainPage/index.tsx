@@ -53,7 +53,7 @@ export default function HomePage(): JSX.Element {
                   navigate("/flow/" + id);
                 });
               }}
-              options={[{name: "yesyes", onBtnClick: () => console.log('dips')}, {name: "dips", onBtnClick: () => console.log('yesyes')}]}
+              options={[{name: "Import from JSON", onBtnClick: () => console.log('imported')}]}
             />
           </div>
         </div>
