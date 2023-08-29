@@ -125,7 +125,6 @@ export default function ExtraSidebar(): JSX.Element {
               }
               onClick={(event) => {
                 saveFlow(flow!);
-                setSuccessData({ title: "Changes saved successfully" });
               }}
             >
               <IconComponent
