@@ -37,9 +37,14 @@ export default function DropdownButton({
       </div>
       {showOptions && (
         <div className="absolute top-10 w-full">
-          {options.map((optionName) => (
-            <Button className="w-full" variant="primary">
-              {optionName}
+          {options.map(({ name, onBtnClick }) => (
+            <Button
+              className="w-full"
+              variant="primary"
+              onClick={onBtnClick}
+              key={name}
+            >
+              {name}
             </Button>
           ))}
         </div>
