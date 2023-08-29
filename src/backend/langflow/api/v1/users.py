@@ -43,7 +43,7 @@ def add_user(
         db.refresh(new_user)
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="User exists") from e
+        raise HTTPException(status_code=400, detail="This username is unavailable as it has already been claimed. Please choose a different username.") from e
 
     return new_user
 
