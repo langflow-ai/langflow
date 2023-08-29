@@ -63,26 +63,38 @@ function ApiInterceptor() {
       }
     );
 
+    const isAuthorizedURL = (url) => {
+      const authorizedDomains = [
+        "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples",
+        "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples",
+        "https://api.github.com/repos/logspace-ai/langflow",
+        "auto_login",
+      ];
+
+      const authorizedEndpoints = ["auto_login"];
+
+      try {
+        const parsedURL = new URL(url);
+
+        const isDomainAllowed = authorizedDomains.some(
+          (domain) => parsedURL.origin === new URL(domain).origin
+        );
+        const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
+          parsedURL.pathname.includes(endpoint)
+        );
+
+        return isDomainAllowed || isEndpointAllowed;
+      } catch (e) {
+        // Invalid URL
+        return false;
+      }
+    };
+
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        if (accessToken) {
+        if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
-        }
-
-        if (
-          config?.url?.includes(
-            "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples"
-          ) ||
-          config?.url?.includes(
-            "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples"
-          ) ||
-          config?.url?.includes(
-            "https://api.github.com/repos/logspace-ai/langflow"
-          ) ||
-          config?.url?.includes("auto_login")
-        ) {
-          delete config.headers["Authorization"];
         }
 
         return config;
