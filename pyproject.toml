@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.4.16"
+version = "0.4.17"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -80,6 +80,7 @@ fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
 metaphor-python = "^0.1.11"
 pillow = "^10.0.0"
+metal-sdk = "^2.0.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
