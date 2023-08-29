@@ -19,7 +19,8 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login, getAuthentication, setUserData, setIsAdmin } = useContext(AuthContext);
+  const { login, getAuthentication, setUserData, setIsAdmin } =
+    useContext(AuthContext);
   const navigate = useNavigate();
   const { setErrorData } = useContext(alertContext);
 
