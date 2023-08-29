@@ -538,6 +538,7 @@ export type ApiKey = {
   name: string;
   created_at: string;
   last_used_at: string;
+  total_uses: number;
 };
 export type fetchErrorComponentType = {
   message: string;

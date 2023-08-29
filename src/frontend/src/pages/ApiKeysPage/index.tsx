@@ -156,6 +156,7 @@ export default function ApiKeysPage() {
                                   </div>
                                 </ShadTooltip>
                               </TableHead>
+                              <TableHead className="h-10">Total Uses</TableHead>
                               <TableHead className="h-10 w-[100px]  text-right"></TableHead>
                             </TableRow>
                           </TableHeader>
@@ -167,7 +168,7 @@ export default function ApiKeysPage() {
                                     <TableCell className="truncate py-2">
                                       <ShadTooltip content={api_keys.name}>
                                         <span className="cursor-default">
-                                          {api_keys.name}
+                                          {api_keys.name ? api_keys.name : "-"}
                                         </span>
                                       </ShadTooltip>
                                     </TableCell>
@@ -177,18 +178,45 @@ export default function ApiKeysPage() {
                                       </span>
                                     </TableCell>
                                     <TableCell className="truncate py-2 ">
-                                      {moment(api_keys.created_at).format(
-                                        "YYYY-MM-DD HH:mm"
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="truncate py-2">
-                                      {moment(api_keys.last_used_at).format(
-                                        "YYYY-MM-DD HH:mm"
-                                      ) === "Invalid date"
-                                        ? "Never"
-                                        : moment(api_keys.last_used_at).format(
+                                      <ShadTooltip
+                                        side="top"
+                                        content={moment(
+                                          api_keys.created_at
+                                        ).format("YYYY-MM-DD HH:mm")}
+                                      >
+                                        <div>
+                                          {moment(api_keys.created_at).format(
                                             "YYYY-MM-DD HH:mm"
                                           )}
+                                        </div>
+                                      </ShadTooltip>
+                                    </TableCell>
+                                    <TableCell className="truncate py-2">
+                                      <ShadTooltip
+                                        side="top"
+                                        content={
+                                          moment(api_keys.last_used_at).format(
+                                            "YYYY-MM-DD HH:mm"
+                                          ) === "Invalid date"
+                                            ? "Never"
+                                            : moment(
+                                                api_keys.last_used_at
+                                              ).format("YYYY-MM-DD HH:mm")
+                                        }
+                                      >
+                                        <div>
+                                          {moment(api_keys.last_used_at).format(
+                                            "YYYY-MM-DD HH:mm"
+                                          ) === "Invalid date"
+                                            ? "Never"
+                                            : moment(
+                                                api_keys.last_used_at
+                                              ).format("YYYY-MM-DD HH:mm")}
+                                        </div>
+                                      </ShadTooltip>
+                                    </TableCell>
+                                    <TableCell className="truncate py-2">
+                                      {api_keys.total_uses}
                                     </TableCell>
                                     <TableCell className="flex w-[100px] py-2 text-right">
                                       <div className="flex">

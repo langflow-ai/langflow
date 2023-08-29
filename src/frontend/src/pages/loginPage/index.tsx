@@ -19,7 +19,7 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login, getAuthentication, setUserData } = useContext(AuthContext);
+  const { login, getAuthentication, setUserData, setIsAdmin } = useContext(AuthContext);
   const navigate = useNavigate();
   const { setErrorData } = useContext(alertContext);
 
@@ -53,10 +53,12 @@ export default function LoginPage(): JSX.Element {
       setTimeout(() => {
         getLoggedUser()
           .then((user) => {
+            const isSuperUser = user.is_superuser;
+            setIsAdmin(isSuperUser);
             setUserData(user);
           })
           .catch((error) => {});
-      }, 1000);
+      }, 500);
     }
   }
 
