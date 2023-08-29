@@ -40,6 +40,7 @@
     "esbuild": "^0.17.18",
     "lodash": "^4.17.21",
     "lucide-react": "^0.233.0",
+    "moment": "^2.29.4",
     "react": "^18.2.0",
     "react-ace": "^10.1.0",
     "react-cookie": "^4.1.1",

@@ -10,8 +10,8 @@ class DatabaseManagerFactory(ServiceFactory):
     def __init__(self):
         super().__init__(DatabaseManager)
 
-    def create(self, settings_service: "SettingsManager"):
+    def create(self, settings_manager: "SettingsManager"):
         # Here you would have logic to create and configure a DatabaseManager
-        if not settings_service.settings.DATABASE_URL:
+        if not settings_manager.settings.DATABASE_URL:
             raise ValueError("No database URL provided")
-        return DatabaseManager(settings_service.settings.DATABASE_URL)
+        return DatabaseManager(settings_manager.settings.DATABASE_URL)

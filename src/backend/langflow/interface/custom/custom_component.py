@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Union
+from uuid import UUID
 from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
@@ -22,6 +23,7 @@ class CustomComponent(Component, extra=Extra.allow):
     function: Optional[Callable] = None
     return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
+    user_id: Optional[Union[UUID, str]] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -187,11 +189,16 @@ class CustomComponent(Component, extra=Extra.allow):
         return build_sorted_vertices_with_caching(graph_data)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
-        get_session = get_session or session_getter
-        db_manager = get_db_manager()
-        with get_session(db_manager) as session:
-            flows = session.query(Flow).all()
-        return flows
+        if not self.user_id:
+            raise ValueError("Session is invalid")
+        try:
+            get_session = get_session or session_getter
+            db_manager = get_db_manager()
+            with get_session(db_manager) as session:
+                flows = session.query(Flow).filter(Flow.user_id == self.user_id).all()
+            return flows
+        except Exception as e:
+            raise ValueError("Session is invalid") from e
 
     def get_flow(
         self,
@@ -207,7 +214,11 @@ class CustomComponent(Component, extra=Extra.allow):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = session.query(Flow).filter(Flow.name == flow_name).first()
+                flow = (
+                    session.query(Flow)
+                    .filter(Flow.name == flow_name)
+                    .filter(Flow.user_id == self.user_id)
+                ).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 
