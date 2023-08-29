@@ -51,7 +51,7 @@ export default function SignUp(): JSX.Element {
         } = error;
         setErrorData({
           title: "Error signing up",
-          list: [detail[0].msg],
+          list: [detail],
         });
         return;
       });

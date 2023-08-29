@@ -348,14 +348,14 @@ export default function AdminPage() {
                               </TableCell>
                               <TableCell className="truncate py-2 ">
                                 {
-                                  new Date(user.create_at)
+                                  new Date(user.create_at!)
                                     .toISOString()
                                     .split("T")[0]
                                 }
                               </TableCell>
                               <TableCell className="truncate py-2">
                                 {
-                                  new Date(user.updated_at)
+                                  new Date(user.updated_at!)
                                     .toISOString()
                                     .split("T")[0]
                                 }
