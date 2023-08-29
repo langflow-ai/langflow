@@ -52,7 +52,7 @@
     "react-syntax-highlighter": "^15.5.0",
     "react-tabs": "^6.0.0",
     "react-tooltip": "^5.13.1",
-    "reactflow": "^11.5.5",
+    "reactflow": "^11.8.3",
     "rehype-mathjax": "^4.0.2",
     "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
