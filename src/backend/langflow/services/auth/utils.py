@@ -269,7 +269,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
 
 def authenticate_user(
     username: str, password: str, db: Session = Depends(get_session)
-) -> User | None:
+) -> Optional[User]:
     user = get_user_by_username(db, username)
 
     if not user:
