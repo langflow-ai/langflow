@@ -32,29 +32,38 @@ export default function Header(): JSX.Element {
           <MenuBar flows={flows} tabId={tabId} />
         )}
         {!autoLogin && location.pathname !== `/flow/${tabId}` && (
-          <Button
+          <a
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
+        >
+          Sign out
+        </a>
+        )}
+
+        {location.pathname === "/admin" && (
+          <a
             onClick={() => {
-              logout();
-              navigate("/login");
+              navigate("/");
             }}
-            className="mx-5 cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            variant="outline"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
           >
-            Sign out
-          </Button>
+            Home
+          </a>
         )}
 
         {isAdmin &&
           !autoLogin &&
           location.pathname !== "/admin" &&
           location.pathname !== `/flow/${tabId}` && (
-            <Button
-              className="cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-              onClick={() => navigate("/admin")}
-              variant="outline"
-            >
-              Admin page
-            </Button>
+            <a
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            onClick={() => navigate("/admin")}
+          >
+            Admin page
+          </a>
           )}
       </div>
       <div className="round-button-div">
