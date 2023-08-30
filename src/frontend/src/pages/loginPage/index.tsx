@@ -31,8 +31,8 @@ export default function LoginPage(): JSX.Element {
 
   function signIn() {
     const user: LoginType = {
-      username: username,
-      password: password,
+      username: username.trim(),
+      password: password.trim(),
     };
     onLogin(user)
       .then((user) => {
