@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import MongoDBAtlasVectorSearch
+from langchain.vectorstores.base import VectorStore
+from langchain.schema import BaseRetriever
 from langchain.schema import Document
 from langchain.embeddings.base import Embeddings
 
@@ -37,10 +39,10 @@ class MongoDbAtlasComponent(CustomComponent):
         collection_name: str,
         mongodb_atlas_cluster_uri: str,
         db_name: str,
-        index_name: Optional[str] = None,
+        index_name: str,
+        embeddings: Embeddings,
         documents: Optional[Document] = None,
-        embeddings: Optional[Embeddings] = None,
-    ) -> MongoDBAtlasVectorSearch:
+    ) -> Union[VectorStore, BaseRetriever]:
         if not mongodb_atlas_cluster_uri:
             raise ValueError("Mongodb atlas cluster uri must be provided in the params")
         from pymongo import MongoClient
