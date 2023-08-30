@@ -28,16 +28,22 @@ class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: dict):
         self.source: "Vertex" = source
         self.target: "Vertex" = target
-        data = edge.get("data", {})
-        if not data:
-            raise ValueError("Edge data is empty")
-        self._source_handle = data.get("sourceHandle", {})
-        self._target_handle = data.get("targetHandle", {})
-        self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
-        self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
-        self.target_param = self.target_handle.fieldName
-        # validate handles
-        self.validate_handles()
+        if data := edge.get("data", {}):
+            self._source_handle = data.get("sourceHandle", {})
+            self._target_handle = data.get("targetHandle", {})
+            self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
+            self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+            self.target_param = self.target_handle.fieldName
+            # validate handles
+            self.validate_handles()
+        else:
+            # Logging here because this is a breaking change
+            logger.error("Edge data is empty")
+            self.source_handle = edge.get("sourceHandle", "")
+            self.target_handle = edge.get("targetHandle", "")
+            # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
+            # target_param is documents
+            self.target_param = self.target_handle.split("|")[1]
         # Validate in __init__ to fail fast
         self.validate_edge()
 
