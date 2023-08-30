@@ -1,8 +1,11 @@
 import sys
 import time
 import httpx
-from langflow.utils.util import get_number_of_workers
-from multiprocess import Process  # type: ignore
+from langflow.services.database.utils import session_getter
+from langflow.services.manager import initialize_services, initialize_settings_manager
+from langflow.services.utils import get_db_manager, get_settings_manager
+
+from multiprocess import Process, cpu_count  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
@@ -10,14 +13,44 @@ import socket
 from rich.panel import Panel
 from rich import box
 from rich import print as rprint
+from rich.table import Table
 import typer
 from langflow.main import setup_app
-from langflow.settings import settings
 from langflow.utils.logger import configure, logger
 import webbrowser
 from dotenv import load_dotenv
 
+from rich.console import Console
+
+console = Console()
+
 app = typer.Typer()
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers
+
+
+def display_results(results):
+    """
+    Display the results of the migration.
+    """
+    for table_results in results:
+        table = Table(title=f"Migration {table_results.table_name}")
+        table.add_column("Name")
+        table.add_column("Type")
+        table.add_column("Status")
+
+        for result in table_results.results:
+            status = "Success" if result.success else "Failure"
+            color = "green" if result.success else "red"
+            table.add_row(result.name, result.type, f"[{color}]{status}[/{color}]")
+
+        console.print(table)
+        console.print()  # Print a new line
 
 
 def update_settings(
@@ -30,19 +63,20 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-
+    initialize_settings_manager()
+    settings_manager = get_settings_manager()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings.update_from_yaml(config, dev=dev)
+        settings_manager.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_manager.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings.update_settings(CACHE=cache)
+        settings_manager.settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings.update_settings(COMPONENTS_PATH=components_path)
+        settings_manager.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 def serve_on_jcloud():
@@ -92,7 +126,7 @@ def serve_on_jcloud():
 
 
 @app.command()
-def serve(
+def run(
     host: str = typer.Option(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
@@ -106,7 +140,9 @@ def serve(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    config: str = typer.Option(
+        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
+    ),
     # .env file param
     env_file: Path = typer.Option(
         None, help="Path to the .env file containing environment variables."
@@ -146,6 +182,11 @@ def serve(
         help="Remove API keys from the projects saved in the database.",
         envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
+    backend_only: bool = typer.Option(
+        False,
+        help="Run only the backend server without the frontend.",
+        envvar="LANGFLOW_BACKEND_ONLY",
+    ),
 ):
     """
     Run the Langflow server.
@@ -167,7 +208,7 @@ def serve(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
-    app = setup_app(static_files_dir=static_files_dir)
+    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -178,6 +219,10 @@ def serve(
         "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
+
+    # Define an env variable to know if we are just testing the server
+    if "pytest" in sys.modules:
+        return
 
     if platform.system() in ["Windows"]:
         # Run using uvicorn on MacOS and Windows
@@ -297,6 +342,43 @@ def run_langflow(host, port, log_level, options, app):
     except Exception as e:
         logger.exception(e)
         sys.exit(1)
+
+
+@app.command()
+def superuser(
+    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+):
+    initialize_services()
+    db_manager = get_db_manager()
+    with session_getter(db_manager) as session:
+        from langflow.services.auth.utils import create_super_user
+
+        if create_super_user(session, username, password):
+            # Verify that the superuser was created
+            from langflow.services.database.models.user.user import User
+
+            user = session.query(User).filter(User.username == username).first()
+            if user is None:
+                typer.echo("Superuser creation failed.")
+                return
+
+            typer.echo("Superuser created successfully.")
+
+        else:
+            typer.echo("Superuser creation failed.")
+
+
+@app.command()
+def migration(test: bool = typer.Option(False, help="Run migrations in test mode.")):
+    initialize_services()
+    db_manager = get_db_manager()
+    if not test:
+        db_manager.run_migrations()
+    results = db_manager.run_migrations_test()
+    display_results(results)
 
 
 def main():

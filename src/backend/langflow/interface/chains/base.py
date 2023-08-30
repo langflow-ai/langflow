@@ -3,7 +3,8 @@ from typing import Any, Dict, List, Optional, Type
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.chains import ChainFrontendNode
 from langflow.utils.logger import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
@@ -30,6 +31,7 @@ class ChainCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
+            settings_manager = get_settings_manager()
             self.type_dict: dict[str, Any] = {
                 chain_name: import_class(f"langchain.chains.{chain_name}")
                 for chain_name in chains.__all__
@@ -43,7 +45,8 @@ class ChainCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: chain
                 for name, chain in self.type_dict.items()
-                if name in settings.CHAINS or settings.DEV
+                if name in settings_manager.settings.CHAINS
+                or settings_manager.settings.DEV
             }
         return self.type_dict
 

@@ -19,7 +19,7 @@ coverage:
 		--cov-report term-missing:skip-covered
 
 tests:
-	poetry run pytest tests
+	poetry run pytest tests -n auto
 
 format:
 	poetry run black .
@@ -27,18 +27,36 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-	poetry run mypy .
+	poetry run mypy --exclude .venv .
 	poetry run black . --check
 	poetry run ruff . --fix
 
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendc:
+	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+
 run_frontend:
 	cd src/frontend && npm start
 
+run_cli:
+	poetry run langflow --path src/frontend/build
+
+run_cli_debug:
+	poetry run langflow --path src/frontend/build --log-level debug
+
+setup_devcontainer:
+	make init
+	make build_frontend
+	poetry run langflow --path src/frontend/build
+
 frontend:
 	make install_frontend
+	make run_frontend
+
+frontendc:
+	make install_frontendc
 	make run_frontend
 
 install_backend:

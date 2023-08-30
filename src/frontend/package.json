@@ -12,11 +12,13 @@
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.4",
     "@radix-ui/react-dropdown-menu": "^2.0.5",
+    "@radix-ui/react-form": "^0.0.3",
     "@radix-ui/react-icons": "^1.3.0",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-menubar": "^1.0.3",
     "@radix-ui/react-popover": "^1.0.6",
     "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-select": "^1.2.2",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.0.3",
@@ -38,6 +40,7 @@
     "esbuild": "^0.17.18",
     "lodash": "^4.17.21",
     "lucide-react": "^0.233.0",
+    "moment": "^2.29.4",
     "react": "^18.2.0",
     "react-ace": "^10.1.0",
     "react-cookie": "^4.1.1",
@@ -50,7 +53,7 @@
     "react-syntax-highlighter": "^15.5.0",
     "react-tabs": "^6.0.0",
     "react-tooltip": "^5.13.1",
-    "reactflow": "^11.5.5",
+    "reactflow": "^11.8.3",
     "rehype-mathjax": "^4.0.2",
     "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
@@ -69,7 +72,8 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+    "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "eslintConfig": {
     "extends": [

@@ -1,7 +1,7 @@
 from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
-from langflow.graph.graph.constants import VERTEX_TYPE_MAP
+from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     FileToolVertex,
@@ -144,7 +144,7 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator:
+    def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.debug("Sorted vertices: %s", sorted_vertices)
@@ -187,10 +187,12 @@ class Graph:
         """Returns the node class based on the node type."""
         if node_type in FILE_TOOLS:
             return FileToolVertex
-        if node_type in VERTEX_TYPE_MAP:
-            return VERTEX_TYPE_MAP[node_type]
+        if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (
-            VERTEX_TYPE_MAP[node_lc_type] if node_lc_type in VERTEX_TYPE_MAP else Vertex
+            lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_lc_type]
+            if node_lc_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
+            else Vertex
         )
 
     def _build_vertices(self) -> List[Vertex]:

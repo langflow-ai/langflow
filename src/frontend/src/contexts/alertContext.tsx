@@ -1,31 +1,8 @@
 import { createContext, ReactNode, useState } from "react";
 import { AlertItemType } from "../types/alerts";
+import { alertContextType } from "../types/typesContext";
 
 import _ from "lodash";
-
-//types for alertContextType
-type alertContextType = {
-  errorData: { title: string; list?: Array<string> };
-  setErrorData: (newState: { title: string; list?: Array<string> }) => void;
-  errorOpen: boolean;
-  setErrorOpen: (newState: boolean) => void;
-  noticeData: { title: string; link?: string };
-  setNoticeData: (newState: { title: string; link?: string }) => void;
-  noticeOpen: boolean;
-  setNoticeOpen: (newState: boolean) => void;
-  successData: { title: string };
-  setSuccessData: (newState: { title: string }) => void;
-  successOpen: boolean;
-  setSuccessOpen: (newState: boolean) => void;
-  notificationCenter: boolean;
-  setNotificationCenter: (newState: boolean) => void;
-  notificationList: Array<AlertItemType>;
-  pushNotificationList: (Object: AlertItemType) => void;
-  clearNotificationList: () => void;
-  removeFromNotificationList: (index: string) => void;
-  loading: boolean;
-  setLoading: (newState: boolean) => void;
-};
 
 //initial values to alertContextType
 const initialValue: alertContextType = {
@@ -48,7 +25,7 @@ const initialValue: alertContextType = {
   notificationList: [],
   pushNotificationList: () => {},
   clearNotificationList: () => {},
-  removeFromNotificationList: () => {},
+  removeFromNotificationList: () => {}
 };
 
 export const alertContext = createContext<alertContextType>(initialValue);
@@ -70,7 +47,8 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   });
   const [successOpen, setSuccessOpen] = useState(false);
   const [notificationCenter, setNotificationCenter] = useState(false);
-  const [notificationList, setNotificationList] = useState([]);
+  const [notificationList, setNotificationList] = useState<AlertItemType[]>([]);
+  const [isTweakPage, setIsTweakPage] = useState<boolean>(false);
   const pushNotificationList = (notification: AlertItemType) => {
     setNotificationList((old) => {
       let newNotificationList = _.cloneDeep(old);

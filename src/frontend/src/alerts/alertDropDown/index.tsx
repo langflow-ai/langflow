@@ -9,7 +9,9 @@ import { alertContext } from "../../contexts/alertContext";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
-export default function AlertDropdown({ children }: AlertDropdownType) {
+export default function AlertDropdown({
+  children,
+}: AlertDropdownType): JSX.Element {
   const {
     notificationList,
     clearNotificationList,
@@ -22,9 +24,9 @@ export default function AlertDropdown({ children }: AlertDropdownType) {
   return (
     <Popover
       open={open}
-      onOpenChange={(k) => {
-        setOpen(k);
-        if (k) setNotificationCenter(false);
+      onOpenChange={(target) => {
+        setOpen(target);
+        if (target) setNotificationCenter(false);
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>

@@ -6,7 +6,7 @@ import Header from "../../components/headerComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-export default function HomePage() {
+export default function HomePage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
     useContext(TabsContext);
 
@@ -48,7 +48,7 @@ export default function HomePage() {
             <Button
               variant="primary"
               onClick={() => {
-                addFlow(null, true).then((id) => {
+                addFlow(null!, true).then((id) => {
                   navigate("/flow/" + id);
                 });
               }}
