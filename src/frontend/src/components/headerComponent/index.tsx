@@ -33,14 +33,14 @@ export default function Header(): JSX.Element {
         )}
         {!autoLogin && location.pathname !== `/flow/${tabId}` && (
           <a
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
-        >
-          Sign out
-        </a>
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+            className="mx-5 cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            Sign out
+          </a>
         )}
 
         {location.pathname === "/admin" && (
@@ -48,7 +48,7 @@ export default function Header(): JSX.Element {
             onClick={() => {
               navigate("/");
             }}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            className="cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
             Home
           </a>
@@ -59,11 +59,11 @@ export default function Header(): JSX.Element {
           location.pathname !== "/admin" &&
           location.pathname !== `/flow/${tabId}` && (
             <a
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
-            onClick={() => navigate("/admin")}
-          >
-            Admin page
-          </a>
+              className="cursor-pointer text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              onClick={() => navigate("/admin")}
+            >
+              Admin page
+            </a>
           )}
       </div>
       <div className="round-button-div">
