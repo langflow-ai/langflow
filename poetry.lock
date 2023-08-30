@@ -207,17 +207,6 @@ files = [
 ]
 
 [[package]]
-name = "argilla"
-version = "0.0.1"
-description = ""
-optional = false
-python-versions = "*"
-files = [
-    {file = "argilla-0.0.1-py3-none-any.whl", hash = "sha256:8bdc3c505bcfb47ba4b91f5658034eae53bf7d4f9317980397605c0c55817396"},
-    {file = "argilla-0.0.1.tar.gz", hash = "sha256:5017854754e89f573b31af25b25b803f51cea9ca1fa0bcf00505dee1f45cf7c9"},
-]
-
-[[package]]
 name = "asgiref"
 version = "3.7.2"
 description = "ASGI specs, helper code, and adapters"
@@ -1235,15 +1224,18 @@ gmpy = ["gmpy"]
 gmpy2 = ["gmpy2"]
 
 [[package]]
-name = "et-xmlfile"
-version = "1.1.0"
-description = "An implementation of lxml.xmlfile for the standard library"
+name = "emoji"
+version = "2.8.0"
+description = "Emoji for Python"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 files = [
-    {file = "et_xmlfile-1.1.0-py3-none-any.whl", hash = "sha256:a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada"},
-    {file = "et_xmlfile-1.1.0.tar.gz", hash = "sha256:8eb9e2bc2f8c97e37a2dc85a09ecdcdec9d8a396530a6d5a33b30b9a92da0c5c"},
+    {file = "emoji-2.8.0-py2.py3-none-any.whl", hash = "sha256:a8468fd836b7ecb6d1eac054c9a591701ce0ccd6c6f7779ad71b66f76664df90"},
+    {file = "emoji-2.8.0.tar.gz", hash = "sha256:8d8b5dec3c507444b58890e598fc895fcec022b3f5acb49497c6ccc5208b8b00"},
 ]
+
+[package.extras]
+dev = ["coverage", "coveralls", "pytest"]
 
 [[package]]
 name = "exceptiongroup"
@@ -3161,24 +3153,6 @@ flake8 = ["flake8"]
 tests = ["psutil", "pytest (!=3.3.0)", "pytest-cov"]
 
 [[package]]
-name = "markdown"
-version = "3.4.4"
-description = "Python implementation of John Gruber's Markdown."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "Markdown-3.4.4-py3-none-any.whl", hash = "sha256:a4c1b65c0957b4bd9e7d86ddc7b3c9868fb9670660f6f99f6d1bca8954d5a941"},
-    {file = "Markdown-3.4.4.tar.gz", hash = "sha256:225c6123522495d4119a90b3a3ba31a1e87a70369e03f14799ea9c0d7183a3d6"},
-]
-
-[package.dependencies]
-importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
-
-[package.extras]
-docs = ["mdx-gh-links (>=0.2)", "mkdocs (>=1.0)", "mkdocs-nature (>=0.4)"]
-testing = ["coverage", "pyyaml"]
-
-[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -3328,6 +3302,21 @@ files = [
 ]
 
 [[package]]
+name = "metal-sdk"
+version = "2.0.2"
+description = "SDK for getmetal.io"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "metal_sdk-2.0.2-py3-none-any.whl", hash = "sha256:a5a95fb3796979085965667ffc41fd9eeddc87b60671619671a0eaebd0bec4a1"},
+    {file = "metal_sdk-2.0.2.tar.gz", hash = "sha256:e5e35d230f00b1b838cfcffbcb7042f450b23b59448f37bdd385761871a1490d"},
+]
+
+[package.dependencies]
+httpx = "*"
+typing-extensions = "*"
+
+[[package]]
 name = "metaphor-python"
 version = "0.1.16"
 description = "A Python package for the Metaphor API."
@@ -3379,23 +3368,6 @@ develop = ["codecov", "pycodestyle", "pytest (>=4.6)", "pytest-cov", "wheel"]
 docs = ["sphinx"]
 gmpy = ["gmpy2 (>=2.1.0a4)"]
 tests = ["pytest (>=4.6)"]
-
-[[package]]
-name = "msg-parser"
-version = "1.2.0"
-description = "This module enables reading, parsing and converting Microsoft Outlook MSG E-Mail files."
-optional = false
-python-versions = ">=3.4"
-files = [
-    {file = "msg_parser-1.2.0-py2.py3-none-any.whl", hash = "sha256:d47a2f0b2a359cb189fad83cc991b63ea781ecc70d91410324273fbf93e95375"},
-    {file = "msg_parser-1.2.0.tar.gz", hash = "sha256:0de858d4fcebb6c8f6f028da83a17a20fe01cdce67c490779cf43b3b0162aa66"},
-]
-
-[package.dependencies]
-olefile = ">=0.46"
-
-[package.extras]
-rtf = ["compressed-rtf (>=1.0.5)"]
 
 [[package]]
 name = "multidict"
@@ -3696,16 +3668,6 @@ files = [
 ]
 
 [[package]]
-name = "olefile"
-version = "0.46"
-description = "Python package to parse, read and write Microsoft OLE2 files (Structured Storage or Compound Document, Microsoft Office)"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-files = [
-    {file = "olefile-0.46.zip", hash = "sha256:133b031eaf8fd2c9399b78b8bc5b8fcbe4c31e85295749bb17a87cba8f3c3964"},
-]
-
-[[package]]
 name = "onnxruntime"
 version = "1.15.1"
 description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
@@ -3781,20 +3743,6 @@ files = [
 
 [package.dependencies]
 pydantic = ">=1.8.2"
-
-[[package]]
-name = "openpyxl"
-version = "3.1.2"
-description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "openpyxl-3.1.2-py2.py3-none-any.whl", hash = "sha256:f91456ead12ab3c6c2e9491cf33ba6d08357d802192379bb482f1033ade496f5"},
-    {file = "openpyxl-3.1.2.tar.gz", hash = "sha256:a6f5977418eff3b2d5500d54d9db50c8277a368436f4e4f8ddb1be3422870184"},
-]
-
-[package.dependencies]
-et-xmlfile = "*"
 
 [[package]]
 name = "opentelemetry-api"
@@ -4253,40 +4201,6 @@ files = [
     {file = "pathspec-0.11.2-py3-none-any.whl", hash = "sha256:1d6ed233af05e679efb96b1851550ea95bbb64b7c490b0f5aa52996c11e92a20"},
     {file = "pathspec-0.11.2.tar.gz", hash = "sha256:e0d8d0ac2f12da61956eb2306b69f9469b42f4deb0f3cb6ed47b9cce9996ced3"},
 ]
-
-[[package]]
-name = "pdf2image"
-version = "1.16.3"
-description = "A wrapper around the pdftoppm and pdftocairo command line tools to convert PDF to a PIL Image list."
-optional = false
-python-versions = "*"
-files = [
-    {file = "pdf2image-1.16.3-py3-none-any.whl", hash = "sha256:b6154164af3677211c22cbb38b2bd778b43aca02758e962fe1e231f6d3b0e380"},
-    {file = "pdf2image-1.16.3.tar.gz", hash = "sha256:74208810c2cef4d9e347769b8e62a52303982ddb4f2dfd744c7ab4b940ae287e"},
-]
-
-[package.dependencies]
-pillow = "*"
-
-[[package]]
-name = "pdfminer-six"
-version = "20221105"
-description = "PDF parser and analyzer"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "pdfminer.six-20221105-py3-none-any.whl", hash = "sha256:1eaddd712d5b2732f8ac8486824533514f8ba12a0787b3d5fe1e686cd826532d"},
-    {file = "pdfminer.six-20221105.tar.gz", hash = "sha256:8448ab7b939d18b64820478ecac5394f482d7a79f5f7eaa7703c6c959c175e1d"},
-]
-
-[package.dependencies]
-charset-normalizer = ">=2.0.0"
-cryptography = ">=36.0.0"
-
-[package.extras]
-dev = ["black", "mypy (==0.931)", "nox", "pytest"]
-docs = ["sphinx", "sphinx-argparse"]
-image = ["Pillow"]
 
 [[package]]
 name = "pexpect"
@@ -5089,17 +5003,6 @@ snappy = ["python-snappy"]
 zstd = ["zstandard"]
 
 [[package]]
-name = "pypandoc"
-version = "1.11"
-description = "Thin wrapper for pandoc."
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "pypandoc-1.11-py3-none-any.whl", hash = "sha256:b260596934e9cfc6513056110a7c8600171d414f90558bf4407e68b209be8007"},
-    {file = "pypandoc-1.11.tar.gz", hash = "sha256:7f6d68db0e57e0f6961bec2190897118c4d305fc2d31c22cd16037f22ee084a5"},
-]
-
-[[package]]
 name = "pyparsing"
 version = "3.1.1"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -5213,19 +5116,6 @@ files = [
 six = ">=1.5"
 
 [[package]]
-name = "python-docx"
-version = "0.8.11"
-description = "Create and update Microsoft Word .docx files."
-optional = false
-python-versions = "*"
-files = [
-    {file = "python-docx-0.8.11.tar.gz", hash = "sha256:1105d233a0956dd8dd1e710d20b159e2d72ac3c301041b95f4d4ceb3e0ebebc4"},
-]
-
-[package.dependencies]
-lxml = ">=2.3.2"
-
-[[package]]
 name = "python-dotenv"
 version = "1.0.0"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -5303,21 +5193,6 @@ files = [
 
 [package.extras]
 dev = ["atomicwrites (==1.2.1)", "attrs (==19.2.0)", "coverage (==6.5.0)", "hatch", "invoke (==1.7.3)", "more-itertools (==4.3.0)", "pbr (==4.3.0)", "pluggy (==1.0.0)", "py (==1.11.0)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-timeout (==2.1.0)", "pyyaml (==5.1)"]
-
-[[package]]
-name = "python-pptx"
-version = "0.6.21"
-description = "Generate and manipulate Open XML PowerPoint (.pptx) files"
-optional = false
-python-versions = "*"
-files = [
-    {file = "python-pptx-0.6.21.tar.gz", hash = "sha256:7798a2aaf89563565b3c7120c0acfe9aff775db0db3580544e3bf4840c2e378f"},
-]
-
-[package.dependencies]
-lxml = ">=3.1.0"
-Pillow = ">=3.3.2"
-XlsxWriter = ">=0.5.7"
 
 [[package]]
 name = "python-semantic-release"
@@ -6995,50 +6870,67 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "unstructured"
-version = "0.7.12"
+version = "0.10.9"
 description = "A library that prepares raw documents for downstream ML tasks."
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "unstructured-0.7.12-py3-none-any.whl", hash = "sha256:6dec4f23574e213f30bccb680a4fb84c95617092ce4abf5d8955cc71af402fef"},
-    {file = "unstructured-0.7.12.tar.gz", hash = "sha256:3dcddea34f52e1070f38fd10063b3b0f64bc4cbe5b778d6b86b5d33262d625cd"},
+    {file = "unstructured-0.10.9-py3-none-any.whl", hash = "sha256:182062983cf5ade923e871be52154829d92e5b72dfd7575847618fb44f7debd6"},
+    {file = "unstructured-0.10.9.tar.gz", hash = "sha256:fd62f84abf12c85ef8b81567a4fcb841b7450f010454b69754bfc5b10b68d869"},
 ]
 
 [package.dependencies]
-argilla = "*"
+beautifulsoup4 = "*"
 chardet = "*"
+emoji = "*"
 filetype = "*"
 lxml = "*"
-markdown = "*"
-msg-parser = "*"
 nltk = "*"
-openpyxl = "*"
-pandas = "*"
-pdf2image = "*"
-"pdfminer.six" = "*"
-pillow = "*"
-pypandoc = "*"
-python-docx = "*"
 python-magic = "*"
-python-pptx = "*"
 requests = "*"
 tabulate = "*"
-xlrd = "*"
 
 [package.extras]
+airtable = ["pyairtable"]
+all-docs = ["Pillow (<10)", "ebooklib", "markdown", "msg-parser", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pypandoc", "python-docx", "python-pptx", "unstructured-inference", "xlrd"]
 azure = ["adlfs", "fsspec"]
+biomed = ["bs4"]
+box = ["boxfs", "fsspec"]
+confluence = ["atlassian-python-api"]
+csv = ["pandas"]
+delta-table = ["deltalake", "fsspec"]
 discord = ["discord-py"]
+doc = ["python-docx"]
+docx = ["python-docx"]
 dropbox = ["dropboxdrivefs", "fsspec"]
-gcs = ["fsspec", "gcsfs"]
-github = ["pygithub (==1.58.2)"]
+elasticsearch = ["elasticsearch", "jq"]
+epub = ["ebooklib"]
+gcs = ["bs4", "fsspec", "gcsfs"]
+github = ["pygithub (>1.58.0)"]
 gitlab = ["python-gitlab"]
 google-drive = ["google-api-python-client"]
 huggingface = ["langdetect", "sacremoses", "sentencepiece", "torch", "transformers"]
-local-inference = ["unstructured-inference (==0.5.4)"]
+image = ["Pillow (<10)", "pdf2image", "pdfminer.six", "unstructured-inference"]
+local-inference = ["Pillow (<10)", "ebooklib", "markdown", "msg-parser", "openpyxl", "pandas", "pdf2image", "pdfminer.six", "pypandoc", "python-docx", "python-pptx", "unstructured-inference", "xlrd"]
+md = ["markdown"]
+msg = ["msg-parser"]
+notion = ["htmlBuilder", "notion-client"]
+odt = ["pypandoc", "python-docx"]
+onedrive = ["Office365-REST-Python-Client (<2.4.3)", "bs4", "msal"]
+org = ["pypandoc"]
+outlook = ["Office365-REST-Python-Client (<2.4.3)", "msal"]
+pdf = ["Pillow (<10)", "pdf2image", "pdfminer.six", "unstructured-inference"]
+ppt = ["python-pptx"]
+pptx = ["python-pptx"]
 reddit = ["praw"]
+rst = ["pypandoc"]
+rtf = ["pypandoc"]
 s3 = ["fsspec", "s3fs"]
+sharepoint = ["Office365-REST-Python-Client (<2.4.3)", "msal"]
 slack = ["slack-sdk"]
+tsv = ["pandas"]
 wikipedia = ["wikipedia"]
+xlsx = ["openpyxl", "pandas", "xlrd"]
 
 [[package]]
 name = "uritemplate"
@@ -7444,33 +7336,6 @@ files = [
 ]
 
 [[package]]
-name = "xlrd"
-version = "2.0.1"
-description = "Library for developers to extract data from Microsoft Excel (tm) .xls spreadsheet files"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
-files = [
-    {file = "xlrd-2.0.1-py2.py3-none-any.whl", hash = "sha256:6a33ee89877bd9abc1158129f6e94be74e2679636b8a205b43b85206c3f0bbdd"},
-    {file = "xlrd-2.0.1.tar.gz", hash = "sha256:f72f148f54442c6b056bf931dbc34f986fd0c3b0b6b5a58d013c9aef274d0c88"},
-]
-
-[package.extras]
-build = ["twine", "wheel"]
-docs = ["sphinx"]
-test = ["pytest", "pytest-cov"]
-
-[[package]]
-name = "xlsxwriter"
-version = "3.1.2"
-description = "A Python module for creating Excel XLSX files."
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "XlsxWriter-3.1.2-py3-none-any.whl", hash = "sha256:331508ff39d610ecdaf979e458840bc1eab6e6a02cfd5d08f044f0f73636236f"},
-    {file = "XlsxWriter-3.1.2.tar.gz", hash = "sha256:78751099a770273f1c98b8d6643351f68f98ae8e6acf9d09d37dc6798f8cd3de"},
-]
-
-[[package]]
 name = "yarl"
 version = "1.9.2"
 description = "Yet another URL library"
@@ -7638,4 +7503,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "3517d8ba2744a059d3f107a826392c25ed57b5279ccf45ffdb8e188f959b256a"
+content-hash = "2390a7da4e661d287aa15bfe00ba84789301af5cca5dbc584f0093461670364e"

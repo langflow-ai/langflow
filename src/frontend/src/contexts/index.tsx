@@ -16,17 +16,17 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
       <TooltipProvider>
         <ReactFlowProvider>
           <DarkProvider>
-            <TypesProvider>
-              <LocationProvider>
-                <AlertProvider>
+            <AlertProvider>
+              <TypesProvider>
+                <LocationProvider>
                   <SSEProvider>
                     <TabsProvider>
                       <UndoRedoProvider>{children}</UndoRedoProvider>
                     </TabsProvider>
                   </SSEProvider>
-                </AlertProvider>
-              </LocationProvider>
-            </TypesProvider>
+                </LocationProvider>
+              </TypesProvider>
+            </AlertProvider>
           </DarkProvider>
         </ReactFlowProvider>
       </TooltipProvider>

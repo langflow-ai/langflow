@@ -9,10 +9,16 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
-import Header from "./components/headerComponent";
+import FetchErrorComponent from "./components/fetchErrorComponent";
+import LoadingComponent from "./components/loadingComponent";
+import {
+  FETCH_ERROR_DESCRIPION,
+  FETCH_ERROR_MESSAGE,
+} from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
+import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
 export default function App() {
@@ -25,6 +31,7 @@ export default function App() {
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
   const { hardReset } = useContext(TabsContext);
+
   const {
     errorData,
     errorOpen,
@@ -35,7 +42,9 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    loading,
   } = useContext(alertContext);
+  const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -133,8 +142,22 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        <Header />
-        <Router />
+        {loading ? (
+          <div className="loading-page-panel">
+            {fetchError ? (
+              <FetchErrorComponent
+                description={FETCH_ERROR_DESCRIPION}
+                message={FETCH_ERROR_MESSAGE}
+              ></FetchErrorComponent>
+            ) : (
+              <LoadingComponent remSize={50} />
+            )}
+          </div>
+        ) : (
+          <>
+            <Router />
+          </>
+        )}
       </ErrorBoundary>
       <div></div>
       <div className="app-div" style={{ zIndex: 999 }}>

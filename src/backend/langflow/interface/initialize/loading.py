@@ -1,4 +1,5 @@
 import json
+import orjson
 from typing import Any, Callable, Dict, Sequence, Type
 
 from langchain.agents import agent as agent_module
@@ -66,7 +67,7 @@ def convert_kwargs(params):
     for key in kwargs_keys:
         if isinstance(params[key], str):
             try:
-                params[key] = json.loads(params[key])
+                params[key] = orjson.loads(params[key])
             except json.JSONDecodeError:
                 # if the string is not a valid json string, we will
                 # remove the key from the params
@@ -306,7 +307,7 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
     metadata = params.pop("metadata", None)
     if metadata and isinstance(metadata, str):
         try:
-            metadata = json.loads(metadata)
+            metadata = orjson.loads(metadata)
         except json.JSONDecodeError as exc:
             raise ValueError(
                 "The metadata you provided is not a valid JSON string."
