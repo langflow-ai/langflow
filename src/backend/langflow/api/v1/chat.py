@@ -59,6 +59,9 @@ async def chat(
     except WebSocketException as exc:
         logger.error(f"Websocket error: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
+    except Exception as exc:
+        logger.error(f"Error in chat websocket: {exc}")
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
 
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
