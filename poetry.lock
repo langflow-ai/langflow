@@ -6760,6 +6760,17 @@ files = [
 ]
 
 [[package]]
+name = "types-google-cloud-ndb"
+version = "2.2.0.0"
+description = "Typing stubs for google-cloud-ndb"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-google-cloud-ndb-2.2.0.0.tar.gz", hash = "sha256:1485074019e4ffaf1900e185e5fc861f8f7bd99fb0c6390c040271a2327092b3"},
+    {file = "types_google_cloud_ndb-2.2.0.0-py3-none-any.whl", hash = "sha256:027025dd593aa26a6505c1be7ff42f4acb70580f1a07f4030fb77a3d1869e83d"},
+]
+
+[[package]]
 name = "types-pillow"
 version = "9.5.0.6"
 description = "Typing stubs for Pillow"
@@ -7503,4 +7514,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "2390a7da4e661d287aa15bfe00ba84789301af5cca5dbc584f0093461670364e"
+content-hash = "20347dcfd3f57ef74d2cdf2882bb8694624b7cd7db610bc96e6bde1a8688cae2"
