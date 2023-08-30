@@ -89,7 +89,8 @@ async def get_current_user(
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
         if expires := payload.get("exp", None):
-            expires_datetime = datetime.fromtimestamp(expires)
+            expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
+            # TypeError: can't compare offset-naive and offset-aware datetimes
             if datetime.now(timezone.utc) > expires_datetime:
                 raise credentials_exception
 
