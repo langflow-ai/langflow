@@ -1,7 +1,7 @@
 import contextlib
 import json
 import secrets
-from langflow.services.settings.utils import set_secure_permissions
+from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 import orjson
 import os
 from shutil import copy2
@@ -55,31 +55,27 @@ class Settings(BaseSettings):
 
     @validator("SECRET_KEY", pre=True)
     def get_secret_key(cls, value, values):
-        if not value:
+        config_dir = values.get("CONFIG_DIR")
+
+        if not config_dir:
+            logger.debug("No CONFIG_DIR provided, not saving secret key")
+            return value or secrets.token_urlsafe(32)
+
+        secret_key_path = Path(config_dir) / "secret_key"
+
+        if value:
+            logger.debug("Secret key provided")
+            write_secret_to_file(secret_key_path, value)
+        else:
             logger.debug("No secret key provided, generating a random one")
 
-            if config_dir := values.get("CONFIG_DIR"):
-                secret_key_path = Path(config_dir) / "secret_key"
-
-                if secret_key_path.exists():
-                    with open(secret_key_path, "rb") as f:
-                        value = f.read()
-                    logger.debug("Loaded secret key")
-                else:
-                    value = secrets.token_urlsafe(32)
-
-                    with open(secret_key_path, "wb") as f:
-                        f.write(value)
-
-                    # Limit the file permissions
-                    try:
-                        set_secure_permissions(secret_key_path)
-                    except Exception:
-                        logger.error("Failed to set secure permissions on secret key")
-
-                    logger.debug("Saved secret key")
+            if secret_key_path.exists():
+                value = read_secret_from_file(secret_key_path)
+                logger.debug("Loaded secret key")
             else:
-                logger.debug("No CONFIG_DIR provided, not saving secret key")
+                value = secrets.token_urlsafe(32)
+                write_secret_to_file(secret_key_path, value)
+                logger.debug("Saved secret key")
 
         return value
 
