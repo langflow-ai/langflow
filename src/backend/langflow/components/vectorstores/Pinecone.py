@@ -42,8 +42,9 @@ class PineconeComponent(CustomComponent):
         api_key: str,
         environment: str,
         index_name: str,
-        documents: Optional[Document],
+        namespace: str,
         embeddings: Optional[Embeddings],
+        documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         pinecone.init(
             api_key=api_key,  # find at app.pinecone.io
@@ -55,12 +56,15 @@ class PineconeComponent(CustomComponent):
             # we create a new index
             pinecone.create_index(name=index_name, metric="cosine", dimension=1536)
 
-        if documents is not None and embeddings is not None:
+        if documents is not None:
             return Pinecone.from_documents(
                 documents=documents,
                 embedding=embeddings,
                 index_name=index_name,
+                namespace=namespace,
             )
 
         # if documents is None assume you already have an index and try to load it like this
-        return Pinecone.from_existing_index(index_name=index_name, embedding=embeddings)
+        return Pinecone.from_existing_index(
+            index_name=index_name, embedding=embeddings, namespace=namespace
+        )
