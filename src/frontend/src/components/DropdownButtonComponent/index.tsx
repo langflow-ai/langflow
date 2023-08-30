@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { dropdownButtonPropsType } from "../../types/components";
+import { Transition } from "@headlessui/react";
 
 export default function DropdownButton({
   firstButtonName,
   onFirstBtnClick,
   options,
 }: dropdownButtonPropsType): JSX.Element {
-  const [showOptions, setShowOptions] = useState(false);
+  const [showOptions, setShowOptions] = useState<boolean>(false);
 
   return (
     <div className="align-center relative flex">
@@ -36,20 +37,29 @@ export default function DropdownButton({
           )}
         </button>
       </div>
-      {showOptions && (
-        <div className="absolute top-10 w-full">
-          {options.map(({ name, onBtnClick }) => (
+      <Transition
+        show={showOptions}
+        leave="transition ease-in duration-100"
+        leaveFrom="opacity-100"
+        leaveTo="opacity-0"
+        as={Fragment}
+        enter="transition ease-in duration-100"
+        enterFrom="opacity-0"
+        enterTo="opacity-100"
+      >
+        <div className="absolute top-10 w-full bg-background pb-0.5 pr-0.5 pl-0.5 rounded-lg shadow-lg ">
+          {options.map(({ name, onBtnClick }, index) => (
             <Button
-              className="w-full"
+              className="w-full mt-1"
               variant="primary"
               onClick={onBtnClick}
-              key={name}
+              key={index}
             >
               {name}
             </Button>
           ))}
         </div>
-      )}
+      </Transition>
     </div>
   );
 }
