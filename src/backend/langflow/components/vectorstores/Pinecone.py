@@ -7,6 +7,7 @@ from langchain.schema import BaseRetriever
 from langchain.schema import Document
 from langchain.embeddings.base import Embeddings
 import pinecone  # type: ignore
+from langchain.embeddings.openai import OpenAIEmbeddings
 
 
 class PineconeComponent(CustomComponent):
@@ -43,7 +44,7 @@ class PineconeComponent(CustomComponent):
         environment: str,
         index_name: str,
         namespace: str,
-        embeddings: Optional[Embeddings],
+        embeddings: Embeddings,
         documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         pinecone.init(
@@ -51,10 +52,16 @@ class PineconeComponent(CustomComponent):
             environment=environment,  # next to api key in console
         )
 
-        # First, check if our index already exists. If it doesn't, we create it
+        # check if our index already exists. If it doesn't, we create it
         if index_name not in pinecone.list_indexes():
-            # we create a new index
-            pinecone.create_index(name=index_name, metric="cosine", dimension=1536)
+            if isinstance(embeddings, OpenAIEmbeddings):
+                # we create a new index
+                pinecone.create_index(name=index_name, metric="cosine", dimension=1536)
+            else:
+                # I don't know the dimension of the embeddings so raise an error
+                raise ValueError(
+                    "There no index with the given name. Please create one first."
+                )
 
         if documents is not None:
             return Pinecone.from_documents(
