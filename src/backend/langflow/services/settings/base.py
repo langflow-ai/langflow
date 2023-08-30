@@ -72,6 +72,10 @@ class Settings(BaseSettings):
             if secret_key_path.exists():
                 value = read_secret_from_file(secret_key_path)
                 logger.debug("Loaded secret key")
+                if not value:
+                    value = secrets.token_urlsafe(32)
+                    write_secret_to_file(secret_key_path, value)
+                    logger.debug("Saved secret key")
             else:
                 value = secrets.token_urlsafe(32)
                 write_secret_to_file(secret_key_path, value)
