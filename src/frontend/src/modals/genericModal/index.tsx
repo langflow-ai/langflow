@@ -136,7 +136,7 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
-            setNodeClass!(apiReturn.data?.frontend_node);
+            if(apiReturn.data?.frontend_node) setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
           }
