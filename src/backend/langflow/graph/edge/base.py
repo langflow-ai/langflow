@@ -39,11 +39,11 @@ class Edge:
         else:
             # Logging here because this is a breaking change
             logger.error("Edge data is empty")
-            self.source_handle = edge.get("sourceHandle", "")
-            self.target_handle = edge.get("targetHandle", "")
+            self._source_handle = edge.get("sourceHandle", "")
+            self._target_handle = edge.get("targetHandle", "")
             # 'BaseLoader;BaseOutputParser|documents|PromptTemplate-zmTlD'
             # target_param is documents
-            self.target_param = self.target_handle.split("|")[1]
+            self.target_param = self._target_handle.split("|")[1]
         # Validate in __init__ to fail fast
         self.validate_edge()
 
