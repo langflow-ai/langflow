@@ -1,5 +1,8 @@
 import os
+from pathlib import Path
 import platform
+
+from langflow.utils.logger import logger
 
 
 def set_secure_permissions(file_path):
@@ -28,3 +31,17 @@ def set_secure_permissions(file_path):
         )
     else:
         print("Unsupported OS")
+
+
+def write_secret_to_file(path: Path, value: str) -> None:
+    with path.open("wb") as f:
+        f.write(value)
+    try:
+        set_secure_permissions(path)
+    except Exception:
+        logger.error("Failed to set secure permissions on secret key")
+
+
+def read_secret_from_file(path: Path) -> str:
+    with path.open("rb") as f:
+        return f.read()
