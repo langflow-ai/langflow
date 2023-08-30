@@ -18,6 +18,10 @@ from langflow.services.utils import get_session
 from langflow.utils.logger import logger
 from cachetools import LRUCache
 from sqlmodel import Session
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.services.chat.manager import ChatManager
 
 router = APIRouter(tags=["Chat"])
 
@@ -33,16 +37,23 @@ async def chat(
 ):
     """Websocket endpoint for chat."""
     try:
+        await websocket.accept()
         user = await get_current_user(token, db)
+        if not user:
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
         if not user.is_active:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+
+        chat_manager: "ChatManager" = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
             # if the flow is not built yet
-            await websocket.accept()
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
