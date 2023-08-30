@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -42,8 +42,11 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    setErrorData,
     loading,
+    setLoading,
   } = useContext(alertContext);
+  const navigate = useNavigate();
   const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts

@@ -6,7 +6,7 @@ from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
-import chromadb
+import chromadb  # type: ignore
 
 
 class ChromaComponent(CustomComponent):

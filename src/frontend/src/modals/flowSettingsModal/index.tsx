@@ -3,7 +3,6 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
@@ -12,15 +11,14 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { setSuccessData } = useContext(alertContext);
   const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
-    setName(flow.name);
-    setDescription(flow.description);
-  }, [flow.name, flow.description]);
-  const [name, setName] = useState(flow.name);
-  const [description, setDescription] = useState(flow.description);
+    setName(flow!.name);
+    setDescription(flow!.description);
+  }, [flow!.name, flow!.description]);
+  const [name, setName] = useState(flow!.name);
+  const [description, setDescription] = useState(flow!.description);
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
@@ -28,7 +26,6 @@ export default function FlowSettingsModal({
     savedFlow!.name = name;
     savedFlow!.description = description;
     saveFlow(savedFlow!);
-    setSuccessData({ title: "Changes saved successfully" });
     setOpen(false);
   }
   return (

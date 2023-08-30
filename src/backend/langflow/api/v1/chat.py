@@ -1,12 +1,23 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.utils import get_session
 from langflow.utils.logger import logger
 from cachetools import LRUCache
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -14,9 +25,17 @@ flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
 @router.websocket("/chat/{client_id}")
-async def chat(client_id: str, websocket: WebSocket):
+async def chat(
+    client_id: str,
+    websocket: WebSocket,
+    token: str = Query(...),
+    db: Session = Depends(get_session),
+):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user(token, db)
+        if not user.is_active:
+            raise HTTPException(status_code=401, detail="Invalid token")
         chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
@@ -32,7 +51,9 @@ async def chat(client_id: str, websocket: WebSocket):
 
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
-async def init_build(graph_data: dict, flow_id: str):
+async def init_build(
+    graph_data: dict, flow_id: str, current_user=Depends(get_current_active_user)
+):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
     try:
@@ -54,6 +75,7 @@ async def init_build(graph_data: dict, flow_id: str):
         flow_data_store[flow_id] = {
             "graph_data": graph_data,
             "status": BuildStatus.STARTED,
+            "user_id": current_user.id,
         }
 
         return InitResponse(flowId=flow_id)
@@ -99,6 +121,7 @@ async def stream_build(flow_id: str):
                 return
 
             graph_data = flow_data_store[flow_id].get("graph_data")
+            user_id = flow_data_store[flow_id]["user_id"]
 
             if not graph_data:
                 error_message = "No data provided"
@@ -119,7 +142,7 @@ async def stream_build(flow_id: str):
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
-                    vertex.build()
+                    vertex.build(user_id)
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")

@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
 
-def test_zero_shot_agent(client: TestClient):
-    response = client.get("api/v1/all")
+def test_zero_shot_agent(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -113,8 +113,8 @@ def test_zero_shot_agent(client: TestClient):
     }
 
 
-def test_json_agent(client: TestClient):
-    response = client.get("api/v1/all")
+def test_json_agent(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -152,8 +152,8 @@ def test_json_agent(client: TestClient):
     }
 
 
-def test_csv_agent(client: TestClient):
-    response = client.get("api/v1/all")
+def test_csv_agent(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
@@ -195,8 +195,8 @@ def test_csv_agent(client: TestClient):
     }
 
 
-def test_initialize_agent(client: TestClient):
-    response = client.get("api/v1/all")
+def test_initialize_agent(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     agents = json_response["agents"]
