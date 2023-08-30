@@ -35,7 +35,7 @@ def set_secure_permissions(file_path):
 
 def write_secret_to_file(path: Path, value: str) -> None:
     with path.open("wb") as f:
-        f.write(value)
+        f.write(value.encode("utf-8"))
     try:
         set_secure_permissions(path)
     except Exception:
