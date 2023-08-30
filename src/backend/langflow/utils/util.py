@@ -4,12 +4,10 @@ import importlib
 from functools import wraps
 from typing import Optional, Dict, Any, Union
 
-from docstring_parser import parse  # type: ignore
+from docstring_parser import parse
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.utils.logger import logger
-from multiprocess import cpu_count  # type: ignore
 
 
 def build_template_from_function(
@@ -265,6 +263,9 @@ def format_dict(
 
         _type: Union[str, type] = get_type(value)
 
+        if "BaseModel" in str(_type):
+            continue
+
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
@@ -455,10 +456,3 @@ def add_options_to_field(
         value["options"] = options_map[class_name]
         value["list"] = True
         value["value"] = options_map[class_name][0]
-
-
-def get_number_of_workers(workers=None):
-    if workers == -1 or workers is None:
-        workers = (cpu_count() * 2) + 1
-    logger.debug(f"Number of workers: {workers}")
-    return workers

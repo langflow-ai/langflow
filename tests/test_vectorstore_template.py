@@ -4,9 +4,9 @@ from langflow.services.utils import get_settings_manager
 
 # check that all agents are in settings.agents
 # are in json_response["agents"]
-def test_vectorstores_settings(client: TestClient):
+def test_vectorstores_settings(client: TestClient, logged_in_headers):
     settings_manager = get_settings_manager()
-    response = client.get("api/v1/all")
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     vectorstores = json_response["vectorstores"]

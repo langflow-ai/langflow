@@ -2,6 +2,7 @@ import _ from "lodash";
 import {
   Connection,
   Edge,
+  Node,
   ReactFlowInstance,
   ReactFlowJsonObject,
 } from "reactflow";
@@ -16,6 +17,7 @@ import {
 import {
   cleanEdgesType,
   updateEdgesHandleIdsType,
+  unselectAllNodesType,
 } from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 
@@ -64,7 +66,14 @@ export function cleanEdges({
   updateEdge(newEdges);
 }
 
-// add comments to this function
+export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
+  let newNodes = _.cloneDeep(data);
+  newNodes!.forEach((node: Node) => {
+    node.selected = false;
+  });
+  updateNodes(newNodes!);
+}
+
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   reactFlowInstance: ReactFlowInstance

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from langflow.utils.logger import logger
 from contextlib import contextmanager
@@ -14,6 +15,11 @@ def initialize_database():
 
     database_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     try:
+        database_manager.check_schema_health()
+    except Exception as exc:
+        logger.error(f"Error checking schema health: {exc}")
+        raise RuntimeError("Error checking schema health") from exc
+    try:
         database_manager.run_migrations()
     except CommandError as exc:
         if "Can't locate revision identified by" not in str(exc):
@@ -28,8 +34,11 @@ def initialize_database():
             session.execute("DROP TABLE alembic_version")
         database_manager.run_migrations()
     except Exception as exc:
-        logger.error(f"Error running migrations: {exc}")
-        raise RuntimeError("Error running migrations") from exc
+        # if the exception involves tables already existing
+        # we can ignore it
+        if "already exists" not in str(exc):
+            logger.error(f"Error running migrations: {exc}")
+            raise RuntimeError("Error running migrations") from exc
     database_manager.create_db_and_tables()
     logger.debug("Database initialized")
 
@@ -45,3 +54,16 @@ def session_getter(db_manager: "DatabaseManager"):
         raise
     finally:
         session.close()
+
+
+@dataclass
+class Result:
+    name: str
+    type: str
+    success: bool
+
+
+@dataclass
+class TableResults:
+    table_name: str
+    results: list[Result]
