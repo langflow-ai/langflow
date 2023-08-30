@@ -61,6 +61,8 @@ async def chat(
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
     except Exception as exc:
         logger.error(f"Error in chat websocket: {exc}")
+        if isinstance(exc, HTTPException):
+            exc = exc.detail
         if "Could not validate credentials" in str(exc):
             await websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
