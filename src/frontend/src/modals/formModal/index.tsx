@@ -8,7 +8,7 @@ import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
-import _ from "lodash";
+import _, { set } from "lodash";
 import AccordionComponent from "../../components/AccordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
@@ -27,6 +27,7 @@ import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
+import { getBuildStatus } from "../../controllers/API";
 
 export default function FormModal({
   flow,
@@ -155,9 +156,21 @@ export default function FormModal({
 
   function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
+      getBuildStatus(flow.id).then((response) => {
+        if (response.data.built) {
+          connectWS();
+        }
+        else {
+          setErrorData({
+            title: "Please build the flow again before using the chat."
+          })
+        }
+      }).catch((error) => {
+        setErrorData({title:error.data?.detail?error.data.detail:error.message})
+
+      });
       setErrorData({ title: event.reason });
       setTimeout(() => {
-        connectWS();
         setLockChat(false);
       }, 1000);
     }
@@ -173,9 +186,8 @@ export default function FormModal({
     const host = isDevelopment ? "localhost:7860" : window.location.host;
     const chatEndpoint = `/api/v1/chat/${chatId}`;
 
-    return `${
-      isDevelopment ? "ws" : webSocketProtocol
-    }://${host}${chatEndpoint}?token=${encodeURIComponent(accessToken!)}`;
+    return `${isDevelopment ? "ws" : webSocketProtocol
+      }://${host}${chatEndpoint}?token=${encodeURIComponent(accessToken!)}`;
   }
 
   function handleWsMessage(data: any) {
@@ -197,20 +209,20 @@ export default function FormModal({
               newChatHistory.push(
                 chatItem.files
                   ? {
-                      isSend: !chatItem.is_bot,
-                      message: chatItem.message,
-                      template: chatItem.template,
-                      thought: chatItem.intermediate_steps,
-                      files: chatItem.files,
-                      chatKey: chatItem.chatKey,
-                    }
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    template: chatItem.template,
+                    thought: chatItem.intermediate_steps,
+                    files: chatItem.files,
+                    chatKey: chatItem.chatKey,
+                  }
                   : {
-                      isSend: !chatItem.is_bot,
-                      message: chatItem.message,
-                      template: chatItem.template,
-                      thought: chatItem.intermediate_steps,
-                      chatKey: chatItem.chatKey,
-                    }
+                    isSend: !chatItem.is_bot,
+                    message: chatItem.message,
+                    template: chatItem.template,
+                    thought: chatItem.intermediate_steps,
+                    chatKey: chatItem.chatKey,
+                  }
               );
             }
           }
@@ -260,7 +272,6 @@ export default function FormModal({
       };
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log("Received data:", data);
         handleWsMessage(data);
         //get chat history
       };
@@ -268,7 +279,6 @@ export default function FormModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        console.log(ev, "error");
         if (flow.id === "") {
           connectWS();
         } else {
@@ -294,7 +304,6 @@ export default function FormModal({
   useEffect(() => {
     connectWS();
     return () => {
-      console.log("unmount");
       console.log(ws);
       if (ws.current) {
         ws.current.close();
@@ -433,73 +442,73 @@ export default function FormModal({
 
               {tabsState[id.current]?.formKeysData?.input_keys
                 ? Object.keys(
-                    tabsState[id.current].formKeysData.input_keys!
-                  ).map((key, index) => (
-                    <div className="file-component-accordion-div" key={index}>
-                      <AccordionComponent
-                        trigger={
-                          <div className="file-component-badge-div">
-                            <Badge variant="gray" size="md">
-                              {key}
-                            </Badge>
+                  tabsState[id.current].formKeysData.input_keys!
+                ).map((key, index) => (
+                  <div className="file-component-accordion-div" key={index}>
+                    <AccordionComponent
+                      trigger={
+                        <div className="file-component-badge-div">
+                          <Badge variant="gray" size="md">
+                            {key}
+                          </Badge>
 
-                            <div
-                              className="-mb-1"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                              }}
-                            >
-                              <ToggleShadComponent
-                                enabled={chatKey === key}
-                                setEnabled={(value) =>
-                                  handleOnCheckedChange(value, key)
-                                }
-                                size="small"
-                                disabled={tabsState[
-                                  id.current
-                                ].formKeysData.handle_keys!.some(
-                                  (t) => t === key
-                                )}
-                              />
-                            </div>
+                          <div
+                            className="-mb-1"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                            }}
+                          >
+                            <ToggleShadComponent
+                              enabled={chatKey === key}
+                              setEnabled={(value) =>
+                                handleOnCheckedChange(value, key)
+                              }
+                              size="small"
+                              disabled={tabsState[
+                                id.current
+                              ].formKeysData.handle_keys!.some(
+                                (t) => t === key
+                              )}
+                            />
                           </div>
-                        }
-                        key={index}
-                        keyValue={key}
-                      >
-                        <div className="file-component-tab-column">
-                          {tabsState[id.current].formKeysData.handle_keys!.some(
-                            (t) => t === key
-                          ) && (
+                        </div>
+                      }
+                      key={index}
+                      keyValue={key}
+                    >
+                      <div className="file-component-tab-column">
+                        {tabsState[id.current].formKeysData.handle_keys!.some(
+                          (t) => t === key
+                        ) && (
                             <div className="font-normal text-muted-foreground ">
                               Source: Component
                             </div>
                           )}
-                          <Textarea
-                            className="custom-scroll"
-                            value={
-                              tabsState[id.current].formKeysData.input_keys![
-                                key
-                              ]
-                            }
-                            onChange={(e) => {
-                              //@ts-ignore
-                              setTabsState((old: TabsState) => {
-                                let newTabsState = _.cloneDeep(old);
-                                newTabsState[
-                                  id.current
-                                ].formKeysData.input_keys![key] =
-                                  e.target.value;
-                                return newTabsState;
-                              });
-                            }}
-                            disabled={chatKey === key}
-                            placeholder="Enter text..."
-                          ></Textarea>
-                        </div>
-                      </AccordionComponent>
-                    </div>
-                  ))
+                        <Textarea
+                          className="custom-scroll"
+                          value={
+                            tabsState[id.current].formKeysData.input_keys![
+                            key
+                            ]
+                          }
+                          onChange={(e) => {
+                            //@ts-ignore
+                            setTabsState((old: TabsState) => {
+                              let newTabsState = _.cloneDeep(old);
+                              newTabsState[
+                                id.current
+                              ].formKeysData.input_keys![key] =
+                                e.target.value;
+                              return newTabsState;
+                            });
+                          }}
+                          disabled={chatKey === key}
+                          placeholder="Enter text..."
+                        ></Textarea>
+                      </div>
+                    </AccordionComponent>
+                  </div>
+                ))
                 : null}
               {tabsState[id.current].formKeysData.memory_keys!.map(
                 (key, index) => (
@@ -513,7 +522,7 @@ export default function FormModal({
                           <div className="-mb-1">
                             <ToggleShadComponent
                               enabled={chatKey === key}
-                              setEnabled={() => {}}
+                              setEnabled={() => { }}
                               size="small"
                               disabled={true}
                             />
