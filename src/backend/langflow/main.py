@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from langflow.api import router
 from langflow.database.base import create_db_and_tables, Engine
 from langflow.interface.utils import setup_llm_caching
+from langflow.services.plugins.langfuse import LangfuseInstance
 from langflow.utils.logger import configure
 
 
@@ -37,6 +38,9 @@ def create_app():
     app.on_event("startup")(Engine.update)
     app.on_event("startup")(create_db_and_tables)
     app.on_event("startup")(setup_llm_caching)
+    app.on_event("startup")(LangfuseInstance.update)
+    app.on_event("shutdown")(Engine.teardown)
+    app.on_event("shutdown")(LangfuseInstance.teardown)
     return app
 
 
