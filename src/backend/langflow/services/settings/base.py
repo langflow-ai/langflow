@@ -1,14 +1,15 @@
 import contextlib
 import json
+import secrets
+from langflow.services.settings.utils import set_secure_permissions
 import orjson
 import os
 from shutil import copy2
-import secrets
 from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, root_validator, validator
+from pydantic import BaseSettings, Field, root_validator, validator
 from langflow.utils.logger import logger
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -43,13 +44,44 @@ class Settings(BaseSettings):
     COMPONENTS_PATH: List[str] = []
 
     # Login settings
-    SECRET_KEY: str = secrets.token_hex(32)
+    SECRET_KEY: Optional[str] = Field(None, env="LANGFLOW_SECRET_KEY")
+
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = True
+
+    @validator("SECRET_KEY", pre=True)
+    def get_secret_key(cls, value, values):
+        if not value:
+            logger.debug("No secret key provided, generating a random one")
+
+            if config_dir := values.get("CONFIG_DIR"):
+                secret_key_path = Path(config_dir) / "secret_key"
+
+                if secret_key_path.exists():
+                    with open(secret_key_path, "rb") as f:
+                        value = f.read()
+                    logger.debug("Loaded secret key")
+                else:
+                    value = secrets.token_urlsafe(32)
+
+                    with open(secret_key_path, "wb") as f:
+                        f.write(value)
+
+                    # Limit the file permissions
+                    try:
+                        set_secure_permissions(secret_key_path)
+                    except Exception:
+                        logger.error("Failed to set secure permissions on secret key")
+
+                    logger.debug("Saved secret key")
+            else:
+                logger.debug("No CONFIG_DIR provided, not saving secret key")
+
+        return value
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
