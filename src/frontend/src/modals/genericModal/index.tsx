@@ -124,7 +124,6 @@ export default function GenericModal({
     //nodeClass is always null on tweaks
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
-        // debugger;
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
@@ -137,7 +136,6 @@ export default function GenericModal({
             setSuccessData({
               title: "Prompt is ready",
             });
-            
             if(JSON.stringify(apiReturn.data?.frontend_node)!==JSON.stringify({})) setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
