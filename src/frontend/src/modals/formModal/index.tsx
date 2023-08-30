@@ -175,7 +175,7 @@ export default function FormModal({
 
     return `${
       isDevelopment ? "ws" : webSocketProtocol
-    }://${host}${chatEndpoint}?token=${accessToken}`;
+    }://${host}${chatEndpoint}?token=${encodeURIComponent(accessToken!)}`;
   }
 
   function handleWsMessage(data: any) {
