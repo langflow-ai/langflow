@@ -35,5 +35,5 @@ class SettingsManager(Service):
                 )
 
         settings = Settings(**settings_dict)
-        auth_settings = AuthSettings()
+        auth_settings = AuthSettings(CONFIG_DIR=settings.CONFIG_DIR)
         return cls(settings, auth_settings)

@@ -312,7 +312,7 @@ export async function getHealth() {
  */
 export async function getBuildStatus(
   flowId: string
-): Promise<BuildStatusTypeAPI> {
+): Promise<AxiosResponse<BuildStatusTypeAPI>> {
   return await api.get(`${BASE_URL_API}build/${flowId}/status`);
 }
 
