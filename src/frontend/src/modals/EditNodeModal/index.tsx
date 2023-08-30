@@ -111,7 +111,8 @@ const EditNodeModal = forwardRef(
             <div
               className={classNames(
                 "edit-node-modal-box",
-                nodeLength > limitScrollFieldsModal
+                nodeLength > limitScrollFieldsModal ||
+                  nodeLength > arrayOfObjects.length
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
                   : "overflow-hidden"
               )}
