@@ -11,7 +11,7 @@ export default function IconComponent({
     <TargetIcon
       className={className}
       style={{ color: iconColor }}
-      stroke-width={1.5}
+      strokeWidth={1.5}
     />
   );
 }

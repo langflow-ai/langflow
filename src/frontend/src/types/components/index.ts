@@ -55,7 +55,7 @@ export type InputListComponentType = {
 };
 
 export type KeyPairListComponent = {
-  value: any[];
+  value: any;
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
