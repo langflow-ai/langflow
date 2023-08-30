@@ -18,7 +18,7 @@ class LangfuseInstance:
     def create(cls):
         logger.debug("Creating Langfuse instance")
         from langflow.settings import settings
-        from langfuse import Langfuse
+        from langfuse import Langfuse  # type: ignore
 
         if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
             logger.debug("Langfuse credentials found")
