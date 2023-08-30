@@ -508,6 +508,131 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/validate/code",
   "/api/v1/custom_component",
   "/api/v1/validate/prompt",
+  "http://localhost:7860/login",
 ];
 
 export const skipNodeUpdate = ["CustomComponent"];
+
+export const CONTROL_INPUT_STATE = {
+  password: "",
+  cnfPassword: "",
+  username: "",
+};
+
+export const CONTROL_LOGIN_STATE = {
+  username: "",
+  password: "",
+};
+
+export const CONTROL_NEW_USER = {
+  username: "",
+  password: "",
+  is_active: false,
+  is_superuser: false,
+};
+
+export const CONTROL_NEW_API_KEY = {
+  apikeyname: "",
+};
+
+export const tabsCode = [];
+
+export function tabsArray(codes: string[], method: number) {
+  if (!method) return;
+  if (method === 0) {
+    return [
+      {
+        name: "cURL",
+        mode: "bash",
+        image: "https://curl.se/logo/curl-symbol-transparent.png",
+        language: "sh",
+        code: codes[0],
+      },
+      {
+        name: "Python API",
+        mode: "python",
+        image:
+          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+        language: "py",
+        code: codes[1],
+      },
+      {
+        name: "Python Code",
+        mode: "python",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[2],
+      },
+      {
+        name: "Chat Widget HTML",
+        description:
+          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+        mode: "html",
+        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+        language: "py",
+        code: codes[3],
+      },
+    ];
+  }
+  return [
+    {
+      name: "cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      language: "sh",
+      code: codes[0],
+    },
+    {
+      name: "Python API",
+      mode: "python",
+      image:
+        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
+      language: "py",
+      code: codes[1],
+    },
+    {
+      name: "Python Code",
+      mode: "python",
+      language: "py",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      code: codes[2],
+    },
+    {
+      name: "Chat Widget HTML",
+      description:
+        "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
+      mode: "html",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[3],
+    },
+    {
+      name: "Tweaks",
+      mode: "python",
+      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
+      language: "py",
+      code: codes[4],
+    },
+  ];
+}
+export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
+export const FETCH_ERROR_DESCRIPION =
+  "Check if everything is working properly and try again.";
+
+export const BASE_URL_API = "/api/v1/";
+
+export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
+
+export const API_PAGE_PARAGRAPH_1 =
+  "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.";
+
+export const API_PAGE_PARAGRAPH_2 =
+  "Do not share your API key with others, or expose it in the browser or other client-side code.";
+
+export const API_PAGE_USER_KEYS =
+  "This user does not have any keys assigned at the moment.";
+
+export const LAST_USED_SPAN_1 = "The last time this key was used.";
+
+export const LAST_USED_SPAN_2 =
+  "Accurate to within the hour from the most recent usage.";

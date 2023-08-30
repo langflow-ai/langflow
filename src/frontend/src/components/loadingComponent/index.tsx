@@ -1,8 +1,8 @@
-type LoadingComponentProps = {
-  remSize: number;
-};
+import { LoadingComponentProps } from "../../types/components";
 
-export default function LoadingComponent({ remSize }: LoadingComponentProps) {
+export default function LoadingComponent({
+  remSize,
+}: LoadingComponentProps): JSX.Element {
   return (
     <div role="status" className="m-auto w-min">
       <svg

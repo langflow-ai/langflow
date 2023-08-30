@@ -31,7 +31,12 @@ def post_validate_code(code: Code):
 def post_validate_prompt(prompt_request: ValidatePromptRequest):
     try:
         input_variables = validate_prompt(prompt_request.template)
-
+        # Check if frontend_node is None before proceeding to avoid attempting to update a non-existent node.
+        if prompt_request.frontend_node is None:
+            return PromptValidationResponse(
+                input_variables=input_variables,
+                frontend_node={},
+            )
         old_custom_fields = get_old_custom_fields(prompt_request)
 
         add_new_variables_to_template(input_variables, prompt_request)

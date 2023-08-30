@@ -1,34 +1,5 @@
 import { createContext, ReactNode, useState } from "react";
-
-//types for location context
-type locationContextType = {
-  current: Array<string>;
-  setCurrent: (newState: Array<string>) => void;
-  isStackedOpen: boolean;
-  setIsStackedOpen: (newState: boolean) => void;
-  showSideBar: boolean;
-  setShowSideBar: (newState: boolean) => void;
-  extraNavigation: {
-    title: string;
-    options?: Array<{
-      name: string;
-      href: string;
-      icon: any;
-      children?: Array<any>;
-    }>;
-  };
-  setExtraNavigation: (newState: {
-    title: string;
-    options?: Array<{
-      name: string;
-      href: string;
-      icon: any;
-      children?: Array<any>;
-    }>;
-  }) => void;
-  extraComponent: any;
-  setExtraComponent: (newState: any) => void;
-};
+import { locationContextType } from "../types/typesContext";
 
 //initial value for location context
 const initialValue = {

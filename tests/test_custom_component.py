@@ -5,7 +5,7 @@ from uuid import uuid4
 
 
 from fastapi import HTTPException
-from langflow.database.models.flow import Flow, FlowCreate
+from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.component import (
     Component,
@@ -473,15 +473,16 @@ def test_build_config_no_code():
 
 
 @pytest.fixture
-def component():
+def component(client, active_user):
     return CustomComponent(
+        user_id=active_user.id,
         field_config={
             "fields": {
                 "llm": {"type": "str"},
                 "url": {"type": "str"},
                 "year": {"type": "int"},
             }
-        }
+        },
     )
 
 

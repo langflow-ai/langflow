@@ -4,22 +4,27 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
+import { nodeToolbarPropsType } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 
-export default function NodeToolbarComponent({ data, setData, deleteNode }) {
+export default function NodeToolbarComponent({
+  data,
+  setData,
+  deleteNode,
+}: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
-    Object.keys(data.node.template).filter(
-      (t) =>
-        t.charAt(0) !== "_" &&
-        data.node.template[t].show &&
-        (data.node.template[t].type === "str" ||
-          data.node.template[t].type === "bool" ||
-          data.node.template[t].type === "float" ||
-          data.node.template[t].type === "code" ||
-          data.node.template[t].type === "prompt" ||
-          data.node.template[t].type === "file" ||
-          data.node.template[t].type === "Any" ||
-          data.node.template[t].type === "int")
+    Object.keys(data.node!.template).filter(
+      (templateField) =>
+        templateField.charAt(0) !== "_" &&
+        data.node?.template[templateField].show &&
+        (data.node.template[templateField].type === "str" ||
+          data.node.template[templateField].type === "bool" ||
+          data.node.template[templateField].type === "float" ||
+          data.node.template[templateField].type === "code" ||
+          data.node.template[templateField].type === "prompt" ||
+          data.node.template[templateField].type === "file" ||
+          data.node.template[templateField].type === "Any" ||
+          data.node.template[templateField].type === "int")
     ).length
   );
 
@@ -55,8 +60,8 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(data.id).position.x,
-                    paneY: reactFlowInstance.getNode(data.id).position.y,
+                    paneX: reactFlowInstance.getNode(data.id)?.position.x,
+                    paneY: reactFlowInstance.getNode(data.id)?.position.y,
                   }
                 );
               }}
@@ -67,23 +72,23 @@ export default function NodeToolbarComponent({ data, setData, deleteNode }) {
 
           <ShadTooltip
             content={
-              data.node.documentation === "" ? "Coming Soon" : "Documentation"
+              data.node?.documentation === "" ? "Coming Soon" : "Documentation"
             }
             side="top"
           >
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                  (data.node.documentation === ""
+                  (data.node?.documentation === ""
                     ? " text-muted-foreground"
                     : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
-              href={data.node.documentation}
+              href={data.node?.documentation}
               // deactivate link if no documentation is provided
               onClick={(event) => {
-                if (data.node.documentation === "") {
+                if (data.node?.documentation === "") {
                   event.preventDefault();
                 }
               }}
