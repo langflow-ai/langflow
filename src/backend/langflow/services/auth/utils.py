@@ -88,6 +88,10 @@ async def get_current_user(
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
+        if expires := payload.get("exp", None):
+            expires_datetime = datetime.fromtimestamp(expires)
+            if datetime.now(timezone.utc) > expires_datetime:
+                raise credentials_exception
 
         if user_id is None or token_type:
             raise credentials_exception
