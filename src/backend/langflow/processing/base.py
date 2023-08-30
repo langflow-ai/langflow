@@ -4,6 +4,7 @@ from langflow.api.v1.callback import (
     StreamingLLMCallbackHandler,
 )
 from langflow.processing.process import fix_memory_inputs, format_actions
+
 from langflow.utils.logger import logger
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
 
 
-def setup_callbacks(sync, **kwargs):
+def setup_callbacks(sync, trace_id, **kwargs):
     """Setup callbacks for langchain object"""
     callbacks = []
     if sync:
@@ -20,31 +21,22 @@ def setup_callbacks(sync, **kwargs):
     else:
         callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
 
-    if langfuse_callback := get_langfuse_callback():
+    if langfuse_callback := get_langfuse_callback(trace_id=trace_id):
         logger.debug("Langfuse callback loaded")
         callbacks.append(langfuse_callback)
     return callbacks
 
 
-def get_langfuse_callback():
-    from langflow.settings import settings
+def get_langfuse_callback(trace_id):
+    from langflow.services.plugins.langfuse import LangfuseInstance
+    from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
-    if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+    if langfuse := LangfuseInstance.get():
         logger.debug("Langfuse credentials found")
         try:
-            from langfuse.callback import CallbackHandler  # type: ignore
-
-            return CallbackHandler(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST,
-            )
-        except ImportError as exc:
-            raise ImportError(
-                "Error importing langfuse callback. "
-                "Please install langfuse with `pip install langfuse`"
-            ) from exc
+            trace = langfuse.trace(CreateTrace(id=trace_id))
+            return trace.getNewHandler()
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
 
@@ -82,12 +74,14 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
             logger.error(f"Error fixing memory inputs: {exc}")
 
         try:
-            callbacks = setup_callbacks(sync=False, **kwargs)
+            trace_id = kwargs.pop("session_id", None)
+            callbacks = setup_callbacks(sync=False, trace_id=trace_id, **kwargs)
             output = await langchain_object.acall(inputs, callbacks=callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            callbacks = setup_callbacks(sync=True, **kwargs)
+            trace_id = kwargs.pop("session_id", None)
+            callbacks = setup_callbacks(sync=True, trace_id=trace_id, **kwargs)
             output = langchain_object(inputs, callbacks=callbacks)
 
         # if langfuse callback is present, run callback.langfuse.flush()
