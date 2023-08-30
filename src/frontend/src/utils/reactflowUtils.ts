@@ -16,8 +16,8 @@ import {
 } from "../types/flow";
 import {
   cleanEdgesType,
-  updateEdgesHandleIdsType,
   unselectAllNodesType,
+  updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 

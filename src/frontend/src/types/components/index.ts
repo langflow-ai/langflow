@@ -268,7 +268,7 @@ export type UserInputType = {
   is_superuser?: boolean;
   id?: string;
   create_at?: string;
-  updated_at?:string;
+  updated_at?: string;
 };
 
 export type ApiKeyType = {
