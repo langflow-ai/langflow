@@ -72,7 +72,7 @@ export const TabsContext = createContext<TabsContextType>(
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
-  const { getAuthentication } = useContext(AuthContext);
+  const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
 
@@ -85,6 +85,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
+
+  useEffect(() => {
+    if(!isAuthenticated){
+      hardReset();
+    }
+  }, [isAuthenticated])
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
