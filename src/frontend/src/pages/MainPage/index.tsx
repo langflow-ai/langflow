@@ -8,8 +8,9 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import DropdownButton from "../../components/DropdownButtonComponent";
 export default function HomePage(): JSX.Element {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow } =
+  const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow, uploadFlow } =
     useContext(TabsContext);
+  const dropdownOptions = [{name: "Import from JSON", onBtnClick: () => uploadFlow(true)}]
 
   // Set a null id
   useEffect(() => {
@@ -53,12 +54,12 @@ export default function HomePage(): JSX.Element {
                   navigate("/flow/" + id);
                 });
               }}
-              options={[{name: "Import from JSON", onBtnClick: () => console.log('imported')}]}
+              options={dropdownOptions}
             />
           </div>
         </div>
         <span className="main-page-description-text">
-          Manage your personal projects. Download or upload your collection.
+          Manage your personal projects. Download or upload your collection. 
         </span>
         <div className="main-page-flows-display">
           {flows.map((flow, idx) => (
