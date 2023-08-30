@@ -509,3 +509,9 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/custom_component",
   "/api/v1/validate/prompt",
 ];
+
+export const skipNodeUpdate = ["CustomComponent"];
+
+export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
+export const FETCH_ERROR_DESCRIPION =
+  "Check if everything is working properly and try again.";
