@@ -1,7 +1,5 @@
 import contextlib
 import json
-import secrets
-from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 import orjson
 import os
 from shutil import copy2
@@ -9,7 +7,7 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, Field, root_validator, validator
+from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -42,46 +40,6 @@ class Settings(BaseSettings):
     CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
-
-    # Login settings
-    SECRET_KEY: Optional[str] = Field(None, env="LANGFLOW_SECRET_KEY")
-
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
-    # If AUTO_LOGIN = True
-    # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
-
-    @validator("SECRET_KEY", pre=True)
-    def get_secret_key(cls, value, values):
-        config_dir = values.get("CONFIG_DIR")
-
-        if not config_dir:
-            logger.debug("No CONFIG_DIR provided, not saving secret key")
-            return value or secrets.token_urlsafe(32)
-
-        secret_key_path = Path(config_dir) / "secret_key"
-
-        if value:
-            logger.debug("Secret key provided")
-            write_secret_to_file(secret_key_path, value)
-        else:
-            logger.debug("No secret key provided, generating a random one")
-
-            if secret_key_path.exists():
-                value = read_secret_from_file(secret_key_path)
-                logger.debug("Loaded secret key")
-                if not value:
-                    value = secrets.token_urlsafe(32)
-                    write_secret_to_file(secret_key_path, value)
-                    logger.debug("Saved secret key")
-            else:
-                value = secrets.token_urlsafe(32)
-                write_secret_to_file(secret_key_path, value)
-                logger.debug("Saved secret key")
-
-        return value
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
