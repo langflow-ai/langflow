@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import _ from "lodash";
 import {
   ReactNode,
@@ -27,7 +28,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { TabsContextType, TabsState, errorsVarType } from "../types/tabs";
+import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -39,6 +40,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
+import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -78,7 +80,9 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData, setSuccessData } =
+    useContext(alertContext);
+  const { getAuthentication } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
 
@@ -127,24 +131,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         try {
           processDBData(DbData);
           updateStateWithDbData(DbData);
-        } catch (e) {
-          console.error(e);
-        }
+        } catch (e) {}
       }
     });
   }
 
   useEffect(() => {
-    // get data from db
-    //get tabs locally saved
-    // let tabsData = getLocalStorageTabsData();
-    refreshFlows();
-  }, [templates]);
+    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
+    if (getAuthentication() === true) {
+      // get data from db
+      //get tabs locally saved
+      // let tabsData = getLocalStorageTabsData();
+      refreshFlows();
+    }
+  }, [templates, getAuthentication()]);
 
   function getTabsDataFromDB() {
     //get tabs from db
     return readFlowsFromDatabase();
   }
+
   function processDBData(DbData: FlowType[]) {
     DbData.forEach((flow: FlowType) => {
       try {
@@ -153,9 +159,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         }
         processFlowEdges(flow);
         processFlowNodes(flow);
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     });
   }
 
@@ -497,7 +501,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         return id;
       } catch (error) {
         // Handle the error if needed
-        console.error("Error while adding flow:", error);
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
@@ -603,6 +606,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
+        setSuccessData({ title: "Changes saved successfully" });
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
@@ -625,7 +629,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err as errorsVarType);
+      setErrorData({
+        title: "Error while saving changes",
+        list: [(err as AxiosError).message],
+      });
     }
   }
 

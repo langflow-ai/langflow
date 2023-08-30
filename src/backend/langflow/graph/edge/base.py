@@ -40,7 +40,6 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-        if no_matched_type:
             raise ValueError(
                 f"Edge between {self.source.vertex_type} and {self.target.vertex_type} "
                 f"has no matched type"
