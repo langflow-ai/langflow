@@ -33,8 +33,8 @@ export default function SignUp(): JSX.Element {
   function handleSignup(): void {
     const { username, password } = inputState;
     const newUser: UserInputType = {
-      username,
-      password,
+      username: username.trim(),
+      password: password.trim(),
     };
     addUser(newUser)
       .then((user) => {
