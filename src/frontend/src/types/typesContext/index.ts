@@ -46,6 +46,8 @@ export type alertContextType = {
 export type darkContextType = {
   dark: {};
   setDark: (newState: {}) => void;
+  stars: number;
+  setStars: (stars: number) => void;
 };
 
 export type locationContextType = {
