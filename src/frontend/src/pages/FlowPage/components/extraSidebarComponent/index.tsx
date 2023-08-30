@@ -21,7 +21,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
-  const { setSuccessData, setErrorData, setIsTweakPage } =
+  const { setSuccessData, setErrorData } =
     useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -103,7 +103,6 @@ export default function ExtraSidebar(): JSX.Element {
               <ApiModal flow={flow} disable={!isBuilt}>
                 <div
                   className={classNames("extra-side-bar-buttons")}
-                  onClick={() => setIsTweakPage(true)}
                 >
                   <IconComponent
                     name="Code2"
