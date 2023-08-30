@@ -79,16 +79,43 @@ const EditNodeModal = forwardRef(
       setMyData(data); // reset data to what it is on node when opening modal
     }, [modalOpen]);
 
-    const [arrayOfObjects, setArrayOfObjects] = useState([
-      { key1: "value1", key2: "value2" },
-      { key3: "value3", key4: "value4" },
-      { key5: "value5", key6: "value6" },
-    ]);
+    const [dict, setDict] = useState({
+      key1: "value1",
+      key2: "value2",
+      key3: "value3",
+      key4: "value4",
+      key5: "value5",
+      key6: "value6",
+    } as {});
+    const [dictArr, setDictArr] = useState([]);
 
-    const handleOnNewValueTest = (newValue): void => {
-      let newData = cloneDeep(arrayOfObjects);
-      newData = newValue;
-      setArrayOfObjects(newData);
+    useEffect(() => {
+      convertToArray(dict);
+    }, [dict]);
+
+    const convertToArray = (singleObject) => {
+      let arrConverted: any = [];
+      for (const key in singleObject) {
+        if (singleObject.hasOwnProperty(key)) {
+          const newObj = {};
+          newObj[key] = singleObject[key];
+          arrConverted.push(newObj);
+        }
+      }
+      setDictArr(arrConverted);
+    };
+
+    const convertToDict = (newValue): void => {
+      const flattenedObject = {};
+      for (const obj of newValue) {
+        for (const key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            flattenedObject[key] = obj[key];
+          }
+        }
+      }
+      let newData = cloneDeep(flattenedObject);
+      setDict(newData);
     };
 
     return (
@@ -112,7 +139,7 @@ const EditNodeModal = forwardRef(
               className={classNames(
                 "edit-node-modal-box",
                 nodeLength > limitScrollFieldsModal ||
-                  nodeLength > arrayOfObjects.length
+                  nodeLength > dictArr.length
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
                   : "overflow-hidden"
               )}
@@ -180,6 +207,16 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "str" ? (
+                                    <div className="mt-2 w-full">
+                                      <KeypairListComponent
+                                        disabled={disabled}
+                                        editNode={true}
+                                        value={dictArr}
+                                        onChange={convertToDict}
+                                      />
+                                    </div>
                                   ) : myData.node.template[templateParam]
                                       .multiline ? (
                                     <TextAreaComponent
@@ -348,16 +385,6 @@ const EditNodeModal = forwardRef(
                                     onChange={(value: string | string[]) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
-                                  />
-                                </div>
-                              ) : myData.node?.template[templateParam].type ===
-                                "keypair" ? (
-                                <div className="mt-2 w-full">
-                                  <KeypairListComponent
-                                    disabled={disabled}
-                                    value={arrayOfObjects}
-                                    onChange={handleOnNewValueTest}
-                                    editNode={true}
                                   />
                                 </div>
                               ) : myData.node?.template[templateParam].type ===

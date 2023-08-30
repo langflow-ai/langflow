@@ -16,6 +16,7 @@ import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
+import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
@@ -31,7 +32,6 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
-import KeypairListComponent from "../../../../components/keypairListComponent";
 
 export default function ParameterComponent({
   left,
@@ -94,21 +94,44 @@ export default function ParameterComponent({
     renderTooltips();
   };
 
-  const [arrayOfObjects, setArrayOfObjects] = useState([
-    { key1: "value1", key2: "value2" },
-    { key3: "value3", key4: "value4" },
-    { key5: "value5", key6: "value6" },
-  ])
+  const [dict, setDict] = useState({
+    key1: "value1",
+    key2: "value2",
+    key3: "value3",
+    key4: "value4",
+    key5: "value5",
+    key6: "value6",
+  } as {});
+  const [dictArr, setDictArr] = useState([]);
 
+  useEffect(() => {
+    convertToArray(dict);
+  }, [dict]);
 
-  const handleOnNewValueTest = (newValue): void => {
-    let newData = cloneDeep(arrayOfObjects);
-    newData = newValue;
-    setArrayOfObjects(newData);
+  const convertToArray = (singleObject) => {
+    let arrConverted: any = [];
+    for (const key in singleObject) {
+      if (singleObject.hasOwnProperty(key)) {
+        const newObj = {};
+        newObj[key] = singleObject[key];
+        arrConverted.push(newObj);
+      }
+    }
+    setDictArr(arrConverted);
   };
 
-
-
+  const convertToDict = (newValue): void => {
+    const flattenedObject = {};
+    for (const obj of newValue) {
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          flattenedObject[key] = obj[key];
+        }
+      }
+    }
+    let newData = cloneDeep(flattenedObject);
+    setDict(newData);
+  };
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -225,6 +248,15 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
+        ) : left === true && type === "str" ? (
+          <div className="mt-2 w-full">
+            <KeypairListComponent
+              disabled={disabled}
+              editNode={false}
+              value={dictArr}
+              onChange={convertToDict}
+            />
+          </div>
         ) : (
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
@@ -358,20 +390,7 @@ export default function ParameterComponent({
               onChange={handleOnNewValue}
             />
           </div>
-        )
-        : left === true && type === "keypair" ? (
-          <div className="mt-2 w-full">
-          <KeypairListComponent
-          disabled={disabled}
-          editNode={false}
-          value={
-            arrayOfObjects
-          }
-          onChange={handleOnNewValueTest}
-        />
-          </div>
-        )
-        : (
+        ) : (
           <></>
         )}
       </>
