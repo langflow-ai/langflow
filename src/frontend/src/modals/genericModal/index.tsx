@@ -121,9 +121,10 @@ export default function GenericModal({
   }
 
   function validatePrompt(closeModal: boolean): void {
+    //nodeClass is always null on tweaks
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
-        if (apiReturn.data) {
+        if (apiReturn.data && nodeClass) {
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);

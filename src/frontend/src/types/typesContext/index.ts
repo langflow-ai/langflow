@@ -41,8 +41,6 @@ export type alertContextType = {
   removeFromNotificationList: (index: string) => void;
   loading: boolean;
   setLoading: (newState: boolean) => void;
-  isTweakPage: boolean;
-  setIsTweakPage: (newState: boolean) => void;
 };
 
 export type darkContextType = {

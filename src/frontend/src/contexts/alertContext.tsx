@@ -25,9 +25,7 @@ const initialValue: alertContextType = {
   notificationList: [],
   pushNotificationList: () => {},
   clearNotificationList: () => {},
-  removeFromNotificationList: () => {},
-  isTweakPage: false,
-  setIsTweakPage: () => {},
+  removeFromNotificationList: () => {}
 };
 
 export const alertContext = createContext<alertContextType>(initialValue);
@@ -123,8 +121,6 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   return (
     <alertContext.Provider
       value={{
-        isTweakPage,
-        setIsTweakPage,
         removeFromNotificationList,
         clearNotificationList,
         notificationList,
