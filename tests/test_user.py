@@ -12,7 +12,7 @@ def super_user(client, session):
     settings_manager = get_settings_manager()
     auth_settings = settings_manager.auth_settings
     return create_super_user(
-        session,
+        db=session,
         username=auth_settings.FIRST_SUPERUSER,
         password=auth_settings.FIRST_SUPERUSER_PASSWORD,
     )
