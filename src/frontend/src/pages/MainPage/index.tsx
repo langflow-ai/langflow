@@ -3,13 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
+import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import DropdownButton from "../../components/DropdownButtonComponent";
 export default function HomePage(): JSX.Element {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow, removeFlow, uploadFlow } =
-    useContext(TabsContext);
+  const {
+    flows,
+    setTabId,
+    downloadFlows,
+    uploadFlows,
+    addFlow,
+    removeFlow, uploadFlow,
+    isLoading,
+  } = useContext(TabsContext);
   const dropdownOptions = [{name: "Import from JSON", onBtnClick: () => uploadFlow(true)}]
 
   // Set a null id
@@ -17,6 +25,10 @@ export default function HomePage(): JSX.Element {
     setTabId("");
   }, []);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log(isLoading);
+  }, [isLoading]);
 
   // Personal flows display
   return (
@@ -62,31 +74,40 @@ export default function HomePage(): JSX.Element {
           Manage your personal projects. Download or upload your collection. 
         </span>
         <div className="main-page-flows-display">
-          {flows.map((flow, idx) => (
-            <CardComponent
-              key={idx}
-              flow={flow}
-              id={flow.id}
-              button={
-                <Link to={"/flow/" + flow.id}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="whitespace-nowrap "
-                  >
-                    <IconComponent
-                      name="ExternalLink"
-                      className="main-page-nav-button"
-                    />
-                    Edit Flow
-                  </Button>
-                </Link>
-              }
-              onDelete={() => {
-                removeFlow(flow.id);
-              }}
-            />
-          ))}
+          {isLoading && flows.length == 0 ? (
+            <>
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+            </>
+          ) : (
+            flows.map((flow, idx) => (
+              <CardComponent
+                key={idx}
+                flow={flow}
+                id={flow.id}
+                button={
+                  <Link to={"/flow/" + flow.id}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap "
+                    >
+                      <IconComponent
+                        name="ExternalLink"
+                        className="main-page-nav-button"
+                      />
+                      Edit Flow
+                    </Button>
+                  </Link>
+                }
+                onDelete={() => {
+                  removeFlow(flow.id);
+                }}
+              />
+            ))
+          )}
         </div>
       </div>
     </>
