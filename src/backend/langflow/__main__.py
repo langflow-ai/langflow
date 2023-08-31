@@ -356,7 +356,7 @@ def superuser(
     with session_getter(db_manager) as session:
         from langflow.services.auth.utils import create_super_user
 
-        if create_super_user(session, username, password):
+        if create_super_user(db=session, username=username, password=password):
             # Verify that the superuser was created
             from langflow.services.database.models.user.user import User
 
