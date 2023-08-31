@@ -224,7 +224,7 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
-        ) : left === true && type === "str" ? (
+        ) : left === true && type === "dict" ? (
           <div className="mt-2 w-full">
             <KeypairListComponent
               disabled={disabled}

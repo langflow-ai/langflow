@@ -27,6 +27,11 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
+import {
+  convertArrayToObj,
+  convertObjToArray,
+  hasDuplicateKeys,
+} from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -49,6 +54,7 @@ const EditNodeModal = forwardRef(
     const [myData, setMyData] = useState(data);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
+    const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
     let disabled =
       reactFlowInstance
@@ -87,10 +93,10 @@ const EditNodeModal = forwardRef(
       key5: "value5",
       key6: "value6",
     } as {});
-    const [dictArr, setDictArr] = useState([]);
+    const [dictArr, setDictArr] = useState([] as string[]);
 
     useEffect(() => {
-      convertToArray(dict);
+      setDictArr(convertObjToArray(dict));
     }, [dict]);
 
     const convertToArray = (singleObject) => {
@@ -208,13 +214,25 @@ const EditNodeModal = forwardRef(
                                       }}
                                     />
                                   ) : myData.node?.template[templateParam]
-                                      .type === "str" ? (
+                                      .type === "dict" ? (
                                     <div className="mt-2 w-full">
                                       <KeypairListComponent
                                         disabled={disabled}
-                                        editNode={true}
+                                        editNode={false}
                                         value={dictArr}
-                                        onChange={convertToDict}
+                                        duplicateKey={errorDuplicateKey}
+                                        onChange={(newValue: string[]) => {
+                                          setErrorDuplicateKey(
+                                            hasDuplicateKeys(newValue)
+                                          );
+                                          if (hasDuplicateKeys(newValue)) {
+                                            setDictArr(newValue);
+                                          } else {
+                                            setDict(
+                                              convertArrayToObj(newValue)
+                                            );
+                                          }
+                                        }}
                                       />
                                     </div>
                                   ) : myData.node.template[templateParam]

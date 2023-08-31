@@ -20,8 +20,6 @@ export default function KeypairListComponent({
       onChange([""]);
     }
   }, [disabled]);
-
-  console.log(duplicateKey);
   
 
  const handleChangeKey = (event, idx) => {
@@ -54,7 +52,12 @@ export default function KeypairListComponent({
                 disabled={disabled}
                 type="text"
                 value={key}
-                className={editNode ? "input-edit-node" : ""}
+                className={classNames(
+                  editNode
+                    ? "input-edit-node"
+                    : "",
+                    duplicateKey ? "input-invalid" : ""
+                )}
                 placeholder="Type key..."
                 onChange={(event) => handleChangeKey(event, index)}
                 onKeyDown={(e) => {
