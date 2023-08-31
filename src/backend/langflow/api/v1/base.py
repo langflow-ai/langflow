@@ -1,3 +1,4 @@
+from typing import Optional
 from langflow.template.frontend_node.base import FrontendNode
 from pydantic import BaseModel, validator
 
@@ -20,7 +21,8 @@ class FrontendNodeRequest(FrontendNode):
 class ValidatePromptRequest(BaseModel):
     name: str
     template: str
-    frontend_node: FrontendNodeRequest
+    #optional for tweak call
+    frontend_node: Optional[FrontendNodeRequest]
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
@@ -39,7 +41,8 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
-    frontend_node: FrontendNodeRequest
+    #object return for tweak call
+    frontend_node: FrontendNodeRequest | object
 
 
 INVALID_CHARACTERS = {
