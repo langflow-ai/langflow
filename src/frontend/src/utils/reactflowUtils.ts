@@ -289,3 +289,42 @@ export function getConnectedNodes(
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
+
+export function convertObjToArray(singleObject){
+  let arrConverted: any = [];
+  for (const key in singleObject) {
+    if (singleObject.hasOwnProperty(key)) {
+      const newObj = {};
+      newObj[key] = singleObject[key];
+      arrConverted.push(newObj);
+    }
+  }
+
+  return arrConverted;
+}
+
+export function convertArrayToObj(newValue){
+  const flattenedObject = {};
+  for (const obj of newValue) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        flattenedObject[key] = obj[key];
+      }
+    }
+  }
+  let newData = _.cloneDeep(flattenedObject);
+  return newData;
+}
+
+export function hasDuplicateKeys(array) {
+  const keys = {};
+  for (const obj of array) {
+      for (const key in obj) {
+          if (keys[key]) {
+              return true; // Duplicate key found
+          }
+          keys[key] = true;
+      }
+  }
+  return false; // No duplicate keys found
+}

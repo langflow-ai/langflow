@@ -25,7 +25,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
-import { isValidConnection } from "../../../../utils/reactflowUtils";
+import { convertArrayToObj, convertObjToArray, hasDuplicateKeys, isValidConnection } from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -53,6 +53,7 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
+  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -105,33 +106,8 @@ export default function ParameterComponent({
   const [dictArr, setDictArr] = useState([]);
 
   useEffect(() => {
-    convertToArray(dict);
+    setDictArr(convertObjToArray(dict));
   }, [dict]);
-
-  const convertToArray = (singleObject) => {
-    let arrConverted: any = [];
-    for (const key in singleObject) {
-      if (singleObject.hasOwnProperty(key)) {
-        const newObj = {};
-        newObj[key] = singleObject[key];
-        arrConverted.push(newObj);
-      }
-    }
-    setDictArr(arrConverted);
-  };
-
-  const convertToDict = (newValue): void => {
-    const flattenedObject = {};
-    for (const obj of newValue) {
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          flattenedObject[key] = obj[key];
-        }
-      }
-    }
-    let newData = cloneDeep(flattenedObject);
-    setDict(newData);
-  };
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -254,7 +230,12 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={dictArr}
-              onChange={convertToDict}
+              duplicateKey={errorDuplicateKey}
+              onChange={(newValue) => {
+                setErrorDuplicateKey(hasDuplicateKeys(newValue));
+                if(hasDuplicateKeys(newValue)) return;
+                setDict(convertArrayToObj(newValue));
+              }}
             />
           </div>
         ) : (

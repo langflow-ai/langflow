@@ -13,6 +13,7 @@ export default function KeypairListComponent({
   onChange,
   disabled,
   editNode = false,
+  duplicateKey
 }: KeyPairListComponent): JSX.Element {
   useEffect(() => {
     if (disabled) {
@@ -20,19 +21,17 @@ export default function KeypairListComponent({
     }
   }, [disabled]);
 
-  const handleChangeKey = (event, idx) => {
+  console.log(duplicateKey);
+  
+
+ const handleChangeKey = (event, idx) => {
     const newInputList = _.cloneDeep(value);
     const oldKey = Object.keys(newInputList[idx])[0];
-    let counter = 1;
-    let newKey = event.target.value;
-    while (newInputList.some(obj => Object.keys(obj)[0] === newKey)) {
-      newKey = `${event.target.value}_${counter}`;
-      counter++;
-    }
-    newInputList[idx] = { [newKey]: newInputList[idx][oldKey] };
+    const updatedObj = { [event.target.value]: newInputList[idx][oldKey] };
+    newInputList[idx] = updatedObj;
     onChange(newInputList);
   };
-  
+
   const handleChangeValue = (newValue, idx) => {
     const newInputList = _.cloneDeep(value);
     const key = Object.keys(newInputList[idx])[0];
