@@ -204,7 +204,7 @@ export default function AdminPage() {
           <div className="flex w-full justify-between px-4">
             <div className="flex w-96 items-center gap-4">
               <Input
-                placeholder="Search Examples"
+                placeholder="Search Username"
                 value={inputValue}
                 onChange={(e) => handleFilterUsers(e.target.value)}
               />
