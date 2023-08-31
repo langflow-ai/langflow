@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -300,4 +301,5 @@ export const nodeIconsLucide: iconsType = {
   UserCog2,
   Key,
   Unplug,
+  ChevronUp,
 };

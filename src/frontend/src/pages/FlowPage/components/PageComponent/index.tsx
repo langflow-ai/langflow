@@ -421,7 +421,7 @@ export default function Page({
                   zoomOnScroll={!view}
                   zoomOnPinch={!view}
                   panOnDrag={!view}
-                  proOptions={{hideAttribution: true}}
+                  proOptions={{ hideAttribution: true }}
                 >
                   <Background className="" />
                   {!view && (
