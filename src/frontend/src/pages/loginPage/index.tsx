@@ -131,7 +131,9 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full" type="submit">Sign in</Button>
+              <Button className="mr-3 mt-6 w-full" type="submit">
+                Sign in
+              </Button>
             </Form.Submit>
           </div>
           <div className="w-full">
