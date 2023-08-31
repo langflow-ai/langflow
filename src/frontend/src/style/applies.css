@@ -1037,4 +1037,8 @@
   .label-invalid{
     @apply text-destructive
   }
+
+  .input-invalid{
+    @apply border-destructive focus:ring-destructive  focus:border-destructive
+  }
 }
