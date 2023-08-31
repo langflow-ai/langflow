@@ -504,7 +504,7 @@ export const USER_PROJECTS_HEADER = "My Collection";
  * @constant
  *
  */
-export const ADMIN_HEADER_TITLE = "Welcome back!";
+export const ADMIN_HEADER_TITLE = "Admin Page";
 
 /**
  * Header description for admin page

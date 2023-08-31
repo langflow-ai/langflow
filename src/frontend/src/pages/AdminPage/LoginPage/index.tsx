@@ -48,7 +48,7 @@ export default function LoginAdminPage() {
   }
 
   function getUser() {
-    if (getAuthentication) {
+    if (getAuthentication()) {
       setTimeout(() => {
         getLoggedUser()
           .then((user) => {

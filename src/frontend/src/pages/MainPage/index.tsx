@@ -35,10 +35,6 @@ export default function HomePage(): JSX.Element {
   }, []);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    console.log(isLoading);
-  }, [isLoading]);
-
   // Personal flows display
   return (
     <>
