@@ -154,6 +154,11 @@ export default function Header(): JSX.Element {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
+                    onClick={() => navigate("/account/settings")}
+                  >
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => {
                       logout();
                       navigate("/login");
