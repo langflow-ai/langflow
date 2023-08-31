@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.4.14"
+version = "0.5.0a0"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -33,7 +33,7 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.9.0"
 gunicorn = "^21.1.0"
-langchain = "^0.0.256"
+langchain = "^0.0.274"
 openai = "^0.27.8"
 pandas = "^2.0.0"
 chromadb = "^0.3.21"
@@ -83,7 +83,7 @@ bcrypt = "^4.0.1"
 python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
 markupsafe = "^2.1.3"
-
+pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
@@ -101,6 +101,8 @@ types-appdirs = "^1.4.3.5"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
+pytest-mock = "^3.11.1"
+pytest-xdist = "^3.3.1"
 
 
 [tool.poetry.extras]

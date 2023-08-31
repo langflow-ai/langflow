@@ -473,15 +473,16 @@ def test_build_config_no_code():
 
 
 @pytest.fixture
-def component():
+def component(client, active_user):
     return CustomComponent(
+        user_id=active_user.id,
         field_config={
             "fields": {
                 "llm": {"type": "str"},
                 "url": {"type": "str"},
                 "year": {"type": "int"},
             }
-        }
+        },
     )
 
 

@@ -92,7 +92,6 @@ class ChatManager(Service):
             )
 
     async def connect(self, client_id: str, websocket: WebSocket):
-        await websocket.accept()
         self.active_connections[client_id] = websocket
 
     def disconnect(self, client_id: str):
@@ -191,7 +190,7 @@ class ChatManager(Service):
                 json_payload = await websocket.receive_json()
                 try:
                     payload = orjson.loads(json_payload)
-                except TypeError:
+                except Exception:
                     payload = json_payload
                 if "clear_history" in payload:
                     self.chat_history.history[client_id] = []

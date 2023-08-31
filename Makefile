@@ -19,7 +19,7 @@ coverage:
 		--cov-report term-missing:skip-covered
 
 tests:
-	poetry run pytest tests
+	poetry run pytest tests -n auto
 
 format:
 	poetry run black .
@@ -27,7 +27,7 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-	poetry run mypy .
+	poetry run mypy --exclude .venv .
 	poetry run black . --check
 	poetry run ruff . --fix
 

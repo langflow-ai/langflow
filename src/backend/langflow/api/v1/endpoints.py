@@ -1,13 +1,15 @@
 from http import HTTPStatus
-from typing import Annotated, Optional, Union
+from typing import Annotated, Any, Optional, Union
+from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.database.models.user.user import User
 from langflow.services.utils import get_settings_manager
 from langflow.utils.logger import logger
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body
-
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
+import sqlalchemy as sa
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -33,12 +35,12 @@ router = APIRouter(tags=["Base"])
 
 
 @router.get("/all")
-def get_all():
+def get_all(current_user: User = Depends(get_current_active_user)):
     logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
-    custom_components_from_file = {}
+    custom_components_from_file: dict[str, Any] = {}
     settings_manager = get_settings_manager()
     if settings_manager.settings.COMPONENTS_PATH:
         logger.info(
@@ -58,8 +60,12 @@ def get_all():
 
         logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
         for custom_component_dict in custom_component_dicts:
-            logger.debug(
-                {key: len(value) for key, value in custom_component_dict.items()}
+            # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
             )
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
@@ -71,22 +77,42 @@ def get_all():
 
 
 # For backwards compatibility we will keep the old endpoint
-@router.post("/predict/{flow_id}", response_model=ProcessResponse)
-@router.post("/process/{flow_id}", response_model=ProcessResponse)
+@router.post(
+    "/predict/{flow_id}",
+    response_model=ProcessResponse,
+    dependencies=[Depends(api_key_security)],
+)
+@router.post(
+    "/process/{flow_id}",
+    response_model=ProcessResponse,
+)
 async def process_flow(
+    session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[dict] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    session: Session = Depends(get_session),
+    api_key_user: User = Depends(api_key_security),
 ):
     """
     Endpoint to process an input with a given flow_id.
     """
 
     try:
-        flow = session.get(Flow, flow_id)
+        if api_key_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API Key",
+            )
+
+        # Get the flow that matches the flow_id and belongs to the user
+        flow = (
+            session.query(Flow)
+            .filter(Flow.id == flow_id)
+            .filter(Flow.user_id == api_key_user.id)
+            .first()
+        )
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
 
@@ -102,6 +128,22 @@ async def process_flow(
             graph_data, inputs, clear_cache, session_id
         )
         return ProcessResponse(result=response, session_id=session_id)
+    except sa.exc.StatementError as exc:
+        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
+        if "badly formed hexadecimal UUID string" in str(exc):
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
+    except ValueError as exc:
+        if f"Flow {flow_id} not found" in str(exc):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+            ) from exc
     except Exception as e:
         # Log stack trace
         logger.exception(e)
