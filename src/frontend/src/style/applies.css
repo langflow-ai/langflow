@@ -488,10 +488,10 @@
     @apply flex-max-width h-12 items-center justify-between border-border bg-muted;
   }
   .header-start-display {
-    @apply flex w-96 items-center justify-start gap-2;
+    @apply flex w-[30%] items-center justify-start gap-2;
   }
   .header-end-division {
-    @apply flex w-96 justify-end px-2;
+    @apply flex w-[30%] justify-end px-2;
   }
   .header-end-display {
     @apply ml-auto mr-2 flex items-center gap-5;

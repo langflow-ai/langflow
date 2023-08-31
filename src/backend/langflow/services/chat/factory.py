@@ -6,6 +6,6 @@ class ChatManagerFactory(ServiceFactory):
     def __init__(self):
         super().__init__(ChatManager)
 
-    def create(self, settings_service):
+    def create(self):
         # Here you would have logic to create and configure a ChatManager
         return ChatManager()

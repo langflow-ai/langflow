@@ -1,12 +1,12 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getRepoStars } from "../../controllers/API";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -17,29 +17,54 @@ export default function Header(): JSX.Element {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
+  const { logout, autoLogin, isAdmin } = useContext(AuthContext);
+  const { stars } = useContext(darkContext);
+  const navigate = useNavigate();
 
-  const [stars, setStars] = useState(null);
-
-  // Get and set numbers of stars on header
-  useEffect(() => {
-    async function fetchStars() {
-      const starsCount = await getRepoStars("logspace-ai", "langflow");
-      setStars(starsCount);
-    }
-    fetchStars();
-  }, []);
   return (
     <div className="header-arrangement">
       <div className="header-start-display">
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <Button variant="outline" className="">
-          Sign out
-        </Button>
+
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
+        {!autoLogin && location.pathname !== `/flow/${tabId}` && (
+          <a
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
+        >
+          Sign out
+        </a>
+        )}
+
+        {location.pathname === "/admin" && (
+          <a
+            onClick={() => {
+              navigate("/");
+            }}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+          >
+            Home
+          </a>
+        )}
+
+        {isAdmin &&
+          !autoLogin &&
+          location.pathname !== "/admin" &&
+          location.pathname !== `/flow/${tabId}` && (
+            <a
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
+            onClick={() => navigate("/admin")}
+          >
+            Admin page
+          </a>
+          )}
       </div>
       <div className="round-button-div">
         <Link to="/">
@@ -119,6 +144,18 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
+          {!autoLogin && (
+            <button
+              onClick={() => {
+                navigate("/account/api-keys");
+              }}
+            >
+              <IconComponent
+                name="Key"
+                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
+              />
+            </button>
+          )}
         </div>
       </div>
     </div>
