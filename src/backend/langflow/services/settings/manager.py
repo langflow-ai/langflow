@@ -35,5 +35,10 @@ class SettingsManager(Service):
                 )
 
         settings = Settings(**settings_dict)
-        auth_settings = AuthSettings(CONFIG_DIR=settings.CONFIG_DIR)
+        if not settings.CONFIG_DIR:
+            raise ValueError("CONFIG_DIR must be set in settings")
+
+        auth_settings = AuthSettings(
+            CONFIG_DIR=settings.CONFIG_DIR,
+        )
         return cls(settings, auth_settings)
