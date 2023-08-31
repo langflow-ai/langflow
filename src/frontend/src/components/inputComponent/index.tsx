@@ -30,6 +30,7 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
+            type={password && !pwdVisible ? "password" : "text"}
             value={value}
             disabled={disabled}
             required={required}
@@ -53,6 +54,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <Input
+          type={password && !pwdVisible ? "password" : "text"}
           value={value}
           disabled={disabled}
           required={required}
@@ -76,6 +78,8 @@ export default function InputComponent({
       )}
       {password && (
         <button
+          type="button"
+          tabIndex={-1}
           className={classNames(
             editNode
               ? "input-component-true-button"

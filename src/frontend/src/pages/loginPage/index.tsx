@@ -89,6 +89,7 @@ export default function LoginPage(): JSX.Element {
 
               <Form.Control asChild>
                 <Input
+                  type="username"
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -129,12 +130,12 @@ export default function LoginPage(): JSX.Element {
           </div>
           <div className="w-full">
             <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full">Sign in</Button>
+              <Button className="mr-3 mt-6 w-full" type="submit">Sign in</Button>
             </Form.Submit>
           </div>
           <div className="w-full">
             <Link to="/signup">
-              <Button className="w-full" variant="outline">
+              <Button className="w-full" variant="outline" type="button">
                 Don't have an account?&nbsp;<b>Sign Up</b>
               </Button>
             </Link>
