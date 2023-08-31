@@ -400,7 +400,7 @@ export async function renewAccessToken(token: string) {
   }
 }
 
-export async function getLoggedUser(): Promise<Array<Users>> {
+export async function getLoggedUser(): Promise<Users | null> {
   try {
     const res = await api.get(`${BASE_URL_API}user`);
 
@@ -411,7 +411,7 @@ export async function getLoggedUser(): Promise<Array<Users>> {
     console.log("Error:", error);
     throw error;
   }
-  return [];
+  return null;
 }
 
 export async function addUser(user: UserInputType): Promise<Array<Users>> {

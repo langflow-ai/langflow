@@ -238,7 +238,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function hardReset() {
     newNodeId.current = uid();
     setTabId("");
-
     setFlows([]);
     setIsLoading(true);
     setId(uid());
