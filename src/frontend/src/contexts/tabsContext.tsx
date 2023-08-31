@@ -39,6 +39,7 @@ const TabsContextInitialValue: TabsContextType = {
   save: () => {},
   tabId: "",
   setTabId: (index: string) => {},
+  isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
   addFlow: async (flowData?: any) => "",
@@ -72,9 +73,11 @@ export const TabsContext = createContext<TabsContextType>(
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
-  const { getAuthentication } = useContext(AuthContext);
+  const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -85,6 +88,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hardReset();
+    }
+  }, [isAuthenticated]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -116,11 +125,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
+    setIsLoading(true);
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
         try {
           processDBData(DbData);
           updateStateWithDbData(DbData);
+          setIsLoading(false);
         } catch (e) {}
       }
     });
@@ -229,6 +240,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setTabId("");
 
     setFlows([]);
+    setIsLoading(true);
     setId(uid());
   }
 
@@ -641,6 +653,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         paste,
         getTweak,
         setTweak,
+        isLoading,
       }}
     >
       {children}
