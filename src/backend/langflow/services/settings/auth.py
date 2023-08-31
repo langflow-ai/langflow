@@ -31,18 +31,8 @@ class AuthSettings(BaseSettings):
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = False
-    FIRST_SUPERUSER: Optional[str] = Field(
-        "langflow",
-        description="First super user to be created if AUTO_LOGIN is True.",
-        env="LANGFLOW_FIRST_SUPERUSER",
-        allow_mutation=False,
-    )
-    FIRST_SUPERUSER_PASSWORD: Optional[str] = Field(
-        "langflow",
-        description="First super user password to be created if AUTO_LOGIN is True.",
-        env="LANGFLOW_FIRST_SUPERUSER_PASSWORD",
-        allow_mutation=False,
-    )
+    FIRST_SUPERUSER: str = "langflow"
+    FIRST_SUPERUSER_PASSWORD: str = "langflow"
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
