@@ -255,7 +255,9 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 }
 
 export function handleKeyDown(
-  e: React.KeyboardEvent<HTMLInputElement>,
+  e:
+    | React.KeyboardEvent<HTMLInputElement>
+    | React.KeyboardEvent<HTMLTextAreaElement>,
   inputValue: string | string[] | null,
   block: string
 ) {

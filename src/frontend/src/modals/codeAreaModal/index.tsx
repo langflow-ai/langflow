@@ -28,8 +28,7 @@ export default function CodeAreaModal({
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
   const [height, setHeight] = useState<string | null>(null);
-  const { setErrorData, setSuccessData, isTweakPage } =
-    useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
