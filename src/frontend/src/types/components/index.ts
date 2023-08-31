@@ -59,6 +59,7 @@ export type KeyPairListComponent = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
+  duplicateKey?: boolean;
 };
 
 export type TextAreaComponentType = {
