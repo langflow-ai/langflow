@@ -23,6 +23,7 @@ import {
   varHighlightHTML,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { cloneDeep } from "lodash";
 
 export default function GenericModal({
   field_name = "",
@@ -122,6 +123,11 @@ export default function GenericModal({
 
   function validatePrompt(closeModal: boolean): void {
     //nodeClass is always null on tweaks
+    if(nodeClass){
+      const nodeClassCp = cloneDeep(nodeClass);
+      nodeClassCp['template']['template']['value'] = inputValue;
+      nodeClass = nodeClassCp;
+    }
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
