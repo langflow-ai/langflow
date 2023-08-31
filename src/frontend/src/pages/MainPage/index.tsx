@@ -18,7 +18,9 @@ export default function HomePage(): JSX.Element {
     removeFlow, uploadFlow,
     isLoading,
   } = useContext(TabsContext);
-  const dropdownOptions = [{name: "Import from JSON", onBtnClick: () => uploadFlow(true)}]
+  const dropdownOptions = [{name: "Import from JSON", onBtnClick: () => uploadFlow(true).then((id) => {
+    navigate("/flow/" + id);
+  })}]
 
   // Set a null id
   useEffect(() => {
