@@ -37,7 +37,12 @@ async def api_key_security(
     result: Optional[Union[ApiKey, User]] = None
     if settings_manager.auth_settings.AUTO_LOGIN:
         # Get the first user
-        settings_manager.auth_settings.FIRST_SUPERUSER
+        if not settings_manager.auth_settings.FIRST_SUPERUSER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+
         result = get_user_by_username(
             db, settings_manager.auth_settings.FIRST_SUPERUSER
         )
@@ -79,6 +84,9 @@ async def get_current_user(
 
     if isinstance(token, Coroutine):
         token = await token
+
+    if settings_manager.auth_settings.SECRET_KEY is None:
+        raise credentials_exception
 
     try:
         payload = jwt.decode(
@@ -150,9 +158,9 @@ def create_token(data: dict, expires_delta: timedelta):
 
 
 def create_super_user(
+    username: str,
+    password: str,
     db: Session = Depends(get_session),
-    username: Optional[str] = None,
-    password: Optional[str] = None,
 ) -> User:
     super_user = get_user_by_username(db, username)
 
@@ -176,7 +184,12 @@ def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
     settings_manager = get_settings_manager()
     username = settings_manager.auth_settings.FIRST_SUPERUSER
     password = settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
-    super_user = create_super_user(db, username=username, password=password)
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing first superuser credentials",
+        )
+    super_user = create_super_user(db=db, username=username, password=password)
 
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
