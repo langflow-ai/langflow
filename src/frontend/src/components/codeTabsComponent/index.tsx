@@ -49,7 +49,6 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
-  const { isTweakPage, setIsTweakPage } = useContext(alertContext);
 
   useEffect(() => {
     if (flow && flow["data"]!["nodes"]) {
@@ -58,16 +57,14 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    unselectAllNodes({
-      data,
-      updateNodes: (nodes) => {
-        reactFlowInstance?.setNodes(nodes);
-      },
-    });
-
-    return () => {
-      if (isTweakPage) setIsTweakPage(false);
-    };
+    if(tweaks){
+      unselectAllNodes({
+        data,
+        updateNodes: (nodes) => {
+          reactFlowInstance?.setNodes(nodes);
+        },
+      });
+    }
   }, []);
 
   const copyToClipboard = () => {
