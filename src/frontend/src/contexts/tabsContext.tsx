@@ -48,7 +48,7 @@ const TabsContextInitialValue: TabsContextType = {
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
-  uploadFlow: () => {},
+  uploadFlow: async () => "",
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
@@ -298,39 +298,38 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow(newProject?: boolean, file?: File) {
+  async function uploadFlow(
+    newProject?: boolean,
+    file?: File
+  ): Promise<String | undefined> {
+    let id;
     if (file) {
-      file.text().then((text) => {
-        // parse the text into a JSON object
-        let flow: FlowType = JSON.parse(text);
+      let text = await file.text();
+      // parse the text into a JSON object
+      let flow: FlowType = JSON.parse(text);
 
-        addFlow(flow, newProject);
-      });
+      id = await addFlow(flow, newProject);
     } else {
       // create a file input
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json";
       // add a change event listener to the file input
-      input.onchange = (e: Event) => {
-        // check if the file type is application/json
-        if (
-          (e.target as HTMLInputElement).files![0].type === "application/json"
-        ) {
-          // get the file from the file input
-          const currentfile = (e.target as HTMLInputElement).files![0];
-          // read the file as text
-          currentfile.text().then((text) => {
-            // parse the text into a JSON object
+      id = await new Promise(resolve => {
+        input.onchange = async (e: Event) => {
+          if ((e.target as HTMLInputElement).files![0].type === "application/json") {
+            const currentfile = (e.target as HTMLInputElement).files![0];
+            let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-
-            addFlow(flow, newProject);
-          });
-        }
-      };
-      // trigger the file input click event to open the file dialog
-      input.click();
+            const flowId = await addFlow(flow, newProject);
+            resolve(flowId);
+          }
+        };
+        // trigger the file input click event to open the file dialog
+        input.click();
+      });
     }
+    return id;
   }
 
   function uploadFlows() {
