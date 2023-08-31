@@ -21,7 +21,7 @@ class FrontendNodeRequest(FrontendNode):
 class ValidatePromptRequest(BaseModel):
     name: str
     template: str
-    #optional for tweak call
+    # optional for tweak call
     frontend_node: Optional[FrontendNodeRequest]
 
 
@@ -41,7 +41,7 @@ class CodeValidationResponse(BaseModel):
 
 class PromptValidationResponse(BaseModel):
     input_variables: list
-    #object return for tweak call
+    # object return for tweak call
     frontend_node: FrontendNodeRequest | object
 
 
