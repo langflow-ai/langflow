@@ -39,9 +39,7 @@ export default function DropdownButton({
               }}
             >
               {!showOptions ? (
-                <IconComponent
-                  name="ChevronDown"
-                />
+                <IconComponent name="ChevronDown" />
               ) : (
                 <IconComponent name="ChevronUp" />
               )}
