@@ -154,18 +154,12 @@ def create_super_user(
     username: Optional[str] = None,
     password: Optional[str] = None,
 ) -> User:
-    settings_manager = get_settings_manager()
-
-    super_user = get_user_by_username(
-        db, username or settings_manager.auth_settings.FIRST_SUPERUSER
-    )
+    super_user = get_user_by_username(db, username)
 
     if not super_user:
         super_user = User(
-            username=username or settings_manager.auth_settings.FIRST_SUPERUSER,
-            password=get_password_hash(
-                password or settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
-            ),
+            username=username,
+            password=get_password_hash(password),
             is_superuser=True,
             is_active=True,
             last_login_at=None,
@@ -179,7 +173,10 @@ def create_super_user(
 
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
-    super_user = create_super_user(db)
+    settings_manager = get_settings_manager()
+    username = settings_manager.auth_settings.FIRST_SUPERUSER
+    password = settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
+    super_user = create_super_user(db, username=username, password=password)
 
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
