@@ -253,6 +253,7 @@ export type UserManagementType = {
   icon: string;
   data?: any;
   index?: number;
+  asChild?: boolean;
   onConfirm: (index, data) => void;
 };
 
@@ -548,5 +549,5 @@ export type fetchErrorComponentType = {
 export type dropdownButtonPropsType = {
   firstButtonName: string;
   onFirstBtnClick: () => void;
-  options: Array<{ name: string; onBtnClick: () => void; }>;
+  options: Array<{ name: string; onBtnClick: () => void }>;
 };

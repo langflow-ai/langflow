@@ -400,7 +400,7 @@ export async function renewAccessToken(token: string) {
   }
 }
 
-export async function getLoggedUser(): Promise<Users> {
+export async function getLoggedUser(): Promise<Array<Users>> {
   try {
     const res = await api.get(`${BASE_URL_API}user`);
 
@@ -411,9 +411,10 @@ export async function getLoggedUser(): Promise<Users> {
     console.log("Error:", error);
     throw error;
   }
+  return [];
 }
 
-export async function addUser(user: UserInputType): Promise<Users> {
+export async function addUser(user: UserInputType): Promise<Array<Users>> {
   try {
     const res = await api.post(`${BASE_URL_API}user`, user);
     if (res.status === 200) {
@@ -423,12 +424,13 @@ export async function addUser(user: UserInputType): Promise<Users> {
     console.log("Error:", error);
     throw error;
   }
+  return [];
 }
 
 export async function getUsersPage(
   skip: number,
   limit: number
-): Promise<[Users]> {
+): Promise<Array<Users>> {
   try {
     const res = await api.get(
       `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
@@ -440,6 +442,7 @@ export async function getUsersPage(
     console.log("Error:", error);
     throw error;
   }
+  return [];
 }
 
 export async function deleteUser(user_id: string) {

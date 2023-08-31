@@ -500,6 +500,21 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 /**
+ * Header text for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_TITLE = "Welcome back!";
+
+/**
+ * Header description for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_DESCRIPTION =
+  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
+
+/**
  * URLs excluded from error retries.
  * @constant
  *
