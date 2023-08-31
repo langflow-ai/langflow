@@ -79,6 +79,7 @@ psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
 langchain-experimental = "^0.0.8"
 metaphor-python = "^0.1.11"
+langfuse = "^1.0.13"
 pillow = "^10.0.0"
 metal-sdk = "^2.0.2"
 
@@ -96,6 +97,7 @@ pandas-stubs = "^2.0.0.230412"
 types-pillow = "^9.5.0.2"
 types-appdirs = "^1.4.3.5"
 types-pyyaml = "^6.0.12.8"
+types-google-cloud-ndb = "^2.2.0.0"
 
 
 [tool.poetry.extras]
