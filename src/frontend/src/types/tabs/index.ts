@@ -5,6 +5,7 @@ export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;
   save: () => void;
   tabId: string;
+  isLoading: boolean;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
