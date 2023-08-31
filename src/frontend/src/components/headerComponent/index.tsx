@@ -149,11 +149,15 @@ export default function Header(): JSX.Element {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {isAdmin && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => navigate("/admin")}
+                    >
                       Admin Page
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
+                    className="cursor-pointer"
                     onClick={() => {
                       logout();
                       navigate("/login");
