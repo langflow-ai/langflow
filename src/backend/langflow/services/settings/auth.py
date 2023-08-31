@@ -11,10 +11,11 @@ from langflow.utils.logger import logger
 class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
-    SECRET_KEY: Optional[str] = Field(
-        None,
+    SECRET_KEY: str = Field(
+        default="",
         description="Secret key for JWT. If not provided, a random one will be generated.",
         env="LANGFLOW_SECRET_KEY",
+        allow_mutation=False,
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
@@ -30,8 +31,18 @@ class AuthSettings(BaseSettings):
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = False
-    FIRST_SUPERUSER: str = "langflow"
-    FIRST_SUPERUSER_PASSWORD: str = "langflow"
+    FIRST_SUPERUSER: Optional[str] = Field(
+        "langflow",
+        description="First super user to be created if AUTO_LOGIN is True.",
+        env="LANGFLOW_FIRST_SUPERUSER",
+        allow_mutation=False,
+    )
+    FIRST_SUPERUSER_PASSWORD: Optional[str] = Field(
+        "langflow",
+        description="First super user password to be created if AUTO_LOGIN is True.",
+        env="LANGFLOW_FIRST_SUPERUSER_PASSWORD",
+        allow_mutation=False,
+    )
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
