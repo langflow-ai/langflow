@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 from langflow.services.base import Service
+from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.utils import get_settings_manager
 from sqlalchemy import inspect
@@ -159,3 +160,23 @@ class DatabaseManager(Service):
                 )
 
         logger.debug("Database and tables created successfully")
+
+    def teardown(self):
+        logger.debug("Tearing down database")
+        try:
+            settings_manager = get_settings_manager()
+            # remove the default superuser if auto_login is enabled
+            # using the FIRST_SUPERUSER to get the user
+            if settings_manager.auth_settings.AUTO_LOGIN:
+                logger.debug("Removing default superuser")
+                username = settings_manager.auth_settings.FIRST_SUPERUSER
+                with Session(self.engine) as session:
+                    user = get_user_by_username(session, username)
+                    session.delete(user)
+                    session.commit()
+                    logger.debug("Default superuser removed")
+
+        except Exception as exc:
+            logger.error(f"Error tearing down database: {exc}")
+
+        self.engine.dispose()
