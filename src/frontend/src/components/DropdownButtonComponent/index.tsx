@@ -1,8 +1,13 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
+import { dropdownButtonPropsType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
-import { dropdownButtonPropsType } from "../../types/components";
-import { Transition } from "@headlessui/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export default function DropdownButton({
   firstButtonName,
@@ -12,54 +17,51 @@ export default function DropdownButton({
   const [showOptions, setShowOptions] = useState<boolean>(false);
 
   return (
-    <div className="align-center relative flex">
-      <div>
-        <Button
-          variant="primary"
-          className="mr-4 w-full"
-          onClick={onFirstBtnClick}
-        >
-          {firstButtonName}
-        </Button>
-      </div>
-      <div>
-        <button
-          className="absolute inset-y-0 right-0 items-center text-muted-foreground"
-          onClick={(event) => {
+    <div>
+      <DropdownMenu open={showOptions}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="primary"
+            className="relative pr-10"
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onFirstBtnClick();
+            }}
+          >
+            {firstButtonName}
+            <div
+              className="absolute right-2 items-center text-muted-foreground"
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                setShowOptions(!showOptions);
+              }}
+            >
+              {!showOptions ? (
+                <IconComponent
+                  name="ChevronDown"
+                />
+              ) : (
+                <IconComponent name="ChevronUp" />
+              )}
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          onPointerDownOutside={(event) => {
             event.stopPropagation();
+            event.preventDefault();
             setShowOptions(!showOptions);
           }}
         >
-          {!showOptions ? (
-            <IconComponent name="ChevronDown" className="" aria-hidden="true" />
-          ) : (
-            <IconComponent name="ChevronUp" />
-          )}
-        </button>
-      </div>
-      <Transition
-        show={showOptions}
-        leave="transition ease-in duration-100"
-        leaveFrom="opacity-100"
-        leaveTo="opacity-0"
-        as={Fragment}
-        enter="transition ease-in duration-100"
-        enterFrom="opacity-0"
-        enterTo="opacity-100"
-      >
-        <div className="absolute top-10 w-full bg-background pb-0.5 pr-0.5 pl-0.5 rounded-lg shadow-lg ">
           {options.map(({ name, onBtnClick }, index) => (
-            <Button
-              className="w-full mt-1"
-              variant="primary"
-              onClick={onBtnClick}
-              key={index}
-            >
+            <DropdownMenuItem onClick={onBtnClick} key={index}>
               {name}
-            </Button>
+            </DropdownMenuItem>
           ))}
-        </div>
-      </Transition>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
