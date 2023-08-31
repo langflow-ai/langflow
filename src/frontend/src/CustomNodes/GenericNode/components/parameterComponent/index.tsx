@@ -103,7 +103,7 @@ export default function ParameterComponent({
     key5: "value5",
     key6: "value6",
   } as {});
-  const [dictArr, setDictArr] = useState([]);
+  const [dictArr, setDictArr] = useState([] as string[]);
 
   useEffect(() => {
     setDictArr(convertObjToArray(dict));
@@ -231,10 +231,14 @@ export default function ParameterComponent({
               editNode={false}
               value={dictArr}
               duplicateKey={errorDuplicateKey}
-              onChange={(newValue) => {
+              onChange={(newValue: string[]) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                if(hasDuplicateKeys(newValue)) return;
-                setDict(convertArrayToObj(newValue));
+                if(hasDuplicateKeys(newValue)){
+                  setDictArr(newValue);
+                }
+                else{
+                  setDict(convertArrayToObj(newValue));
+                }
               }}
             />
           </div>
