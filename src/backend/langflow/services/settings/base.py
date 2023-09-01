@@ -37,9 +37,10 @@ class Settings(BaseSettings):
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE: str = "InMemoryCache"
+    CACHE_TYPE: str = "memory"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
+    LANGCHAIN_CACHE: str = "InMemoryCache"
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
