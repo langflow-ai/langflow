@@ -173,7 +173,7 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
 #     return result, session_id
 
 
-def process_graph_cached(
+async def process_graph_cached(
     data_graph: Dict[str, Any],
     inputs: Optional[dict] = None,
     clear_cache=False,
