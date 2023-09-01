@@ -1,13 +1,14 @@
 import threading
 import time
 from collections import OrderedDict
+from langflow.services.base import Service
 
 from langflow.services.cache.base import BaseCacheManager
 
 import pickle
 
 
-class InMemoryCache(BaseCacheManager):
+class InMemoryCache(BaseCacheManager, Service):
 
     """
     A simple in-memory cache using an OrderedDict.
@@ -175,7 +176,7 @@ class InMemoryCache(BaseCacheManager):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(BaseCacheManager):
+class RedisCache(BaseCacheManager, Service):
     """
     A Redis-based cache implementation.
 
