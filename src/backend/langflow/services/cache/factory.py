@@ -1,13 +1,17 @@
 from langflow.services.cache.manager import InMemoryCache, RedisCache, BaseCacheManager
 from langflow.services.factory import ServiceFactory
 from langflow.utils.logger import logger
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.services.settings.manager import SettingsManager
 
 
 class CacheManagerFactory(ServiceFactory):
     def __init__(self):
         super().__init__(BaseCacheManager)
 
-    def create(self, settings_manager):
+    def create(self, settings_manager: "SettingsManager"):
         # Here you would have logic to create and configure a CacheManager
         # based on the settings_service
 
