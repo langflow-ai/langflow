@@ -6,11 +6,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-from langflow.routers import login, users, health
+
 
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.database.utils import initialize_database
-from langflow.services.manager import initialize_services
+from langflow.services.manager import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
 
@@ -31,15 +31,16 @@ def create_app():
         allow_headers=["*"],
     )
 
-    app.include_router(login.router)
-    app.include_router(users.router)
-    app.include_router(health.router)
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
 
     app.include_router(router)
 
     app.on_event("startup")(initialize_services)
     app.on_event("startup")(initialize_database)
     app.on_event("startup")(setup_llm_caching)
+    app.on_event("shutdown")(teardown_services)
     return app
 
 
@@ -89,7 +90,7 @@ def setup_app(
 
 if __name__ == "__main__":
     import uvicorn
-    from langflow.utils.util import get_number_of_workers
+    from langflow.__main__ import get_number_of_workers
 
     configure()
     uvicorn.run(

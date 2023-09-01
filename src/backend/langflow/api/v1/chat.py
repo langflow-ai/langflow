@@ -1,35 +1,76 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.utils import get_session
 from langflow.utils.logger import logger
+from sqlmodel import Session
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langflow.services.chat.manager import ChatManager
 
 router = APIRouter(tags=["Chat"])
 
 
 @router.websocket("/chat/{client_id}")
-async def chat(client_id: str, websocket: WebSocket):
+async def chat(
+    client_id: str,
+    websocket: WebSocket,
+    token: str = Query(...),
+    db: Session = Depends(get_session),
+):
     """Websocket endpoint for chat."""
     try:
-        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
-        if client_id in chat_manager.cache_manager:
+        await websocket.accept()
+        user = await get_current_user(token, db)
+        if not user:
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+        if not user.is_active:
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+
+        chat_manager: "ChatManager" = service_manager.get(ServiceType.CHAT_MANAGER)
+        if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
             # if the flow is not built yet
-            await websocket.accept()
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
-        logger.error(f"Websocket error: {exc}")
+        logger.error(f"Websocket exrror: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
+    except Exception as exc:
+        logger.error(f"Error in chat websocket: {exc}")
+        messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        if "Could not validate credentials" in str(exc):
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+        else:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
-async def init_build(graph_data: dict, flow_id: str):
+async def init_build(
+    graph_data: dict, flow_id: str, current_user=Depends(get_current_active_user)
+):
     """Initialize the build by storing graph data and returning a unique session ID."""
     cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
     try:
@@ -51,6 +92,7 @@ async def init_build(graph_data: dict, flow_id: str):
         cache_manager[flow_id] = {
             "graph_data": graph_data,
             "status": BuildStatus.STARTED,
+            "user_id": current_user.id,
         }
 
         return InitResponse(flowId=flow_id)
@@ -98,6 +140,7 @@ async def stream_build(flow_id: str):
                 return
 
             graph_data = cache_manager[flow_id].get("graph_data")
+            cache_manager[flow_id]["user_id"]
 
             if not graph_data:
                 error_message = "No data provided"
@@ -105,14 +148,9 @@ async def stream_build(flow_id: str):
                 return
 
             logger.debug("Building langchain object")
-            try:
-                # Some error could happen when building the graph
-                graph = Graph.from_payload(graph_data)
-            except Exception as exc:
-                logger.exception(exc)
-                error_message = str(exc)
-                yield str(StreamData(event="error", data={"error": error_message}))
-                return
+
+            # Some error could happen when building the graph
+            graph = Graph.from_payload(graph_data)
 
             number_of_nodes = len(graph.nodes)
             cache_manager[flow_id]["status"] = BuildStatus.IN_PROGRESS
@@ -130,7 +168,9 @@ async def stream_build(flow_id: str):
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
-                    logger.debug(f"Output: {params}")
+                    logger.debug(
+                        f"Output: {params[:100]}{'...' if len(params) > 100 else ''}"
+                    )
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response

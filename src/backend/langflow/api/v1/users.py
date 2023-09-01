@@ -1,4 +1,11 @@
 from uuid import UUID
+from langflow.api.v1.schemas import UsersResponse
+from langflow.services.database.models.user import (
+    User,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -7,28 +14,27 @@ from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
 from langflow.services.utils import get_session
-from langflow.auth.auth import get_current_active_user, get_password_hash
-from langflow.database.models.user import (
-    User,
-    UserAddModel,
-    UserListModel,
-    UserPatchModel,
-    UsersResponse,
+from langflow.services.auth.utils import (
+    get_current_active_superuser,
+    get_current_active_user,
+    get_password_hash,
+)
+from langflow.services.database.models.user.crud import (
     update_user,
 )
 
-router = APIRouter(tags=["Login"])
+router = APIRouter(tags=["Users"])
 
 
-@router.post("/user", response_model=UserListModel)
+@router.post("/user", response_model=UserRead, status_code=201)
 def add_user(
-    user: UserAddModel,
+    user: UserCreate,
     db: Session = Depends(get_session),
 ) -> User:
     """
     Add a new user to the database.
     """
-    new_user = User(**user.dict())
+    new_user = User.from_orm(user)
     try:
         new_user.password = get_password_hash(user.password)
 
@@ -37,13 +43,17 @@ def add_user(
         db.refresh(new_user)
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="User exists") from e
+        raise HTTPException(
+            status_code=400, detail="This username is unavailable."
+        ) from e
 
     return new_user
 
 
-@router.get("/user", response_model=UserListModel)
-def read_current_user(current_user: User = Depends(get_current_active_user)) -> User:
+@router.get("/user", response_model=UserRead)
+def read_current_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
     """
     Retrieve the current user's data.
     """
@@ -54,7 +64,7 @@ def read_current_user(current_user: User = Depends(get_current_active_user)) -> 
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
-    _: Session = Depends(get_current_active_user),
+    current_user: Session = Depends(get_current_active_superuser),
     db: Session = Depends(get_session),
 ) -> UsersResponse:
     """
@@ -68,14 +78,14 @@ def read_all_users(
 
     return UsersResponse(
         total_count=total_count,  # type: ignore
-        users=[UserListModel(**dict(user.User)) for user in users],
+        users=[UserRead(**dict(user.User)) for user in users],
     )
 
 
-@router.patch("/user/{user_id}", response_model=UserListModel)
+@router.patch("/user/{user_id}", response_model=UserRead)
 def patch_user(
     user_id: UUID,
-    user: UserPatchModel,
+    user: UserUpdate,
     _: Session = Depends(get_current_active_user),
     db: Session = Depends(get_session),
 ) -> User:
@@ -88,12 +98,21 @@ def patch_user(
 @router.delete("/user/{user_id}")
 def delete_user(
     user_id: UUID,
-    _: Session = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_superuser),
     db: Session = Depends(get_session),
 ) -> dict:
     """
     Delete a user from the database.
     """
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=400, detail="You can't delete your own user account"
+        )
+    elif not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403, detail="You don't have the permission to delete this user"
+        )
+
     user_db = db.query(User).filter(User.id == user_id).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
@@ -115,14 +134,13 @@ def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
     """
     new_user = User(
         username="superuser",
-        password="12345",
+        password=get_password_hash("12345"),
         is_active=True,
         is_superuser=True,
         last_login_at=None,
     )
 
     try:
-        new_user.password = get_password_hash(new_user.password)
         db.add(new_user)
         db.commit()
         db.refresh(new_user)

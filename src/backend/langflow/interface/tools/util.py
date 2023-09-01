@@ -3,6 +3,7 @@ import inspect
 from typing import Dict, Union
 
 from langchain.agents.tools import Tool
+from langflow.utils.logger import logger
 
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
@@ -57,7 +58,13 @@ def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
 
 
 def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
-    tree = ast.parse(inspect.getsource(cls))
+    try:
+        tree = ast.parse(inspect.getsource(cls))
+    except IndentationError:
+        logger.error(
+            f"Error parsing class {cls.__name__}. Make sure there are no tabs in the code."
+        )
+        return None
 
     tool_params = {}
 

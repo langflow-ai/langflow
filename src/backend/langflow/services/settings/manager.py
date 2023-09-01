@@ -1,4 +1,5 @@
 from langflow.services.base import Service
+from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
 from langflow.utils.logger import logger
 import os
@@ -8,9 +9,10 @@ import yaml
 class SettingsManager(Service):
     name = "settings_manager"
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, auth_settings: AuthSettings):
         super().__init__()
         self.settings = settings
+        self.auth_settings = auth_settings
 
     @classmethod
     def load_settings_from_yaml(cls, file_path: str) -> "SettingsManager":
@@ -33,4 +35,10 @@ class SettingsManager(Service):
                 )
 
         settings = Settings(**settings_dict)
-        return cls(settings)
+        if not settings.CONFIG_DIR:
+            raise ValueError("CONFIG_DIR must be set in settings")
+
+        auth_settings = AuthSettings(
+            CONFIG_DIR=settings.CONFIG_DIR,
+        )
+        return cls(settings, auth_settings)

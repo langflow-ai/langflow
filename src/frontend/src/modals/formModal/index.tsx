@@ -23,7 +23,9 @@ import {
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { getBuildStatus } from "../../controllers/API";
 import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
@@ -60,6 +62,7 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const { reactFlowInstance } = useContext(typesContext);
+  const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
@@ -153,14 +156,28 @@ export default function FormModal({
 
   function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
+      getBuildStatus(flow.id)
+        .then((response) => {
+          if (response.data.built) {
+            connectWS();
+          } else {
+            setErrorData({
+              title: "Please build the flow again before using the chat.",
+            });
+          }
+        })
+        .catch((error) => {
+          setErrorData({
+            title: error.data?.detail ? error.data.detail : error.message,
+          });
+        });
       setErrorData({ title: event.reason });
       setTimeout(() => {
-        connectWS();
         setLockChat(false);
       }, 1000);
     }
   }
-
+  //TODO improve check of user authentication
   function getWebSocketUrl(
     chatId: string,
     isDevelopment: boolean = false
@@ -173,7 +190,7 @@ export default function FormModal({
 
     return `${
       isDevelopment ? "ws" : webSocketProtocol
-    }://${host}${chatEndpoint}`;
+    }://${host}${chatEndpoint}?token=${encodeURIComponent(accessToken!)}`;
   }
 
   function handleWsMessage(data: any) {
@@ -258,7 +275,6 @@ export default function FormModal({
       };
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log("Received data:", data);
         handleWsMessage(data);
         //get chat history
       };
@@ -266,7 +282,6 @@ export default function FormModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        console.log(ev, "error");
         if (flow.id === "") {
           connectWS();
         } else {
@@ -292,7 +307,6 @@ export default function FormModal({
   useEffect(() => {
     connectWS();
     return () => {
-      console.log("unmount");
       console.log(ws);
       if (ws.current) {
         ws.current.close();

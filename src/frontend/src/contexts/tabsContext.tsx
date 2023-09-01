@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import _ from "lodash";
 import {
   ReactNode,
@@ -21,7 +22,7 @@ import {
 import { APIClassType, APITemplateType } from "../types/api";
 import { tweakType } from "../types/components";
 import { FlowType, NodeDataType, NodeType } from "../types/flow";
-import { TabsContextType, TabsState, errorsVarType } from "../types/tabs";
+import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   updateIds,
@@ -29,6 +30,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
+import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
@@ -37,6 +39,7 @@ const TabsContextInitialValue: TabsContextType = {
   save: () => {},
   tabId: "",
   setTabId: (index: string) => {},
+  isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
   addFlow: async (flowData?: any) => "",
@@ -45,7 +48,7 @@ const TabsContextInitialValue: TabsContextType = {
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
-  uploadFlow: () => {},
+  uploadFlow: async () => "",
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
@@ -68,9 +71,13 @@ export const TabsContext = createContext<TabsContextType>(
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData, setSuccessData } =
+    useContext(alertContext);
+  const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -81,6 +88,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [tabsState, setTabsState] = useState<TabsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hardReset();
+    }
+  }, [isAuthenticated]);
 
   const newNodeId = useRef(uid());
   function incrementNodeId() {
@@ -112,29 +125,33 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
+    setIsLoading(true);
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
         try {
           processDBData(DbData);
           updateStateWithDbData(DbData);
-        } catch (e) {
-          console.error(e);
-        }
+          setIsLoading(false);
+        } catch (e) {}
       }
     });
   }
 
   useEffect(() => {
-    // get data from db
-    //get tabs locally saved
-    // let tabsData = getLocalStorageTabsData();
-    refreshFlows();
-  }, [templates]);
+    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
+    if (getAuthentication() === true) {
+      // get data from db
+      //get tabs locally saved
+      // let tabsData = getLocalStorageTabsData();
+      refreshFlows();
+    }
+  }, [templates, getAuthentication()]);
 
   function getTabsDataFromDB() {
     //get tabs from db
     return readFlowsFromDatabase();
   }
+
   function processDBData(DbData: FlowType[]) {
     DbData.forEach((flow: FlowType) => {
       try {
@@ -143,9 +160,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         }
         processFlowEdges(flow);
         processFlowNodes(flow);
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     });
   }
 
@@ -225,6 +240,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setTabId("");
 
     setFlows([]);
+    setIsLoading(true);
     setId(uid());
   }
 
@@ -282,39 +298,38 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow(newProject?: boolean, file?: File) {
+  async function uploadFlow(
+    newProject?: boolean,
+    file?: File
+  ): Promise<String | undefined> {
+    let id;
     if (file) {
-      file.text().then((text) => {
-        // parse the text into a JSON object
-        let flow: FlowType = JSON.parse(text);
+      let text = await file.text();
+      // parse the text into a JSON object
+      let flow: FlowType = JSON.parse(text);
 
-        addFlow(flow, newProject);
-      });
+      id = await addFlow(flow, newProject);
     } else {
       // create a file input
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json";
       // add a change event listener to the file input
-      input.onchange = (e: Event) => {
-        // check if the file type is application/json
-        if (
-          (e.target as HTMLInputElement).files![0].type === "application/json"
-        ) {
-          // get the file from the file input
-          const currentfile = (e.target as HTMLInputElement).files![0];
-          // read the file as text
-          currentfile.text().then((text) => {
-            // parse the text into a JSON object
+      id = await new Promise(resolve => {
+        input.onchange = async (e: Event) => {
+          if ((e.target as HTMLInputElement).files![0].type === "application/json") {
+            const currentfile = (e.target as HTMLInputElement).files![0];
+            let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-
-            addFlow(flow, newProject);
-          });
-        }
-      };
-      // trigger the file input click event to open the file dialog
-      input.click();
+            const flowId = await addFlow(flow, newProject);
+            resolve(flowId);
+          }
+        };
+        // trigger the file input click event to open the file dialog
+        input.click();
+      });
     }
+    return id;
   }
 
   function uploadFlows() {
@@ -478,7 +493,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         return id;
       } catch (error) {
         // Handle the error if needed
-        console.error("Error while adding flow:", error);
         throw error; // Re-throw the error so the caller can handle it if needed
       }
     } else {
@@ -579,6 +593,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
+        setSuccessData({ title: "Changes saved successfully" });
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
@@ -601,7 +616,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      setErrorData(err as errorsVarType);
+      setErrorData({
+        title: "Error while saving changes",
+        list: [(err as AxiosError).message],
+      });
     }
   }
 
@@ -634,6 +652,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         paste,
         getTweak,
         setTweak,
+        isLoading,
       }}
     >
       {children}

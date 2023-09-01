@@ -2,13 +2,13 @@ import base64
 import contextlib
 import functools
 import hashlib
-import json
 import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict
 from appdirs import user_cache_dir
+from langflow.services.database.models.base import orjson_dumps
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import BaseCacheManager
@@ -93,7 +93,8 @@ def clear_old_cache_files(max_cache_size: int = 3):
 def compute_dict_hash(graph_data):
     graph_data = filter_json(graph_data)
 
-    cleaned_graph_json = json.dumps(graph_data, sort_keys=True)
+    cleaned_graph_json = orjson_dumps(graph_data, sort_keys=True)
+
     return hashlib.sha256(cleaned_graph_json.encode("utf-8")).hexdigest()
 
 
