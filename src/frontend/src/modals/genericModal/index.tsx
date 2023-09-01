@@ -137,6 +137,7 @@ export default function GenericModal({
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setNodeClass!(apiReturn.data?.frontend_node);
           } else {
             setIsEdit(false);
             setSuccessData({
