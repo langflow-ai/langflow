@@ -1,9 +1,10 @@
 from langflow.services.schema import ServiceType
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from langflow.utils.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.factory import ServiceFactory
+    from langflow.services.base import Service
 
 
 class ServiceManager:
@@ -12,7 +13,7 @@ class ServiceManager:
     """
 
     def __init__(self):
-        self.services = {}
+        self.services: Dict[str, "Service"] = {}
         self.factories = {}
         self.dependencies = {}
 
@@ -85,6 +86,8 @@ class ServiceManager:
         Teardown all the services.
         """
         for service in self.services.values():
+            if service is None:
+                continue
             logger.debug(f"Teardown service {service.name}")
             service.teardown()
         self.services = {}
@@ -105,6 +108,7 @@ def initialize_services():
     from langflow.services.settings import factory as settings_factory
     from langflow.services.session import factory as session_manager_factory
     from langflow.services.auth import factory as auth_factory
+    from langflow.services.task import factory as task_factory
 
     service_manager.register_factory(settings_factory.SettingsManagerFactory())
     service_manager.register_factory(
@@ -123,6 +127,9 @@ def initialize_services():
     service_manager.register_factory(
         session_manager_factory.SessionManagerFactory(),
         dependencies=[ServiceType.CACHE_MANAGER],
+    )
+    service_manager.register_factory(
+        task_factory.TaskManagerFactory(),
     )
 
     # Test cache connection
