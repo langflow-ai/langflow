@@ -17,7 +17,7 @@ from sqlmodel import Session
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")
 
-API_KEY_NAME = "api-key"
+API_KEY_NAME = "x-api-key"
 
 api_key_query = APIKeyQuery(
     name=API_KEY_NAME, scheme_name="API key query", auto_error=False
