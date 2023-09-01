@@ -7042,6 +7042,17 @@ files = [
 ]
 
 [[package]]
+name = "types-pywin32"
+version = "306.0.0.4"
+description = "Typing stubs for pywin32"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-pywin32-306.0.0.4.tar.gz", hash = "sha256:ae4bbec80d535053236d4bebedf55f58dee89cf5883d277f0fa89e857f3ff337"},
+    {file = "types_pywin32-306.0.0.4-py3-none-any.whl", hash = "sha256:f76a343ed6933008af85e158063963f923e54f2f461e697b2929b4178c7b77a1"},
+]
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.11"
 description = "Typing stubs for PyYAML"
@@ -7773,4 +7784,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "c877b4d713eef71815d858d30976ab21c42e5eadcc2df8159e940e03323681ee"
+content-hash = "a3a506d483c2db7169a9790090095d1764aa5be223d135c6fc3fc2768dfef36c"
