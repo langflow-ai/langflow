@@ -2,13 +2,17 @@ import _ from "lodash";
 import {
   Connection,
   Edge,
+  Node,
   ReactFlowInstance,
   ReactFlowJsonObject,
 } from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
-import { cleanEdgesType } from "../types/utils/reactflowUtils";
+import {
+  cleanEdgesType,
+  unselectAllNodesType,
+} from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 
 export function cleanEdges({
@@ -53,6 +57,14 @@ export function cleanEdges({
     }
   });
   updateEdge(newEdges);
+}
+
+export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
+  let newNodes = _.cloneDeep(data);
+  newNodes!.forEach((node: Node) => {
+    node.selected = false;
+  });
+  updateNodes(newNodes!);
 }
 
 export function isValidConnection(
@@ -247,7 +259,6 @@ export function handleKeyDown(
   inputValue: string | string[] | null,
   block: string
 ) {
-  console.log(e, inputValue, block);
   //condition to fix bug control+backspace on Windows/Linux
   if (
     (typeof inputValue === "string" &&

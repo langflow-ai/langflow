@@ -144,7 +144,7 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator:
+    def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
         logger.debug("There are %s vertices in the graph", len(sorted_vertices))

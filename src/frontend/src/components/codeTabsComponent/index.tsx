@@ -29,7 +29,9 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { darkContext } from "../../contexts/darkContext";
+import { typesContext } from "../../contexts/typesContext";
 import { codeTabsPropsType } from "../../types/components";
+import { unselectAllNodes } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
@@ -45,12 +47,24 @@ export default function CodeTabsComponent({
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
+  const { reactFlowInstance } = useContext(typesContext);
 
   useEffect(() => {
     if (flow && flow["data"]!["nodes"]) {
       setData(flow["data"]!["nodes"]);
     }
   }, [flow]);
+
+  useEffect(() => {
+    if (tweaks) {
+      unselectAllNodes({
+        data,
+        updateNodes: (nodes) => {
+          reactFlowInstance?.setNodes(nodes);
+        },
+      });
+    }
+  }, []);
 
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
@@ -159,13 +173,13 @@ export default function CodeTabsComponent({
         )}
       </div>
 
-      {tabs.map((tab, index) => (
+      {tabs.map((tab, idx) => (
         <TabsContent
-          value={index.toString()}
+          value={idx.toString()}
           className="api-modal-tabs-content"
-          key={index} // Remember to add a unique key prop
+          key={idx} // Remember to add a unique key prop
         >
-          {index < 4 ? (
+          {idx < 4 ? (
             <>
               {tab.description && (
                 <div
@@ -181,7 +195,7 @@ export default function CodeTabsComponent({
                 {tab.code}
               </SyntaxHighlighter>
             </>
-          ) : index === 4 ? (
+          ) : idx === 4 ? (
             <>
               <div className="api-modal-according-display">
                 <div
@@ -192,8 +206,8 @@ export default function CodeTabsComponent({
                       : "overflow-hidden"
                   )}
                 >
-                  {data?.map((node: any, index) => (
-                    <div className="px-3" key={index}>
+                  {data?.map((node: any, i) => (
+                    <div className="px-3" key={i}>
                       {tweaks?.tweaksList!.current.includes(
                         node["data"]["id"]
                       ) && (
@@ -236,10 +250,10 @@ export default function CodeTabsComponent({
                                         node.data.node.template[templateField]
                                           .type === "int")
                                   )
-                                  .map((templateField, index) => {
+                                  .map((templateField, indx) => {
                                     return (
                                       <TableRow
-                                        key={index}
+                                        key={indx}
                                         className="h-10 dark:border-b-muted"
                                       >
                                         <TableCell className="p-0 text-center text-sm text-foreground">
@@ -278,7 +292,7 @@ export default function CodeTabsComponent({
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList![
-                                                          index
+                                                          i
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
@@ -327,7 +341,7 @@ export default function CodeTabsComponent({
                                                             let newInputList =
                                                               cloneDeep(old);
                                                             newInputList![
-                                                              index
+                                                              i
                                                             ].data.node.template[
                                                               templateField
                                                             ].value = target;
@@ -372,7 +386,7 @@ export default function CodeTabsComponent({
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList![
-                                                          index
+                                                          i
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
@@ -405,7 +419,7 @@ export default function CodeTabsComponent({
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList![
-                                                        index
+                                                        i
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = e;
@@ -496,7 +510,7 @@ export default function CodeTabsComponent({
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList![
-                                                        index
+                                                        i
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
@@ -532,7 +546,7 @@ export default function CodeTabsComponent({
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList![
-                                                        index
+                                                        i
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
@@ -584,7 +598,7 @@ export default function CodeTabsComponent({
                                                       let newInputList =
                                                         cloneDeep(old);
                                                       newInputList![
-                                                        index
+                                                        i
                                                       ].data.node.template[
                                                         templateField
                                                       ].value = target;
@@ -639,7 +653,7 @@ export default function CodeTabsComponent({
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList![
-                                                          index
+                                                          i
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
@@ -694,7 +708,7 @@ export default function CodeTabsComponent({
                                                         let newInputList =
                                                           cloneDeep(old);
                                                         newInputList![
-                                                          index
+                                                          i
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;

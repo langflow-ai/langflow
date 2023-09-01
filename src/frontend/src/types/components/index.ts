@@ -218,7 +218,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string;
+    value: string | boolean;
     name: string;
   };
 };
@@ -261,6 +261,29 @@ export type loginInputStateType = {
   password: string;
 };
 
+export type UserInputType = {
+  username: string;
+  password: string;
+  is_active?: boolean;
+  is_superuser?: boolean;
+  id?: string;
+  create_at?: string;
+  updated_at?: string;
+};
+
+export type ApiKeyType = {
+  title: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data?: any;
+  onCloseModal: () => void;
+};
+
+export type ApiKeyInputType = {
+  apikeyname: string;
+};
 export type groupedObjType = {
   family: string;
   type: string;
@@ -507,4 +530,23 @@ export type validationStatusType = {
   params: string;
   progress: number;
   valid: boolean;
+};
+
+export type ApiKey = {
+  id: string;
+  api_key: string;
+  name: string;
+  created_at: string;
+  last_used_at: string;
+  total_uses: number;
+};
+export type fetchErrorComponentType = {
+  message: string;
+  description: string;
+};
+
+export type dropdownButtonPropsType = {
+  firstButtonName: string;
+  onFirstBtnClick: () => void;
+  options: Array<{ name: string; onBtnClick: () => void; }>;
 };

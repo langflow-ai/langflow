@@ -1,8 +1,8 @@
 import contextlib
 import json
+import orjson
 import os
 from shutil import copy2
-import secrets
 from typing import Optional, List
 from pathlib import Path
 
@@ -10,7 +10,8 @@ import yaml
 from pydantic import BaseSettings, root_validator, validator
 from langflow.utils.logger import logger
 
-BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+# BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
+BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 class Settings(BaseSettings):
@@ -39,23 +40,6 @@ class Settings(BaseSettings):
     CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
-
-    # cache settings
-    # if CACHE_TYPE is set to "redis", the following settings are used
-    CACHE_TYPE: str = "redis"
-
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_DB: int = 0
-    REDIS_CACHE_EXPIRE: int = 3600
-    # Login settings
-    SECRET_KEY: str = secrets.token_hex(32)
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
-    # If AUTO_LOGIN = True
-    # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
@@ -192,7 +176,7 @@ class Settings(BaseSettings):
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = json.loads(str(value))
+                    value = orjson.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
                         if isinstance(item, Path):

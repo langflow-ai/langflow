@@ -1,10 +1,11 @@
 import sys
 import time
 import httpx
-from langflow.services.manager import initialize_settings_manager
-from langflow.services.utils import get_settings_manager
-from langflow.utils.util import get_number_of_workers
-from multiprocess import Process  # type: ignore
+from langflow.services.database.utils import session_getter
+from langflow.services.manager import initialize_services, initialize_settings_manager
+from langflow.services.utils import get_db_manager, get_settings_manager
+
+from multiprocess import Process, cpu_count  # type: ignore
 import platform
 from pathlib import Path
 from typing import Optional
@@ -12,13 +13,44 @@ import socket
 from rich.panel import Panel
 from rich import box
 from rich import print as rprint
+from rich.table import Table
 import typer
 from langflow.main import setup_app
 from langflow.utils.logger import configure, logger
 import webbrowser
 from dotenv import load_dotenv
 
+from rich.console import Console
+
+console = Console()
+
 app = typer.Typer()
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers
+
+
+def display_results(results):
+    """
+    Display the results of the migration.
+    """
+    for table_results in results:
+        table = Table(title=f"Migration {table_results.table_name}")
+        table.add_column("Name")
+        table.add_column("Type")
+        table.add_column("Status")
+
+        for result in table_results.results:
+            status = "Success" if result.success else "Failure"
+            color = "green" if result.success else "red"
+            table.add_row(result.name, result.type, f"[{color}]{status}[/{color}]")
+
+        console.print(table)
+        console.print()  # Print a new line
 
 
 def update_settings(
@@ -94,7 +126,7 @@ def serve_on_jcloud():
 
 
 @app.command()
-def serve(
+def run(
     host: str = typer.Option(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
@@ -310,6 +342,43 @@ def run_langflow(host, port, log_level, options, app):
     except Exception as e:
         logger.exception(e)
         sys.exit(1)
+
+
+@app.command()
+def superuser(
+    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+):
+    initialize_services()
+    db_manager = get_db_manager()
+    with session_getter(db_manager) as session:
+        from langflow.services.auth.utils import create_super_user
+
+        if create_super_user(db=session, username=username, password=password):
+            # Verify that the superuser was created
+            from langflow.services.database.models.user.user import User
+
+            user = session.query(User).filter(User.username == username).first()
+            if user is None:
+                typer.echo("Superuser creation failed.")
+                return
+
+            typer.echo("Superuser created successfully.")
+
+        else:
+            typer.echo("Superuser creation failed.")
+
+
+@app.command()
+def migration(test: bool = typer.Option(False, help="Run migrations in test mode.")):
+    initialize_services()
+    db_manager = get_db_manager()
+    if not test:
+        db_manager.run_migrations()
+    results = db_manager.run_migrations_test()
+    display_results(results)
 
 
 def main():
