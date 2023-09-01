@@ -11,7 +11,7 @@ test.describe("Login", () => {
 
     await page.goto("http://localhost:3000/");
     await page.waitForURL("http://localhost:3000/login");
-    expect(page.url()).toBe("http://localhost:3000/login");
+    await page.waitForURL("http://localhost:3000/login",{timeout:100})
     await page.getByPlaceholder('Username').click();
     await page.close();
   });
