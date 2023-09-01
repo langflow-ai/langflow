@@ -6,11 +6,16 @@ import os
 
 
 class NameTest(FastHttpUser):
-    host = "http://localhost/api/v1"  # make sure the port number is correct
+    host = "http://localhost:7860/api/v1"  # make sure the port number is correct
     wait_time = between(1, 5)
 
     with open("names.txt", "r") as file:
         names = [line.strip() for line in file.readlines()]
+
+    headers = {
+        # api-key
+        "x-api-key": "lf-a1EsRC75ybWiKRCRLyhX1R9rPlqQKYlnRQoZWysg6NM",
+    }
 
     def poll_task(self, task_id, sleep_time=1):
         while True:
@@ -18,6 +23,7 @@ class NameTest(FastHttpUser):
                 "GET",
                 f"/task/{task_id}/status",
                 name="task_status",
+                headers=self.headers,
             ) as response:
                 status = response.js.get("status")
                 if status == "SUCCESS":
@@ -29,14 +35,18 @@ class NameTest(FastHttpUser):
     @task
     def send_name_and_check(self):
         name = random.choice(self.names)
-        flow_id = os.getenv("FLOW_ID")
+        flow_id = os.getenv("FLOW_ID", "88989f6d-8da4-4d6f-8205-480693c36200")
         session_id = f"{name}-{time.time()}"
 
         def process(flow_id, payload):
             task_id = None
             print(f"Processing {payload}")
             with self.rest(
-                "POST", f"/process/{flow_id}", json=payload, name="process"
+                "POST",
+                f"/process/{flow_id}",
+                json=payload,
+                name="process",
+                headers=self.headers,
             ) as response:
                 if response.status_code != 200:
                     response.failure("Process call failed")
