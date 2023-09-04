@@ -8,7 +8,7 @@ import re
 import yaml
 from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.services.chat.config import ChatConfig
 from langflow.services.utils import get_settings_manager
 

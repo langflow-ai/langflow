@@ -1,6 +1,6 @@
 from langflow.services.schema import ServiceType
 from typing import TYPE_CHECKING, List, Optional
-from langflow.utils.logger import logger
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.factory import ServiceFactory
