@@ -92,7 +92,6 @@ class ChatManager(Service):
             )
 
     async def connect(self, client_id: str, websocket: WebSocket):
-        await websocket.accept()
         self.active_connections[client_id] = websocket
 
     def disconnect(self, client_id: str):

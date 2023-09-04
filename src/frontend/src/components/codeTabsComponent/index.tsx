@@ -28,7 +28,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { codeTabsPropsType } from "../../types/components";
@@ -57,7 +56,7 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    if(tweaks){
+    if (tweaks) {
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {
