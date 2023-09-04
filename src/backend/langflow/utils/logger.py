@@ -13,7 +13,7 @@ def configure(log_level: str = "DEBUG", log_file: Path = None):
             {
                 "sink": RichHandler(rich_tracebacks=True, markup=True),
                 "format": log_format,
-                "level": log_level,
+                "level": log_level.upper(),
             }
         ]
     )
@@ -24,7 +24,7 @@ def configure(log_level: str = "DEBUG", log_file: Path = None):
 
         logger.add(
             sink=str(log_file),
-            level=log_level,
+            level=log_level.upper(),
             format=log_format,
             rotation="10 MB",  # Log rotation based on file size
         )
