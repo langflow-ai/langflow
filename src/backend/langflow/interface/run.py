@@ -1,7 +1,7 @@
 from typing import Any, Dict, Tuple
 from langflow.services.cache.utils import memoize_dict
 from langflow.graph import Graph
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 @memoize_dict(maxsize=10)

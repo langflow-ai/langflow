@@ -8,7 +8,7 @@ from langflow.api.v1.base import (
     validate_prompt,
 )
 from langflow.template.field.base import TemplateField
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.validate import validate_code
 
 # build router
