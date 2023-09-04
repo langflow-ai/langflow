@@ -33,6 +33,7 @@ from langflow.services.utils import get_session
 from langflow.worker import process_graph_cached_task
 from sqlmodel import Session
 
+from langflow.services.task.manager import TaskManager
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -97,7 +98,9 @@ async def process_flow(
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
+    task_manager: "TaskManager" = Depends(get_task_manager),
     api_key_user: User = Depends(api_key_security),
+    sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
 ):
     """
     Endpoint to process an input with a given flow_id.
@@ -128,18 +131,30 @@ async def process_flow(
                 graph_data = process_tweaks(graph_data, tweaks)
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
-        task_manager = get_task_manager()
-        task_id = task_manager.launch_task(
-            process_graph_cached_task
-            if task_manager.use_celery
-            else process_graph_cached,
-            graph_data,
-            inputs,
-            clear_cache,
-            session_id,
-        )
-        task = task_manager.get_task(task_id)
-        return ProcessResponse(result=task.status, id=task_id)
+        if sync:
+            task_id, result = await task_manager.launch_and_await_task(
+                process_graph_cached_task
+                if task_manager.use_celery
+                else process_graph_cached,
+                graph_data,
+                inputs,
+                clear_cache,
+                session_id,
+            )
+            task_result = result.result
+            session_id = result.session_id
+        else:
+            task_id, task = await task_manager.launch_task(
+                process_graph_cached_task
+                if task_manager.use_celery
+                else process_graph_cached,
+                graph_data,
+                inputs,
+                clear_cache,
+                session_id,
+            )
+            task_result = task.status
+        return ProcessResponse(result=task_result, id=task_id, session_id=session_id)
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):

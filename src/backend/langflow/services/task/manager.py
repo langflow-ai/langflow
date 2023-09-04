@@ -1,12 +1,12 @@
-import asyncio
 from typing import Any, Callable, Union
 import logging
 
 from langflow.services.base import Service
-from langflow.services.task.utils import AsyncIOTaskResult, get_celery_worker_status
+from langflow.services.task.backends.anyio import AnyIOBackend
+from langflow.services.task.backends.base import TaskBackend
+from langflow.services.task.utils import get_celery_worker_status
 
 try:
-    from celery.result import AsyncResult
     from langflow.worker import celery_app
 
     try:
@@ -20,51 +20,36 @@ except ImportError:
 
 
 class TaskManager(Service):
-    STATUS_PENDING = "PENDING"
-    STATUS_FINISHED = "FINISHED"
-    STATUS_UNKNOWN = "UNKNOWN"
     name = "task_manager"
 
     def __init__(self):
-        self.tasks = {}  # For storing asyncio tasks
-        self.celery_results = {}  # For storing Celery AsyncResult instances
-        if USE_CELERY:
-            from langflow.worker import celery_app
-
-            self.celery_app = celery_app
-
-        else:
-            self.celery_app = None  # To store the celery app if available
+        self.backend = self.get_backend()
         self.use_celery = USE_CELERY
 
-    def launch_task(
+    def get_backend(self) -> TaskBackend:
+        if USE_CELERY:
+            from langflow.services.task.backends.celery import CeleryBackend
+
+            return CeleryBackend()
+        return AnyIOBackend()
+
+    # In your TaskManager class
+    async def launch_and_await_task(
         self,
         task_func: Callable[..., Any],
         *args: Any,
         **kwargs: Any,
-    ) -> Union[int, str]:
-        if USE_CELERY:
-            task = task_func.apply_async(args=args, kwargs=kwargs)
-            self.celery_results[task.id] = task
-            return task.id
-        else:
-            task = asyncio.create_task(task_func(*args, **kwargs))
-            task_id = str(id(task))
-            self.tasks[task_id] = AsyncIOTaskResult(task)
+    ) -> Any:
+        if not self.use_celery:
+            return None, await task_func(*args, **kwargs)
+        task = task_func.apply(args=args, kwargs=kwargs)
+        result = task.get()
+        return task.id, result
 
-            def set_result(future):
-                try:
-                    self.tasks[task_id] = AsyncIOTaskResult(future)
-                except Exception as e:
-                    logging.error(f"An error occurred: {e}")
+    async def launch_task(
+        self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Union[str, str]:
+        return await self.backend.launch_task(task_func, *args, **kwargs)
 
-            task.add_done_callback(set_result)
-            return task_id
-
-    # Update the get_task_status function in TaskManager class
-    def get_task(
-        self, task_id: Union[int, str]
-    ) -> Union[AsyncResult, AsyncIOTaskResult]:
-        if self.use_celery:
-            return AsyncResult(task_id, app=self.celery_app)
-        return self.tasks.get(task_id)
+    def get_task(self, task_id: Union[int, str]) -> Any:
+        return self.backend.get_task(task_id)
