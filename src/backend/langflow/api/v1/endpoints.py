@@ -7,7 +7,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
 from langflow.services.utils import get_settings_manager
-from langflow.utils.logger import logger
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
 from langflow.interface.custom.custom_component import CustomComponent
