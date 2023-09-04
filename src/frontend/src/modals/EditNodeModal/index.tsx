@@ -34,6 +34,7 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import DictComponent from "../../components/dictComponent";
 
 const EditNodeModal = forwardRef(
   (
@@ -99,30 +100,20 @@ const EditNodeModal = forwardRef(
       setDictArr(convertObjToArray(dict));
     }, [dict]);
 
-    const convertToArray = (singleObject) => {
-      let arrConverted: any = [];
-      for (const key in singleObject) {
-        if (singleObject.hasOwnProperty(key)) {
-          const newObj = {};
-          newObj[key] = singleObject[key];
-          arrConverted.push(newObj);
-        }
-      }
-      setDictArr(arrConverted);
-    };
+    const [obj, setObj] = useState({
+      arr: ["test", 123456, false, null],
+      boolean: false,
+      longString:
+        "long string long string long string long string long string long string",
+      number: 123456,
+      try: {
+        k1: 123,
+        k2: "123",
+        k3: false,
+      },
+      string: "string"
+    });
 
-    const convertToDict = (newValue): void => {
-      const flattenedObject = {};
-      for (const obj of newValue) {
-        for (const key in obj) {
-          if (obj.hasOwnProperty(key)) {
-            flattenedObject[key] = obj[key];
-          }
-        }
-      }
-      let newData = cloneDeep(flattenedObject);
-      setDict(newData);
-    };
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
@@ -213,7 +204,21 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
-                                  ) : myData.node?.template[templateParam]
+                                  )
+                                  : myData.node?.template[templateParam]
+                                      .type === "str" ? (
+                                    <div className="mt-2 w-full">
+                                        <DictComponent
+                                          disabled={disabled}
+                                          editNode={false}
+                                          value={obj}
+                                          onChange={(newValue) => {
+                                            setDict(newValue);
+                                          }}
+                                        />
+                                    </div>
+                                  )
+                                  : myData.node?.template[templateParam]
                                       .type === "dict" ? (
                                     <div className="mt-2 w-full">
                                       <KeypairListComponent
