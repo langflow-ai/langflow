@@ -74,6 +74,7 @@ import {
   X,
   XCircle,
   Zap,
+  BookMarked
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -300,4 +301,5 @@ export const nodeIconsLucide: iconsType = {
   UserCog2,
   Key,
   Unplug,
+  BookMarked
 };

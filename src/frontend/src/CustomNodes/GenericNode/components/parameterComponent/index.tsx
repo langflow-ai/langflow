@@ -32,6 +32,7 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
+import DictComponent from "../../../../components/dictComponent";
 
 export default function ParameterComponent({
   left,
@@ -108,6 +109,21 @@ export default function ParameterComponent({
   useEffect(() => {
     setDictArr(convertObjToArray(dict));
   }, [dict]);
+
+  
+  const [obj, setObj] = useState({
+    arr: ["test", 123456, false, null],
+    boolean: false,
+    longString:
+      "long string long string long string long string long string long string",
+    number: 123456,
+    try: {
+      k1: 123,
+      k2: "123",
+      k3: false,
+    },
+    string: "string"
+  });
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -224,7 +240,20 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
-        ) : left === true && type === "dict" ? (
+        )
+        : left === true && type === "str" ? (
+          <div className="mt-2 w-full">
+            <DictComponent
+              disabled={disabled}
+              editNode={false}
+              value={obj}
+              onChange={(newValue) => {
+                setDict(newValue);
+              }}
+            />
+          </div>
+        )
+        : left === true && type === "dict" ? (
           <div className="mt-2 w-full">
             <KeypairListComponent
               disabled={disabled}
