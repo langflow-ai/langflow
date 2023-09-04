@@ -31,7 +31,6 @@ import {
   Hammer,
   HelpCircle,
   Home,
-  InfinityIcon,
   Info,
   Laptop2,
   Layers,
@@ -57,6 +56,7 @@ import {
   StoreIcon,
   SunIcon,
   TerminalSquare,
+  ToyBrickIcon,
   Trash2,
   Undo,
   Upload,
@@ -208,7 +208,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide = {
-  Component: InfinityIcon,
+  Component: ToyBrickIcon,
   Bundle: GroupIcon,
   Flow: WorkflowIcon,
   Store: StoreIcon,

@@ -241,7 +241,7 @@
   }
 
   .community-pages-flows-panel {
-    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4;
+    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-5;
   }
   .generic-node-div {
     @apply relative flex w-96 flex-col justify-center rounded-lg bg-background;
