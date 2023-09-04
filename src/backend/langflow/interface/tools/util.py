@@ -3,7 +3,7 @@ import inspect
 from typing import Dict, Union
 
 from langchain.agents.tools import Tool
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:

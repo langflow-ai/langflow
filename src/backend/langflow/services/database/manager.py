@@ -7,7 +7,7 @@ from langflow.services.utils import get_settings_manager
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Session, create_engine
-from langflow.utils.logger import logger
+from loguru import logger
 from alembic.config import Config
 from alembic import command
 from langflow.services.database import models  # noqa

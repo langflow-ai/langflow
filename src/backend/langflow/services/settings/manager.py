@@ -1,7 +1,7 @@
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
-from langflow.utils.logger import logger
+from loguru import logger
 import os
 import yaml
 

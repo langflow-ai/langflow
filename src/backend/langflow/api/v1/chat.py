@@ -15,7 +15,7 @@ from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
 from langflow.services.utils import get_session
-from langflow.utils.logger import logger
+from loguru import logger
 from cachetools import LRUCache
 from sqlmodel import Session
 from typing import TYPE_CHECKING
