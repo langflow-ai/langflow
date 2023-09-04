@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import DropdownButton from "../../components/DropdownButtonComponent";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
@@ -7,7 +8,6 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
-import DropdownButton from "../../components/DropdownButtonComponent";
 export default function HomePage(): JSX.Element {
   const {
     flows,
@@ -15,12 +15,19 @@ export default function HomePage(): JSX.Element {
     downloadFlows,
     uploadFlows,
     addFlow,
-    removeFlow, uploadFlow,
+    removeFlow,
+    uploadFlow,
     isLoading,
   } = useContext(TabsContext);
-  const dropdownOptions = [{name: "Import from JSON", onBtnClick: () => uploadFlow(true).then((id) => {
-    navigate("/flow/" + id);
-  })}]
+  const dropdownOptions = [
+    {
+      name: "Import from JSON",
+      onBtnClick: () =>
+        uploadFlow(true).then((id) => {
+          navigate("/flow/" + id);
+        }),
+    },
+  ];
 
   // Set a null id
   useEffect(() => {
@@ -73,7 +80,7 @@ export default function HomePage(): JSX.Element {
           </div>
         </div>
         <span className="main-page-description-text">
-          Manage your personal projects. Download or upload your collection. 
+          Manage your personal projects. Download or upload your collection.
         </span>
         <div className="main-page-flows-display">
           {isLoading && flows.length == 0 ? (
