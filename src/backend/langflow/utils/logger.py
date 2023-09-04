@@ -1,9 +1,10 @@
+from typing import Optional
 from loguru import logger
 from pathlib import Path
 from rich.logging import RichHandler
 
 
-def configure(log_level: str = "DEBUG", log_file: Path = None):
+def configure(log_level: str = "DEBUG", log_file: Optional[Path] = None):
     log_format = "<green>{time:HH:mm:ss}</green> - <level>{level: <8}</level> - <level>{message}</level>"
     logger.remove()  # Remove default handlers
 
