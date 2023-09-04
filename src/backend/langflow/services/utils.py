@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from langflow.services.database.manager import DatabaseManager
     from langflow.services.settings.manager import SettingsManager
+    from langflow.services.chat.manager import ChatManager
+    from sqlmodel import Session
 
 
 def get_settings_manager() -> "SettingsManager":
@@ -15,6 +17,10 @@ def get_db_manager() -> "DatabaseManager":
     return service_manager.get(ServiceType.DATABASE_MANAGER)
 
 
-def get_session():
+def get_session() -> "Session":
     db_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     yield from db_manager.get_session()
+
+
+def get_chat_manager() -> "ChatManager":
+    return service_manager.get(ServiceType.CHAT_MANAGER)
