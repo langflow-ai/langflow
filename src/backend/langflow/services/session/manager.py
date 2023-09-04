@@ -34,5 +34,3 @@ class SessionManager(Service):
     def clear_session(self, session_id, data_graph):
         key = self.generate_key(session_id, data_graph)
         self.cache_manager.delete(key)
-
-    # Additional methods to handle session-related logic

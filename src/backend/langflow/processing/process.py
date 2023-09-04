@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import json
 from pathlib import Path
 from langchain.schema import AgentAction
@@ -173,6 +174,12 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
 #     return result, session_id
 
 
+@dataclass
+class Result:
+    result: Any
+    session_id: str
+
+
 async def process_graph_cached(
     data_graph: Dict[str, Any],
     inputs: Optional[dict] = None,
@@ -191,7 +198,7 @@ async def process_graph_cached(
         session_id, data_graph, (langchain_object, artifacts)
     )
 
-    return result, session_id
+    return Result(result, session_id)
 
 
 def load_flow_from_json(
