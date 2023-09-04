@@ -548,5 +548,5 @@ export type fetchErrorComponentType = {
 export type dropdownButtonPropsType = {
   firstButtonName: string;
   onFirstBtnClick: () => void;
-  options: Array<{ name: string; onBtnClick: () => void; }>;
+  options: Array<{ name: string; onBtnClick: () => void }>;
 };

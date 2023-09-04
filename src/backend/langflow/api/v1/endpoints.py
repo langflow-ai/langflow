@@ -34,14 +34,15 @@ from sqlmodel import Session
 router = APIRouter(tags=["Base"])
 
 
-@router.get("/all")
-def get_all(current_user: User = Depends(get_current_active_user)):
+@router.get("/all", dependencies=[Depends(get_current_active_user)])
+def get_all(
+    settings_manager=Depends(get_settings_manager),
+):
     logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file: dict[str, Any] = {}
-    settings_manager = get_settings_manager()
     if settings_manager.settings.COMPONENTS_PATH:
         logger.info(
             f"Building custom components from {settings_manager.settings.COMPONENTS_PATH}"
