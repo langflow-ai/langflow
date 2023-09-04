@@ -89,7 +89,7 @@ class DatabaseManager(Service):
 
         for table in legacy_tables:
             if table in inspector.get_table_names():
-                logger.warn(f"Legacy table exists: {table}")
+                logger.warning(f"Legacy table exists: {table}")
 
         return True
 
