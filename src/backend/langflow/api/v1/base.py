@@ -22,7 +22,7 @@ class ValidatePromptRequest(BaseModel):
     name: str
     template: str
     # optional for tweak call
-    frontend_node: Optional[FrontendNodeRequest]
+    frontend_node: Optional[FrontendNodeRequest] = None
 
 
 # Build ValidationResponse class for {"imports": {"errors": []}, "function": {"errors": []}}
