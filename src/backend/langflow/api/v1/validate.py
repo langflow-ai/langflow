@@ -35,7 +35,7 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
         if prompt_request.frontend_node is None:
             return PromptValidationResponse(
                 input_variables=input_variables,
-                frontend_node={},
+                frontend_node=None,
             )
         old_custom_fields = get_old_custom_fields(prompt_request)
 
