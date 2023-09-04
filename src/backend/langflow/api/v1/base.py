@@ -42,7 +42,7 @@ class CodeValidationResponse(BaseModel):
 class PromptValidationResponse(BaseModel):
     input_variables: list
     # object return for tweak call
-    frontend_node: FrontendNodeRequest | object
+    frontend_node: Optional[FrontendNodeRequest] = None
 
 
 INVALID_CHARACTERS = {
