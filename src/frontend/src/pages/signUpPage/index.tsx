@@ -84,6 +84,7 @@ export default function SignUp(): JSX.Element {
 
               <Form.Control asChild>
                 <Input
+                  type="username"
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -157,6 +158,7 @@ export default function SignUp(): JSX.Element {
           <div className="w-full">
             <Form.Submit asChild>
               <Button
+                type="submit"
                 className="mr-3 mt-6 w-full"
                 onClick={() => {
                   handleSignup();

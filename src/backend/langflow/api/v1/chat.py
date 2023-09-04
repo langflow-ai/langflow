@@ -11,13 +11,14 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
-from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
-from langflow.services.utils import get_session
+from langflow.services.utils import get_chat_manager, get_session
 from langflow.utils.logger import logger
 from cachetools import LRUCache
 from sqlmodel import Session
+from langflow.services.chat.manager import ChatManager
+
 
 router = APIRouter(tags=["Chat"])
 
@@ -30,29 +31,48 @@ async def chat(
     websocket: WebSocket,
     token: str = Query(...),
     db: Session = Depends(get_session),
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
 ):
     """Websocket endpoint for chat."""
     try:
+        await websocket.accept()
         user = await get_current_user(token, db)
+        if not user:
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
         if not user.is_active:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
             # if the flow is not built yet
-            await websocket.accept()
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
         logger.error(f"Websocket error: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
+    except Exception as exc:
+        logger.error(f"Error in chat websocket: {exc}")
+        messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        if "Could not validate credentials" in str(exc):
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
+        else:
+            await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
 async def init_build(
-    graph_data: dict, flow_id: str, current_user=Depends(get_current_active_user)
+    graph_data: dict,
+    flow_id: str,
+    current_user=Depends(get_current_active_user),
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
 ):
     """Initialize the build by storing graph data and returning a unique session ID."""
 
@@ -67,7 +87,6 @@ async def init_build(
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
-        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if flow_id in chat_manager.in_memory_cache:
             with chat_manager.in_memory_cache._lock:
                 chat_manager.in_memory_cache.delete(flow_id)
@@ -103,7 +122,9 @@ async def build_status(flow_id: str):
 
 
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
-async def stream_build(flow_id: str):
+async def stream_build(
+    flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
+):
     """Stream the build process based on stored flow data."""
 
     async def event_stream(flow_id):
@@ -182,7 +203,6 @@ async def stream_build(flow_id: str):
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-            chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
             chat_manager.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)
