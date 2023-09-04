@@ -1,5 +1,5 @@
 from langflow.services import ServiceType, service_manager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ def get_db_manager() -> "DatabaseManager":
     return service_manager.get(ServiceType.DATABASE_MANAGER)
 
 
-def get_session() -> "Session":
+def get_session() -> Generator["Session", None, None]:
     db_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     yield from db_manager.get_session()
 
