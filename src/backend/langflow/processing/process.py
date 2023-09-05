@@ -103,12 +103,6 @@ def get_build_result(data_graph, session_id):
     return build_sorted_vertices(data_graph, session_id)
 
 
-def clear_caches_if_needed(clear_cache: bool):
-    if clear_cache:
-        build_sorted_vertices.clear_cache()
-        logger.debug("Cleared cache")
-
-
 def load_langchain_object(
     data_graph: Dict[str, Any], session_id: str
 ) -> Tuple[Union[Chain, VectorStore], Dict[str, Any], str]:
@@ -152,28 +146,6 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     return result
 
 
-# def process_graph_cached(
-#     data_graph: Dict[str, Any],
-#     inputs: Optional[dict] = None,
-#     clear_cache=False,
-#     session_id=None,
-# ) -> Tuple[Any, str]:
-#     clear_caches_if_needed(clear_cache)
-#     # If session_id is provided, load the langchain_object from the session
-#     # else build the graph and return the result and the new session_id
-#     langchain_object, artifacts, session_id = load_langchain_object(
-#         data_graph, session_id
-#     )
-#     processed_inputs = process_inputs(inputs, artifacts)
-#     result = generate_result(langchain_object, processed_inputs)
-#     if result:
-#         # we need to update the cache with the updated langchain_object
-#         build_sorted_vertices_with_caching.update_cache(
-#             session_id, (langchain_object, artifacts)
-#         )
-#     return result, session_id
-
-
 @dataclass
 class Result:
     result: Any
@@ -185,9 +157,10 @@ async def process_graph_cached(
     inputs: Optional[dict] = None,
     clear_cache=False,
     session_id=None,
-) -> Tuple[Any, str]:
-    clear_caches_if_needed(clear_cache)
+) -> Result:
     session_manager = get_session_manager()
+    if clear_cache:
+        session_manager.clear_session(session_id)
     if session_id is None:
         session_id = session_manager.generate_key(
             session_id=session_id, data_graph=data_graph
