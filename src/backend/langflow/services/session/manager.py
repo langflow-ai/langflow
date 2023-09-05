@@ -37,10 +37,8 @@ class SessionManager(Service):
             session_id = session_id_generator()
         return self.build_key(session_id, data_graph=data_graph)
 
-    def update_session(self, session_id, data_graph, value):
-        key = self.build_key(session_id, data_graph)
-        self.cache_manager.set(key, value)
+    def update_session(self, session_id, value):
+        self.cache_manager.set(session_id, value)
 
-    def clear_session(self, session_id, data_graph):
-        key = self.build_key(session_id, data_graph)
-        self.cache_manager.delete(key)
+    def clear_session(self, session_id):
+        self.cache_manager.delete(session_id)
