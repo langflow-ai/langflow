@@ -77,7 +77,7 @@ export default function ParameterComponent({
         [tabId]: {
           ...prev[tabId],
           isPending: true,
-          formKeysData: prev[tabId].formKeysData,
+          formKeysData: prev[tabId] ? prev[tabId].formKeysData : {}
         },
       };
     });

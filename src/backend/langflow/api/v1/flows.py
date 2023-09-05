@@ -86,7 +86,9 @@ def delete_flow(*, session: Session = Depends(get_session), flow_id: UUID):
 
 
 @router.post("/batch/", response_model=List[FlowRead], status_code=201)
-def create_flows(*, session: Session = Depends(get_session), flow_list: FlowListCreate):
+def create_flows(
+    *, session: Session = Depends(get_session), flow_list: FlowListCreate
+):
     """Create multiple new flows."""
     db_flows = []
     for flow in flow_list.flows:

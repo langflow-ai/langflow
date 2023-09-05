@@ -59,6 +59,8 @@ class TemplateFieldCreator(BaseModel, ABC):
     info: Optional[str] = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
+    form: bool = False
+
     def to_dict(self):
         result = self.dict()
         # Remove key if it is None
