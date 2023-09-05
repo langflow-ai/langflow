@@ -34,7 +34,7 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
-from langflow.utils.logger import logger
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow import CustomComponent

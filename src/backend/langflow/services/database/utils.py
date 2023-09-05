@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from langflow.utils.logger import logger
+from loguru import logger
 from contextlib import contextmanager
 from alembic.util.exc import CommandError
 from sqlmodel import Session

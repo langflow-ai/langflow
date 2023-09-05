@@ -7,7 +7,7 @@ from langflow.services.cache.manager import Subject
 from langflow.services.chat.utils import process_graph
 from langflow.interface.utils import pil_to_base64
 from langflow.services.schema import ServiceType
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 import asyncio

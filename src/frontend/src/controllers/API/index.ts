@@ -471,7 +471,7 @@ export async function updateUser(user_id: string, user: Users) {
 
 export async function getApiKey() {
   try {
-    const res = await api.get(`${BASE_URL_API}api_key`);
+    const res = await api.get(`${BASE_URL_API}api_key/`);
     if (res.status === 200) {
       return res.data;
     }
@@ -483,7 +483,7 @@ export async function getApiKey() {
 
 export async function createApiKey(name: string) {
   try {
-    const res = await api.post(`${BASE_URL_API}api_key`, { name });
+    const res = await api.post(`${BASE_URL_API}api_key/`, { name });
     if (res.status === 200) {
       return res.data;
     }

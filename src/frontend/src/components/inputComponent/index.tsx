@@ -54,7 +54,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <Input
-          type={password && !pwdVisible ? "password" : "text"}
+          type="text"
           value={value}
           disabled={disabled}
           required={required}
