@@ -5,7 +5,7 @@ from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.services.utils import get_settings_manager
 
 from langflow.template.frontend_node.llms import LLMFrontendNode
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class
 
 

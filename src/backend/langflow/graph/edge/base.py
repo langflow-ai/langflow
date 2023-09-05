@@ -1,4 +1,4 @@
-from langflow.utils.logger import logger
+from loguru import logger
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

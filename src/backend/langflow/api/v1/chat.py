@@ -11,16 +11,15 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
-from langflow.services import service_manager, ServiceType
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
-from langflow.services.utils import get_session
-from langflow.utils.logger import logger
+from langflow.services.utils import get_cache_manager, get_session
+from loguru import logger
+from langflow.services.utils import get_chat_manager
 from sqlmodel import Session
-from typing import TYPE_CHECKING
+from langflow.services.chat.manager import ChatManager
+from langflow.services.cache.manager import BaseCacheManager
 
-if TYPE_CHECKING:
-    from langflow.services.chat.manager import ChatManager
 
 router = APIRouter(tags=["Chat"])
 
@@ -31,6 +30,7 @@ async def chat(
     websocket: WebSocket,
     token: str = Query(...),
     db: Session = Depends(get_session),
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
 ):
     """Websocket endpoint for chat."""
     try:
@@ -45,7 +45,6 @@ async def chat(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
             )
 
-        chat_manager: "ChatManager" = service_manager.get(ServiceType.CHAT_MANAGER)
         if client_id in chat_manager.in_memory_cache:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
@@ -69,10 +68,13 @@ async def chat(
 
 @router.post("/build/init/{flow_id}", response_model=InitResponse, status_code=201)
 async def init_build(
-    graph_data: dict, flow_id: str, current_user=Depends(get_current_active_user)
+    graph_data: dict,
+    flow_id: str,
+    current_user=Depends(get_current_active_user),
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    cache_manager: "BaseCacheManager" = Depends(get_cache_manager),
 ):
     """Initialize the build by storing graph data and returning a unique session ID."""
-    cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
     try:
         if flow_id is None:
             raise ValueError("No ID provided")
@@ -85,7 +87,6 @@ async def init_build(
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
-        chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
         if flow_id in chat_manager.cache_manager:
             chat_manager.cache_manager.delete(flow_id)
             logger.debug(f"Deleted flow {flow_id} from cache")
@@ -102,9 +103,10 @@ async def init_build(
 
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
-async def build_status(flow_id: str):
+async def build_status(
+    flow_id: str, cache_manager: "BaseCacheManager" = Depends(get_cache_manager)
+):
     """Check the flow_id is in the cache_manager."""
-    cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
     try:
         built = (
             flow_id in cache_manager
@@ -121,9 +123,12 @@ async def build_status(flow_id: str):
 
 
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
-async def stream_build(flow_id: str):
+async def stream_build(
+    flow_id: str,
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    cache_manager: "BaseCacheManager" = Depends(get_cache_manager),
+):
     """Stream the build process based on stored flow data."""
-    cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
 
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
@@ -204,7 +209,6 @@ async def stream_build(flow_id: str):
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-            chat_manager = service_manager.get(ServiceType.CHAT_MANAGER)
             chat_manager.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
             chat_manager.chat_history.empty_history(flow_id)

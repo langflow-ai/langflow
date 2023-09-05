@@ -3,7 +3,7 @@ from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import sync_to_async
 
 
