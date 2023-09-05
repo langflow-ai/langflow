@@ -50,8 +50,6 @@ def process_graph_cached_task(
     result = generate_result(langchain_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
-    session_manager.update_session(
-        session_id, data_graph, (langchain_object, artifacts)
-    )
+    session_manager.update_session(session_id, (langchain_object, artifacts))
 
     return result, session_id
