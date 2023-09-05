@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 
 class TaskBackend(ABC):
     @abstractmethod
-    def launch_task(
-        self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Union[int, str]:
+    def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any):
         pass
 
     @abstractmethod
-    def get_task(self, task_id: Union[int, str]) -> Any:
+    def get_task(self, task_id: str) -> Any:
         pass
