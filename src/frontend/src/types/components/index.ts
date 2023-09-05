@@ -283,7 +283,7 @@ export type UserInputType = {
   is_superuser?: boolean;
   id?: string;
   create_at?: string;
-  updated_at?:string;
+  updated_at?: string;
 };
 
 export type ApiKeyType = {
@@ -558,4 +558,10 @@ export type ApiKey = {
 export type fetchErrorComponentType = {
   message: string;
   description: string;
+};
+
+export type dropdownButtonPropsType = {
+  firstButtonName: string;
+  onFirstBtnClick: () => void;
+  options: Array<{ name: string; onBtnClick: () => void }>;
 };

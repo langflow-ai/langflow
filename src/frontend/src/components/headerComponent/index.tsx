@@ -7,8 +7,17 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
@@ -17,7 +26,7 @@ export default function Header(): JSX.Element {
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
-  const { logout, autoLogin, isAdmin } = useContext(AuthContext);
+  const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const { stars } = useContext(darkContext);
   const navigate = useNavigate();
 
@@ -31,40 +40,6 @@ export default function Header(): JSX.Element {
         {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
           <MenuBar flows={flows} tabId={tabId} />
         )}
-        {!autoLogin && location.pathname !== `/flow/${tabId}` && (
-          <a
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer mx-5"
-        >
-          Sign out
-        </a>
-        )}
-
-        {location.pathname === "/admin" && (
-          <a
-            onClick={() => {
-              navigate("/");
-            }}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
-          >
-            Home
-          </a>
-        )}
-
-        {isAdmin &&
-          !autoLogin &&
-          location.pathname !== "/admin" &&
-          location.pathname !== `/flow/${tabId}` && (
-            <a
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary cursor-pointer"
-            onClick={() => navigate("/admin")}
-          >
-            Admin page
-          </a>
-          )}
       </div>
       <div className="round-button-div">
         <Link to="/">
@@ -155,6 +130,44 @@ export default function Header(): JSX.Element {
                 className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
               />
             </button>
+          )}
+          {!autoLogin && (
+            <>
+              <Separator orientation="vertical" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={
+                      "h-7 w-7 rounded-full focus-visible:outline-0 " +
+                      gradients[
+                        parseInt(userData?.id ?? "", 10) % gradients.length
+                      ]
+                    }
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => navigate("/admin")}
+                    >
+                      Admin Page
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => {
+                      logout();
+                      navigate("/login");
+                    }}
+                  >
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           )}
         </div>
       </div>

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import platform
 
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 def set_secure_permissions(file_path):
@@ -43,5 +43,5 @@ def write_secret_to_file(path: Path, value: str) -> None:
 
 
 def read_secret_from_file(path: Path) -> str:
-    with path.open("rb") as f:
+    with path.open("r") as f:
         return f.read()
