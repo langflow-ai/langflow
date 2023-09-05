@@ -360,3 +360,92 @@ def test_various_prompts(client, prompt, expected_input_variables):
     response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
+
+
+def test_basic_chat_in_process(client, added_flow, created_api_key):
+    # Run the /api/v1/process/{flow_id} endpoint
+    headers = {"x-api-key": created_api_key.api_key}
+    post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
+    response = client.post(
+        f"api/v1/process/{added_flow.get('id')}",
+        headers=headers,
+        json=post_data,
+    )
+    assert response.status_code == 200, response.json()
+    # Check the response
+    assert "Gabriel" in response.json()["result"]["text"]
+    # session_id should be returned
+    assert "session_id" in response.json()
+    assert response.json()["session_id"] is not None
+    # New request with the same session_id
+    # asking "What is my name?" should return "Gabriel"
+    post_data = {
+        "inputs": {"text": "What is my name?"},
+        "session_id": response.json()["session_id"],
+    }
+    response = client.post(
+        f"api/v1/process/{added_flow.get('id')}",
+        headers=headers,
+        json=post_data,
+    )
+    assert response.status_code == 200, response.json()
+    assert "Gabriel" in response.json()["result"]["text"]
+
+
+def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
+    # Run the /api/v1/process/{flow_id} endpoint
+    headers = {"x-api-key": created_api_key.api_key}
+    post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
+    response = client.post(
+        f"api/v1/process/{added_flow.get('id')}",
+        headers=headers,
+        json=post_data,
+    )
+    assert response.status_code == 200, response.json()
+    # Check the response
+    assert "Gabriel" in response.json()["result"]["text"]
+    # session_id should be returned
+    assert "session_id" in response.json()
+    assert response.json()["session_id"] is not None
+    # New request with a different session_id
+    # asking "What is my name?" should return "Gabriel"
+    post_data = {
+        "inputs": {"text": "What is my name?"},
+        "session_id": "other session id",
+    }
+    response = client.post(
+        f"api/v1/process/{added_flow.get('id')}",
+        headers=headers,
+        json=post_data,
+    )
+    assert response.status_code == 200, response.json()
+    assert "Gabriel" not in response.json()["result"]["text"]
+
+
+@pytest.mark.parametrize("name", ["Gabriel", "John"])
+def test_basic_chat_with_two_session_ids_and_names(
+    client, added_flow, created_api_key, name
+):
+    headers = {"x-api-key": created_api_key.api_key}
+
+    def run_api_post(endpoint, headers, post_data):
+        response = client.post(endpoint, headers=headers, json=post_data)
+        assert response.status_code == 200, response.json()
+        return response.json()
+
+    def assert_name_and_session_in_response(name, response_json):
+        assert name in response_json["result"]["text"]
+        assert "session_id" in response_json
+        assert response_json["session_id"] is not None
+
+    # Run the /api/v1/process/{flow_id} endpoint
+    flow_id = added_flow.get("id")
+    post_data = {"inputs": {"text": f"Hi, My name is {name}"}}
+    response_json = run_api_post(f"api/v1/process/{flow_id}", headers, post_data)
+    assert_name_and_session_in_response(name, response_json)
+    session_id = response_json["session_id"]
+
+    # New request with the same session_id asking "What is my name?" should return name
+    post_data = {"inputs": {"text": "What is my name?"}, "session_id": session_id}
+    response_json = run_api_post(f"api/v1/process/{flow_id}", headers, post_data)
+    assert name in response_json["result"]["text"]
