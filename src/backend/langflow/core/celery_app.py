@@ -1,4 +1,4 @@
-from celery import Celery
+from celery import Celery  # type: ignore
 
 
 def make_celery(app_name: str):

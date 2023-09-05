@@ -76,7 +76,7 @@ class Vertex:
     def get_task(self):
         # using the task_id, get the task from celery
         # and return it
-        from celery.result import AsyncResult
+        from celery.result import AsyncResult  # type: ignore
 
         return AsyncResult(self.task_id)
 
