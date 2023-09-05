@@ -20,13 +20,14 @@ from langflow.services.auth.utils import (
     get_password_hash,
 )
 from langflow.services.database.models.user.crud import (
+    get_user_by_id,
     update_user,
 )
 
-router = APIRouter(tags=["Users"])
+router = APIRouter(tags=["Users"], prefix="/users")
 
 
-@router.post("/user", response_model=UserRead, status_code=201)
+@router.post("/", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
     session: Session = Depends(get_session),
@@ -50,7 +51,7 @@ def add_user(
     return new_user
 
 
-@router.get("/user", response_model=UserRead)
+@router.get("/whoami", response_model=UserRead)
 def read_current_user(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
@@ -60,7 +61,7 @@ def read_current_user(
     return current_user
 
 
-@router.get("/users", response_model=UsersResponse)
+@router.get("/", response_model=UsersResponse)
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
@@ -82,20 +83,53 @@ def read_all_users(
     )
 
 
-@router.patch("/user/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserRead)
 def patch_user(
     user_id: UUID,
-    user: UserUpdate,
-    _: Session = Depends(get_current_active_user),
+    user_update: UserUpdate,
+    user: Session = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ) -> User:
     """
     Update an existing user's data.
     """
-    return update_user(user_id, user, session)
+    if not user.is_superuser and user.id != user_id:
+        raise HTTPException(
+            status_code=403, detail="You don't have the permission to update this user"
+        )
+
+    if user_db := get_user_by_id(session, user_id):
+        return update_user(user_db, user_update, session)
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
 
 
-@router.delete("/user/{user_id}")
+@router.patch("/{user_id}/reset-password", response_model=UserRead)
+def reset_password(
+    user_id: UUID,
+    user_update: UserUpdate,
+    user: Session = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+) -> User:
+    """
+    Reset a user's password.
+    """
+    if user_id != user.id:
+        raise HTTPException(
+            status_code=400, detail="You can't change another user's password"
+        )
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password = get_password_hash(user_update.password)
+    session.commit()
+    session.refresh(user)
+
+    return user
+
+
+@router.delete("/{user_id}", response_model=dict)
 def delete_user(
     user_id: UUID,
     current_user: User = Depends(get_current_active_superuser),
