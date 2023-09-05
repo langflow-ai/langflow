@@ -8,7 +8,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.services.utils import get_settings_manager
 
 from langflow.template.frontend_node.agents import AgentFrontendNode
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 
 
