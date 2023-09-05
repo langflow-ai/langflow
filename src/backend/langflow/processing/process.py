@@ -192,17 +192,13 @@ async def process_graph_cached(
         session_id = session_manager.generate_key(
             session_id=session_id, data_graph=data_graph
         )
-    else:
-        session_id = session_manager.build_key(session_id, data_graph)
     # Load the graph using SessionManager
     langchain_object, artifacts = session_manager.load_session(session_id, data_graph)
     processed_inputs = process_inputs(inputs, artifacts)
     result = generate_result(langchain_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
-    session_manager.update_session(
-        session_id, data_graph, (langchain_object, artifacts)
-    )
+    session_manager.update_session(session_id, (langchain_object, artifacts))
 
     return Result(result, session_id)
 
