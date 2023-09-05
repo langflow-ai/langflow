@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import { CardComponent } from "../../components/cardComponent";
@@ -34,6 +34,28 @@ export default function HomePage(): JSX.Element {
     setTabId("");
   }, []);
   const navigate = useNavigate();
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const dragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const dragEnter = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const dragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const fileDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    // Handle file drop logic here
+  };
 
   // Personal flows display
   return (
@@ -78,40 +100,59 @@ export default function HomePage(): JSX.Element {
         <span className="main-page-description-text">
           Manage your personal projects. Download or upload your collection.
         </span>
-        <div className="main-page-flows-display">
-          {isLoading && flows.length == 0 ? (
+        <div
+          onDragOver={dragOver}
+          onDragEnter={dragEnter}
+          onDragLeave={dragLeave}
+          onDrop={fileDrop}
+          className={
+            "h-full w-full " + (isDragging
+              ? "flex flex-col items-center justify-center mb-24 gap-4 text-2xl font-light"
+              : "")
+          }
+        >
+          {isDragging ? (
             <>
-              <SkeletonCardComponent />
-              <SkeletonCardComponent />
-              <SkeletonCardComponent />
-              <SkeletonCardComponent />
+              <IconComponent name="ArrowUpToLine" className="h-12 w-12 stroke-1" />
+              Drop your flow here
             </>
           ) : (
-            flows.map((flow, idx) => (
-              <CardComponent
-                key={idx}
-                flow={flow}
-                id={flow.id}
-                button={
-                  <Link to={"/flow/" + flow.id}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="whitespace-nowrap "
-                    >
-                      <IconComponent
-                        name="ExternalLink"
-                        className="main-page-nav-button"
-                      />
-                      Edit Flow
-                    </Button>
-                  </Link>
-                }
-                onDelete={() => {
-                  removeFlow(flow.id);
-                }}
-              />
-            ))
+            <div className="main-page-flows-display">
+              {isLoading && flows.length == 0 ? (
+                <>
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
+                </>
+              ) : (
+                flows.map((flow, idx) => (
+                  <CardComponent
+                    key={idx}
+                    flow={flow}
+                    id={flow.id}
+                    button={
+                      <Link to={"/flow/" + flow.id}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="whitespace-nowrap "
+                        >
+                          <IconComponent
+                            name="ExternalLink"
+                            className="main-page-nav-button"
+                          />
+                          Edit Flow
+                        </Button>
+                      </Link>
+                    }
+                    onDelete={() => {
+                      removeFlow(flow.id);
+                    }}
+                  />
+                ))
+              )}
+            </div>
           )}
         </div>
       </div>
