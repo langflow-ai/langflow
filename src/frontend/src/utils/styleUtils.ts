@@ -1,4 +1,5 @@
 import {
+  ArrowUpToLine,
   Bell,
   Check,
   CheckCircle2,
@@ -188,6 +189,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,
