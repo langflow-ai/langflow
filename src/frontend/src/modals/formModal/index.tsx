@@ -194,7 +194,8 @@ export default function FormModal({
   }
 
   function handleWsMessage(data: any) {
-    if (Array.isArray(data)) {
+    console.log(data);
+    if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
         let newChatHistory: ChatMessageType[] = [];
@@ -313,7 +314,7 @@ export default function FormModal({
       }
     };
     // do not add connectWS on dependencies array
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     if (
