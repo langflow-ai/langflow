@@ -106,14 +106,20 @@ def created_api_key(session, active_user):
 
 def test_process_flow_invalid_api_key(client, flow, monkeypatch):
     # Mock de process_graph_cached
-    async def mock_process_graph_cached(*args, **kwargs):
-        return Result(result={}, session_id="session_id_mock")
+    from langflow.api.v1 import endpoints
+    from langflow.services.database.models.api_key import crud
 
     settings_manager = get_settings_manager()
     settings_manager.auth_settings.AUTO_LOGIN = False
-    from langflow.api.v1 import endpoints
+
+    async def mock_process_graph_cached(*args, **kwargs):
+        return Result(result={}, session_id="session_id_mock")
+
+    def mock_update_total_uses(*args, **kwargs):
+        return created_api_key
 
     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
+    monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
 
     headers = {"x-api-key": "invalid_api_key"}
 
@@ -160,6 +166,7 @@ def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
 def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_key):
     # Mock de process_graph_cached
     from langflow.api.v1 import endpoints
+    from langflow.services.database.models.api_key import crud
 
     settings_manager = get_settings_manager()
     settings_manager.auth_settings.AUTO_LOGIN = False
@@ -167,7 +174,11 @@ def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_k
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
 
+    def mock_update_total_uses(*args, **kwargs):
+        return created_api_key
+
     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
+    monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
 
     api_key = created_api_key.api_key
     headers = {"x-api-key": api_key}
@@ -193,6 +204,7 @@ def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_k
 def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
     # Mock de process_graph_cached
     from langflow.api.v1 import endpoints
+    from langflow.services.database.models.api_key import crud
 
     settings_manager = get_settings_manager()
     settings_manager.auth_settings.AUTO_LOGIN = False
@@ -200,7 +212,11 @@ def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
 
+    async def mock_update_total_uses(*args, **kwargs):
+        return created_api_key
+
     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
+    monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
 
     headers = {"x-api-key": "api_key"}
 
