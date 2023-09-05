@@ -2,6 +2,8 @@ from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
 from langflow.services.cache.utils import compute_dict_hash
 
+from langflow.services.session.utils import session_id_generator
+
 
 class SessionManager(Service):
     name = "session_manager"
@@ -25,6 +27,9 @@ class SessionManager(Service):
     def generate_key(self, session_id, data_graph):
         # Hash the JSON and combine it with the session_id to create a unique key
         json_hash = compute_dict_hash(data_graph)
+        if session_id is None:
+            # generate a 5 char session_id to concatenate with the json_hash
+            session_id = session_id_generator()
         return f"{session_id}{':' if session_id else ''}{json_hash}"
 
     def update_session(self, session_id, data_graph, value):
