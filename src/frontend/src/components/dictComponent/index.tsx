@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { KeyPairListComponent } from "../../types/components";
+import { DictComponentType } from "../../types/components";
 
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
@@ -10,7 +10,7 @@ export default function DictComponent({
   onChange,
   disabled,
   editNode = false,
-}: KeyPairListComponent): JSX.Element {
+}: DictComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange([""]);

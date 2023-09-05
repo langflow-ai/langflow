@@ -206,7 +206,7 @@ const EditNodeModal = forwardRef(
                                     />
                                   )
                                   : myData.node?.template[templateParam]
-                                      .type === "str" ? (
+                                      .type === "dict" ? (
                                     <div className="mt-2 w-full">
                                         <DictComponent
                                           disabled={disabled}
@@ -219,7 +219,7 @@ const EditNodeModal = forwardRef(
                                     </div>
                                   )
                                   : myData.node?.template[templateParam]
-                                      .type === "dict" ? (
+                                      .type === "keypair" ? (
                                     <div className="mt-2 w-full">
                                       <KeypairListComponent
                                         disabled={disabled}
