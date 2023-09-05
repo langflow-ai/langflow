@@ -54,7 +54,9 @@ export default function HomePage(): JSX.Element {
   const fileDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    // Handle file drop logic here
+    if (e.dataTransfer.types.some((types) => types === "Files")) {
+      uploadFlow(true, e.dataTransfer.files.item(0)!);
+    }
   };
 
   // Personal flows display
