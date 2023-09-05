@@ -45,7 +45,7 @@ async def chat(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
             )
 
-        if client_id in chat_manager.in_memory_cache:
+        if client_id in chat_manager.cache_manager:
             await chat_manager.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
