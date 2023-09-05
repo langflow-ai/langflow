@@ -1,5 +1,5 @@
 from langflow.services.schema import ServiceType
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from loguru import logger
 
 if TYPE_CHECKING:

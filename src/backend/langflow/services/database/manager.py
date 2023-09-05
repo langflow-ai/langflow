@@ -107,12 +107,10 @@ class DatabaseManager(Service):
         # We will check that all models are in the database
         # and that the database is up to date with all columns
         sql_models = [models.Flow, models.User, models.ApiKey]
-        results = []
-        for sql_model in sql_models:
-            results.append(
-                TableResults(sql_model.__tablename__, self.check_table(sql_model))
-            )
-        return results
+        return [
+            TableResults(sql_model.__tablename__, self.check_table(sql_model))
+            for sql_model in sql_models
+        ]
 
     def check_table(self, model):
         results = []
