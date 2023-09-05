@@ -7,6 +7,7 @@ import Header from "../../components/headerComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage(): JSX.Element {
   const {
@@ -19,6 +20,7 @@ export default function HomePage(): JSX.Element {
     uploadFlow,
     isLoading,
   } = useContext(TabsContext);
+  const { setErrorData } = useContext(alertContext);
   const dropdownOptions = [
     {
       name: "Import from JSON",
@@ -55,7 +57,14 @@ export default function HomePage(): JSX.Element {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.types.some((types) => types === "Files")) {
-      uploadFlow(true, e.dataTransfer.files.item(0)!);
+      if (e.dataTransfer.files.item(0).type === "application/json") {
+        uploadFlow(true, e.dataTransfer.files.item(0)!);
+      } else {
+        setErrorData({
+          title: "Invalid file type",
+          list: ["Please upload a JSON file"],
+        });
+      }
     }
   };
 
@@ -108,14 +117,18 @@ export default function HomePage(): JSX.Element {
           onDragLeave={dragLeave}
           onDrop={fileDrop}
           className={
-            "h-full w-full " + (isDragging
-              ? "flex flex-col items-center justify-center mb-24 gap-4 text-2xl font-light"
+            "h-full w-full " +
+            (isDragging
+              ? "mb-24 flex flex-col items-center justify-center gap-4 text-2xl font-light"
               : "")
           }
         >
           {isDragging ? (
             <>
-              <IconComponent name="ArrowUpToLine" className="h-12 w-12 stroke-1" />
+              <IconComponent
+                name="ArrowUpToLine"
+                className="h-12 w-12 stroke-1"
+              />
               Drop your flow here
             </>
           ) : (
