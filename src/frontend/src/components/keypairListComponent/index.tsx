@@ -20,6 +20,42 @@ export default function KeypairListComponent({
       onChange([""]);
     }
   }, [disabled]);
+
+  //when this feature is available, this code below must be in the parent component
+  // const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
+  // const [dict, setDict] = useState({
+  //   key1: "value1",
+  //   key2: "value2",
+  //   key3: "value3",
+  //   key4: "value4",
+  //   key5: "value5",
+  //   key6: "value6",
+  // } as {});
+  // const [dictArr, setDictArr] = useState([] as string[]);
+
+  // useEffect(() => {
+  //   setDictArr(convertObjToArray(dict));
+  // }, [dict]);
+
+  // left === true && type === "keypairlist" ? (
+  //   <div className="mt-2 w-full">
+  //     <KeypairListComponent
+  //       disabled={disabled}
+  //       editNode={false}
+  //       value={dictArr}
+  //       duplicateKey={errorDuplicateKey}
+  //       onChange={(newValue: string[]) => {
+  //         setErrorDuplicateKey(hasDuplicateKeys(newValue));
+  //         if(hasDuplicateKeys(newValue)){
+  //           setDictArr(newValue);
+  //         }
+  //         else{
+  //           setDict(convertArrayToObj(newValue));
+  //         }
+  //       }}
+  //     />
+  //   </div>
+  // )
   
 
  const handleChangeKey = (event, idx) => {

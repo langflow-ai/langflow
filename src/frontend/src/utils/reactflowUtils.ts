@@ -321,10 +321,10 @@ export function hasDuplicateKeys(array) {
   for (const obj of array) {
       for (const key in obj) {
           if (keys[key]) {
-              return true; // Duplicate key found
+              return true; 
           }
           keys[key] = true;
       }
   }
-  return false; // No duplicate keys found
+  return false; 
 }
