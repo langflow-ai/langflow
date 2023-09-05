@@ -192,6 +192,8 @@ async def process_graph_cached(
         session_id = session_manager.generate_key(
             session_id=session_id, data_graph=data_graph
         )
+    else:
+        session_id = session_manager.build_key(session_id, data_graph)
     # Load the graph using SessionManager
     langchain_object, artifacts = session_manager.load_session(session_id, data_graph)
     processed_inputs = process_inputs(inputs, artifacts)
