@@ -241,7 +241,7 @@ export default function ParameterComponent({
         !optionalHandle ? (
           <></>
         )
-        : left === true && type === "str" ? (
+        : left === true && type === "dict" ? (
           <div className="mt-2 w-full">
             <DictComponent
               disabled={disabled}
@@ -253,7 +253,7 @@ export default function ParameterComponent({
             />
           </div>
         )
-        : left === true && type === "dict" ? (
+        : left === true && type === "keypair" ? (
           <div className="mt-2 w-full">
             <KeypairListComponent
               disabled={disabled}

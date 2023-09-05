@@ -54,12 +54,19 @@ export type InputListComponentType = {
   editNode?: boolean;
 };
 
-export type KeyPairListComponent = {
+export type KeyPairListComponentType = {
   value: any;
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
   duplicateKey?: boolean;
+};
+
+export type DictComponentType = {
+  value: any;
+  onChange: (value: string[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
 };
 
 export type TextAreaComponentType = {

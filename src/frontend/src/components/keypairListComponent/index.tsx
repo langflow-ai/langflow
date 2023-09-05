@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { KeyPairListComponent } from "../../types/components";
+import { KeyPairListComponentType } from "../../types/components";
 
 import _ from "lodash";
 import { TypeModal } from "../../constants/enums";
@@ -14,7 +14,7 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   duplicateKey
-}: KeyPairListComponent): JSX.Element {
+}: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange([""]);
