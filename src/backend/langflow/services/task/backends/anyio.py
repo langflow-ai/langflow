@@ -17,7 +17,7 @@ class AnyIOTaskResult:
         return self._status
 
     @property
-    def result(self) -> any:
+    def result(self) -> Any:
         return self._result
 
     def ready(self) -> bool:
@@ -41,10 +41,10 @@ class AnyIOBackend(TaskBackend):
     ) -> Tuple[str, AnyIOTaskResult]:  # sourcery skip: remove-unnecessary-cast
         async with anyio.create_task_group() as tg:
             task_result = AnyIOTaskResult(tg)
-            await tg.spawn(task_result.run, task_func, *args, **kwargs)
+            tg.start_soon(task_result.run, task_func, *args, **kwargs)
             task_id = str(id(task_result))
             self.tasks[task_id] = task_result
             return task_id, task_result
 
-    def get_task(self, task_id: int) -> AnyIOTaskResult:
+    def get_task(self, task_id: str) -> Any:
         return self.tasks.get(task_id)
