@@ -67,9 +67,11 @@ def update_total_uses(session, api_key: ApiKey):
     # but session is not thread safe so we need to create a new session
 
     with Session(session.get_bind()) as new_session:
-        api_key = new_session.get(ApiKey, api_key.id)
-        api_key.total_uses += 1
-        api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-        new_session.add(api_key)
+        new_api_key = new_session.get(ApiKey, api_key.id)
+        if new_api_key is None:
+            raise ValueError("API Key not found")
+        new_api_key.total_uses += 1
+        new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+        new_session.add(new_api_key)
         new_session.commit()
-    return api_key
+    return new_api_key
