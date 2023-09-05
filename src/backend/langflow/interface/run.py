@@ -1,8 +1,8 @@
 from typing import Any, Dict, Tuple
 from langflow.services.cache.utils import Memoize
 from langflow.graph import Graph
-from langflow.utils.logger import logger
 from langflow.services.utils import get_cache_manager
+from loguru import logger
 
 
 @Memoize(get_cache_manager=get_cache_manager)

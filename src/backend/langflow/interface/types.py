@@ -29,7 +29,7 @@ from langflow.template.frontend_node.custom_components import (
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import get_base_classes
 
 import re

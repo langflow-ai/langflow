@@ -87,6 +87,7 @@ python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
 markupsafe = "^2.1.3"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
+loguru = "^0.7.1"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -29,7 +29,7 @@ router = APIRouter(tags=["Users"])
 @router.post("/user", response_model=UserRead, status_code=201)
 def add_user(
     user: UserCreate,
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> User:
     """
     Add a new user to the database.
@@ -38,11 +38,11 @@ def add_user(
     try:
         new_user.password = get_password_hash(user.password)
 
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
     except IntegrityError as e:
-        db.rollback()
+        session.rollback()
         raise HTTPException(
             status_code=400, detail="This username is unavailable."
         ) from e
@@ -65,16 +65,16 @@ def read_all_users(
     skip: int = 0,
     limit: int = 10,
     current_user: Session = Depends(get_current_active_superuser),
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> UsersResponse:
     """
     Retrieve a list of users from the database with pagination.
     """
     query = select(User).offset(skip).limit(limit)
-    users = db.execute(query).fetchall()
+    users = session.execute(query).fetchall()
 
     count_query = select(func.count()).select_from(User)  # type: ignore
-    total_count = db.execute(count_query).scalar()
+    total_count = session.execute(count_query).scalar()
 
     return UsersResponse(
         total_count=total_count,  # type: ignore
@@ -87,19 +87,19 @@ def patch_user(
     user_id: UUID,
     user: UserUpdate,
     _: Session = Depends(get_current_active_user),
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> User:
     """
     Update an existing user's data.
     """
-    return update_user(user_id, user, db)
+    return update_user(user_id, user, session)
 
 
 @router.delete("/user/{user_id}")
 def delete_user(
     user_id: UUID,
     current_user: User = Depends(get_current_active_superuser),
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> dict:
     """
     Delete a user from the database.
@@ -113,12 +113,12 @@ def delete_user(
             status_code=403, detail="You don't have the permission to delete this user"
         )
 
-    user_db = db.query(User).filter(User.id == user_id).first()
+    user_db = session.query(User).filter(User.id == user_id).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    db.delete(user_db)
-    db.commit()
+    session.delete(user_db)
+    session.commit()
 
     return {"detail": "User deleted"}
 
@@ -126,7 +126,7 @@ def delete_user(
 # TODO: REMOVE - Just for testing purposes
 @router.post("/super_user", response_model=User)
 def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
-    db: Session = Depends(get_session),
+    session: Session = Depends(get_session),
 ) -> User:
     """
     Add a superuser for testing purposes.
@@ -141,11 +141,11 @@ def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
     )
 
     try:
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
     except IntegrityError as e:
-        db.rollback()
+        session.rollback()
         raise HTTPException(status_code=400, detail="User exists") from e
 
     return new_user

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import platform
 
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 def set_secure_permissions(file_path):

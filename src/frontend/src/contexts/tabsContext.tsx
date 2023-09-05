@@ -315,9 +315,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       input.type = "file";
       input.accept = ".json";
       // add a change event listener to the file input
-      id = await new Promise(resolve => {
+      id = await new Promise((resolve) => {
         input.onchange = async (e: Event) => {
-          if ((e.target as HTMLInputElement).files![0].type === "application/json") {
+          if (
+            (e.target as HTMLInputElement).files![0].type === "application/json"
+          ) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);

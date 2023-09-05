@@ -4,8 +4,7 @@ from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.services.base import Service
 from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
-from langflow.interface.utils import pil_to_base64
-from langflow.utils.logger import logger
+from loguru import logger
 
 from .cache import cache_manager
 import asyncio

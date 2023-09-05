@@ -83,6 +83,7 @@ def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: User = Depends(get_current_active_user),
+    settings_manager=Depends(get_settings_manager),
 ):
     """Update a flow."""
 
@@ -90,7 +91,6 @@ def update_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.dict(exclude_unset=True)
-    settings_manager = get_settings_manager()
     if settings_manager.settings.REMOVE_API_KEYS:
         flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():

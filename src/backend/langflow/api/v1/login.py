@@ -34,9 +34,9 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(db: Session = Depends(get_session)):
-    settings_manager = get_settings_manager()
-
+async def auto_login(
+    db: Session = Depends(get_session), settings_manager=Depends(get_settings_manager)
+):
     if settings_manager.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 

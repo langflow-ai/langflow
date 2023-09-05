@@ -5,7 +5,7 @@ from langflow.services.settings.utils import read_secret_from_file, write_secret
 
 from pydantic import BaseSettings, Field, validator
 from passlib.context import CryptContext
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 class AuthSettings(BaseSettings):

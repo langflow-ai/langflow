@@ -8,7 +8,7 @@ from langflow.interface.run import (
     update_memory_keys,
 )
 from langflow.services.utils import get_session_manager
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.graph import Graph
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore

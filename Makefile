@@ -27,7 +27,7 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-	poetry run mypy --exclude .venv .
+	poetry run mypy src/backend/langflow
 	poetry run black . --check
 	poetry run ruff . --fix
 
