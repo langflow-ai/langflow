@@ -3,8 +3,6 @@ import secrets
 import threading
 from uuid import UUID
 from typing import List, Optional
-from langflow.services.database.utils import session_getter
-from langflow.services.utils import get_db_manager
 from sqlmodel import Session, select
 from langflow.services.database.models.api_key import (
     ApiKey,
@@ -67,8 +65,8 @@ def update_total_uses(session, api_key: ApiKey):
     """Update the total uses and last used at."""
     # This is running in a separate thread to avoid slowing down the request
     # but session is not thread safe so we need to create a new session
-    db_manager = get_db_manager()
-    with session_getter(db_manager) as new_session:
+
+    with Session(session.get_bind()) as new_session:
         api_key = new_session.get(ApiKey, api_key.id)
         api_key.total_uses += 1
         api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
