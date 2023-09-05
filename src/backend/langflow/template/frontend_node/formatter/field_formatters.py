@@ -8,6 +8,7 @@ from langflow.utils.constants import (
     ANTHROPIC_MODELS,
     CHAT_OPENAI_MODELS,
     OPENAI_MODELS,
+    LITELLM_MODELS,
 )
 
 
@@ -26,6 +27,7 @@ class ModelSpecificFieldFormatter(FieldFormatter):
         "ChatOpenAI": CHAT_OPENAI_MODELS,
         "Anthropic": ANTHROPIC_MODELS,
         "ChatAnthropic": ANTHROPIC_MODELS,
+        "ChatLiteLLM": LITELLM_MODELS
     }
 
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:

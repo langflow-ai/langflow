@@ -15,6 +15,7 @@ from langchain.chat_models import (
     ChatOpenAI,
     ChatVertexAI,
     ChatAnthropic,
+    ChatLiteLLM,
 )
 
 from langflow.interface.importing.utils import import_class
@@ -27,6 +28,7 @@ llm_type_to_cls_dict["anthropic-chat"] = ChatAnthropic  # type: ignore
 llm_type_to_cls_dict["azure-chat"] = AzureChatOpenAI  # type: ignore
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
 llm_type_to_cls_dict["vertexai-chat"] = ChatVertexAI  # type: ignore
+llm_type_to_cls_dict["litellm-chat"] = ChatLiteLLM  # type: ignore
 
 
 # Toolkits
