@@ -126,6 +126,18 @@
     @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
   }
 
+  .skeleton-card {
+    @apply bg-background h-48 p-4 border rounded-lg flex flex-col gap-6;
+  }
+
+  .skeleton-card-wrapper {
+    @apply flex items-center space-x-4;
+  }
+
+  .skeleton-card-text {
+    @apply flex flex-col gap-3;
+  }
+
   /* The same as primary-input but no-truncate */
   .textarea-primary {
     @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;

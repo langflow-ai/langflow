@@ -9,7 +9,13 @@ from langflow.services.database.models.user import UserUpdate
 
 @pytest.fixture
 def super_user(client, session):
-    return create_super_user(session)
+    settings_manager = get_settings_manager()
+    auth_settings = settings_manager.auth_settings
+    return create_super_user(
+        db=session,
+        username=auth_settings.FIRST_SUPERUSER,
+        password=auth_settings.FIRST_SUPERUSER_PASSWORD,
+    )
 
 
 @pytest.fixture

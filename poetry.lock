@@ -3047,13 +3047,13 @@ server = ["fastapi (>=0.100.0)", "pydantic-settings (>=2.0.1)", "sse-starlette (
 
 [[package]]
 name = "loguru"
-version = "0.7.0"
+version = "0.7.1"
 description = "Python logging made (stupidly) simple"
 optional = false
 python-versions = ">=3.5"
 files = [
-    {file = "loguru-0.7.0-py3-none-any.whl", hash = "sha256:b93aa30099fa6860d4727f1b81f8718e965bb96253fa190fab2077aaad6d15d3"},
-    {file = "loguru-0.7.0.tar.gz", hash = "sha256:1612053ced6ae84d7959dd7d5e431a0532642237ec21f7fd83ac73fe539e03e1"},
+    {file = "loguru-0.7.1-py3-none-any.whl", hash = "sha256:046bf970cb3cad77a28d607cbf042ac25a407db987a1e801c7f7e692469982f9"},
+    {file = "loguru-0.7.1.tar.gz", hash = "sha256:7ba2a7d81b79a412b0ded69bd921e012335e80fd39937a633570f273a343579e"},
 ]
 
 [package.dependencies]
@@ -3061,7 +3061,7 @@ colorama = {version = ">=0.3.4", markers = "sys_platform == \"win32\""}
 win32-setctime = {version = ">=1.0.0", markers = "sys_platform == \"win32\""}
 
 [package.extras]
-dev = ["Sphinx (==5.3.0)", "colorama (==0.4.5)", "colorama (==0.4.6)", "freezegun (==1.1.0)", "freezegun (==1.2.2)", "mypy (==v0.910)", "mypy (==v0.971)", "mypy (==v0.990)", "pre-commit (==3.2.1)", "pytest (==6.1.2)", "pytest (==7.2.1)", "pytest-cov (==2.12.1)", "pytest-cov (==4.0.0)", "pytest-mypy-plugins (==1.10.1)", "pytest-mypy-plugins (==1.9.3)", "sphinx-autobuild (==2021.3.14)", "sphinx-rtd-theme (==1.2.0)", "tox (==3.27.1)", "tox (==4.4.6)"]
+dev = ["Sphinx (==7.2.5)", "colorama (==0.4.5)", "colorama (==0.4.6)", "freezegun (==1.1.0)", "freezegun (==1.2.2)", "mypy (==v0.910)", "mypy (==v0.971)", "mypy (==v1.4.1)", "pre-commit (==3.3.1)", "pytest (==6.1.2)", "pytest (==7.4.0)", "pytest-cov (==2.12.1)", "pytest-cov (==4.1.0)", "pytest-mypy-plugins (==1.9.3)", "pytest-mypy-plugins (==3.0.0)", "sphinx-autobuild (==2021.3.14)", "sphinx-rtd-theme (==1.3.0)", "tox (==3.27.1)", "tox (==4.11.0)"]
 
 [[package]]
 name = "lxml"
@@ -7042,6 +7042,17 @@ files = [
 ]
 
 [[package]]
+name = "types-pywin32"
+version = "306.0.0.4"
+description = "Typing stubs for pywin32"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-pywin32-306.0.0.4.tar.gz", hash = "sha256:ae4bbec80d535053236d4bebedf55f58dee89cf5883d277f0fa89e857f3ff337"},
+    {file = "types_pywin32-306.0.0.4-py3-none-any.whl", hash = "sha256:f76a343ed6933008af85e158063963f923e54f2f461e697b2929b4178c7b77a1"},
+]
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.11"
 description = "Typing stubs for PyYAML"
@@ -7773,4 +7784,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "c877b4d713eef71815d858d30976ab21c42e5eadcc2df8159e940e03323681ee"
+content-hash = "6523f2e35458c6d0b8d281e20dd2233180128805ea07199c073224b0d6f75ee7"

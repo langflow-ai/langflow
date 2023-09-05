@@ -28,7 +28,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { codeTabsPropsType } from "../../types/components";
@@ -57,7 +56,7 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    if(tweaks){
+    if (tweaks) {
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {
@@ -181,7 +180,7 @@ export default function CodeTabsComponent({
           key={idx} // Remember to add a unique key prop
         >
           {idx < 4 ? (
-            <>
+            <div className="w-full h-full flex flex-col">
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"
@@ -195,7 +194,7 @@ export default function CodeTabsComponent({
               >
                 {tab.code}
               </SyntaxHighlighter>
-            </>
+            </div>
           ) : idx === 4 ? (
             <>
               <div className="api-modal-according-display">

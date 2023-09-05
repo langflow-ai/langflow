@@ -5,6 +5,7 @@ export type TabsContextType = {
   saveFlow: (flow: FlowType) => Promise<void>;
   save: () => void;
   tabId: string;
+  isLoading: boolean;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
@@ -23,7 +24,7 @@ export type TabsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  uploadFlow: (newFlow?: boolean, file?: File) => void;
+  uploadFlow: (newFlow?: boolean, file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   tabsState: TabsState;

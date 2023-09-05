@@ -5,16 +5,17 @@ from langflow.services.settings.utils import read_secret_from_file, write_secret
 
 from pydantic import BaseSettings, Field, validator
 from passlib.context import CryptContext
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
-    SECRET_KEY: Optional[str] = Field(
-        None,
+    SECRET_KEY: str = Field(
+        default="",
         description="Secret key for JWT. If not provided, a random one will be generated.",
         env="LANGFLOW_SECRET_KEY",
+        allow_mutation=False,
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

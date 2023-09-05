@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
