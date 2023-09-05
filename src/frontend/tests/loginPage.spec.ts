@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { BASE_URL_API } from "../src/constants/constants";
 
-test.describe("Test Login Page", () => {
+test.describe("Auto_login tests", () => {
   const baseUrl = `http://localhost:7860${BASE_URL_API}`
   test("Test auto login GET", async ({ request }) => {
       const response = await request.get(`${baseUrl}auto_login`)
@@ -12,9 +12,10 @@ test.describe("Test Login Page", () => {
       expect(body.token_type).toBeTruthy();
   });
 
-  test("auto_login", async ({ page }) => {
+
+  test("auto_login sign in", async ({ page }) => {
       await page.routeFromHAR("harFiles/langflow.har", {
-        url: "*/api/v1/*",
+        url: "**/api/v1/**",
         update: false,
       });
       await page.goto("http:localhost:3000/");
@@ -25,5 +26,15 @@ test.describe("Test Login Page", () => {
           .locator(".community-pages-flows-panel")
           .evaluate((el) => el.children)
       ).toBeTruthy();
+    });
+    test("auto_login block_admin", async ({ page }) => {
+      await page.routeFromHAR("harFiles/langflow.har", {
+        url: "**/api/v1/**",
+        update: false,
+      });
+      await page.goto("http:localhost:3000/");
+      await page.goto("http:localhost:3000/login")
+      await page.goto("http:localhost:3000/admin")
+      await page.goto("http:localhost:3000/admin/login")
     });
 });
