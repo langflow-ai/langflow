@@ -402,7 +402,7 @@ export async function renewAccessToken(token: string) {
 
 export async function getLoggedUser(): Promise<Users | null> {
   try {
-    const res = await api.get(`${BASE_URL_API}user`);
+    const res = await api.get(`${BASE_URL_API}users/whoami`);
 
     if (res.status === 200) {
       return res.data;
@@ -416,7 +416,7 @@ export async function getLoggedUser(): Promise<Users | null> {
 
 export async function addUser(user: UserInputType): Promise<Array<Users>> {
   try {
-    const res = await api.post(`${BASE_URL_API}user`, user);
+    const res = await api.post(`${BASE_URL_API}users/`, user);
     if (res.status === 200) {
       return res.data;
     }
@@ -433,7 +433,7 @@ export async function getUsersPage(
 ): Promise<Array<Users>> {
   try {
     const res = await api.get(
-      `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
+      `${BASE_URL_API}users/?skip=${skip}&limit=${limit}`
     );
     if (res.status === 200) {
       return res.data;
@@ -447,7 +447,7 @@ export async function getUsersPage(
 
 export async function deleteUser(user_id: string) {
   try {
-    const res = await api.delete(`${BASE_URL_API}user/${user_id}`);
+    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
     if (res.status === 200) {
       return res.data;
     }
@@ -459,7 +459,7 @@ export async function deleteUser(user_id: string) {
 
 export async function updateUser(user_id: string, user: Users) {
   try {
-    const res = await api.patch(`${BASE_URL_API}user/${user_id}`, user);
+    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
     if (res.status === 200) {
       return res.data;
     }
