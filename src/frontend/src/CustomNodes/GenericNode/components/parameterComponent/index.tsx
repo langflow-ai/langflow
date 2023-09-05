@@ -54,7 +54,6 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, save, flows } = useContext(TabsContext);
-  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -95,20 +94,6 @@ export default function ParameterComponent({
     });
     renderTooltips();
   };
-
-  const [dict, setDict] = useState({
-    key1: "value1",
-    key2: "value2",
-    key3: "value3",
-    key4: "value4",
-    key5: "value5",
-    key6: "value6",
-  } as {});
-  const [dictArr, setDictArr] = useState([] as string[]);
-
-  useEffect(() => {
-    setDictArr(convertObjToArray(dict));
-  }, [dict]);
 
   
   const [obj, setObj] = useState({
@@ -248,30 +233,12 @@ export default function ParameterComponent({
               editNode={false}
               value={obj}
               onChange={(newValue) => {
-                setDict(newValue);
+                setObj(newValue);
               }}
             />
           </div>
         )
-        : left === true && type === "keypair" ? (
-          <div className="mt-2 w-full">
-            <KeypairListComponent
-              disabled={disabled}
-              editNode={false}
-              value={dictArr}
-              duplicateKey={errorDuplicateKey}
-              onChange={(newValue: string[]) => {
-                setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                if(hasDuplicateKeys(newValue)){
-                  setDictArr(newValue);
-                }
-                else{
-                  setDict(convertArrayToObj(newValue));
-                }
-              }}
-            />
-          </div>
-        ) : (
+        : (
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
             delayDuration={0}

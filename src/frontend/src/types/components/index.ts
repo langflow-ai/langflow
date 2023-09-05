@@ -64,7 +64,7 @@ export type KeyPairListComponentType = {
 
 export type DictComponentType = {
   value: any;
-  onChange: (value: string[]) => void;
+  onChange: (value) => void;
   disabled: boolean;
   editNode?: boolean;
 };
