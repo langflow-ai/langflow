@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
+from tests.utils import run_post
+
 
 PROMPT_REQUEST = {
     "name": "string",
@@ -422,30 +424,27 @@ def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
     assert "Gabriel" not in response.json()["result"]["text"]
 
 
-@pytest.mark.parametrize("name", ["Gabriel", "John"])
-def test_basic_chat_with_two_session_ids_and_names(
-    client, added_flow, created_api_key, name
-):
+def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
+    flow_id = added_flow.get("id")
+    names = ["Gabriel", "John"]
+    session_ids = []
 
-    def run_api_post(endpoint, headers, post_data):
-        response = client.post(endpoint, headers=headers, json=post_data)
-        assert response.status_code == 200, response.json()
-        return response.json()
+    for name in names:
+        post_data = {"inputs": {"text": f"Hi, My name is {name}"}}
+        response_json = run_post(client, flow_id, headers, post_data)
 
-    def assert_name_and_session_in_response(name, response_json):
         assert name in response_json["result"]["text"]
         assert "session_id" in response_json
         assert response_json["session_id"] is not None
 
-    # Run the /api/v1/process/{flow_id} endpoint
-    flow_id = added_flow.get("id")
-    post_data = {"inputs": {"text": f"Hi, My name is {name}"}}
-    response_json = run_api_post(f"api/v1/process/{flow_id}", headers, post_data)
-    assert_name_and_session_in_response(name, response_json)
-    session_id = response_json["session_id"]
+        session_ids.append(response_json["session_id"])
 
-    # New request with the same session_id asking "What is my name?" should return name
-    post_data = {"inputs": {"text": "What is my name?"}, "session_id": session_id}
-    response_json = run_api_post(f"api/v1/process/{flow_id}", headers, post_data)
-    assert name in response_json["result"]["text"]
+    for i, name in enumerate(names):
+        post_data = {
+            "inputs": {"text": "What is my name?"},
+            "session_id": session_ids[i],
+        }
+        response_json = run_post(client, flow_id, headers, post_data)
+
+        assert name in response_json["result"]["text"]
