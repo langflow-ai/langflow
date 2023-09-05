@@ -42,13 +42,15 @@ class TaskManager(Service):
     ) -> Any:
         if not self.use_celery:
             return None, await task_func(*args, **kwargs)
+        if not hasattr(task_func, "apply"):
+            raise ValueError(f"Task function {task_func} does not have an apply method")
         task = task_func.apply(args=args, kwargs=kwargs)
         result = task.get()
         return task.id, result
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Union[str, str]:
+    ) -> Any:
         return await self.backend.launch_task(task_func, *args, **kwargs)
 
     def get_task(self, task_id: Union[int, str]) -> Any:
