@@ -188,6 +188,10 @@ async def process_graph_cached(
 ) -> Tuple[Any, str]:
     clear_caches_if_needed(clear_cache)
     session_manager = get_session_manager()
+    if session_id is None:
+        session_id = session_manager.generate_key(
+            session_id=session_id, data_graph=data_graph
+        )
     # Load the graph using SessionManager
     langchain_object, artifacts = session_manager.load_session(session_id, data_graph)
     processed_inputs = process_inputs(inputs, artifacts)
