@@ -6,8 +6,9 @@ from langflow.api.v1.flows import get_session
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.flow.flow import Flow
+from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
+import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -28,6 +29,9 @@ def pytest_configure():
     )
     pytest.OPENAPI_EXAMPLE_PATH = (
         Path(__file__).parent.absolute() / "data" / "Openapi.json"
+    )
+    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
+        Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
     )
 
     pytest.CODE_WITH_SYNTAX_ERROR = """
@@ -98,6 +102,12 @@ def openapi_graph():
 @pytest.fixture
 def json_flow():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def json_flow_with_prompt_and_history():
+    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
         return f.read()
 
 
@@ -208,3 +218,15 @@ def flow(client, json_flow: str, session, active_user):
     session.commit()
 
     return flow
+
+
+@pytest.fixture
+def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
+    flow = orjson.loads(json_flow_with_prompt_and_history)
+    data = flow["data"]
+    flow = FlowCreate(name="Basic Chat", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
