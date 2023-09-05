@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
@@ -27,7 +27,7 @@ export default function Header(): JSX.Element {
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
-  const { stars } = useContext(darkContext);
+  const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
 
   return (
@@ -140,7 +140,7 @@ export default function Header(): JSX.Element {
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
                       gradients[
-                        parseInt(userData?.id ?? "", 10) % gradients.length
+                        gradientIndex
                       ]
                     }
                   />
