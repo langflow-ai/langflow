@@ -1,11 +1,7 @@
 import json
 from langflow.graph import Graph
-from langflow.services.cache.utils import compute_dict_hash
 
 import pytest
-from langflow.interface.run import (
-    build_langchain_object_with_caching,
-)
 
 
 def get_graph(_type="basic"):
@@ -39,14 +35,6 @@ def openapi_data_graph():
 
 def langchain_objects_are_equal(obj1, obj2):
     return str(obj1) == str(obj2)
-
-
-# Test build_langchain_object_with_caching
-def test_build_langchain_object_with_caching(client, basic_data_graph):
-    session_id = compute_dict_hash(basic_data_graph)
-    build_langchain_object_with_caching.clear_cache(session_id)
-    graph = build_langchain_object_with_caching(basic_data_graph)
-    assert graph is not None
 
 
 # Test build_graph
