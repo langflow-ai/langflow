@@ -55,7 +55,6 @@ const EditNodeModal = forwardRef(
     const [myData, setMyData] = useState(data);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
-    const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
     let disabled =
       reactFlowInstance
@@ -86,19 +85,6 @@ const EditNodeModal = forwardRef(
       setMyData(data); // reset data to what it is on node when opening modal
     }, [modalOpen]);
 
-    const [dict, setDict] = useState({
-      key1: "value1",
-      key2: "value2",
-      key3: "value3",
-      key4: "value4",
-      key5: "value5",
-      key6: "value6",
-    } as {});
-    const [dictArr, setDictArr] = useState([] as string[]);
-
-    useEffect(() => {
-      setDictArr(convertObjToArray(dict));
-    }, [dict]);
 
     const [obj, setObj] = useState({
       arr: ["test", 123456, false, null],
@@ -135,8 +121,7 @@ const EditNodeModal = forwardRef(
             <div
               className={classNames(
                 "edit-node-modal-box",
-                nodeLength > limitScrollFieldsModal ||
-                  nodeLength > dictArr.length
+                nodeLength > limitScrollFieldsModal
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
                   : "overflow-hidden"
               )}
@@ -213,34 +198,12 @@ const EditNodeModal = forwardRef(
                                           editNode={false}
                                           value={obj}
                                           onChange={(newValue) => {
-                                            setDict(newValue);
+                                            setObj(newValue);
                                           }}
                                         />
                                     </div>
                                   )
-                                  : myData.node?.template[templateParam]
-                                      .type === "keypairlist" ? (
-                                    <div className="mt-2 w-full">
-                                      <KeypairListComponent
-                                        disabled={disabled}
-                                        editNode={false}
-                                        value={dictArr}
-                                        duplicateKey={errorDuplicateKey}
-                                        onChange={(newValue: string[]) => {
-                                          setErrorDuplicateKey(
-                                            hasDuplicateKeys(newValue)
-                                          );
-                                          if (hasDuplicateKeys(newValue)) {
-                                            setDictArr(newValue);
-                                          } else {
-                                            setDict(
-                                              convertArrayToObj(newValue)
-                                            );
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                  ) : myData.node.template[templateParam]
+                                   : myData.node.template[templateParam]
                                       .multiline ? (
                                     <TextAreaComponent
                                       disabled={disabled}
