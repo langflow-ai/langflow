@@ -262,6 +262,11 @@ export type loginInputStateType = {
   password: string;
 };
 
+export type resetPasswordInputStateType = {
+  password: string;
+  cnfPassword: string;
+};
+
 export type UserInputType = {
   username: string;
   password: string;

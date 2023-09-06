@@ -534,6 +534,11 @@ export const CONTROL_INPUT_STATE = {
   username: "",
 };
 
+export const CONTROL_RESET_PASSWORD_STATE = {
+  password: "",
+  cnfPassword: "",
+};
+
 export const CONTROL_LOGIN_STATE = {
   username: "",
   password: "",
