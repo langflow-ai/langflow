@@ -7,7 +7,6 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
-import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   nodeColors,
@@ -72,30 +71,18 @@ export default function ExtraSidebar() {
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
-        <div className="side-bar-button">
-          <ShadTooltip content="Import" side="top">
-            <button
-              className="extra-side-bar-buttons"
-              onClick={() => {
-                uploadFlow();
-              }}
-            >
-              <IconComponent name="FileUp" className="side-bar-button-size " />
-            </button>
-          </ShadTooltip>
+        <div className="flex w-96 gap-2">
+          <button
+            className="extra-side-bar-buttons flex h-10 gap-2 text-sm"
+            onClick={() => {
+              uploadFlow();
+            }}
+          >
+            <IconComponent name="Share" className="h-4 w-4" />
+            Share
+          </button>
         </div>
-        <div className="side-bar-button">
-          <ExportModal>
-            <ShadTooltip content="Export" side="top">
-              <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent
-                  name="FileDown"
-                  className="side-bar-button-size"
-                />
-              </div>
-            </ShadTooltip>
-          </ExportModal>
-        </div>
+
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
@@ -104,7 +91,7 @@ export default function ExtraSidebar() {
                   <IconComponent
                     name="Code2"
                     className={
-                      "side-bar-button-size" +
+                      "side-bar-button-size stroke-[1.5px]" +
                       (isBuilt ? " " : " extra-side-bar-save-disable")
                     }
                   />
@@ -127,7 +114,7 @@ export default function ExtraSidebar() {
               <IconComponent
                 name="Save"
                 className={
-                  "side-bar-button-size" +
+                  "side-bar-button-size stroke-[1.5px]" +
                   (isPending ? " " : " extra-side-bar-save-disable")
                 }
               />

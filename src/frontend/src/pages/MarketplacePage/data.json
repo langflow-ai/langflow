@@ -12,6 +12,7 @@
     "categories": ["agents"],
     "downloads": "1231231",
     "type": "Component",
+    "isChat": true,
     "isFree": true
   },
   {
@@ -27,7 +28,8 @@
     "categories": ["vectorstores"],
     "downloads": "1254231",
     "type": "Component",
-    "isFree": true
+    "isFree": true,
+    "isChat": true
   },
   {
     "name": "Angular",
@@ -42,7 +44,8 @@
     "categories": ["tools"],
     "downloads": "1341231",
     "type": "Flow",
-    "isFree": false
+    "isFree": false,
+    "isChat": false
   },
   {
     "name": "Vue",
@@ -57,6 +60,7 @@
     "categories": ["chains"],
     "downloads": "123231",
     "type": "Flow",
-    "isFree": false
+    "isFree": false,
+    "isChat": false
   }
 ]

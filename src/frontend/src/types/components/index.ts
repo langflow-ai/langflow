@@ -12,6 +12,7 @@ export type InputComponentType = {
   onChangePass?: (value: boolean | boolean) => void;
   showPass?: boolean;
   icon?: string;
+  big?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;

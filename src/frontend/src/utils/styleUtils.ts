@@ -1,5 +1,6 @@
 import {
   Bell,
+  Boxes,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -52,6 +53,7 @@ import {
   Scissors,
   Search,
   Settings2,
+  Share2,
   Sparkles,
   StoreIcon,
   SunIcon,
@@ -128,6 +130,40 @@ export const gradients = [
   "bg-gradient-to-br from-fuchsia-500 via-red-600 to-orange-400",
   "bg-gradient-to-br from-sky-400 via-rose-400 to-lime-400",
   "bg-gradient-to-br from-lime-600 via-yellow-300 to-red-600",
+];
+
+export const rGradients = [
+  "bg-gradient-to-r from-gray-800 via-rose-700 to-violet-900",
+  "bg-gradient-to-r from-green-200 via-green-300 to-blue-500",
+  "bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-700",
+  "bg-gradient-to-r from-green-200 via-green-400 to-purple-700",
+  "bg-gradient-to-r from-blue-100 via-blue-300 to-blue-500",
+  "bg-gradient-to-r from-purple-400 to-yellow-400",
+  "bg-gradient-to-r from-red-800 via-yellow-600 to-yellow-500",
+  "bg-gradient-to-r from-blue-300 via-green-200 to-yellow-300",
+  "bg-gradient-to-r from-blue-700 via-blue-800 to-gray-900",
+  "bg-gradient-to-r from-green-300 to-purple-400",
+  "bg-gradient-to-r from-yellow-200 via-pink-200 to-pink-400",
+  "bg-gradient-to-r from-green-500 to-green-700",
+  "bg-gradient-to-r from-rose-400 via-fuchsia-500 to-indigo-500",
+  "bg-gradient-to-r from-sky-400 to-blue-500",
+  "bg-gradient-to-r from-green-200 via-green-400 to-green-500",
+  "bg-gradient-to-r from-red-400 via-gray-300 to-blue-500",
+  "bg-gradient-to-r from-gray-900 to-gray-600 bg-gradient-to-r",
+  "bg-gradient-to-r from-rose-500 via-red-400 to-red-500",
+  "bg-gradient-to-r from-fuchsia-600 to-pink-600",
+  "bg-gradient-to-r from-emerald-500 to-lime-600",
+  "bg-gradient-to-r from-rose-500 to-indigo-700",
+  "bg-gradient-to-r bg-gradient-to-tr from-violet-500 to-orange-300",
+  "bg-gradient-to-r from-gray-900 via-purple-900 to-violet-600",
+  "bg-gradient-to-r from-yellow-200 via-red-500 to-fuchsia-500",
+  "bg-gradient-to-r from-sky-400 to-indigo-900",
+  "bg-gradient-to-r from-amber-200 via-violet-600 to-sky-900",
+  "bg-gradient-to-r from-amber-700 via-orange-300 to-rose-800",
+  "bg-gradient-to-r from-gray-300 via-fuchsia-600 to-orange-600",
+  "bg-gradient-to-r from-fuchsia-500 via-red-600 to-orange-400",
+  "bg-gradient-to-r from-sky-400 via-rose-400 to-lime-400",
+  "bg-gradient-to-r from-lime-600 via-yellow-300 to-red-600",
 ];
 
 // tailwind to right gradients from 500 to 700 shades
@@ -208,6 +244,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide = {
+  Share: Share2,
   Component: ToyBrickIcon,
   Bundle: GroupIcon,
   Flow: WorkflowIcon,
@@ -268,6 +305,7 @@ export const nodeIconsLucide = {
   WolframAlphaQueryRun: SvgWolfram,
   custom_components: GradientSparkles,
   custom: Edit,
+  Boxes,
   Trash2,
   X,
   XCircle,

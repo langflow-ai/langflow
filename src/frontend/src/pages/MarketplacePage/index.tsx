@@ -6,6 +6,7 @@ import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { MarketCardComponent } from "../../components/marketCardComponent";
+import { MarketCardComponentComponent } from "../../components/marketCardComponentComponent";
 import { Badge } from "../../components/ui/badge";
 import { classNames } from "../../utils/utils";
 import data from "./data.json";
@@ -55,6 +56,7 @@ export default function MarketplacePage() {
           <div className="flex items-center justify-center gap-4">
             <div className="w-[35%]">
               <InputComponent
+                big
                 icon="Search"
                 placeholder="Search Flows and Components"
                 onChange={(e) => searchItem(e)}
@@ -104,6 +106,19 @@ export default function MarketplacePage() {
               )
               .map((item, idx) => (
                 <MarketCardComponent key={idx} data={item} onAdd={() => {}} />
+              ))}
+            {searchData
+              .filter(
+                (f) =>
+                  Array.from(filteredCategories).length === 0 ||
+                  filteredCategories.has(f.type)
+              )
+              .map((item, idx) => (
+                <MarketCardComponentComponent
+                  key={idx}
+                  data={item}
+                  onAdd={() => {}}
+                />
               ))}
           </div>
         </div>

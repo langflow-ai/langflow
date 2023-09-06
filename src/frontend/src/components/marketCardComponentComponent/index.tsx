@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "../ui/card";
 
-export const MarketCardComponent = ({
+export const MarketCardComponentComponent = ({
   data,
   onAdd,
 }: {
@@ -57,10 +57,11 @@ export const MarketCardComponent = ({
           <div>
             <CardTitle className="card-component-title-display justify-between text-xl">
               <span className="card-component-title-size flex items-center gap-2">
-                {data.name} <IconComponent name="Bundle" className="h-5 w-5" />
+                {data.name}{" "}
+                <IconComponent name="Component" className="h-5 w-5" />
               </span>
               <div className="flex items-center gap-2 rounded-lg bg-black/5 p-1 px-2 text-xs text-foreground transition-all hover:bg-black/20">
-                <IconComponent name="GitFork" className="h-3 w-3" />
+                <IconComponent name="Download" className="h-3 w-3" />
                 {nFormatter(data.downloads, 2)}
               </div>
             </CardTitle>
@@ -82,24 +83,10 @@ export const MarketCardComponent = ({
         <div className="card-component-footer-arrangement items-center">
           <div className="card-component-footer w-full justify-between">
             <div className=" flex gap-2 rounded-xl">
-              {data.isChat && (
-                <span className="flex items-center gap-1.5 text-xs text-foreground">
-                  <IconComponent name="chat" className="h-4 w-4" />
-                </span>
-              )}
-              <div className="group/btn flex gap-1.5">
-                <span className="flex items-center gap-1.5 text-xs text-foreground">
-                  <IconComponent name="Component" className="h-4 w-4" />
-                  123
-                </span>
-                <div className="flex w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground transition-all duration-300 group-hover/btn:w-16">
-                  <div className="flex h-3.5 w-16 items-center gap-1">
-                    <IconComponent name="agents" className="h-3.5 w-3.5" />
-                    <IconComponent name="chains" className="h-3.5 w-3.5" />
-                    <IconComponent name="tools" className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-              </div>
+              <span className="flex items-center gap-1.5 text-xs text-foreground">
+                Output:{" "}
+                <IconComponent name={data.categories[0]} className="h-4 w-4" />
+              </span>
             </div>
             {data.isFree ? (
               <Badge size="md" variant="free">
