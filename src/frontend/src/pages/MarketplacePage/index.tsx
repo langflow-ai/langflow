@@ -53,10 +53,10 @@ export default function MarketplacePage() {
         </span>
         <div className="flex w-full flex-col gap-4 p-4">
           <div className="flex items-center justify-center gap-4">
-            <div className="w-[45%]">
+            <div className="w-[35%]">
               <InputComponent
                 icon="Search"
-                placeholder="Search Components"
+                placeholder="Search Flows and Components"
                 onChange={(e) => searchItem(e)}
                 value={inputText}
                 password={false}
