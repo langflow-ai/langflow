@@ -67,18 +67,11 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
 
   backend:
-    image: "langflow:${TAG-latest}"
+    image: "ogabrielluiz/langflow:latest"
     build:
       context: ../
       dockerfile: base.Dockerfile
     # user: your-non-root-user # Make sure your Dockerfile creates this user
-    depends_on:
-      db:
-        condition: service_healthy
-      queue:
-        condition: service_healthy
-    env_file:
-      - backend.env
     # ports:
     #   - 7860
     volumes:
@@ -98,8 +91,6 @@ services:
     image: postgres:15.4
     volumes:
       - app-db-data:/var/lib/postgresql/data/pgdata
-    env_file:
-      - db.env
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
     deploy:
@@ -114,11 +105,6 @@ services:
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
       - default
-    env_file:
-      - ./pgadmin.env
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
       - ./pgadmin:/var/lib/pgadmin
     deploy:
@@ -143,12 +129,7 @@ services:
       test: "exit 0"
 
   celeryworker:
-    image: "langflow:${TAG-latest}"
-    depends_on:
-      queue:
-        condition: service_healthy
-    env_file:
-      - ./celeryworker.env
+    image: "ogabrielluiz/langflow:latest"
     build:
       context: ../
       dockerfile: base.Dockerfile
@@ -162,13 +143,6 @@ services:
     image: mher/flower
     networks:
       - default
-    depends_on:
-      queue:
-        condition: service_healthy
-      celeryworker:
-        condition: service_healthy
-    env_file:
-      - ./flower.env
     environment:
       - CELERY_BROKER_URL='redis://$${LANGFLOW_REDIS_PASSWORD:+default:$${LANGFLOW_REDIS_PASSWORD}@}$${LANGFLOW_REDIS_HOST}:$${LANGFLOW_REDIS_PORT}/$${LANGFLOW_REDIS_DB}'
       - FLOWER_PORT=5555
@@ -187,17 +161,13 @@ services:
         - traefik.http.services.${STACK_NAME?Variable not set}-flower.loadbalancer.server.port=5555
 
   frontend:
+    image: "ogabrielluiz/langflow_frontend:latest"
     # user: your-non-root-user
     build:
       context: ../src/frontend
       dockerfile: Dockerfile
       args:
         - BACKEND_URL=http://backend:7860
-    depends_on:
-      backend:
-        condition: service_healthy
-    env_file:
-      - ./frontend.env
     restart: on-failure
     deploy:
       labels:
@@ -225,9 +195,6 @@ services:
 
   grafana:
     image: grafana/grafana:8.2.6
-    depends_on:
-      prometheus:
-        condition: service_healthy
     # ports:
     #   - 3000:3000
     volumes:
