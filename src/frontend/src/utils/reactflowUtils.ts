@@ -385,3 +385,19 @@ export function customStringify(obj: any): string {
   );
   return `{${keyValuePairs.join(",")}}`;
 }
+
+export function getMiddlePoint(nodes: Node[]) {
+  let middlePointX = 0;
+  let middlePointY = 0;
+
+  nodes.forEach((node) => {
+    middlePointX += node.position.x;
+    middlePointY += node.position.y;
+  });
+
+  const totalNodes = nodes.length;
+  const averageX = middlePointX / totalNodes;
+  const averageY = middlePointY / totalNodes;
+
+  return { x: averageX, y: averageY };
+}
