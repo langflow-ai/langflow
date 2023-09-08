@@ -3,6 +3,7 @@ import {
   Connection,
   Edge,
   Node,
+  OnSelectionChangeParams,
   ReactFlowInstance,
   ReactFlowJsonObject,
 } from "reactflow";
@@ -20,6 +21,8 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
+import ShortUniqueId from "short-unique-id";
+const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -400,4 +403,39 @@ export function getMiddlePoint(nodes: Node[]) {
   const averageY = middlePointY / totalNodes;
 
   return { x: averageX, y: averageY };
+}
+
+export function generateFlow(
+  selection: OnSelectionChangeParams,
+  reactFlowInstance: ReactFlowInstance,
+  name: string
+): { newFlow: FlowType; removedEdges: Edge[] } {
+  const newFlowData = reactFlowInstance.toObject();
+
+  /*	remove edges that are not connected to selected nodes on both ends
+		in future we can save this edges to when ungrouping reconect to the old nodes
+	*/
+  newFlowData.edges = selection.edges.filter(
+    (edge) =>
+      selection.nodes.some((node) => node.id === edge.target) &&
+      selection.nodes.some((node) => node.id === edge.source)
+  );
+  newFlowData.nodes = selection.nodes;
+
+  const newFlow: FlowType = {
+    data: newFlowData,
+    name: name,
+    description: "",
+    //generating local id instead of using the id from the server, can change in the future
+    id: uid(),
+  };
+  // filter edges that are not connected to selected nodes on both ends
+  // using O(n²) aproach because the number of edges is small
+  // in the future we can use a better aproach using a set
+  return {
+    newFlow,
+    removedEdges: selection.edges.filter(
+      (edge) => !newFlowData.edges.includes(edge)
+    ),
+  };
 }
