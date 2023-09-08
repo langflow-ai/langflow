@@ -477,3 +477,38 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     node.position.y += deltaPosition.y;
   });
 }
+
+export function concatFlows(
+  flow: FlowType,
+  ReactFlowInstance: ReactFlowInstance
+) {
+  const { nodes, edges } = flow.data!;
+  ReactFlowInstance.addNodes(nodes);
+  ReactFlowInstance.addEdges(edges);
+}
+
+export function generateNodeFromFlow(flow: FlowType): NodeType {
+  const { nodes } = flow.data!;
+  const outputNode = _.cloneDeep(findLastNode(flow.data!));
+  // console.log(flow)
+  const position = getMiddlePoint(nodes);
+  let data = _.cloneDeep(flow);
+  const newGroupNode: NodeType = {
+    data: {
+      id: data.id,
+      type: outputNode!.data.type,
+      node: {
+        display_name:"group Node",
+        documentation: "",
+        base_classes: outputNode!.data.node!.base_classes,
+        description: "group Node",
+        template: generateNodeTemplate(data),
+        flow: data,
+      },
+    },
+    id: data.id,
+    position,
+    type: "groupNode",
+  };
+  return newGroupNode;
+}
