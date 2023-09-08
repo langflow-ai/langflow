@@ -33,6 +33,7 @@ class UserCreate(SQLModel):
 class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
+    profile_image: Optional[str] = Field()
     is_active: bool = Field()
     is_superuser: bool = Field()
     create_at: datetime = Field()
