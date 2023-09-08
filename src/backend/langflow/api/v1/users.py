@@ -18,6 +18,7 @@ from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
     get_password_hash,
+    verify_password,
 )
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -125,11 +126,11 @@ def reset_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    new_password = get_password_hash(user_update.password)
-    if new_password == user.password:
+    if verify_password(user_update.password, user.password):
         raise HTTPException(
             status_code=400, detail="You can't use your current password"
         )
+    new_password = get_password_hash(user_update.password)
     user.password = new_password
     session.commit()
     session.refresh(user)
