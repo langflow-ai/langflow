@@ -1,4 +1,5 @@
 import * as Form from "@radix-ui/react-form";
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import GradientChooserComponent from "../../components/gradientChooserComponent";
@@ -27,7 +28,7 @@ export default function ProfileSettingsPage(): JSX.Element {
     setTabId("");
   }, []);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { userData } = useContext(AuthContext);
+  const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
   function handlePatchUser() {
@@ -38,12 +39,21 @@ export default function ProfileSettingsPage(): JSX.Element {
       });
       return;
     }
-    try{
-      updateUser(userData!.id, { password, profile_image: gradient }).then(() => {setSuccessData({title: "Changes saved successfully!"})});
-    } catch (error) {
-      setErrorData({title: "Error saving changes", list: [error as string]});
-    }
+    try {
+      updateUser(userData!.id, { password, profile_image: gradient }).then(
+        () => {
+          setSuccessData({ title: "Changes saved successfully!" });
+          if (gradient !== "") {
+            let newUserData = cloneDeep(userData);
+            newUserData!.profile_image = gradient;
 
+            setUserData(newUserData);
+          }
+        }
+      );
+    } catch (error) {
+      setErrorData({ title: "Error saving changes", list: [error as string] });
+    }
   }
 
   function handleInput({
@@ -130,12 +140,19 @@ export default function ProfileSettingsPage(): JSX.Element {
               </Form.Label>
 
               <div className="mt-4 w-[1010px]">
-              <GradientChooserComponent
-                value={gradient == "" ? (userData!.profile_image ?? gradients[parseInt(userData!.id ?? "", 30) % gradients.length]) : gradient}
-                onChange={(value) => {
-                  handleInput({ target: { name: "gradient", value } });
-                }}
-              />
+                <GradientChooserComponent
+                  value={
+                    gradient == ""
+                      ? userData!.profile_image ??
+                        gradients[
+                          parseInt(userData!.id ?? "", 30) % gradients.length
+                        ]
+                      : gradient
+                  }
+                  onChange={(value) => {
+                    handleInput({ target: { name: "gradient", value } });
+                  }}
+                />
               </div>
             </Form.Field>
           </div>
