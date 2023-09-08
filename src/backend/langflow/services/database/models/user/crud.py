@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 from typing import Union
 from uuid import UUID
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from langflow.services.database.models.user.user import User, UserUpdate
 from langflow.services.utils import get_session
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
-
 
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -37,7 +36,9 @@ def update_user(
             changed = True
 
     if not changed:
-        raise HTTPException(status_code=304, detail="Nothing to update")
+        raise HTTPException(
+            status_code=status.HTTP_304_NOT_MODIFIED, detail="Nothing to update"
+        )
 
     user_db.updated_at = datetime.now(timezone.utc)
     flag_modified(user_db, "updated_at")
