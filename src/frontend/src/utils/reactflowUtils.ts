@@ -517,6 +517,40 @@ export function validateSelection(
   }
   return errorsArray;
 }
+// TODO UPDATE TO NEW TYPES
+function updateGroupNodeTemplate(template: APITemplateType) {
+  /*this function receives a template, iterates for it's items
+	updating the visibility of all basic types setting it to advanced true*/
+  Object.keys(template).forEach((key) => {
+    let type = template[key].type;
+    if (
+      (type === "str" ||
+        type === "bool" ||
+        type === "float" ||
+        type === "code" ||
+        type === "prompt" ||
+        type === "file" ||
+        type === "int") &&
+      !template[key].required
+    ) {
+      template[key].advanced = true;
+    }
+  });
+  return template;
+}
+
+export function generateNodeTemplate(Flow: FlowType) {
+  /*
+		this function receives a flow and generate a template for the group node
+	*/
+  let template = mergeNodeTemplates({
+    nodes: Flow.data!.nodes,
+    edges: Flow.data!.edges,
+  });
+  updateGroupNodeTemplate(template);
+  return template;
+}
+
 
 export function generateNodeFromFlow(flow: FlowType): NodeType {
   const { nodes } = flow.data!;
