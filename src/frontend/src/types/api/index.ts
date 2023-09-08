@@ -91,6 +91,7 @@ export type Users = {
   username: string;
   is_active: boolean;
   is_superuser: boolean;
+  profile_image: string;
   create_at: Date;
   updated_at: Date;
 };

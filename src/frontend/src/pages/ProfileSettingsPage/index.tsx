@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import GradientChooserComponent from "../../components/gradientChooserComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -13,6 +14,7 @@ import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../types/components";
+import { gradients } from "../../utils/styleUtils";
 export default function ProfileSettingsPage(): JSX.Element {
   const { setTabId } = useContext(TabsContext);
 
@@ -24,7 +26,7 @@ export default function ProfileSettingsPage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
@@ -36,8 +38,12 @@ export default function ProfileSettingsPage(): JSX.Element {
       });
       return;
     }
+    try{
+      updateUser(userData!.id, { password, profile_image: gradient }).then(() => {setSuccessData({title: "Changes saved successfully!"})});
+    } catch (error) {
+      setErrorData({title: "Error saving changes", list: [error as string]});
+    }
 
-    updateUser(userData!.id, {password, profile_image: gradient});
   }
 
   function handleInput({
@@ -67,87 +73,81 @@ export default function ProfileSettingsPage(): JSX.Element {
             const data = Object.fromEntries(new FormData(event.currentTarget));
             event.preventDefault();
           }}
-          className="flex justify-between px-6"
+          className="flex h-full flex-col px-6 pb-16"
         >
-          <div className="flex gap-4">
-          <div className="mb-3 w-96">
-            <Form.Field name="password">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Password <span className="font-medium text-destructive">*</span>
-              </Form.Label>
+          <div className="flex h-full flex-col gap-4">
+            <div className="flex gap-4">
+              <div className="mb-3 w-96">
+                <Form.Field name="password">
+                  <Form.Label className="data-[invalid]:label-invalid">
+                    Password{" "}
+                  </Form.Label>
 
-              <Form.Control asChild>
-                <InputComponent
-                  onChange={(value) => {
-                    handleInput({ target: { name: "password", value } });
-                  }}
-                  value={password}
-                  isForm
-                  password={true}
-                  required
-                  placeholder="Password"
-                  className="w-full"
-                />
-              </Form.Control>
+                  <Form.Control asChild>
+                    <InputComponent
+                      onChange={(value) => {
+                        handleInput({ target: { name: "password", value } });
+                      }}
+                      value={password}
+                      isForm
+                      password={true}
+                      placeholder="Password"
+                      className="w-full"
+                    />
+                  </Form.Control>
 
-              <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your password
-              </Form.Message>
-            </Form.Field>
-          </div>
-          <div className="mb-3 w-96">
-            <Form.Field name="cnfPassword">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Confirm Password{" "}
-                <span className="font-medium text-destructive">*</span>
-              </Form.Label>
+                  <Form.Message match="valueMissing" className="field-invalid">
+                    Please enter your password
+                  </Form.Message>
+                </Form.Field>
+              </div>
+              <div className="mb-3 w-96">
+                <Form.Field name="cnfPassword">
+                  <Form.Label className="data-[invalid]:label-invalid">
+                    Confirm Password{" "}
+                  </Form.Label>
 
-              <InputComponent
-                onChange={(value) => {
-                  handleInput({ target: { name: "cnfPassword", value } });
-                }}
-                value={cnfPassword}
-                isForm
-                password={true}
-                required
-                placeholder="Confirm Password"
-                className="w-full"
-              />
+                  <InputComponent
+                    onChange={(value) => {
+                      handleInput({ target: { name: "cnfPassword", value } });
+                    }}
+                    value={cnfPassword}
+                    isForm
+                    password={true}
+                    placeholder="Confirm Password"
+                    className="w-full"
+                  />
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                Please confirm your password
-              </Form.Message>
-            </Form.Field>
+                  <Form.Message className="field-invalid" match="valueMissing">
+                    Please confirm your password
+                  </Form.Message>
+                </Form.Field>
+              </div>
+            </div>
             <Form.Field name="gradient">
               <Form.Label className="data-[invalid]:label-invalid">
-                Insert Gradient{" "}
-                <span className="font-medium text-destructive">*</span>
+                Profile Gradient{" "}
               </Form.Label>
 
-              <InputComponent
+              <div className="mt-4 w-[1010px]">
+              <GradientChooserComponent
+                value={gradient == "" ? (userData!.profile_image ?? gradients[parseInt(userData!.id ?? "", 30) % gradients.length]) : gradient}
                 onChange={(value) => {
                   handleInput({ target: { name: "gradient", value } });
                 }}
-                value={gradient}
-                isForm
-                password={true}
-                required
-                placeholder="Insert Gradient"
-                className="w-full"
               />
-
-              <Form.Message className="field-invalid" match="valueMissing">
-                Please insert gradient
-              </Form.Message>
+              </div>
             </Form.Field>
           </div>
-          </div>
-          <div className="w-40">
-            <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full" type="submit">
-                Save
-              </Button>
-            </Form.Submit>
+
+          <div className="flex w-full justify-end">
+            <div className="w-32">
+              <Form.Submit asChild>
+                <Button className="mr-3 mt-6 w-full" type="submit">
+                  Save
+                </Button>
+              </Form.Submit>
+            </div>
           </div>
         </Form.Root>
       </div>
