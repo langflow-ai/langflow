@@ -185,6 +185,10 @@ def test_patch_reset_password(client, active_user, logged_in_headers):
         headers=logged_in_headers,
     )
     assert response.status_code == 200, response.json()
+    # Now we need to test if the new password works
+    login_data = {"username": active_user.username, "password": "newpassword"}
+    response = client.post("/api/v1/login", data=login_data)
+    assert response.status_code == 200
 
 
 def test_patch_user_wrong_id(client, active_user, logged_in_headers):

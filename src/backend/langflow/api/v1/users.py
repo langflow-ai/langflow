@@ -121,8 +121,8 @@ def reset_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user.password = get_password_hash(user_update.password)
+    new_password = get_password_hash(user_update.password)
+    user.password = new_password
     session.commit()
     session.refresh(user)
 
