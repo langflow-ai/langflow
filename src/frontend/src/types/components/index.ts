@@ -262,9 +262,10 @@ export type loginInputStateType = {
   password: string;
 };
 
-export type resetPasswordInputStateType = {
+export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
+  gradient: string;
 };
 
 export type UserInputType = {

@@ -6,6 +6,7 @@ import {
   APIObjectType,
   LoginType,
   Users,
+  changeUser,
   sendAllProps,
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
@@ -427,19 +428,6 @@ export async function addUser(user: UserInputType): Promise<Array<Users>> {
   return [];
 }
 
-export async function resetPassword(user_id: string, password: string): Promise<Array<Users>> {
-  try {
-    const res = await api.post(`${BASE_URL_API}users/${user_id}/reset-password`, {password});
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    console.log("Error:", error);
-    throw error;
-  }
-  return [];
-}
-
 export async function getUsersPage(
   skip: number,
   limit: number
@@ -470,7 +458,7 @@ export async function deleteUser(user_id: string) {
   }
 }
 
-export async function updateUser(user_id: string, user: Users) {
+export async function updateUser(user_id: string, user: changeUser) {
   try {
     const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
     if (res.status === 200) {
