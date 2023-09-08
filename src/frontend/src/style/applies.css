@@ -303,7 +303,7 @@
     @apply hover:text-accent-foreground hover:transition-all;
   }
   .generic-node-desc {
-    @apply h-full w-full py-5 text-foreground;
+    @apply h-full w-full  text-foreground;
   }
   .generic-node-desc-text {
     @apply w-full px-5 pb-3 text-sm text-muted-foreground;
