@@ -22,7 +22,7 @@ export default function DictAreaModal({
   const [dictObj, setDictObj] = useState(value);
 
   return (
-    <BaseModal size="medium" open={open} setOpen={setOpen}>
+    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_DICT_DIALOG_SUBTITLE}>
         <span className="pr-2">Edit Dictionary</span>
