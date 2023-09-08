@@ -63,7 +63,7 @@ export function AuthProvider({ children }): React.ReactElement {
             .then((user) => {
               setUserData(user);
               setLoading(false);
-              const isSuperUser = user.is_superuser;
+              const isSuperUser = user!.is_superuser;
               setIsAdmin(isSuperUser);
             })
             .catch((error) => {});
