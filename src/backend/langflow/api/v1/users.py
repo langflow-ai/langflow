@@ -98,7 +98,7 @@ def patch_user(
         raise HTTPException(
             status_code=403, detail="You don't have the permission to update this user"
         )
-    if user.password:
+    if user_update.password:
         raise HTTPException(
             status_code=400, detail="You can't change your password here"
         )
