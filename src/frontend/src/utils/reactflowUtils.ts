@@ -487,6 +487,37 @@ export function concatFlows(
   ReactFlowInstance.addEdges(edges);
 }
 
+export function validateSelection(
+  selection: OnSelectionChangeParams
+): Array<string> {
+  let errorsArray: Array<string> = [];
+  // check if there is more than one node
+  if (selection.nodes.length < 2) {
+    errorsArray.push("Please select more than one node");
+  }
+
+  //check if there are two or more nodes with free outputs
+  if (
+    selection.nodes.filter(
+      (n) => !selection.edges.some((e) => e.source === n.id)
+    ).length > 1
+  ) {
+    errorsArray.push("Please select only one node with free outputs");
+  }
+
+  // check if there is any node that does not have any connection
+  if (
+    selection.nodes.some(
+      (node) =>
+        !selection.edges.some((edge) => edge.target === node.id) &&
+        !selection.edges.some((edge) => edge.source === node.id)
+    )
+  ) {
+    errorsArray.push("Please select only nodes that are connected");
+  }
+  return errorsArray;
+}
+
 export function generateNodeFromFlow(flow: FlowType): NodeType {
   const { nodes } = flow.data!;
   const outputNode = _.cloneDeep(findLastNode(flow.data!));
