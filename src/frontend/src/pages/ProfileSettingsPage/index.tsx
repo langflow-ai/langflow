@@ -40,8 +40,8 @@ export default function ProfileSettingsPage(): JSX.Element {
       return;
     }
     try {
-      await resetPassword(userData!.id, { password });
-      await updateUser(userData!.id, { profile_image: gradient });
+      if(password !== "") await resetPassword(userData!.id, { password });
+      if(gradient !== "") await updateUser(userData!.id, { profile_image: gradient });
       if (gradient !== "") {
         let newUserData = cloneDeep(userData);
         newUserData!.profile_image = gradient;
@@ -50,7 +50,7 @@ export default function ProfileSettingsPage(): JSX.Element {
       }
       setSuccessData({ title: "Changes saved successfully!" });
     } catch (error) {
-      setErrorData({ title: "Error saving changes", list: [error as string] });
+      setErrorData({ title: "Error saving changes", list: [(error as any).response.data.detail] });
     }
   }
 
