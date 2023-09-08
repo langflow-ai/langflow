@@ -441,6 +441,8 @@ export default function Page({
                    [&>button]:border-b-border hover:[&>button]:bg-border"
                     ></Controls>
                   )}
+                  <SelectionMenu isVisible={selectionMenuVisible} nodes={lastSelection?.nodes}
+                  onClick={()=>{console.log('click')}}/>
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
