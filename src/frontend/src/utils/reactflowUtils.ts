@@ -653,3 +653,132 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
   };
   return newGroupNode;
 }
+
+export function connectedInputNodesOnHandle(
+  nodeId: string,
+  handleId: string,
+  { nodes, edges }: { nodes: NodeType[]; edges: Edge[] }
+) {
+  const connectedNodes: Array<{ name: string; id: string; isGroup: boolean }> =
+    [];
+  // return the nodes connected to the input handle of the node
+  const TargetEdges = edges.filter((e) => e.target === nodeId);
+  TargetEdges.forEach((edge) => {
+    if (edge.targetHandle === handleId) {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (sourceNode) {
+        if (sourceNode.type === "groupNode") {
+          let lastNode = findLastNode(sourceNode.data.node.flow.data);
+          while (lastNode && lastNode.type === "groupNode") {
+            lastNode = findLastNode(lastNode.data.node.flow.data);
+          }
+          if (lastNode) {
+            connectedNodes.push({
+              name: sourceNode.data.node.flow.name,
+              id: lastNode.id,
+              isGroup: true,
+            });
+          }
+        } else {
+          connectedNodes.push({
+            name: sourceNode.data.type,
+            id: sourceNode.id,
+            isGroup: false,
+          });
+        }
+      }
+    }
+  });
+  return connectedNodes;
+}
+
+export function ungroupNode(
+  groupNode:NodeDataType,
+  BaseFlow: ReactFlowJsonObject,
+) {
+  const {template} = groupNode.node
+  const {flow} = groupNode.node;
+  const gNodes: NodeType[] = flow.data.nodes;
+  const gEdges = flow.data.edges;
+  //redirect edges to correct proxy node
+  let updatedEdges: Edge[] = [];
+  BaseFlow.edges.forEach((edge) => {
+    let newEdge = _.cloneDeep(edge);
+    if (newEdge.target === groupNode.id) {
+      if (newEdge.targetHandle.split("|").length > 3) {
+        let type = newEdge.targetHandle.split("|")[0];
+        let field = newEdge.targetHandle.split("|")[4];
+        let proxy = newEdge.targetHandle.split("|")[3];
+        let node = gNodes.find((n) => n.id === proxy);
+        console.log(node);
+        if (node) {
+          newEdge.target = proxy;
+          if (node.type === "groupNode") {
+            newEdge.targetHandle =
+              type +
+              "|" +
+              field +
+              "|" +
+              proxy +
+              "|" +
+              node.data.node.template[field].proxy.id +
+              "|" +
+              node.data.node.template[field].proxy.field;
+          } else {
+            newEdge.targetHandle = type + "|" + field + "|" + proxy;
+          }
+          updatedEdges.push(newEdge);
+        }
+      }
+    }
+    if (newEdge.source === groupNode.id) {
+      const lastNode = _.cloneDeep(findLastNode(flow.data));
+      newEdge.source = lastNode.id;
+      let sourceHandle = newEdge.sourceHandle.split("|");
+      sourceHandle[1] = lastNode.id;
+      newEdge.sourceHandle = sourceHandle.join("|");
+      updatedEdges.push(newEdge);
+    }
+  });
+  Object.keys(template).forEach((key) => {
+    let { field, id } = template[key].proxy;
+    let nodeIndex = gNodes.findIndex((n) => n.id === id);
+    if (nodeIndex !== -1) {
+      let display_name: string;
+      let show = gNodes[nodeIndex].data.node.template[field].show;
+      let advanced = gNodes[nodeIndex].data.node.template[field].advanced;
+      if (gNodes[nodeIndex].data.node.template[field].display_name) {
+        display_name = gNodes[nodeIndex].data.node.template[field].display_name;
+      } else {
+        display_name = gNodes[nodeIndex].data.node.template[field].name;
+      }
+      gNodes[nodeIndex].data.node.template[field] = template[key];
+      gNodes[nodeIndex].data.node.template[field].show = show;
+      gNodes[nodeIndex].data.node.template[field].advanced = advanced;
+      gNodes[nodeIndex].data.node.template[field].display_name = display_name;
+    }
+  });
+
+  const nodes = [...BaseFlow.nodes.filter((n) => n.id !== groupNode.id), ...gNodes];
+  const edges = [
+    ...BaseFlow.edges.filter(
+      (e) => e.target !== groupNode.id && e.source !== groupNode.id
+    ),
+    ...gEdges,
+    ...updatedEdges,
+  ];
+  BaseFlow.nodes = nodes;
+  BaseFlow.edges = edges;
+}
+
+export function processFLow(FlowObject: ReactFlowJsonObject) {
+  let clonedFLow = _.cloneDeep(FlowObject);
+  clonedFLow.nodes.forEach((node: NodeType) => {
+    if (node.type === "groupNode") {
+      processFLow(node.data.node.flow.data);
+      ungroupNode(node.data, clonedFLow);
+    }
+  });
+  console.log(clonedFLow);
+  return clonedFLow;
+}
