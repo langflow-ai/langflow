@@ -42,6 +42,7 @@ import {
 import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import SelectionMenu from "../SelectionMenuComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
