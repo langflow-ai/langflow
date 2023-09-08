@@ -9,6 +9,7 @@ import React, {
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -25,14 +26,18 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
-import { convertArrayToObj, convertObjToArray, hasDuplicateKeys, isValidConnection } from "../../../../utils/reactflowUtils";
+import {
+  convertArrayToObj,
+  convertObjToArray,
+  hasDuplicateKeys,
+  isValidConnection,
+} from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
-import DictComponent from "../../../../components/dictComponent";
 
 export default function ParameterComponent({
   left,
@@ -95,7 +100,6 @@ export default function ParameterComponent({
     renderTooltips();
   };
 
-  
   const [obj, setObj] = useState({
     arr: ["test", 123456, false, null],
     boolean: false,
@@ -107,8 +111,23 @@ export default function ParameterComponent({
       k2: "123",
       k3: false,
     },
-    string: "string"
+    string: "string",
   });
+
+  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
+  const [dict, setDict] = useState({
+    key1: "value1",
+    key2: "value2",
+    key3: "value3",
+    key4: "value4",
+    key5: "value5",
+    key6: "value6",
+  } as {});
+  const [dictArr, setDictArr] = useState([] as string[]);
+
+  useEffect(() => {
+    setDictArr(convertObjToArray(dict));
+  }, [dict]);
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -225,8 +244,7 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
-        )
-        : left === true && type === "dict" ? (
+        ) : left === true && type === "nested_dict" ? (
           <div className="mt-2 w-full">
             <DictComponent
               disabled={disabled}
@@ -237,8 +255,24 @@ export default function ParameterComponent({
               }}
             />
           </div>
-        )
-        : (
+        ) : left === true && type === "dict" ? (
+          <div className="mt-2 w-full">
+            <KeypairListComponent
+              disabled={disabled}
+              editNode={false}
+              value={dictArr}
+              duplicateKey={errorDuplicateKey}
+              onChange={(newValue: string[]) => {
+                setErrorDuplicateKey(hasDuplicateKeys(newValue));
+                if (hasDuplicateKeys(newValue)) {
+                  setDictArr(newValue);
+                } else {
+                  setDict(convertArrayToObj(newValue));
+                }
+              }}
+            />
+          </div>
+        ) : (
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
             delayDuration={0}

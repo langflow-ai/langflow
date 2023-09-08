@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
+import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -34,7 +35,6 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import DictComponent from "../../components/dictComponent";
 
 const EditNodeModal = forwardRef(
   (
@@ -85,7 +85,6 @@ const EditNodeModal = forwardRef(
       setMyData(data); // reset data to what it is on node when opening modal
     }, [modalOpen]);
 
-
     const [obj, setObj] = useState({
       arr: ["test", 123456, false, null],
       boolean: false,
@@ -97,9 +96,23 @@ const EditNodeModal = forwardRef(
         k2: "123",
         k3: false,
       },
-      string: "string"
+      string: "string",
     });
 
+    const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
+    const [dict, setDict] = useState({
+      key1: "value1",
+      key2: "value2",
+      key3: "value3",
+      key4: "value4",
+      key5: "value5",
+      key6: "value6",
+    } as {});
+    const [dictArr, setDictArr] = useState([] as string[]);
+
+    useEffect(() => {
+      setDictArr(convertObjToArray(dict));
+    }, [dict]);
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
@@ -189,21 +202,41 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
-                                  )
-                                  : myData.node?.template[templateParam]
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "nested_dict" ? (
+                                    <div className="mt-2 w-full">
+                                      <DictComponent
+                                        disabled={disabled}
+                                        editNode={true}
+                                        value={obj}
+                                        onChange={(newValue) => {
+                                          setObj(newValue);
+                                        }}
+                                      />
+                                    </div>
+                                  ) : myData.node?.template[templateParam]
                                       .type === "dict" ? (
                                     <div className="mt-2 w-full">
-                                        <DictComponent
-                                          disabled={disabled}
-                                          editNode={false}
-                                          value={obj}
-                                          onChange={(newValue) => {
-                                            setObj(newValue);
-                                          }}
-                                        />
+                                      <KeypairListComponent
+                                        disabled={disabled}
+                                        editNode={true}
+                                        value={dictArr}
+                                        duplicateKey={errorDuplicateKey}
+                                        onChange={(newValue: string[]) => {
+                                          setErrorDuplicateKey(
+                                            hasDuplicateKeys(newValue)
+                                          );
+                                          if (hasDuplicateKeys(newValue)) {
+                                            setDictArr(newValue);
+                                          } else {
+                                            setDict(
+                                              convertArrayToObj(newValue)
+                                            );
+                                          }
+                                        }}
+                                      />
                                     </div>
-                                  )
-                                   : myData.node.template[templateParam]
+                                  ) : myData.node.template[templateParam]
                                       .multiline ? (
                                     <TextAreaComponent
                                       disabled={disabled}
