@@ -10,8 +10,8 @@ export default function FloatComponent({
   editNode = false,
 }: FloatComponentType): JSX.Element {
   const step = 0.1;
-  const min = 0;
-  const max = 1;
+  const min = -2;
+  const max = +2;
 
   // Clear component state
   useEffect(() => {
@@ -27,10 +27,10 @@ export default function FloatComponent({
         step={step}
         min={min}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
-          if (event.target.value < min.toString()) {
+          if (Number(event.target.value) < min) {
             event.target.value = min.toString();
           }
-          if (event.target.value > max.toString()) {
+          if (Number(event.target.value) > max) {
             event.target.value = max.toString();
           }
         }}
@@ -39,7 +39,7 @@ export default function FloatComponent({
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
         placeholder={
-          editNode ? "Number 0 to 1" : "Type a number from zero to one"
+          editNode ? "Number -2 to 2" : "Type a number from minus two to two"
         }
         onChange={(event) => {
           onChange(event.target.value);
