@@ -11,7 +11,7 @@ export default function FloatComponent({
 }: FloatComponentType): JSX.Element {
   const step = 0.1;
   const min = -2;
-  const max = +2;
+  const max = 2;
 
   // Clear component state
   useEffect(() => {
