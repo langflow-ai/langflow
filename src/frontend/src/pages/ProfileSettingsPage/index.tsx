@@ -4,20 +4,20 @@ import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
-import { CONTROL_RESET_PASSWORD_STATE } from "../../constants/constants";
+import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { resetPassword } from "../../controllers/API";
+import { updateUser } from "../../controllers/API";
 import {
   inputHandlerEventType,
-  resetPasswordInputStateType,
+  patchUserInputStateType,
 } from "../../types/components";
 export default function ProfileSettingsPage(): JSX.Element {
   const { setTabId } = useContext(TabsContext);
 
-  const [inputState, setInputState] = useState<resetPasswordInputStateType>(
-    CONTROL_RESET_PASSWORD_STATE
+  const [inputState, setInputState] = useState<patchUserInputStateType>(
+    CONTROL_PATCH_USER_STATE
   );
 
   // set null id
@@ -26,9 +26,9 @@ export default function ProfileSettingsPage(): JSX.Element {
   }, []);
   const { setErrorData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
-  const { password, cnfPassword } = inputState;
+  const { password, cnfPassword, gradient } = inputState;
 
-  function changePassword() {
+  function handlePatchUser() {
     if (password !== cnfPassword) {
       setErrorData({
         title: "Error changing password",
@@ -36,7 +36,8 @@ export default function ProfileSettingsPage(): JSX.Element {
       });
       return;
     }
-    resetPassword(userData!.id, password);
+
+    updateUser(userData!.id, {password, profile_image: gradient});
   }
 
   function handleInput({
@@ -62,7 +63,7 @@ export default function ProfileSettingsPage(): JSX.Element {
         </span>
         <Form.Root
           onSubmit={(event) => {
-            changePassword();
+            handlePatchUser();
             const data = Object.fromEntries(new FormData(event.currentTarget));
             event.preventDefault();
           }}
@@ -70,7 +71,7 @@ export default function ProfileSettingsPage(): JSX.Element {
         >
           <div className="flex gap-4">
           <div className="mb-3 w-96">
-            <Form.Field name="username">
+            <Form.Field name="password">
               <Form.Label className="data-[invalid]:label-invalid">
                 Password <span className="font-medium text-destructive">*</span>
               </Form.Label>
@@ -95,7 +96,7 @@ export default function ProfileSettingsPage(): JSX.Element {
             </Form.Field>
           </div>
           <div className="mb-3 w-96">
-            <Form.Field name="password">
+            <Form.Field name="cnfPassword">
               <Form.Label className="data-[invalid]:label-invalid">
                 Confirm Password{" "}
                 <span className="font-medium text-destructive">*</span>
@@ -117,12 +118,34 @@ export default function ProfileSettingsPage(): JSX.Element {
                 Please confirm your password
               </Form.Message>
             </Form.Field>
+            <Form.Field name="gradient">
+              <Form.Label className="data-[invalid]:label-invalid">
+                Insert Gradient{" "}
+                <span className="font-medium text-destructive">*</span>
+              </Form.Label>
+
+              <InputComponent
+                onChange={(value) => {
+                  handleInput({ target: { name: "gradient", value } });
+                }}
+                value={gradient}
+                isForm
+                password={true}
+                required
+                placeholder="Insert Gradient"
+                className="w-full"
+              />
+
+              <Form.Message className="field-invalid" match="valueMissing">
+                Please insert gradient
+              </Form.Message>
+            </Form.Field>
           </div>
           </div>
           <div className="w-40">
             <Form.Submit asChild>
               <Button className="mr-3 mt-6 w-full" type="submit">
-                Reset Password
+                Save
               </Button>
             </Form.Submit>
           </div>

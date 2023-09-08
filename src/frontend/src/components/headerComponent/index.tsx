@@ -140,7 +140,7 @@ export default function Header(): JSX.Element {
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
                       gradients[
-                        parseInt(userData?.id ?? "", 10) % gradients.length
+                        parseInt(userData?.id ?? "", 30) % gradients.length
                       ]
                     }
                   />

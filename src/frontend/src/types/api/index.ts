@@ -78,6 +78,14 @@ export type LoginAuthType = {
   token_type?: string;
 };
 
+export type changeUser = {
+  username?: string;
+  is_active?: boolean;
+  is_superuser?: boolean;
+  password?: string;
+  profile_image?: string;
+}
+
 export type Users = {
   id: string;
   username: string;
