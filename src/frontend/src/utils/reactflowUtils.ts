@@ -9,7 +9,7 @@ import {
   XYPosition,
 } from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
-import { APITemplateType } from "../types/api";
+import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
   FlowType,
   NodeType,
@@ -537,6 +537,82 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     }
   });
   return template;
+}
+// TODO UPDATE TO NEW HANDLE FORMAT
+export function mergeNodeTemplates({
+  nodes,
+  edges,
+}: {
+  nodes: NodeType[];
+  edges: Edge[];
+}): APITemplateType {
+  /* this function receives a flow and iterate trhow each node
+		and merge the templates with only the visible fields
+		if there are two keys with the same name in the flow, we will update the display name of each one
+		to show from which node it came from
+	*/
+  let template: APITemplateType = {};
+  nodes.forEach((node) => {
+    let nodeTemplate = _.cloneDeep(node.data.node!.template);
+    Object.keys(nodeTemplate)
+      .filter((field_name) => field_name.charAt(0) !== "_")
+      .forEach((key) => {
+        if (
+          nodeTemplate[key].show &&
+          !isHandleConnected(edges, key, nodeTemplate[key], node.id)
+        ) {
+          template[key + "_" + node.id] = nodeTemplate[key];
+          template[key + "_" + node.id].proxy = { id: node.id, field: key };
+          if (node.type === "groupNode") {
+            template[key + "_" + node.id].display_name =
+              node.data.node!.flow!.name + " - " + nodeTemplate[key].name;
+          } else {
+            template[key + "_" + node.id].display_name =
+              node.data.type + " - " + nodeTemplate[key].name;
+          }
+        }
+      });
+  });
+  return template;
+}
+// TODO UPDATE TO NEW HANDLE FORMAT
+function isHandleConnected(
+  edges: Edge[],
+  key: string,
+  field: TemplateVariableType,
+  nodeId: string
+) {
+  /*
+		this function receives a flow and a handleId and check if there is a connection with this handle
+	*/
+  if (field.proxy) {
+    if (
+      edges.some(
+        (e) =>
+          e.targetHandle ===
+          field.type +
+            "|" +
+            key +
+            "|" +
+            nodeId +
+            "|" +
+            field.proxy.id +
+            "|" +
+            field.proxy.field
+      )
+    ) {
+      return true;
+    }
+  } else {
+    if (
+      edges.some(
+        (e) => e.targetHandle === field.type + "|" + key + "|" + nodeId
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function generateNodeTemplate(Flow: FlowType) {
