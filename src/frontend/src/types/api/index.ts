@@ -86,6 +86,11 @@ export type changeUser = {
   profile_image?: string;
 }
 
+export type resetPasswordType = {
+  password?: string;
+  profile_image?: string;
+}
+
 export type Users = {
   id: string;
   username: string;
