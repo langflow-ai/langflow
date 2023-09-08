@@ -464,8 +464,6 @@ export async function updateUser(user_id: string, user: changeUser) {
     const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
     if (res.status === 200) {
       return res.data;
-    } else {
-      throw new Error(res.data.toString());
     }
   } catch (error) {
     console.log("Error:", error);
@@ -478,8 +476,6 @@ export async function resetPassword(user_id: string, user: resetPasswordType) {
     const res = await api.patch(`${BASE_URL_API}users/${user_id}/reset-password`, user);
     if (res.status === 200) {
       return res.data;
-    } else {
-      throw new Error(res.data.toString());
     }
   } catch (error) {
     console.log("Error:", error);
