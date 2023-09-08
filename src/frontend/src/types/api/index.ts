@@ -5,7 +5,6 @@ export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
 export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
 export type APITemplateType = {
-  variable: TemplateVariableType;
   [key: string]: TemplateVariableType;
 };
 export type APIClassType = {
