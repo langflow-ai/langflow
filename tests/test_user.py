@@ -163,6 +163,14 @@ def test_patch_user(client, active_user, logged_in_headers):
         f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
     )
     assert response.status_code == 304, response.json()
+    update_data = UserUpdate(
+        profile_image="new_image",
+    )
+
+    response = client.patch(
+        f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
+    )
+    assert response.status_code == 200, response.json()
 
 
 def test_patch_reset_password(client, active_user, logged_in_headers):
