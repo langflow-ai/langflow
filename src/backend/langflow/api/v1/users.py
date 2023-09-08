@@ -97,6 +97,10 @@ def patch_user(
         raise HTTPException(
             status_code=403, detail="You don't have the permission to update this user"
         )
+    if user.password:
+        raise HTTPException(
+            status_code=400, detail="You can't change your password here"
+        )
 
     if user_db := get_user_by_id(session, user_id):
         return update_user(user_db, user_update, session)
@@ -122,6 +126,10 @@ def reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     new_password = get_password_hash(user_update.password)
+    if new_password == user.password:
+        raise HTTPException(
+            status_code=400, detail="You can't use your current password"
+        )
     user.password = new_password
     session.commit()
     session.refresh(user)
