@@ -7,6 +7,7 @@ import {
   LoginType,
   Users,
   changeUser,
+  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
@@ -461,6 +462,20 @@ export async function deleteUser(user_id: string) {
 export async function updateUser(user_id: string, user: changeUser) {
   try {
     const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
+    if (res.status === 200) {
+      return res.data;
+    } else {
+      throw new Error(res.data.toString());
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function resetPassword(user_id: string, user: resetPasswordType) {
+  try {
+    const res = await api.patch(`${BASE_URL_API}users/${user_id}/reset-password`, user);
     if (res.status === 200) {
       return res.data;
     } else {

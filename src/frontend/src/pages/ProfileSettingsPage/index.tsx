@@ -10,7 +10,7 @@ import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { updateUser } from "../../controllers/API";
+import { resetPassword, updateUser } from "../../controllers/API";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
@@ -31,7 +31,7 @@ export default function ProfileSettingsPage(): JSX.Element {
   const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
-  function handlePatchUser() {
+  async function handlePatchUser() {
     if (password !== cnfPassword) {
       setErrorData({
         title: "Error changing password",
@@ -40,17 +40,15 @@ export default function ProfileSettingsPage(): JSX.Element {
       return;
     }
     try {
-      updateUser(userData!.id, { password, profile_image: gradient }).then(
-        () => {
-          setSuccessData({ title: "Changes saved successfully!" });
-          if (gradient !== "") {
-            let newUserData = cloneDeep(userData);
-            newUserData!.profile_image = gradient;
+      await resetPassword(userData!.id, { password });
+      await updateUser(userData!.id, { profile_image: gradient });
+      if (gradient !== "") {
+        let newUserData = cloneDeep(userData);
+        newUserData!.profile_image = gradient;
 
-            setUserData(newUserData);
-          }
-        }
-      );
+        setUserData(newUserData);
+      }
+      setSuccessData({ title: "Changes saved successfully!" });
     } catch (error) {
       setErrorData({ title: "Error saving changes", list: [error as string] });
     }
