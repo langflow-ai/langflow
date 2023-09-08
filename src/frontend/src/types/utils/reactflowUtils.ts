@@ -21,3 +21,8 @@ export type updateEdgesHandleIdsType = {
 };
 
 export type generateFlowType = { newFlow: FlowType; removedEdges: Edge[] }
+
+export type findLastNodeType = {
+  nodes: NodeType[];
+  edges: Edge[];
+}

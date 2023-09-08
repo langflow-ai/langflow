@@ -6,6 +6,7 @@ import {
   OnSelectionChangeParams,
   ReactFlowInstance,
   ReactFlowJsonObject,
+  XYPosition,
 } from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
@@ -17,6 +18,8 @@ import {
 } from "../types/flow";
 import {
   cleanEdgesType,
+  findLastNodeType,
+  generateFlowType,
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
@@ -409,7 +412,7 @@ export function generateFlow(
   selection: OnSelectionChangeParams,
   reactFlowInstance: ReactFlowInstance,
   name: string
-): { newFlow: FlowType; removedEdges: Edge[] } {
+): generateFlowType {
   const newFlowData = reactFlowInstance.toObject();
 
   /*	remove edges that are not connected to selected nodes on both ends
@@ -438,4 +441,39 @@ export function generateFlow(
       (edge) => !newFlowData.edges.includes(edge)
     ),
   };
+}
+
+export function filterFlow(
+  selection: OnSelectionChangeParams,
+  reactFlowInstance: ReactFlowInstance
+) {
+  reactFlowInstance.setNodes((nodes) =>
+    nodes.filter((node) => !selection.nodes.includes(node))
+  );
+  reactFlowInstance.setEdges((edges) =>
+    edges.filter((edge) => !selection.edges.includes(edge))
+  );
+}
+
+export function findLastNode({
+  nodes,
+  edges,
+}: findLastNodeType) {
+  /*
+		this function receives a flow and return the last node
+	*/
+  let lastNode = nodes.find((n) => !edges.some((e) => e.source === n.id));
+  return lastNode;
+}
+
+export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
+  const middlePoint = getMiddlePoint(flow.data!.nodes);
+  let deltaPosition = {
+    x: NewPosition.x - middlePoint.x,
+    y: NewPosition.y - middlePoint.y,
+  };
+  flow.data!.nodes.forEach((node) => {
+    node.position.x += deltaPosition.x;
+    node.position.y += deltaPosition.y;
+  });
 }
