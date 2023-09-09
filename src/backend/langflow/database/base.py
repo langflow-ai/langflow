@@ -39,6 +39,13 @@ class Engine:
         cls._instance = None
         cls.create()
 
+    @classmethod
+    def teardown(cls):
+        logger.debug("Tearing down database engine")
+        if cls._instance is not None:
+            cls._instance.dispose()
+        cls._instance = None
+
 
 def create_db_and_tables():
     logger.debug("Creating database and tables")
