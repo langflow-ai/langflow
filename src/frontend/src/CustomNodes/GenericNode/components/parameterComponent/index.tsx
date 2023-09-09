@@ -16,6 +16,7 @@ import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
+import OutputComponent from "../../../../components/outputComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
@@ -45,6 +46,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
+  output,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -280,6 +282,14 @@ export default function ParameterComponent({
             <FloatComponent
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
+              onChange={handleOnNewValue}
+            />
+          </div>
+        ) : left === true && type === "str" ? (
+          <div className="mt-2 w-full">
+            <OutputComponent
+              disabled={disabled}
+              value={output}
               onChange={handleOnNewValue}
             />
           </div>

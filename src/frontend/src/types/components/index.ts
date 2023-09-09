@@ -46,9 +46,17 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  output?: validationStatusType | null;
 };
 export type InputListComponentType = {
   value: string[];
+  onChange: (value: string[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+};
+
+export type OutputComponentType = {
+  value?: validationStatusType | null;
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
@@ -108,18 +116,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {
@@ -421,6 +429,12 @@ export type codeAreaModalPropsType = {
   setNodeClass: (Class: APIClassType) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
+};
+
+export type OutputModalType = {
+  setValue: (value: string) => void;
+  value?: validationStatusType | null;
+  children: ReactNode;
 };
 
 export type chatMessagePropsType = {

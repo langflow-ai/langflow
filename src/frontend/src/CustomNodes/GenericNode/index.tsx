@@ -216,6 +216,7 @@ export default function GenericNode({
                       optionalHandle={
                         data.node?.template[templateField].input_types
                       }
+                      output={validationStatus}
                     />
                   ) : (
                     <></>
@@ -244,6 +245,7 @@ export default function GenericNode({
               id={[data.type, data.id, ...data.node!.base_classes].join("|")}
               type={data.node?.base_classes.join("|")}
               left={false}
+              output={validationStatus}
             />
           </>
         </div>
