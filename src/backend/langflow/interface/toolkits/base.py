@@ -6,7 +6,7 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
 from langflow.services.utils import get_settings_manager
 
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class
 
 
