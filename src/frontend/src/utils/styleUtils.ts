@@ -302,6 +302,6 @@ export const nodeIconsLucide: iconsType = {
   UserCog2,
   Key,
   Unplug,
-  Group
+  Group,
   ChevronUp,
 };
