@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -302,4 +303,5 @@ export const nodeIconsLucide: iconsType = {
   Key,
   Unplug,
   Group
+  ChevronUp,
 };

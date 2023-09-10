@@ -7,7 +7,7 @@ from langflow.services.cache.manager import Subject
 from langflow.services.chat.utils import process_graph
 from langflow.interface.utils import pil_to_base64
 from langflow.services.schema import ServiceType
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 import asyncio
@@ -92,7 +92,6 @@ class ChatManager(Service):
             )
 
     async def connect(self, client_id: str, websocket: WebSocket):
-        await websocket.accept()
         self.active_connections[client_id] = websocket
 
     def disconnect(self, client_id: str):
