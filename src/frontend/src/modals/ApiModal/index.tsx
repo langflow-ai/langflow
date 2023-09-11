@@ -33,11 +33,9 @@ const ApiModal = forwardRef(
     {
       flow,
       children,
-      disable,
     }: {
       flow: FlowType;
       children: ReactNode;
-      disable: boolean;
     },
     ref
   ) => {
@@ -202,7 +200,7 @@ const ApiModal = forwardRef(
 
     return (
       <BaseModal open={open} setOpen={setOpen}>
-        <BaseModal.Trigger disable={disable}>{children}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
           <IconComponent

@@ -26,7 +26,7 @@ const Content: React.FC<ContentProps> = ({ children }) => {
 const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
   return (
     <DialogTrigger
-      className={"w-full " + (disable ? "button-disable" : "")}
+      className={asChild ? "" : "w-full"}
       hidden={children ? false : true}
       asChild={asChild}
     >

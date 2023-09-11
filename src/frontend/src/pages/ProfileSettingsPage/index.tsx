@@ -48,6 +48,8 @@ export default function ProfileSettingsPage(): JSX.Element {
 
         setUserData(newUserData);
       }
+      handleInput({ target: { name: "password", value: "" } });
+      handleInput({ target: { name: "cnfPassword", value: "" } });
       setSuccessData({ title: "Changes saved successfully!" });
     } catch (error) {
       setErrorData({ title: "Error saving changes", list: [(error as any).response.data.detail] });
@@ -90,8 +92,6 @@ export default function ProfileSettingsPage(): JSX.Element {
                   <Form.Label className="data-[invalid]:label-invalid">
                     Password{" "}
                   </Form.Label>
-
-                  <Form.Control asChild>
                     <InputComponent
                       onChange={(value) => {
                         handleInput({ target: { name: "password", value } });
@@ -102,8 +102,6 @@ export default function ProfileSettingsPage(): JSX.Element {
                       placeholder="Password"
                       className="w-full"
                     />
-                  </Form.Control>
-
                   <Form.Message match="valueMissing" className="field-invalid">
                     Please enter your password
                   </Form.Message>
