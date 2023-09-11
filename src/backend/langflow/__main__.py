@@ -22,7 +22,7 @@ app = typer.Typer()
 
 def update_settings(
     config: str,
-    cache: str,
+    cache: Optional[str] = None,
     dev: bool = False,
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
