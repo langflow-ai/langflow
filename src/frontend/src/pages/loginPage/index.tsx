@@ -54,7 +54,7 @@ export default function LoginPage(): JSX.Element {
       setTimeout(() => {
         getLoggedUser()
           .then((user) => {
-            const isSuperUser = user.is_superuser;
+            const isSuperUser = user!.is_superuser;
             setIsAdmin(isSuperUser);
             setUserData(user);
           })

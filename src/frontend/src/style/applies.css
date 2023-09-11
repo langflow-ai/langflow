@@ -212,6 +212,10 @@
     @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
   }
 
+  .admin-page-panel {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+  }
+
   .main-page-nav-arrangement {
     @apply flex-max-width justify-between px-6 py-12 pb-2;
   }
@@ -226,6 +230,10 @@
 
   .main-page-description-text {
     @apply flex w-[60%] px-6 pb-14 text-muted-foreground;
+  }
+
+  .admin-page-description-text {
+    @apply flex w-[80%] px-6 pb-8 text-muted-foreground;
   }
 
   .main-page-flows-display {

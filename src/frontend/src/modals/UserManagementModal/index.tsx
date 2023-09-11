@@ -23,6 +23,7 @@ export default function UserManagementModal({
   data,
   index,
   onConfirm,
+  asChild,
 }: UserManagementType) {
   const Icon: any = nodeIconsLucide[icon];
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -60,7 +61,7 @@ export default function UserManagementModal({
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
         <Icon
