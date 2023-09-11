@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE: str = "InMemoryCache"
+    CACHE: Optional[str] = None
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
 
