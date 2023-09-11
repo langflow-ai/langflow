@@ -166,7 +166,8 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/user", json=user_data.dict())
+    response = client.post("/api/v1/users", json=user_data.dict())
+    assert response.status_code == 201
     return response.json()
 
 

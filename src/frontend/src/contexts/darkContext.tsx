@@ -28,9 +28,7 @@ export function DarkProvider({ children }) {
     fetchStars();
     const min = 0;
     const max = 30;
-    setGradientIndex(
-      Math.floor(Math.random() * (max - min + 1)) + min
-    )
+    setGradientIndex(Math.floor(Math.random() * (max - min + 1)) + min);
   }, []);
 
   useEffect(() => {

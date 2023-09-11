@@ -15,6 +15,7 @@ class User(SQLModelSerializable, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
+    profile_image: Optional[str] = Field(default=None)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
     create_at: datetime = Field(default_factory=datetime.utcnow)
@@ -32,6 +33,7 @@ class UserCreate(SQLModel):
 class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
+    profile_image: Optional[str] = Field()
     is_active: bool = Field()
     is_superuser: bool = Field()
     create_at: datetime = Field()
@@ -40,7 +42,8 @@ class UserRead(SQLModel):
 
 
 class UserUpdate(SQLModel):
-    username: Optional[str] = Field()
+    profile_image: Optional[str] = Field()
+    password: Optional[str] = Field()
     is_active: Optional[bool] = Field()
     is_superuser: Optional[bool] = Field()
     last_login_at: Optional[datetime] = Field()
