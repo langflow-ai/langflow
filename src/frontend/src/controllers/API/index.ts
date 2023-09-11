@@ -395,7 +395,9 @@ export async function autoLogin() {
 
 export async function renewAccessToken(token: string) {
   try {
-    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    if (token) {
+      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    }
   } catch (error) {
     console.log("Error:", error);
     throw error;
@@ -473,7 +475,10 @@ export async function updateUser(user_id: string, user: changeUser) {
 
 export async function resetPassword(user_id: string, user: resetPasswordType) {
   try {
-    const res = await api.patch(`${BASE_URL_API}users/${user_id}/reset-password`, user);
+    const res = await api.patch(
+      `${BASE_URL_API}users/${user_id}/reset-password`,
+      user
+    );
     if (res.status === 200) {
       return res.data;
     }

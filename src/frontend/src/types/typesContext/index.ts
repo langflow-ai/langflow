@@ -48,6 +48,8 @@ export type darkContextType = {
   setDark: (newState: {}) => void;
   stars: number;
   setStars: (stars: number) => void;
+  gradientIndex: number;
+  setGradientIndex: (index: number) => void;
 };
 
 export type locationContextType = {
