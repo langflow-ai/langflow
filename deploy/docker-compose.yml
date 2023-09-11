@@ -3,6 +3,8 @@ version: "3.8"
 services:
   proxy:
     image: traefik:v3.0
+    env_file:
+      - .env
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
       - default
@@ -71,9 +73,8 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
-    # user: your-non-root-user # Make sure your Dockerfile creates this user
-    # ports:
-    #   - 7860
+    env_file:
+      - .env
     volumes:
       - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
@@ -99,6 +100,8 @@ services:
           - node.labels.${STACK_NAME?Variable not set}.app-db-data == true
     healthcheck:
       test: "exit 0"
+    env_file:
+      - .env
 
   pgadmin:
     image: dpage/pgadmin4
@@ -107,6 +110,8 @@ services:
       - default
     volumes:
       - ./pgadmin:/var/lib/pgadmin
+    env_file:
+      - .env
     deploy:
       labels:
         - traefik.enable=true
@@ -123,6 +128,8 @@ services:
 
   queue:
     image: redis:6.2.5
+    env_file:
+      - .env
     # ports:
     #   - 6379:6379
     healthcheck:
@@ -130,6 +137,8 @@ services:
 
   celeryworker:
     image: "ogabrielluiz/langflow:latest"
+    env_file:
+      - .env
     build:
       context: ../
       dockerfile: base.Dockerfile
@@ -141,6 +150,8 @@ services:
 
   flower:
     image: "ogabrielluiz/langflow:latest"
+    env_file:
+      - .env
     networks:
       - default
     build:
@@ -166,6 +177,8 @@ services:
 
   frontend:
     image: "ogabrielluiz/langflow_frontend:latest"
+    env_file:
+      - .env
     # user: your-non-root-user
     build:
       context: ../src/frontend
@@ -182,6 +195,8 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.37.9
+    env_file:
+      - .env
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
@@ -199,6 +214,8 @@ services:
 
   grafana:
     image: grafana/grafana:8.2.6
+    env_file:
+      - .env
     # ports:
     #   - 3000:3000
     volumes:
