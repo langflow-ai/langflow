@@ -421,14 +421,14 @@ export async function getLoggedUser(): Promise<Users | null> {
 export async function addUser(user: UserInputType): Promise<Array<Users>> {
   try {
     const res = await api.post(`${BASE_URL_API}users/`, user);
-    if (res.status === 200) {
-      return res.data;
+    if (res.status !== 201) {
+      throw new Error(res.data.detail);
     }
+    return res.data;
   } catch (error) {
     console.log("Error:", error);
     throw error;
   }
-  return [];
 }
 
 export async function getUsersPage(
