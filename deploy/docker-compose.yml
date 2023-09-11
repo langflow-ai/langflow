@@ -140,12 +140,16 @@ services:
       replicas: 1
 
   flower:
-    image: mher/flower
+    image: "ogabrielluiz/langflow:latest"
     networks:
       - default
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
     environment:
-      - CELERY_BROKER_URL='redis://$${LANGFLOW_REDIS_PASSWORD:+default:$${LANGFLOW_REDIS_PASSWORD}@}$${LANGFLOW_REDIS_HOST}:$${LANGFLOW_REDIS_PORT}/$${LANGFLOW_REDIS_DB}'
       - FLOWER_PORT=5555
+
+    command: /bin/sh -c "celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
     deploy:
       labels:
         - traefik.enable=true
