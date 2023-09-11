@@ -28,8 +28,6 @@ class User(SQLModelSerializable, table=True):
 class UserCreate(SQLModel):
     username: str = Field()
     password: str = Field()
-    is_active: bool = Field(default=False)
-    is_superuser: bool = Field(default=False)
 
 
 class UserRead(SQLModel):
