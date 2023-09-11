@@ -38,6 +38,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
+          prerelease: true
           tag: v${{ steps.check-version.outputs.version }}
           commit: main
       - name: Publish to PyPI
