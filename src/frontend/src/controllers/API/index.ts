@@ -393,7 +393,9 @@ export async function autoLogin() {
 
 export async function renewAccessToken(token: string) {
   try {
-    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    if (token) {
+      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    }
   } catch (error) {
     console.log("Error:", error);
     throw error;
