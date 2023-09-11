@@ -36,8 +36,11 @@ import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
 import { TabsState } from "../../../../types/tabs";
 import {
+  generateFlow,
+  generateNodeFromFlow,
   isValidConnection,
   scapeJSONParse,
+  validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
@@ -442,7 +445,29 @@ export default function Page({
                     ></Controls>
                   )}
                   <SelectionMenu isVisible={selectionMenuVisible} nodes={lastSelection?.nodes}
-                  onClick={()=>{console.log('click')}}/>
+                  onClick={()=>{
+                    if(validateSelection(lastSelection!).length===0){
+                      const {newFlow} = generateFlow(lastSelection!,reactFlowInstance!,"new Component");
+                      const newGroupNode = generateNodeFromFlow(newFlow)
+                      setNodes((oldNodes)=>[...oldNodes.filter((oldNodes)=>!lastSelection?.nodes.some((selectionNode)=>selectionNode.id===oldNodes.id)),newGroupNode])
+                      setEdges((oldEdges) =>
+                      oldEdges.filter(
+                        (oldEdge) =>
+                          !lastSelection!.nodes.some(
+                            (selectionNode) =>
+                              selectionNode.id === oldEdge.target ||
+                              selectionNode.id === oldEdge.source
+                          )
+                      )
+                    );
+                    }
+                    else{
+                      setErrorData({
+                        title: "Invalid selection",
+                        list: validateSelection(lastSelection!),
+                      });
+                    }
+                  }}/>
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
