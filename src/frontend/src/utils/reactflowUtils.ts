@@ -668,13 +668,13 @@ export function connectedInputNodesOnHandle(
       const sourceNode = nodes.find((n) => n.id === edge.source);
       if (sourceNode) {
         if (sourceNode.type === "groupNode") {
-          let lastNode = findLastNode(sourceNode.data.node.flow.data);
+          let lastNode = findLastNode(sourceNode.data.node!.flow!.data!);
           while (lastNode && lastNode.type === "groupNode") {
-            lastNode = findLastNode(lastNode.data.node.flow.data);
+            lastNode = findLastNode(lastNode.data.node!.flow!.data!);
           }
           if (lastNode) {
             connectedNodes.push({
-              name: sourceNode.data.node.flow.name,
+              name: sourceNode.data.node!.flow!.name,
               id: lastNode.id,
               isGroup: true,
             });
