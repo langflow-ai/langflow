@@ -48,9 +48,12 @@ class Graph:
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc
 
+    def get_vertex_by_id(self, vertex_id: str) -> "Vertex":
+        return next((node for node in self.vertices if node.id == vertex_id), None)
+
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
-        self.nodes = self._build_vertices()
+        self.vertices = self._build_vertices()
         self.edges = self._build_edges()
         for edge in self.edges:
             edge.source.add_edge(edge)
@@ -65,21 +68,21 @@ class Graph:
     def _build_node_params(self) -> None:
         """Identifies and handles the LLM node within the graph."""
         llm_node = None
-        for node in self.nodes:
+        for node in self.vertices:
             node._build_params()
             if isinstance(node, LLMVertex):
                 llm_node = node
 
         if llm_node:
-            for node in self.nodes:
+            for node in self.vertices:
                 if isinstance(node, ToolkitVertex):
                     node.params["llm"] = llm_node
 
     def _validate_nodes(self) -> None:
         """Check that all nodes have edges"""
-        if len(self.nodes) == 1:
+        if len(self.vertices) == 1:
             return
-        for node in self.nodes:
+        for node in self.vertices:
             if not self._validate_node(node):
                 raise ValueError(
                     f"{node.vertex_type} is not connected to any other components"
@@ -92,7 +95,7 @@ class Graph:
 
     def get_node(self, node_id: str) -> Union[None, Vertex]:
         """Returns a node by id."""
-        return next((node for node in self.nodes if node.id == node_id), None)
+        return next((node for node in self.vertices if node.id == node_id), None)
 
     def get_nodes_with_target(self, node: Vertex) -> List[Vertex]:
         """Returns the nodes connected to a node."""
@@ -120,7 +123,7 @@ class Graph:
             ValueError: If the graph contains a cycle.
         """
         # States: 0 = unvisited, 1 = visiting, 2 = visited
-        state = {node: 0 for node in self.nodes}
+        state = {node: 0 for node in self.vertices}
         sorted_vertices = []
 
         def dfs(node):
@@ -138,7 +141,7 @@ class Graph:
                 sorted_vertices.append(node)
 
         # Visit each node
-        for node in self.nodes:
+        for node in self.vertices:
             if state[node] == 0:
                 dfs(node)
 
@@ -219,7 +222,7 @@ class Graph:
         return children
 
     def __repr__(self):
-        node_ids = [node.id for node in self.nodes]
+        node_ids = [node.id for node in self.vertices]
         edges_repr = "\n".join(
             [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
         )

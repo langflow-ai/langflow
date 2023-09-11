@@ -169,3 +169,17 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+
+class VerticesOrderResponse(BaseModel):
+    ids: List[str]
+
+
+class VertexBuildResponse(BaseModel):
+    id: str
+    valid: bool
+    params: str
+
+
+class VerticesBuiltResponse(BaseModel):
+    vertices: List[VertexBuildResponse]

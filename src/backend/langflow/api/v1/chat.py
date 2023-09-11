@@ -9,7 +9,14 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
-from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
+from langflow.api.v1.schemas import (
+    BuildStatus,
+    BuiltResponse,
+    InitResponse,
+    VertexBuildResponse,
+    VerticesOrderResponse,
+    StreamData,
+)
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
@@ -122,6 +129,56 @@ async def build_status(flow_id: str):
         return HTTPException(status_code=500, detail=str(exc))
 
 
+@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def get_vertices(
+    flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
+):
+    """Check the flow_id is in the flow_data_store."""
+    try:
+        graph_data = flow_data_store[flow_id].get("graph_data")
+        graph = Graph.from_payload(graph_data)
+        chat_manager.set_cache(flow_id, graph)
+        vertices = graph.topological_sort()
+
+        return VerticesOrderResponse(ids=[vertex.id for vertex in vertices])
+
+    except Exception as exc:
+        logger.error(f"Error checking build status: {exc}")
+        return HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/build/{flow_id}/vertices/{vertex_id}")
+def build_vertex(
+    flow_id: str,
+    vertex_id: str,
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    current_user=Depends(get_current_active_user),
+):
+    """Build a vertex instead of the entire graph."""
+    try:
+        graph = chat_manager.get_cache(flow_id)
+        if not isinstance(graph, Graph):
+            raise ValueError("Invalid graph")
+        if not (vertex := graph.get_vertex_by_id(vertex_id)):
+            raise ValueError("Invalid vertex")
+        try:
+            vertex.build(current_user.id)
+            params = vertex._built_object_repr()
+            valid = True
+        except Exception as exc:
+            params = str(exc)
+            valid = False
+
+        return VertexBuildResponse(
+            valid=valid,
+            params=params,
+            id=vertex.id,
+        )
+    except Exception as exc:
+        logger.error(f"Error building vertex: {exc}")
+        return HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(
     flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
@@ -155,7 +212,7 @@ async def stream_build(
             # Some error could happen when building the graph
             graph = Graph.from_payload(graph_data)
 
-            number_of_nodes = len(graph.nodes)
+            number_of_nodes = len(graph.vertices)
             flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
 
             for i, vertex in enumerate(graph.generator_build(), 1):
