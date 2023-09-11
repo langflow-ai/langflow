@@ -185,11 +185,12 @@ export default function AdminPage() {
         updateUser(res["id"], {
           is_active: user.is_active,
           is_superuser: user.is_superuser,
-        });
-        resetFilter();
-        setSuccessData({
-          title: "Success! New user added!",
-        });
+        }).then((res) => {
+          resetFilter();
+          setSuccessData({
+            title: "Success! New user added!",
+          });
+        })
       })
       .catch((error) => {
         setErrorData({
