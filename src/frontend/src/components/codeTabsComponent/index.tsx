@@ -180,7 +180,7 @@ export default function CodeTabsComponent({
           key={idx} // Remember to add a unique key prop
         >
           {idx < 4 ? (
-            <div className="w-full h-full flex flex-col">
+            <div className="flex h-full w-full flex-col">
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"

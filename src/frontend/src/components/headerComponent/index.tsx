@@ -139,9 +139,7 @@ export default function Header(): JSX.Element {
                   <button
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      gradients[
-                        gradientIndex
-                      ]
+                      gradients[gradientIndex]
                     }
                   />
                 </DropdownMenuTrigger>
