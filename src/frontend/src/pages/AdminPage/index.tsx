@@ -182,6 +182,10 @@ export default function AdminPage() {
   function handleNewUser(user: UserInputType) {
     addUser(user)
       .then((res) => {
+        updateUser(res["id"], {
+          is_active: user.is_active,
+          is_superuser: user.is_superuser,
+        });
         resetFilter();
         setSuccessData({
           title: "Success! New user added!",
@@ -189,8 +193,8 @@ export default function AdminPage() {
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on add new user",
-          list: [error["response"]["data"]["detail"]],
+          title: "Error when adding new user",
+          list: [error.response.data.detail],
         });
       });
   }
