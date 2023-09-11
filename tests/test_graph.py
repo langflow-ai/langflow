@@ -29,14 +29,14 @@ def get_node_by_type(graph, node_type: Type[Vertex]) -> Union[Vertex, None]:
 
 def test_graph_structure(basic_graph):
     assert isinstance(basic_graph, Graph)
-    assert len(basic_graph.nodes) > 0
+    assert len(basic_graph.vertices) > 0
     assert len(basic_graph.edges) > 0
-    for node in basic_graph.nodes:
+    for node in basic_graph.vertices:
         assert isinstance(node, Vertex)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-        assert edge.source in basic_graph.nodes
-        assert edge.target in basic_graph.nodes
+        assert edge.source in basic_graph.vertices
+        assert edge.target in basic_graph.vertices
 
 
 def test_circular_dependencies(basic_graph):
@@ -52,7 +52,7 @@ def test_circular_dependencies(basic_graph):
                 return True
         return False
 
-    for node in basic_graph.nodes:
+    for node in basic_graph.vertices:
         assert not check_circular(node, set())
 
 
