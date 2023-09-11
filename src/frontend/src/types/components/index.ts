@@ -233,6 +233,7 @@ export type PaginatorComponentType = {
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
+  asChild?: boolean;
   modalContent: string;
   modalContentTitle: string;
   cancelText: string;

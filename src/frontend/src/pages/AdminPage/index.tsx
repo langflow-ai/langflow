@@ -301,8 +301,9 @@ export default function AdminPage() {
                               </span>
                             </ShadTooltip>
                           </TableCell>
-                          <TableCell className="relative left-5 truncate py-2 text-align-last-left">
+                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
+                              asChild
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -320,14 +321,17 @@ export default function AdminPage() {
                                 );
                               }}
                             >
-                              <Checkbox
-                                id="is_active"
-                                checked={user.is_active}
-                              />
+                              <div className="flex w-fit">
+                                <Checkbox
+                                  id="is_active"
+                                  checked={user.is_active}
+                                />
+                              </div>
                             </ConfirmationModal>
                           </TableCell>
-                          <TableCell className="relative left-5 truncate py-2 text-align-last-left">
+                          <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
+                              asChild
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -345,10 +349,12 @@ export default function AdminPage() {
                                 );
                               }}
                             >
-                              <Checkbox
-                                id="is_superuser"
-                                checked={user.is_superuser}
-                              />
+                              <div className="flex w-fit">
+                                <Checkbox
+                                  id="is_superuser"
+                                  checked={user.is_superuser}
+                                />
+                              </div>
                             </ConfirmationModal>
                           </TableCell>
                           <TableCell className="truncate py-2 ">
