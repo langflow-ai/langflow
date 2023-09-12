@@ -44,7 +44,7 @@ def square(x)
     errors3 = validate_code(code3)
     assert errors3 == {
         "imports": {"errors": []},
-        "function": {"errors": ["invalid syntax (<unknown>, line 4)"]},
+        "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
     }
 
 
