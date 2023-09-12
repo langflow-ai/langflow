@@ -38,9 +38,20 @@ resource "aws_instance" "manager" {
                 echo 'docker swarm join-token worker -q' > get_token.sh
                 chmod +x get_token.sh
                 timeout 5m bash -c "while true; do { echo -e 'HTTP/1.1 200 OK\r\n'; ./get_token.sh; } | nc -l 8080; done" &
+                sleep 10
 
+                # Clone the repo and start the stack
                 git clone https://github.com/logspace-ai/langflow.git
+                cd /langflow
                 git checkout celery
+                cd /langflow/deploy
+
+                sudo cp .env.example .env
+                
+                # Add the label to random worker node to ensure that the data volume is created on the same node                
+                docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
+                
+                env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-compose.yml langflow_stack
 
                 EOT
 
