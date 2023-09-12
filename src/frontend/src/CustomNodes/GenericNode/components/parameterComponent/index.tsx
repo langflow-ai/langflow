@@ -121,7 +121,7 @@ export default function ParameterComponent({
           <>
             {index === 0 && (
                 <span>
-                  {left ? "Avaliable source components:" : "Avaliable target components:"}
+                  {left ? "Avaliable input components:" : "Avaliable output components:"}
                 </span>
               )
             }
