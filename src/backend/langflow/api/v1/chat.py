@@ -163,7 +163,7 @@ def build_vertex(
         graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
             raise ValueError("Invalid graph")
-        if not (vertex := graph.get_vertex_by_id(vertex_id)):
+        if not (vertex := graph.get_vertex(vertex_id)):
             raise ValueError("Invalid vertex")
         try:
             if isinstance(vertex, StatelessVertex):

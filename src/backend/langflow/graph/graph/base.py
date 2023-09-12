@@ -48,9 +48,6 @@ class Graph:
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc
 
-    def get_vertex_by_id(self, vertex_id: str) -> "Vertex":
-        return next((node for node in self.vertices if node.id == vertex_id), None)
-
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
         self.vertices = self._build_vertices()
@@ -93,7 +90,7 @@ class Graph:
         # All nodes that do not have edges are invalid
         return len(node.edges) > 0
 
-    def get_node(self, node_id: str) -> Union[None, Vertex]:
+    def get_vertex(self, node_id: str) -> Union[None, Vertex]:
         """Returns a node by id."""
         return next((node for node in self.vertices if node.id == node_id), None)
 
@@ -186,8 +183,14 @@ class Graph:
             edges.append(Edge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, node_type: str, node_lc_type: str) -> Type[Vertex]:
+    def _get_vertex_class(
+        self, node_type: str, node_lc_type: str, node_id: str
+    ) -> Type[Vertex]:
         """Returns the node class based on the node type."""
+        node_name = node_id.split("-")[0]
+        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
+
         if node_type in FILE_TOOLS:
             return FileToolVertex
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
@@ -205,8 +208,9 @@ class Graph:
             node_data = node["data"]
             node_type: str = node_data["type"]  # type: ignore
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
+            node_id = node["id"]
 
-            VertexClass = self._get_vertex_class(node_type, node_lc_type)
+            VertexClass = self._get_vertex_class(node_type, node_lc_type, node_id)
             nodes.append(VertexClass(node))
 
         return nodes
