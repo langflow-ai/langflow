@@ -279,13 +279,13 @@ def process_tweaks(
 
 def process_tweaks_on_graph(graph: Graph, tweaks):
     for vertex in graph.vertices:
-        if isinstance(vertex, dict) and isinstance(vertex.get("id"), str):
+        if isinstance(vertex, Vertex) and isinstance(vertex.id, str):
             node_id = vertex.id
             if node_tweaks := tweaks.get(node_id):
                 apply_tweaks_on_vertex(vertex, node_tweaks)
         else:
             logger.warning(
-                "Each node should be a dictionary with an 'id' key of type str"
+                "Each node should be a Vertex with an 'id' attribute of type str"
             )
 
     return graph
