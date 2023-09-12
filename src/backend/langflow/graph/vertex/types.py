@@ -263,3 +263,12 @@ class CustomComponentVertex(StatelessVertex):
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+
+
+class ChatVertex(StatelessVertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="custom_components")
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()

@@ -17,6 +17,9 @@ from langflow.interface.custom.base import custom_component_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 
+chat_components = ["ChatInput", "ChatOutput"]
+
+
 class VertexTypesDict(LazyLoadDictBase):
     def __init__(self):
         self._all_types_dict = None
@@ -52,6 +55,7 @@ class VertexTypesDict(LazyLoadDictBase):
                 for t in custom_component_creator.to_list()
             },
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
+            **{t: types.ChatVertex for t in chat_components},
         }
 
 
