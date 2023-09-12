@@ -99,16 +99,20 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
-              <ApiModal flow={flow} disable={!isBuilt}>
-                <div className={classNames("extra-side-bar-buttons")}>
-                  <IconComponent
-                    name="Code2"
-                    className={
-                      "side-bar-button-size" +
-                      (isBuilt ? " " : " extra-side-bar-save-disable")
-                    }
-                  />
-                </div>
+              <ApiModal flow={flow}>
+                <button
+                  className={"w-full " + (!isBuilt ? "button-disable" : "")}
+                >
+                  <div className={classNames("extra-side-bar-buttons")}>
+                    <IconComponent
+                      name="Code2"
+                      className={
+                        "side-bar-button-size" +
+                        (isBuilt ? " " : " extra-side-bar-save-disable")
+                      }
+                    />
+                  </div>
+                </button>
               </ApiModal>
             )}
           </div>

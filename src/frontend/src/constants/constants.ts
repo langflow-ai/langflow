@@ -500,6 +500,21 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 /**
+ * Header text for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_TITLE = "Admin Page";
+
+/**
+ * Header description for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_DESCRIPTION =
+  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
+
+/**
  * URLs excluded from error retries.
  * @constant
  *
@@ -517,6 +532,12 @@ export const CONTROL_INPUT_STATE = {
   password: "",
   cnfPassword: "",
   username: "",
+};
+
+export const CONTROL_PATCH_USER_STATE = {
+  password: "",
+  cnfPassword: "",
+  gradient: "",
 };
 
 export const CONTROL_LOGIN_STATE = {
