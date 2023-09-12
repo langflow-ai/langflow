@@ -284,3 +284,11 @@ class Vertex:
             if self._built_object is not None
             else "Failed to build 😵‍💫"
         )
+
+
+class StatefulVertex(Vertex):
+    pass
+
+
+class StatelessVertex(Vertex):
+    pass
