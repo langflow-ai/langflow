@@ -264,10 +264,10 @@
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
-    @apply relative flex w-96 flex-col justify-center rounded-lg bg-background;
+    @apply relative flex flex-col justify-center rounded-lg bg-background;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center justify-between gap-8  border-b bg-muted p-4;
+    @apply flex w-full items-center gap-8  border-b bg-muted p-4;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
