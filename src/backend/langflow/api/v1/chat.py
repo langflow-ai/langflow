@@ -19,8 +19,10 @@ from langflow.api.v1.schemas import (
 )
 
 from langflow.graph.graph.base import Graph
+from langflow.graph.vertex.base import StatelessVertex
+from langflow.processing.process import process_tweaks_on_graph
+
 from langflow.services.auth.utils import get_current_active_user, get_current_user
-from langflow.services.utils import get_session
 from loguru import logger
 from langflow.services.utils import get_chat_manager, get_session
 from cachetools import LRUCache
@@ -153,16 +155,19 @@ def build_vertex(
     vertex_id: str,
     chat_manager: "ChatManager" = Depends(get_chat_manager),
     current_user=Depends(get_current_active_user),
+    tweaks: dict = Query(None),
 ):
     """Build a vertex instead of the entire graph."""
     try:
         graph = chat_manager.get_cache(flow_id)
+        graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
             raise ValueError("Invalid graph")
         if not (vertex := graph.get_vertex_by_id(vertex_id)):
             raise ValueError("Invalid vertex")
         try:
-            vertex.build(current_user.id)
+            if isinstance(vertex, StatelessVertex):
+                vertex.build(current_user.id, force=True)
             params = vertex._built_object_repr()
             valid = True
         except Exception as exc:
