@@ -22,7 +22,7 @@ export default function OutputComponent({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex w-full gap-3">
-        {value ? (
+        {value && value.valid ? (
           <OutputModal value={value} setValue={(value: string) => {}}>
             <Input
               disabled={true}

@@ -17,14 +17,15 @@ export default function OutputModal({
   children,
 }: OutputModalType): JSX.Element {
   const [open, setOpen] = useState(false);
+  console.log(value);
 
   return (
-    <BaseModal open={open} setOpen={setOpen}>
+    <BaseModal open={open} setOpen={setOpen} size={"small-h-full"}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={OUTPUT_DIALOG_SUBTITLE}>
-        <span className="pr-2">Edit Code</span>
+        <span className="pr-2">Output Value</span>
         <IconComponent
-          name="prompts"
+          name="ArrowDownUp"
           className="h-6 w-6 pl-1 text-primary "
           aria-hidden="true"
         />
@@ -34,8 +35,14 @@ export default function OutputModal({
           <div className="h-full w-full"></div>
 
           <div className="flex h-fit w-full justify-end">
-            <Button className="mt-3" type="submit">
-              Check & Save
+            <Button
+              className="mt-3"
+              type="submit"
+              onClick={() => {
+                setOpen(false);
+              }}
+            >
+              Ok
             </Button>
           </div>
         </div>
