@@ -14,6 +14,7 @@ import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import { Button } from "@mui/material";
 
 export default function GenericNode({
   data: olddata,
@@ -29,6 +30,7 @@ export default function GenericNode({
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
+  const [showNode, setShowNode] = useState<boolean>(true);
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
@@ -84,76 +86,84 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div className="generic-node-div-title">
-          <div className="generic-node-title-arrangement">
-            <IconComponent
-              name={name}
-              className="generic-node-icon"
-              iconColor={`${nodeColors[types[data.type]]}`}
-            />
-            <div className="generic-node-tooltip-div">
-              <ShadTooltip content={data.node?.display_name}>
-                <div className="generic-node-tooltip-div text-primary">
-                  {data.node?.display_name}
-                </div>
-              </ShadTooltip>
-            </div>
+        <div>
+          <div className="grid justify-items-end bg-muted pt-2 pr-2 border-b rounded-t-lg">
+              <IconComponent
+                name="Minus"
+                className="hover:text-accent-foreground text-muted-foreground"
+              />
           </div>
-          <div className="round-button-div">
-            <div>
-              <Tooltip
-                title={
-                  isBuilding ? (
-                    <span>Building...</span>
-                  ) : !validationStatus ? (
-                    <span className="flex">
-                      Build{" "}
-                      <IconComponent
-                        name="Zap"
-                        className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                      />{" "}
-                      flow to validate status.
-                    </span>
-                  ) : (
-                    <div className="max-h-96 overflow-auto">
-                      {typeof validationStatus.params === "string"
-                        ? validationStatus.params
-                            .split("\n")
-                            .map((line: string, index: number) => (
-                              <div key={index}>{line}</div>
-                            ))
-                        : ""}
-                    </div>
-                  )
-                }
-              >
-                <div className="generic-node-status-position">
-                  <div
-                    className={classNames(
-                      validationStatus && validationStatus.valid
-                        ? "green-status"
-                        : "status-build-animation",
-                      "status-div"
-                    )}
-                  ></div>
-                  <div
-                    className={classNames(
-                      validationStatus && !validationStatus.valid
-                        ? "red-status"
-                        : "status-build-animation",
-                      "status-div"
-                    )}
-                  ></div>
-                  <div
-                    className={classNames(
-                      !validationStatus || isBuilding
-                        ? "yellow-status"
-                        : "status-build-animation",
-                      "status-div"
-                    )}
-                  ></div>
-                </div>
-              </Tooltip>
+          <div className="generic-node-div-title">
+            <div className="generic-node-title-arrangement">
+              <IconComponent
+                name={name}
+                className="generic-node-icon"
+                iconColor={`${nodeColors[types[data.type]]}`}
+              />
+              <div className="generic-node-tooltip-div">
+                <ShadTooltip content={data.node?.display_name}>
+                  <div className="generic-node-tooltip-div text-primary">
+                    {data.node?.display_name}
+                  </div>
+                </ShadTooltip>
+              </div>
+            </div>
+            <div className="round-button-div">
+              <div>
+                <Tooltip
+                  title={
+                    isBuilding ? (
+                      <span>Building...</span>
+                    ) : !validationStatus ? (
+                      <span className="flex">
+                        Build{" "}
+                        <IconComponent
+                          name="Zap"
+                          className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        />{" "}
+                        flow to validate status.
+                      </span>
+                    ) : (
+                      <div className="max-h-96 overflow-auto">
+                        {typeof validationStatus.params === "string"
+                          ? validationStatus.params
+                              .split("\n")
+                              .map((line: string, index: number) => (
+                                <div key={index}>{line}</div>
+                              ))
+                          : ""}
+                      </div>
+                    )
+                  }
+                >
+                  <div className="generic-node-status-position">
+                    <div
+                      className={classNames(
+                        validationStatus && validationStatus.valid
+                          ? "green-status"
+                          : "status-build-animation",
+                        "status-div"
+                      )}
+                    ></div>
+                    <div
+                      className={classNames(
+                        validationStatus && !validationStatus.valid
+                          ? "red-status"
+                          : "status-build-animation",
+                        "status-div"
+                      )}
+                    ></div>
+                    <div
+                      className={classNames(
+                        !validationStatus || isBuilding
+                          ? "yellow-status"
+                          : "status-build-animation",
+                        "status-div"
+                      )}
+                    ></div>
+                  </div>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </div>
@@ -167,7 +177,8 @@ export default function GenericNode({
               .map((templateField: string, idx) => (
                 <div key={idx}>
                   {data.node!.template[templateField].show &&
-                  !data.node!.template[templateField].advanced ? (
+                  !data.node!.template[templateField].advanced &&
+                  showNode ? (
                     <ParameterComponent
                       key={
                         (data.node!.template[templateField].input_types?.join(
