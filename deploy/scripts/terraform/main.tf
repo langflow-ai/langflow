@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-1" # Choose the region as needed
+  region = var.region # Choose the region as needed
 }
 
 module "docker-swarm" {
@@ -16,9 +16,9 @@ module "docker-swarm" {
   vpc_id          = aws_vpc.swarm-vpc.id
   subnet_id       = aws_subnet.swarm-public-subnet.id
   security_group  = aws_security_group.swarm-sg.id
-  instance_type   = "t2.micro" # Choose the instance type as needed
-  manager_count   = 1
-  worker_count    = 10 # This is the number of services in the docker-compose.yml file
+  instance_type   = var.instance_type # Choose the instance type as needed
+  manager_count   = var.manager_count
+  worker_count    = var.worker_count # This is the number of services in the docker-compose.yml file
 }
 
 resource "aws_key_pair" "swarm-key" {
