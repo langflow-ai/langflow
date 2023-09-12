@@ -1,12 +1,12 @@
 import ast
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.graph.utils import flatten_list
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
-class AgentVertex(Vertex):
+class AgentVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="agents")
 
@@ -37,12 +37,12 @@ class AgentVertex(Vertex):
         return self._built_object
 
 
-class ToolVertex(Vertex):
+class ToolVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="tools")
 
 
-class LLMVertex(Vertex):
+class LLMVertex(StatelessVertex):
     built_node_type = None
     class_built_object = None
 
@@ -63,7 +63,7 @@ class LLMVertex(Vertex):
         return self._built_object
 
 
-class ToolkitVertex(Vertex):
+class ToolkitVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="toolkits")
 
@@ -73,7 +73,7 @@ class FileToolVertex(ToolVertex):
         super().__init__(data)
 
 
-class WrapperVertex(Vertex):
+class WrapperVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
@@ -85,7 +85,7 @@ class WrapperVertex(Vertex):
         return self._built_object
 
 
-class DocumentLoaderVertex(Vertex):
+class DocumentLoaderVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="documentloaders")
 
@@ -103,27 +103,27 @@ class DocumentLoaderVertex(Vertex):
         return f"{self.vertex_type}()"
 
 
-class EmbeddingVertex(Vertex):
+class EmbeddingVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="embeddings")
 
 
-class VectorStoreVertex(Vertex):
+class VectorStoreVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="vectorstores")
 
 
-class MemoryVertex(Vertex):
+class MemoryVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="memory")
 
 
-class RetrieverVertex(Vertex):
+class RetrieverVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="retrievers")
 
 
-class TextSplitterVertex(Vertex):
+class TextSplitterVertex(StatefulVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="textsplitters")
 
@@ -141,7 +141,7 @@ class TextSplitterVertex(Vertex):
         return f"{self.vertex_type}()"
 
 
-class ChainVertex(Vertex):
+class ChainVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
@@ -165,7 +165,7 @@ class ChainVertex(Vertex):
         return self._built_object
 
 
-class PromptVertex(Vertex):
+class PromptVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
 
@@ -251,12 +251,12 @@ class PromptVertex(Vertex):
             return str(self._built_object)
 
 
-class OutputParserVertex(Vertex):
+class OutputParserVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="output_parsers")
 
 
-class CustomComponentVertex(Vertex):
+class CustomComponentVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="custom_components")
 
