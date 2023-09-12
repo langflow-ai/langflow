@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from langchain.schema import AgentAction
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.run import (
     build_sorted_vertices_with_caching,
     get_memory_key,
@@ -274,3 +275,23 @@ def process_tweaks(
             )
 
     return graph_data
+
+
+def process_tweaks_on_graph(graph: Graph, tweaks):
+    for vertex in graph.vertices:
+        if isinstance(vertex, dict) and isinstance(vertex.get("id"), str):
+            node_id = vertex.id
+            if node_tweaks := tweaks.get(node_id):
+                apply_tweaks_on_vertex(vertex, node_tweaks)
+        else:
+            logger.warning(
+                "Each node should be a dictionary with an 'id' key of type str"
+            )
+
+    return graph
+
+
+def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
+    for tweak_name, tweak_value in node_tweaks.items():
+        if tweak_name and tweak_value and tweak_name in vertex.params:
+            vertex.params[tweak_name] = tweak_value
