@@ -1,4 +1,5 @@
 import {
+  ArrowDownUp,
   Bell,
   Check,
   CheckCircle2,
@@ -161,6 +162,7 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  io: "#e6b25a",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -182,6 +184,7 @@ export const nodeNames: { [char: string]: string } = {
   utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  io: "I/O",
   unknown: "Other",
 };
 
@@ -242,6 +245,7 @@ export const nodeIconsLucide: iconsType = {
   WikipediaQueryRun: SvgWikipedia,
   WolframAlphaQueryRun: SvgWolfram,
   custom_components: GradientSparkles,
+  io: ArrowDownUp,
   custom: Edit,
   Trash2,
   X,
