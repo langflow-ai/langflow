@@ -97,7 +97,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.${STACK_NAME?Variable not set}.app-db-data == true
+          - node.labels.app-db-data == true
     healthcheck:
       test: "exit 0"
     env_file:
