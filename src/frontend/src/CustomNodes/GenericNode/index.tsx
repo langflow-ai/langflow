@@ -88,10 +88,14 @@ export default function GenericNode({
         )}
         <div>
           <div className="grid justify-items-end bg-muted pt-2 pr-2 border-b rounded-t-lg">
+            <button
+              onClick={() => setShowNode(prev => !prev)}
+            >
               <IconComponent
                 name="Minus"
                 className="hover:text-accent-foreground text-muted-foreground"
               />
+            </button>
           </div>
           <div className="generic-node-div-title">
             <div className="generic-node-title-arrangement">
@@ -168,8 +172,8 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className={"generic-node-desc " + (data.node?.description !== "" ? "py-5" : "pb-5")}>
-          {data.node?.description !== "" && (
+        <div className={"generic-node-desc " + (data.node?.description !== "" && showNode ? "py-5" : "pb-5")}>
+          {data.node?.description !== "" && showNode && (
             <div className="generic-node-desc-text">{data.node?.description}</div>
           )}
 
