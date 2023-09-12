@@ -29,6 +29,8 @@ export type TemplateVariableType = {
   show: boolean;
   multiline?: boolean;
   value?: any;
+  dynamic?:boolean;
+  proxy?:{id:string,field:string}
   input_types?: Array<string>;
   [key: string]: any;
 };

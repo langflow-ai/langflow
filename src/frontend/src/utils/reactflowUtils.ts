@@ -23,7 +23,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase } from "./utils";
+import { toNormalCase, toTitleCase } from "./utils";
 import ShortUniqueId from "short-unique-id";
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -517,7 +517,6 @@ export function validateSelection(
   }
   return errorsArray;
 }
-// TODO UPDATE TO NEW TYPES
 function updateGroupNodeTemplate(template: APITemplateType) {
   /*this function receives a template, iterates for it's items
 	updating the visibility of all basic types setting it to advanced true*/
@@ -535,11 +534,14 @@ function updateGroupNodeTemplate(template: APITemplateType) {
       !template[key].required && !input_types
     ) {
       template[key].advanced = true;
+      if(template[key].dynamic)
+      {
+        template[key].dynamic = false
+      }
     }
   });
   return template;
 }
-// TODO UPDATE TO NEW HANDLE FORMAT
 export function mergeNodeTemplates({
   nodes,
   edges,
@@ -547,7 +549,7 @@ export function mergeNodeTemplates({
   nodes: NodeType[];
   edges: Edge[];
 }): APITemplateType {
-  /* this function receives a flow and iterate trhow each node
+  /* this function receives a flow and iterate throw each node
 		and merge the templates with only the visible fields
 		if there are two keys with the same name in the flow, we will update the display name of each one
 		to show from which node it came from
@@ -569,14 +571,17 @@ export function mergeNodeTemplates({
               node.data.node!.flow!.name + " - " + nodeTemplate[key].name;
           } else {
             template[key + "_" + node.id].display_name =
-              node.data.type + " - " + nodeTemplate[key].name;
+              node.data.node!.display_name + " - " + (nodeTemplate[key].display_name
+              ? nodeTemplate[key].display_name
+              : nodeTemplate[key].name
+              ? toTitleCase(nodeTemplate[key].name)
+              : toTitleCase(key))
           }
         }
       });
   });
   return template;
 }
-// TODO UPDATE TO NEW HANDLE FORMAT
 function isHandleConnected(
   edges: Edge[],
   key: string,
@@ -591,23 +596,14 @@ function isHandleConnected(
       edges.some(
         (e) =>
           e.targetHandle ===
-          field.type +
-            "|" +
-            key +
-            "|" +
-            nodeId +
-            "|" +
-            field.proxy.id +
-            "|" +
-            field.proxy.field
-      )
+          customStringify({type:field.type,fieldName:key,id:nodeId,proxy:{id:field.proxy!.id,field:field.proxy!.field}})      )
     ) {
       return true;
     }
   } else {
     if (
       edges.some(
-        (e) => e.targetHandle === field.type + "|" + key + "|" + nodeId
+        (e) => e.targetHandle === customStringify({type:field.type,fieldName:key,id:nodeId})
       )
     ) {
       return true;
@@ -650,7 +646,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
     },
     id: data.id,
     position,
-    type: "groupNode",
+    type: "genericNode",
   };
   return newGroupNode;
 }
