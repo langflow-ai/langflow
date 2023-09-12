@@ -7,6 +7,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
+import { Textarea } from "../../components/ui/textarea";
 import { OUTPUT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { OutputModalType } from "../../types/components";
 import BaseModal from "../baseModal";
@@ -32,7 +33,9 @@ export default function OutputModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col transition-all">
-          <div className="h-full w-full"></div>
+          <div className="h-full w-full">
+            <Textarea rows={10} readOnly={true} value={value?.params} />
+          </div>
 
           <div className="flex h-fit w-full justify-end">
             <Button
