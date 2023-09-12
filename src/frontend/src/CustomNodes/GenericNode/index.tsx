@@ -72,13 +72,15 @@ export default function GenericNode({
           data={data}
           setData={setData}
           deleteNode={deleteNode}
+          setShowNode={setShowNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          "generic-node-div"
+          showNode ? "w-96" : "w-32",
+          "generic-node-div",
         )}
       >
         {data.node?.beta && (
@@ -87,183 +89,264 @@ export default function GenericNode({
           </div>
         )}
         <div>
-          <div className="grid justify-items-end bg-muted pt-2 pr-2 border-b rounded-t-lg">
-            <button
-              onClick={() => setShowNode(prev => !prev)}
-            >
-              <IconComponent
-                name="Minus"
-                className="hover:text-accent-foreground text-muted-foreground"
-              />
-            </button>
-          </div>
-          <div className="generic-node-div-title">
-            <div className="generic-node-title-arrangement">
+          <div className={"generic-node-div-title " + (!showNode ? "relative rounded-t-lg rounded-b-lg" : "justify-between rounded-t-lg")}>
+            <div className={"generic-node-title-arrangement " + (!showNode && "justify-center")}>
               <IconComponent
                 name={name}
-                className="generic-node-icon"
+                className={"generic-node-icon " + (!showNode && "absolute left-10")}
                 iconColor={`${nodeColors[types[data.type]]}`}
               />
-              <div className="generic-node-tooltip-div">
-                <ShadTooltip content={data.node?.display_name}>
-                  <div className="generic-node-tooltip-div text-primary">
-                    {data.node?.display_name}
-                  </div>
-                </ShadTooltip>
-              </div>
+              {showNode && (
+                <div className="generic-node-tooltip-div">
+                  <ShadTooltip content={data.node?.display_name}>
+                    <div className="generic-node-tooltip-div text-primary">
+                      {data.node?.display_name}
+                    </div>
+                  </ShadTooltip>
+                </div>
+              )}
             </div>
-            <div className="round-button-div">
-              <div>
-                <Tooltip
-                  title={
-                    isBuilding ? (
-                      <span>Building...</span>
-                    ) : !validationStatus ? (
-                      <span className="flex">
-                        Build{" "}
-                        <IconComponent
-                          name="Zap"
-                          className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                        />{" "}
-                        flow to validate status.
-                      </span>
-                    ) : (
-                      <div className="max-h-96 overflow-auto">
-                        {typeof validationStatus.params === "string"
-                          ? validationStatus.params
-                              .split("\n")
-                              .map((line: string, index: number) => (
-                                <div key={index}>{line}</div>
-                              ))
-                          : ""}
-                      </div>
-                    )
-                  }
-                >
-                  <div className="generic-node-status-position">
-                    <div
-                      className={classNames(
-                        validationStatus && validationStatus.valid
-                          ? "green-status"
-                          : "status-build-animation",
-                        "status-div"
+            <div>
+              {!showNode && (
+                <>
+                  {Object.keys(data.node!.template)
+                  .filter((templateField) => templateField.charAt(0) !== "_")
+                  .map((templateField: string, idx) => (
+                    <div key={idx}>
+                      {data.node!.template[templateField].show &&
+                      !data.node!.template[templateField].advanced && (
+                        <ParameterComponent
+                          key={
+                            (data.node!.template[templateField].input_types?.join(
+                              ";"
+                            ) ?? data.node!.template[templateField].type) +
+                            "|" +
+                            templateField +
+                            "|" +
+                            data.id
+                          }
+                          data={data}
+                          setData={setData}
+                          color={
+                            nodeColors[
+                              types[data.node?.template[templateField].type!]
+                            ] ??
+                            nodeColors[data.node?.template[templateField].type!] ??
+                            nodeColors.unknown
+                          }
+                          title={
+                            data.node?.template[templateField].display_name
+                              ? data.node.template[templateField].display_name
+                              : data.node?.template[templateField].name
+                              ? toTitleCase(data.node.template[templateField].name)
+                              : toTitleCase(templateField)
+                          }
+                          info={data.node?.template[templateField].info}
+                          name={templateField}
+                          tooltipTitle={
+                            data.node?.template[templateField].input_types?.join(
+                              "\n"
+                            ) ?? data.node?.template[templateField].type
+                          }
+                          required={data.node?.template[templateField].required}
+                          id={
+                            (data.node?.template[templateField].input_types?.join(
+                              ";"
+                            ) ?? data.node?.template[templateField].type) +
+                            "|" +
+                            templateField +
+                            "|" +
+                            data.id
+                          }
+                          left={true}
+                          type={data.node?.template[templateField].type}
+                          optionalHandle={
+                            data.node?.template[templateField].input_types
+                          }
+                          showNode={showNode}
+                        />
                       )}
-                    ></div>
-                    <div
-                      className={classNames(
-                        validationStatus && !validationStatus.valid
-                          ? "red-status"
-                          : "status-build-animation",
-                        "status-div"
-                      )}
-                    ></div>
-                    <div
-                      className={classNames(
-                        !validationStatus || isBuilding
-                          ? "yellow-status"
-                          : "status-build-animation",
-                        "status-div"
-                      )}
-                    ></div>
-                  </div>
-                </Tooltip>
-              </div>
+                    </div>))}
+                    <ParameterComponent
+                      key={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                      data={data}
+                      setData={setData}
+                      color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                      title={
+                        data.node?.output_types && data.node.output_types.length > 0
+                          ? data.node.output_types.join("|")
+                          : data.type
+                      }
+                      tooltipTitle={data.node?.base_classes.join("\n")}
+                      id={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                      type={data.node?.base_classes.join("|")}
+                      left={false}
+                      showNode={showNode}
+                    />
+                </>
+              )}
+
             </div>
+
+
+
+            {showNode && (
+              <div className="round-button-div">
+                <div>
+                  <Tooltip
+                    title={
+                      isBuilding ? (
+                        <span>Building...</span>
+                      ) : !validationStatus ? (
+                        <span className="flex">
+                          Build{" "}
+                          <IconComponent
+                            name="Zap"
+                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                          />{" "}
+                          flow to validate status.
+                        </span>
+                      ) : (
+                        <div className="max-h-96 overflow-auto">
+                          {typeof validationStatus.params === "string"
+                            ? validationStatus.params
+                                .split("\n")
+                                .map((line: string, index: number) => (
+                                  <div key={index}>{line}</div>
+                                ))
+                            : ""}
+                        </div>
+                      )
+                    }
+                  >
+                    <div className="generic-node-status-position">
+                      <div
+                        className={classNames(
+                          validationStatus && validationStatus.valid
+                            ? "green-status"
+                            : "status-build-animation",
+                          "status-div"
+                        )}
+                      ></div>
+                      <div
+                        className={classNames(
+                          validationStatus && !validationStatus.valid
+                            ? "red-status"
+                            : "status-build-animation",
+                          "status-div"
+                        )}
+                      ></div>
+                      <div
+                        className={classNames(
+                          !validationStatus || isBuilding
+                            ? "yellow-status"
+                            : "status-build-animation",
+                          "status-div"
+                        )}
+                      ></div>
+                    </div>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className={"generic-node-desc " + (data.node?.description !== "" && showNode ? "py-5" : "pb-5")}>
-          {data.node?.description !== "" && showNode && (
-            <div className="generic-node-desc-text">{data.node?.description}</div>
-          )}
+        {showNode && (
+          <div className={(showNode ? "generic-node-desc " + (data.node?.description !== "" && showNode ? "py-5" : "pb-5") : "")}>
+            {data.node?.description !== "" && showNode && (
+              <div className="generic-node-desc-text">{data.node?.description}</div>
+            )}
 
-          <>
-            {Object.keys(data.node!.template)
-              .filter((templateField) => templateField.charAt(0) !== "_")
-              .map((templateField: string, idx) => (
-                <div key={idx}>
-                  {data.node!.template[templateField].show &&
-                  !data.node!.template[templateField].advanced &&
-                  showNode ? (
-                    <ParameterComponent
-                      key={
-                        (data.node!.template[templateField].input_types?.join(
-                          ";"
-                        ) ?? data.node!.template[templateField].type) +
-                        "|" +
-                        templateField +
-                        "|" +
-                        data.id
-                      }
-                      data={data}
-                      setData={setData}
-                      color={
-                        nodeColors[
-                          types[data.node?.template[templateField].type!]
-                        ] ??
-                        nodeColors[data.node?.template[templateField].type!] ??
-                        nodeColors.unknown
-                      }
-                      title={
-                        data.node?.template[templateField].display_name
-                          ? data.node.template[templateField].display_name
-                          : data.node?.template[templateField].name
-                          ? toTitleCase(data.node.template[templateField].name)
-                          : toTitleCase(templateField)
-                      }
-                      info={data.node?.template[templateField].info}
-                      name={templateField}
-                      tooltipTitle={
-                        data.node?.template[templateField].input_types?.join(
-                          "\n"
-                        ) ?? data.node?.template[templateField].type
-                      }
-                      required={data.node?.template[templateField].required}
-                      id={
-                        (data.node?.template[templateField].input_types?.join(
-                          ";"
-                        ) ?? data.node?.template[templateField].type) +
-                        "|" +
-                        templateField +
-                        "|" +
-                        data.id
-                      }
-                      left={true}
-                      type={data.node?.template[templateField].type}
-                      optionalHandle={
-                        data.node?.template[templateField].input_types
-                      }
-                    />
-                  ) : (
-                    <></>
-                  )}
-                </div>
-              ))}
-            <div
-              className={classNames(
-                Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                "flex-max-width justify-center"
-              )}
-            >
-              {" "}
-            </div>
-            <ParameterComponent
-              key={[data.type, data.id, ...data.node!.base_classes].join("|")}
-              data={data}
-              setData={setData}
-              color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-              title={
-                data.node?.output_types && data.node.output_types.length > 0
-                  ? data.node.output_types.join("|")
-                  : data.type
-              }
-              tooltipTitle={data.node?.base_classes.join("\n")}
-              id={[data.type, data.id, ...data.node!.base_classes].join("|")}
-              type={data.node?.base_classes.join("|")}
-              left={false}
-            />
-          </>
-        </div>
+            <>
+              {Object.keys(data.node!.template)
+                .filter((templateField) => templateField.charAt(0) !== "_")
+                .map((templateField: string, idx) => (
+                  <div key={idx}>
+                    {data.node!.template[templateField].show &&
+                    !data.node!.template[templateField].advanced ? (
+                      <ParameterComponent
+                        key={
+                          (data.node!.template[templateField].input_types?.join(
+                            ";"
+                          ) ?? data.node!.template[templateField].type) +
+                          "|" +
+                          templateField +
+                          "|" +
+                          data.id
+                        }
+                        data={data}
+                        setData={setData}
+                        color={
+                          nodeColors[
+                            types[data.node?.template[templateField].type!]
+                          ] ??
+                          nodeColors[data.node?.template[templateField].type!] ??
+                          nodeColors.unknown
+                        }
+                        title={
+                          data.node?.template[templateField].display_name
+                            ? data.node.template[templateField].display_name
+                            : data.node?.template[templateField].name
+                            ? toTitleCase(data.node.template[templateField].name)
+                            : toTitleCase(templateField)
+                        }
+                        info={data.node?.template[templateField].info}
+                        name={templateField}
+                        tooltipTitle={
+                          data.node?.template[templateField].input_types?.join(
+                            "\n"
+                          ) ?? data.node?.template[templateField].type
+                        }
+                        required={data.node?.template[templateField].required}
+                        id={
+                          (data.node?.template[templateField].input_types?.join(
+                            ";"
+                          ) ?? data.node?.template[templateField].type) +
+                          "|" +
+                          templateField +
+                          "|" +
+                          data.id
+                        }
+                        left={true}
+                        type={data.node?.template[templateField].type}
+                        optionalHandle={
+                          data.node?.template[templateField].input_types
+                        }
+                        showNode={showNode}
+                      />
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                ))}
+              <div
+                className={classNames(
+                  Object.keys(data.node!.template).length < 1 ? "hidden" : "",
+                  "flex-max-width justify-center"
+                )}
+              >
+                {" "}
+              </div>
+              <ParameterComponent
+                key={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                data={data}
+                setData={setData}
+                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                title={
+                  data.node?.output_types && data.node.output_types.length > 0
+                    ? data.node.output_types.join("|")
+                    : data.type
+                }
+                tooltipTitle={data.node?.base_classes.join("\n")}
+                id={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                type={data.node?.base_classes.join("|")}
+                left={false}
+                showNode={showNode}
+              />
+            </>
+          </div>
+        )}
       </div>
     </>
   );

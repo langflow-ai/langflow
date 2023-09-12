@@ -11,6 +11,7 @@ export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  setShowNode,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -106,7 +107,7 @@ export default function NodeToolbarComponent({
               >
                 <div
                   className={classNames(
-                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
                       (nodeLength == 0
                         ? " text-muted-foreground"
                         : " text-foreground")
@@ -116,6 +117,17 @@ export default function NodeToolbarComponent({
                 </div>
               </EditNodeModal>
             </div>
+          </ShadTooltip>
+
+          <ShadTooltip content="Minimize" side="top">
+            <button
+              className="relative inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+              onClick={() => {
+                setShowNode(prev => !prev);
+              }}
+            >
+              <IconComponent name="Minus" className="h-4 w-4" />
+            </button>
           </ShadTooltip>
         </span>
       </div>

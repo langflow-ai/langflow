@@ -46,6 +46,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  showNode?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -398,6 +399,7 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  setShowNode: (boolean: any) => void;
 };
 
 export type parsedDataType = {

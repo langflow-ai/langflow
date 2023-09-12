@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, divide } from "lodash";
 import React, {
   ReactNode,
   useContext,
@@ -45,6 +45,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
+  showNode,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -179,181 +180,225 @@ export default function ParameterComponent({
   }, [tooltipTitle, flow]);
 
   return (
-    <div
-      ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
-    >
-      <>
-        <div
-          className={
-            "w-full truncate text-sm" +
-            (left ? "" : " text-end") +
-            (info !== "" ? " flex items-center" : "")
-          }
-        >
-          {title}
-          <span className="text-status-red">{required ? " *" : ""}</span>
-          <div className="">
-            {info !== "" && (
-              <ShadTooltip content={infoHtml.current}>
-                {/* put div to avoid bug that does not display tooltip */}
-                <div>
-                  <IconComponent
-                    name="Info"
-                    className="relative bottom-0.5 ml-2 h-3 w-4"
-                  />
-                </div>
-              </ShadTooltip>
-            )}
-          </div>
-        </div>
-        {left &&
-        (type === "str" ||
-          type === "bool" ||
-          type === "float" ||
-          type === "code" ||
-          type === "prompt" ||
-          type === "file" ||
-          type === "int") &&
-        !optionalHandle ? (
-          <></>
-        ) : (
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
-            content={refHtml.current}
-            side={left ? "left" : "right"}
-          >
-            <Handle
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              id={id}
-              isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance!)
-              }
-              className={classNames(
-                left ? "-ml-0.5 " : "-mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
-              )}
-              style={{
-                borderColor: color,
-                top: position,
-              }}
-            ></Handle>
-          </ShadTooltip>
-        )}
-
-        {left === true &&
-        type === "str" &&
-        !data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
-            {data.node?.template[name].list ? (
-              <InputListComponent
-                disabled={disabled}
-                value={
-                  !data.node.template[name].value ||
-                  data.node.template[name].value === ""
-                    ? [""]
-                    : data.node.template[name].value
+    !showNode ? (
+      <div
+        ref={ref}
+        className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      >
+        {
+          left &&
+          (type === "str" ||
+            type === "bool" ||
+            type === "float" ||
+            type === "code" ||
+            type === "prompt" ||
+            type === "file" ||
+            type === "int") &&
+          !optionalHandle ? (
+            <></>
+          ) : (
+            <ShadTooltip
+              styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+              delayDuration={0}
+              content={refHtml.current}
+              side={left ? "left" : "right"}
+            >
+              <Handle
+                type={left ? "target" : "source"}
+                position={left ? Position.Left : Position.Right}
+                id={id}
+                isValidConnection={(connection) =>
+                  isValidConnection(connection, reactFlowInstance!)
                 }
-                onChange={handleOnNewValue}
-              />
-            ) : data.node?.template[name].multiline ? (
-              <TextAreaComponent
+                className={classNames(
+                  left ? "-ml-0.5 " : "-mr-0.5 ",
+                  "h-3 w-3 rounded-full border-2 bg-background"
+                )}
+                style={{
+                  borderColor: color,
+                  top: position,
+                }}
+              ></Handle>
+            </ShadTooltip>
+          )}
+      </ div>
+    ) : (
+      <div
+        ref={ref}
+        className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      >
+        <>
+          <div
+            className={
+              "w-full truncate text-sm" +
+              (left ? "" : " text-end") +
+              (info !== "" ? " flex items-center" : "")
+            }
+          >
+            {title}
+            <span className="text-status-red">{required ? " *" : ""}</span>
+            <div className="">
+              {info !== "" && (
+                <ShadTooltip content={infoHtml.current}>
+                  {/* put div to avoid bug that does not display tooltip */}
+                  <div>
+                    <IconComponent
+                      name="Info"
+                      className="relative bottom-0.5 ml-2 h-3 w-4"
+                    />
+                  </div>
+                </ShadTooltip>
+              )}
+            </div>
+          </div>
+          {left &&
+          (type === "str" ||
+            type === "bool" ||
+            type === "float" ||
+            type === "code" ||
+            type === "prompt" ||
+            type === "file" ||
+            type === "int") &&
+          !optionalHandle ? (
+            <></>
+          ) : (
+            <ShadTooltip
+              styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+              delayDuration={0}
+              content={refHtml.current}
+              side={left ? "left" : "right"}
+            >
+              <Handle
+                type={left ? "target" : "source"}
+                position={left ? Position.Left : Position.Right}
+                id={id}
+                isValidConnection={(connection) =>
+                  isValidConnection(connection, reactFlowInstance!)
+                }
+                className={classNames(
+                  left ? "-ml-0.5 " : "-mr-0.5 ",
+                  "h-3 w-3 rounded-full border-2 bg-background"
+                )}
+                style={{
+                  borderColor: color,
+                  top: position,
+                }}
+              ></Handle>
+            </ShadTooltip>
+          )}
+
+          {left === true &&
+          type === "str" &&
+          !data.node?.template[name].options ? (
+            <div className="mt-2 w-full">
+              {data.node?.template[name].list ? (
+                <InputListComponent
+                  disabled={disabled}
+                  value={
+                    !data.node.template[name].value ||
+                    data.node.template[name].value === ""
+                      ? [""]
+                      : data.node.template[name].value
+                  }
+                  onChange={handleOnNewValue}
+                />
+              ) : data.node?.template[name].multiline ? (
+                <TextAreaComponent
+                  disabled={disabled}
+                  value={data.node.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                />
+              ) : (
+                <InputComponent
+                  disabled={disabled}
+                  password={data.node?.template[name].password ?? false}
+                  value={data.node?.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                />
+              )}
+            </div>
+          ) : left === true && type === "bool" ? (
+            <div className="mt-2 w-full">
+              <ToggleShadComponent
                 disabled={disabled}
-                value={data.node.template[name].value ?? ""}
-                onChange={handleOnNewValue}
+                enabled={data.node?.template[name].value ?? false}
+                setEnabled={(isEnabled) => {
+                  handleOnNewValue(isEnabled);
+                }}
+                size="large"
               />
-            ) : (
-              <InputComponent
+            </div>
+          ) : left === true && type === "float" ? (
+            <div className="mt-2 w-full">
+              <FloatComponent
                 disabled={disabled}
-                password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
               />
-            )}
-          </div>
-        ) : left === true && type === "bool" ? (
-          <div className="mt-2 w-full">
-            <ToggleShadComponent
-              disabled={disabled}
-              enabled={data.node?.template[name].value ?? false}
-              setEnabled={(isEnabled) => {
-                handleOnNewValue(isEnabled);
-              }}
-              size="large"
-            />
-          </div>
-        ) : left === true && type === "float" ? (
-          <div className="mt-2 w-full">
-            <FloatComponent
-              disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
-            />
-          </div>
-        ) : left === true &&
-          type === "str" &&
-          data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
-            <Dropdown
-              options={data.node.template[name].options}
-              onSelect={handleOnNewValue}
-              value={data.node.template[name].value ?? "Choose an option"}
-            ></Dropdown>
-          </div>
-        ) : left === true && type === "code" ? (
-          <div className="mt-2 w-full">
-            <CodeAreaComponent
-              dynamic={data.node?.template[name].dynamic ?? false}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
-              nodeClass={data.node}
-              disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
-            />
-          </div>
-        ) : left === true && type === "file" ? (
-          <div className="mt-2 w-full">
-            <InputFileComponent
-              disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
-              fileTypes={data.node?.template[name].fileTypes}
-              suffixes={data.node?.template[name].suffixes}
-              onFileChange={(filePath: string) => {
-                data.node!.template[name].file_path = filePath;
-                save();
-              }}
-            ></InputFileComponent>
-          </div>
-        ) : left === true && type === "int" ? (
-          <div className="mt-2 w-full">
-            <IntComponent
-              disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
-            />
-          </div>
-        ) : left === true && type === "prompt" ? (
-          <div className="mt-2 w-full">
-            <PromptAreaComponent
-              field_name={name}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
-              nodeClass={data.node}
-              disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
-            />
-          </div>
-        ) : (
-          <></>
-        )}
-      </>
-    </div>
+            </div>
+          ) : left === true &&
+            type === "str" &&
+            data.node?.template[name].options ? (
+            <div className="mt-2 w-full">
+              <Dropdown
+                options={data.node.template[name].options}
+                onSelect={handleOnNewValue}
+                value={data.node.template[name].value ?? "Choose an option"}
+              ></Dropdown>
+            </div>
+          ) : left === true && type === "code" ? (
+            <div className="mt-2 w-full">
+              <CodeAreaComponent
+                dynamic={data.node?.template[name].dynamic ?? false}
+                setNodeClass={(nodeClass) => {
+                  data.node = nodeClass;
+                }}
+                nodeClass={data.node}
+                disabled={disabled}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+              />
+            </div>
+          ) : left === true && type === "file" ? (
+            <div className="mt-2 w-full">
+              <InputFileComponent
+                disabled={disabled}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+                fileTypes={data.node?.template[name].fileTypes}
+                suffixes={data.node?.template[name].suffixes}
+                onFileChange={(filePath: string) => {
+                  data.node!.template[name].file_path = filePath;
+                  save();
+                }}
+              ></InputFileComponent>
+            </div>
+          ) : left === true && type === "int" ? (
+            <div className="mt-2 w-full">
+              <IntComponent
+                disabled={disabled}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+              />
+            </div>
+          ) : left === true && type === "prompt" ? (
+            <div className="mt-2 w-full">
+              <PromptAreaComponent
+                field_name={name}
+                setNodeClass={(nodeClass) => {
+                  data.node = nodeClass;
+                }}
+                nodeClass={data.node}
+                disabled={disabled}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+              />
+            </div>
+          ) : (
+            <></>
+          )}
+        </>
+      </div>
+    )
   );
 }
