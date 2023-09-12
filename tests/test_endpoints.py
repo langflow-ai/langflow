@@ -267,7 +267,7 @@ def square(x)
     assert response3.status_code == 200
     assert response3.json() == {
         "imports": {"errors": []},
-        "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
+        "function": {"errors": ["invalid syntax (<unknown>, line 4)"]},
     }
 
     # Test case with invalid JSON payload
@@ -290,7 +290,7 @@ def square(x)
     assert response6.status_code == 200
     assert response6.json() == {
         "imports": {"errors": []},
-        "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
+        "function": {"errors": ["invalid syntax (<unknown>, line 4)"]},
     }
 
 
