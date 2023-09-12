@@ -173,6 +173,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
+  onClick?: () => void
 };
 
 export type InputProps = {
