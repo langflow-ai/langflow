@@ -91,21 +91,26 @@ class ChatManager(Service):
                 self.cache_manager.current_client_id, chat_response
             )
 
-    async def connect(self, client_id: str, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket):
+        client_id = self.cache_manager.current_client_id
         self.active_connections[client_id] = websocket
 
-    def disconnect(self, client_id: str):
+    def disconnect(self):
+        client_id = self.cache_manager.current_client_id
         self.active_connections.pop(client_id, None)
 
-    async def send_message(self, client_id: str, message: str):
+    async def send_message(self, message: str):
+        client_id = self.cache_manager.current_client_id
         websocket = self.active_connections[client_id]
         await websocket.send_text(message)
 
-    async def send_json(self, client_id: str, message: ChatMessage):
+    async def send_json(self, message: ChatMessage):
+        client_id = self.cache_manager.current_client_id
         websocket = self.active_connections[client_id]
         await websocket.send_json(message.dict())
 
-    async def close_connection(self, client_id: str, code: int, reason: str):
+    async def close_connection(self, code: int, reason: str):
+        client_id = self.cache_manager.current_client_id
         if websocket := self.active_connections[client_id]:
             try:
                 await websocket.close(code=code, reason=reason)
