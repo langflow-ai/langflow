@@ -523,6 +523,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
 	updating the visibility of all basic types setting it to advanced true*/
   Object.keys(template).forEach((key) => {
     let type = template[key].type;
+    let input_types = template[key].input_types;
     if (
       (type === "str" ||
         type === "bool" ||
@@ -531,7 +532,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
         type === "prompt" ||
         type === "file" ||
         type === "int") &&
-      !template[key].required
+      !template[key].required && !input_types
     ) {
       template[key].advanced = true;
     }
