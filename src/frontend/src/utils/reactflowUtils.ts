@@ -779,6 +779,88 @@ export function ungroupNode(
   BaseFlow.edges = edges;
 }
 
+export function expandGroupNode(
+  groupNode: NodeDataType,
+  ReactFlowInstance: ReactFlowInstance,
+) {
+  const {template} = groupNode.node
+  const {flow} = groupNode.node;
+  const gNodes = _.cloneDeep(flow.data.nodes);
+  const gEdges = flow.data.edges;
+  //redirect edges to correct proxy node
+  let updatedEdges: Edge[] = [];
+  ReactFlowInstance.getEdges().forEach((edge) => {
+    let newEdge = _.cloneDeep(edge);
+    if (newEdge.target === groupNode.id) {
+      if (newEdge.targetHandle.split("|").length > 3) {
+        let type = newEdge.targetHandle.split("|")[0];
+        let field = newEdge.targetHandle.split("|")[4];
+        let proxy = newEdge.targetHandle.split("|")[3];
+        let node = gNodes.find((n) => n.id === proxy);
+        console.log(node);
+        if (node) {
+          newEdge.target = proxy;
+          if (node.type === "groupNode") {
+            newEdge.targetHandle =
+              type +
+              "|" +
+              field +
+              "|" +
+              proxy +
+              "|" +
+              node.data.node.template[field].proxy.id +
+              "|" +
+              node.data.node.template[field].proxy.field;
+          } else {
+            newEdge.targetHandle = type + "|" + field + "|" + proxy;
+          }
+          updatedEdges.push(newEdge);
+        }
+      }
+    }
+    if (newEdge.source === groupNode.id) {
+      const lastNode = _.cloneDeep(findLastNode(flow.data));
+      newEdge.source = lastNode.id;
+      let sourceHandle = newEdge.sourceHandle.split("|");
+      sourceHandle[1] = lastNode.id;
+      newEdge.sourceHandle = sourceHandle.join("|");
+      updatedEdges.push(newEdge);
+    }
+  });
+
+  Object.keys(template).forEach((key) => {
+    let { field, id } = template[key].proxy;
+    let nodeIndex = gNodes.findIndex((n) => n.id === id);
+    if (nodeIndex !== -1) {
+      let display_name: string;
+      let show = gNodes[nodeIndex].data.node.template[field].show;
+      let advanced = gNodes[nodeIndex].data.node.template[field].advanced;
+      if (gNodes[nodeIndex].data.node.template[field].display_name) {
+        display_name = gNodes[nodeIndex].data.node.template[field].display_name;
+      } else {
+        display_name = gNodes[nodeIndex].data.node.template[field].name;
+      }
+      gNodes[nodeIndex].data.node.template[field] = template[key];
+      gNodes[nodeIndex].data.node.template[field].show = show;
+      gNodes[nodeIndex].data.node.template[field].advanced = advanced;
+      gNodes[nodeIndex].data.node.template[field].display_name = display_name;
+    }
+  });
+
+  const nodes = [
+    ...ReactFlowInstance.getNodes().filter((n) => n.id !== groupNode.id),
+    ...gNodes,
+  ];
+  const edges = [
+    ...ReactFlowInstance.getEdges().filter(
+      (e) => e.target !== groupNode.id && e.source !== groupNode.id
+    ),
+    ...gEdges,
+    ...updatedEdges,
+  ];
+  ReactFlowInstance.setNodes(nodes);
+  ReactFlowInstance.setEdges(edges);
+}
 export function processFLow(FlowObject: ReactFlowJsonObject) {
   let clonedFLow = _.cloneDeep(FlowObject);
   clonedFLow.nodes.forEach((node: NodeType) => {

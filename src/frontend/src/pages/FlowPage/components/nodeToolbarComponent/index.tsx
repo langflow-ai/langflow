@@ -6,12 +6,13 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
-import { ungroupNode } from "../../../../utils/reactflowUtils";
+import { ungroupNode, updateFlowPosition } from "../../../../utils/reactflowUtils";
 
 export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  position,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -127,6 +128,7 @@ export default function NodeToolbarComponent({
                 )}
                 onClick={(event) => {
                   event.preventDefault();
+                  updateFlowPosition(position,data.node?.flow!)
                   ungroupNode(data, { edges: reactFlowInstance.getEdges(), 
                     nodes: reactFlowInstance.getNodes(), 
                     viewport: reactFlowInstance.getViewport() })

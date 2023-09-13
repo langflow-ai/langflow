@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { NodeToolbar, XYPosition, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -17,10 +17,12 @@ import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data: olddata,
+  position,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
+  position: XYPosition;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
