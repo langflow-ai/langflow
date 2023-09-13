@@ -429,6 +429,16 @@ chat_input_field: Input key that you want the chat to send the user message with
 ></langflow-chat>`;
 }
 
+export function truncateLongId(id: string): string {
+  let [componentName,newId] = id.split("-");
+  if (componentName.length>15){
+    componentName = componentName.slice(0,10);
+    componentName += "...";
+    return componentName+"-"+newId;
+  }
+  return id;
+}
+
 export function tabsArray(codes: string[], method: number) {
   if (!method) return;
   if (method === 0) {

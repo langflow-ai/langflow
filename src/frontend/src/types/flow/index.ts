@@ -19,6 +19,7 @@ export type NodeDataType = {
   type: string;
   node?: APIClassType;
   id: string;
+  output_types?: string[];
 };
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
