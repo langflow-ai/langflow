@@ -1,5 +1,6 @@
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     HTTPException,
     Query,
@@ -23,6 +24,7 @@ from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
 
 from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.database.models.flow.flow import Flow
 from loguru import logger
 from langflow.services.utils import get_chat_manager, get_session
 from cachetools import LRUCache
@@ -133,12 +135,16 @@ async def build_status(flow_id: str):
 
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def get_vertices(
-    flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
+    flow_id: str,
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    session=Depends(get_session),
 ):
     """Check the flow_id is in the flow_data_store."""
     try:
-        graph_data = flow_data_store[flow_id].get("graph_data")
-        graph = Graph.from_payload(graph_data)
+        flow: Flow = session.get(Flow, flow_id)
+        if not flow:
+            raise ValueError("Invalid flow ID")
+        graph = Graph.from_payload(flow.data)
         chat_manager.set_cache(flow_id, graph)
         vertices = graph.topological_sort()
 
@@ -155,7 +161,8 @@ def build_vertex(
     vertex_id: str,
     chat_manager: "ChatManager" = Depends(get_chat_manager),
     current_user=Depends(get_current_active_user),
-    tweaks: dict = Query(None),
+    tweaks: dict = Body(None),
+    inputs: dict = Body(None),
 ):
     """Build a vertex instead of the entire graph."""
     try:
@@ -167,17 +174,27 @@ def build_vertex(
             raise ValueError("Invalid vertex")
         try:
             if isinstance(vertex, StatelessVertex):
-                vertex.build(current_user.id, force=True)
+                vertex.build(current_user.id, force=True, inputs=inputs)
             params = vertex._built_object_repr()
             valid = True
+            result_dict = vertex.get_result_dict()
+            # We need to set the artifacts to pass information
+            # to the frontend
+            vertex.set_artifacts()
+            artifacts = vertex.artifacts
         except Exception as exc:
             params = str(exc)
             valid = False
+            result_dict = {}
+            artifacts = {}
+        chat_manager.set_cache(flow_id, graph)
 
         return VertexBuildResponse(
             valid=valid,
             params=params,
             id=vertex.id,
+            results=result_dict,
+            artifacts=artifacts,
         )
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
