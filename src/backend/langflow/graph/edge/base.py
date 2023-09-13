@@ -60,3 +60,38 @@ class Edge:
             if isinstance(__value, Edge)
             else False
         )
+
+
+class ContractEdge(Edge):
+    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
+        super().__init__(source, target, raw_edge)
+        self.is_fulfilled = False  # Whether the contract has been fulfilled.
+        self.result = None
+
+    def fulfill(self, force: bool = False) -> None:
+        """
+        Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+        If the edge is runnable, the source vertex is run with the message text and the target vertex's
+        root_field param is set to the
+        result. If the edge is not runnable, the target vertex's parameter is set to the result.
+        :param message: The message object to be processed if the edge is runnable.
+        """
+        if self.is_fulfilled:
+            return
+
+        if not self.source._built:
+            self.source.build(force=force)
+
+        self.result = self.source._built_object
+
+        self.target.params[self.target_param] = self.result
+        self.is_fulfilled = True
+
+    def get_result(self):
+        # Fulfill the contract if it has not been fulfilled.
+        if not self.is_fulfilled:
+            self.fulfill()
+        return self.result
+
+    def __repr__(self) -> str:
+        return f"{self.source.vertex_type} -[{self.target_param}]-> {self.target.vertex_type}"
