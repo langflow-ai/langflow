@@ -139,10 +139,10 @@ const EditNodeModal = forwardRef(
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
                             <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
-                              {myData.node?.template[templateParam].name
-                                ? myData.node.template[templateParam].name
+                              {myData.node?.template[templateParam].display_name
+                                ? myData.node.template[templateParam].display_name
                                 : myData.node?.template[templateParam]
-                                    .display_name}
+                                    .name}
                             </TableCell>
                             <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
                               {myData.node?.template[templateParam].type ===
