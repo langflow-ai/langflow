@@ -1,6 +1,6 @@
 from typing import Dict, Generator, List, Type, Union
 
-from langflow.graph.edge.base import Edge
+from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
@@ -166,21 +166,21 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
-    def _build_edges(self) -> List[Edge]:
+    def _build_edges(self) -> List[ContractEdge]:
         """Builds the edges of the graph."""
         # Edge takes two nodes as arguments, so we need to build the nodes first
         # and then build the edges
         # if we can't find a node, we raise an error
 
-        edges: List[Edge] = []
+        edges: List[ContractEdge] = []
         for edge in self._edges:
-            source = self.get_node(edge["source"])
-            target = self.get_node(edge["target"])
+            source = self.get_vertex(edge["source"])
+            target = self.get_vertex(edge["target"])
             if source is None:
                 raise ValueError(f"Source node {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target node {edge['target']} not found")
-            edges.append(Edge(source, target, edge))
+            edges.append(ContractEdge(source, target, edge))
         return edges
 
     def _get_vertex_class(
