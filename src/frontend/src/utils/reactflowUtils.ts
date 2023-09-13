@@ -8,6 +8,7 @@ import {
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
+import ShortUniqueId from "short-unique-id";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
@@ -23,8 +24,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase } from "./utils";
-import ShortUniqueId from "short-unique-id";
+import { toNormalCase, toTitleCase, truncateLongId } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges({
@@ -455,10 +455,7 @@ export function filterFlow(
   );
 }
 
-export function findLastNode({
-  nodes,
-  edges,
-}: findLastNodeType) {
+export function findLastNode({ nodes, edges }: findLastNodeType) {
   /*
 		this function receives a flow and return the last node
 	*/
@@ -531,12 +528,12 @@ function updateGroupNodeTemplate(template: APITemplateType) {
         type === "prompt" ||
         type === "file" ||
         type === "int") &&
-      !template[key].required && !input_types
+      !template[key].required &&
+      !input_types
     ) {
       template[key].advanced = true;
-      if(template[key].dynamic)
-      {
-        template[key].dynamic = false
+      if (template[key].dynamic) {
+        template[key].dynamic = false;
       }
     }
   });
@@ -571,11 +568,14 @@ export function mergeNodeTemplates({
               node.data.node!.flow!.name + " - " + nodeTemplate[key].name;
           } else {
             template[key + "_" + node.id].display_name =
-              node.data.node!.display_name + " - " + (nodeTemplate[key].display_name
-              ? nodeTemplate[key].display_name
-              : nodeTemplate[key].name
-              ? toTitleCase(nodeTemplate[key].name)
-              : toTitleCase(key))
+            //data id already has the node name on it
+              truncateLongId(node.data.id) +
+              " - " +
+              (nodeTemplate[key].display_name
+                ? nodeTemplate[key].display_name
+                : nodeTemplate[key].name
+                ? toTitleCase(nodeTemplate[key].name)
+                : toTitleCase(key));
           }
         }
       });
@@ -596,14 +596,22 @@ function isHandleConnected(
       edges.some(
         (e) =>
           e.targetHandle ===
-          customStringify({type:field.type,fieldName:key,id:nodeId,proxy:{id:field.proxy!.id,field:field.proxy!.field}})      )
+          customStringify({
+            type: field.type,
+            fieldName: key,
+            id: nodeId,
+            proxy: { id: field.proxy!.id, field: field.proxy!.field },
+          })
+      )
     ) {
       return true;
     }
   } else {
     if (
       edges.some(
-        (e) => e.targetHandle === customStringify({type:field.type,fieldName:key,id:nodeId})
+        (e) =>
+          e.targetHandle ===
+          customStringify({ type: field.type, fieldName: key, id: nodeId })
       )
     ) {
       return true;
@@ -624,7 +632,6 @@ export function generateNodeTemplate(Flow: FlowType) {
   return template;
 }
 
-
 export function generateNodeFromFlow(flow: FlowType): NodeType {
   const { nodes } = flow.data!;
   const outputNode = _.cloneDeep(findLastNode(flow.data!));
@@ -634,9 +641,10 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
   const newGroupNode: NodeType = {
     data: {
       id: data.id,
-      type: outputNode!.data.type,
+      type: outputNode?.data.type!,
       node: {
-        display_name:"group Node",
+        output_types: outputNode!.data.node!.output_types,
+        display_name: "group Node",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
         description: "group Node",
@@ -690,11 +698,11 @@ export function connectedInputNodesOnHandle(
 }
 
 export function ungroupNode(
-  groupNode:NodeDataType,
-  BaseFlow: ReactFlowJsonObject,
+  groupNode: NodeDataType,
+  BaseFlow: ReactFlowJsonObject
 ) {
-  const {template} = groupNode.node
-  const {flow} = groupNode.node;
+  const { template } = groupNode.node;
+  const { flow } = groupNode.node;
   const gNodes: NodeType[] = flow.data.nodes;
   const gEdges = flow.data.edges;
   //redirect edges to correct proxy node
@@ -756,7 +764,10 @@ export function ungroupNode(
     }
   });
 
-  const nodes = [...BaseFlow.nodes.filter((n) => n.id !== groupNode.id), ...gNodes];
+  const nodes = [
+    ...BaseFlow.nodes.filter((n) => n.id !== groupNode.id),
+    ...gNodes,
+  ];
   const edges = [
     ...BaseFlow.edges.filter(
       (e) => e.target !== groupNode.id && e.source !== groupNode.id
@@ -772,7 +783,7 @@ export function processFLow(FlowObject: ReactFlowJsonObject) {
   let clonedFLow = _.cloneDeep(FlowObject);
   clonedFLow.nodes.forEach((node: NodeType) => {
     if (node.type === "groupNode") {
-      processFLow(node.data.node.flow.data);
+      processFLow(node.data.node!.flow!.data!);
       ungroupNode(node.data, clonedFLow);
     }
   });
