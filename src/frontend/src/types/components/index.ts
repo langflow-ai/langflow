@@ -1,5 +1,5 @@
 import { ReactElement, ReactNode } from "react";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
@@ -389,6 +389,7 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  position:XYPosition;
 };
 
 export type parsedDataType = {
