@@ -14,7 +14,6 @@ import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import { Button } from "@mui/material";
 
 export default function GenericNode({
   data: olddata,
@@ -37,8 +36,10 @@ export default function GenericNode({
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)
       .filter((templateField) => templateField.charAt(0) !== "_").map((templateCamp) => {
-        if (!data.node?.template[templateCamp].show) return false
-        switch (data.node?.template[templateCamp].type) {
+        const { template } = data.node!;
+        if (template[templateCamp].input_types) return true
+        if (!template[templateCamp].show) return false
+        switch (template[templateCamp].type) {
           case "str":
             return false;
           case "bool":
@@ -84,7 +85,6 @@ export default function GenericNode({
         },
       });
       updateFlow(flow);
-      console.log(myFlow)
     }
     countHandles();
   }, [data]);
@@ -115,7 +115,7 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          showNode ? "w-96" : "w-24 h-24 rounded-full",
+          showNode ? "w-96" : "w-26 h-26 rounded-full",
           "generic-node-div",
         )}
       >
