@@ -215,7 +215,12 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
             return class_method(**params)
         raise ValueError(f"Method {method} not found in {class_object}")
 
-    return class_object(**params)
+    chain = class_object(**params)
+
+    input_keys_dict = {
+        "input_keys": chain.input_keys if hasattr(chain, "input_keys") else []
+    }
+    return chain, input_keys_dict
 
 
 def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params: Dict):
