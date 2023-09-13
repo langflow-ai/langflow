@@ -144,6 +144,7 @@ class TextSplitterVertex(StatefulVertex):
 class ChainVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
+        self.steps = [self._build, self._run]
 
     def build(
         self,
@@ -163,6 +164,10 @@ class ChainVertex(StatelessVertex):
             self._build(user_id=user_id)
 
         return self._built_object
+
+    def set_artifacts(self) -> None:
+        if self._built_object and hasattr(self._built_object, "input_keys"):
+            self.artifacts = dict(input_keys=self._built_object.input_keys)
 
 
 class PromptVertex(StatelessVertex):

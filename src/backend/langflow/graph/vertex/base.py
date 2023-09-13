@@ -9,23 +9,42 @@ from langflow.utils.util import sync_to_async
 
 import inspect
 import types
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import Edge
+    from langflow.graph.edge.base import ContractEdge
 
 
 class Vertex:
     def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
         self.id: str = data["id"]
         self._data = data
-        self.edges: List["Edge"] = []
+        self.edges: List["ContractEdge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = UnbuiltObject()
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.steps: List[Callable] = [self._build]
+        self.steps_ran: List[Callable] = []
+
+    # Build a result dict for each edge
+    # like so: {edge.target.id: {edge.target_param: self._built_object}}
+    def get_result_dict(self, force: bool = False) -> Dict[str, Dict[str, Any]]:
+        """
+        Returns a dictionary with the result of the build process.
+        """
+        for edge in self.edges:
+            edge.fulfill(force=force)
+        return {
+            edge.target.id: {edge.target_param: edge.result}
+            for edge in self.edges
+            if edge.is_fulfilled
+        }
+
+    def set_artifacts(self) -> None:
+        pass
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -132,6 +151,7 @@ class Vertex:
                     params.pop(key, None)
         # Add _type to params
         self.params = params
+        # TODO: Hash params dict
 
     def _build(self, user_id=None):
         """
@@ -143,6 +163,17 @@ class Vertex:
         self._validate_built_object()
 
         self._built = True
+
+    def _run(self, user_id: str, inputs: dict):
+        # user_id is just for compatibility with the other build methods
+        inputs = {key: value or "" for key, value in inputs.items()}
+        if hasattr(self._built_object, "input_keys"):
+            # test if all keys are in inputs
+            # and if not add them with empty string
+            for key in self._built_object.input_keys:
+                if key not in inputs:
+                    inputs[key] = ""
+        self._built_object = self._built_object.run(inputs)
 
     def _build_each_node_in_params_dict(self):
         """
@@ -258,13 +289,25 @@ class Vertex:
 
             raise ValueError(message)
 
+    def _reset(self):
+        self._built = False
+        self._built_object = UnbuiltObject()
+        self.artifacts = {}
+        self.steps_ran = []
+
     def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
-        if not self._built or force:
-            self._build(user_id, *args, **kwargs)
+        if force:
+            self._reset()
+
+        # Run one step
+        if self.steps:
+            step = self.steps.pop(0)
+            self.steps_ran.append(step)
+            step(user_id=user_id)
 
         return self._built_object
 
-    def add_edge(self, edge: "Edge") -> None:
+    def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:
             self.edges.append(edge)
 
