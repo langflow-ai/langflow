@@ -152,7 +152,7 @@ async def get_vertices(
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
-        return HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
@@ -167,14 +167,15 @@ def build_vertex(
     """Build a vertex instead of the entire graph."""
     try:
         graph = chat_manager.get_cache(flow_id)
-        graph = process_tweaks_on_graph(graph, tweaks)
+        if tweaks:
+            graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
             raise ValueError("Invalid graph")
         if not (vertex := graph.get_vertex(vertex_id)):
             raise ValueError("Invalid vertex")
         try:
-            if isinstance(vertex, StatelessVertex):
-                vertex.build(current_user.id, force=True, inputs=inputs)
+            if isinstance(vertex, StatelessVertex) or not vertex._built:
+                vertex.build(user_id=current_user.id, force=True, inputs=inputs)
             params = vertex._built_object_repr()
             valid = True
             result_dict = vertex.get_result_dict()
@@ -198,7 +199,7 @@ def build_vertex(
         )
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
-        return HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
