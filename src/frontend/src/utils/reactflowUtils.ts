@@ -796,42 +796,40 @@ export function expandGroupNode(
       const targetHandle:targetHandleType = newEdge.data.targetHandle;
       if (targetHandle.proxy) {
         let type = targetHandle.type;
-        let field = newEdge.targetHandle.split("|")[4];
-        let proxy = newEdge.targetHandle.split("|")[3];
-        let node = gNodes.find((n) => n.id === proxy);
-        console.log(node);
+        let field = targetHandle.proxy.field;
+        let proxyId = targetHandle.proxy.id;
+        let inputTypes = targetHandle.inputTypes;
+        let node:NodeType = gNodes.find((n) => n.id === proxyId)!;
         if (node) {
-          newEdge.target = proxy;
-          if (node.type === "groupNode") {
-            newEdge.targetHandle =
-              type +
-              "|" +
-              field +
-              "|" +
-              proxy +
-              "|" +
-              node.data.node.template[field].proxy.id +
-              "|" +
-              node.data.node.template[field].proxy.field;
-          } else {
-            newEdge.targetHandle = type + "|" + field + "|" + proxy;
+          newEdge.target = proxyId;
+          let newTargetHandle: targetHandleType = {
+            fieldName: field,
+            type,
+            id: proxyId}
+          if (node.data.node?.flow) {
+            newTargetHandle.proxy = 
+              {field:node.data.node.template[field].proxy?.field!,
+                id:node.data.node.template[field].proxy?.id!}
+            }
+            if(inputTypes){
+              newTargetHandle.inputTypes = inputTypes;
+            }
+            newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
           }
-          updatedEdges.push(newEdge);
         }
       }
-    }
     if (newEdge.source === groupNode.id) {
-      const lastNode = _.cloneDeep(findLastNode(flow.data));
-      newEdge.source = lastNode.id;
-      let sourceHandle = newEdge.sourceHandle.split("|");
-      sourceHandle[1] = lastNode.id;
-      newEdge.sourceHandle = sourceHandle.join("|");
-      updatedEdges.push(newEdge);
+      const lastNode = _.cloneDeep(findLastNode(flow!.data!));
+      newEdge.source = lastNode!.id;
+      let newSourceHandle: sourceHandleType = scapeJSONParse(newEdge.sourceHandle!);
+      newSourceHandle.id = lastNode!.id;
+      newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
+    updatedEdges.push(newEdge);
   });
-
+  //update template values
   Object.keys(template).forEach((key) => {
-    let { field, id } = template[key].proxy;
+    let { field, id } = template[key].proxy!;
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
       let display_name: string;
@@ -863,6 +861,7 @@ export function expandGroupNode(
   ReactFlowInstance.setNodes(nodes);
   ReactFlowInstance.setEdges(edges);
 }
+
 export function processFLow(FlowObject: ReactFlowJsonObject) {
   let clonedFLow = _.cloneDeep(FlowObject);
   clonedFLow.nodes.forEach((node: NodeType) => {
