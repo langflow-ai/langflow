@@ -13,6 +13,7 @@ import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
   FlowType,
+  NodeDataType,
   NodeType,
   sourceHandleType,
   targetHandleType,
@@ -783,17 +784,18 @@ export function expandGroupNode(
   groupNode: NodeDataType,
   ReactFlowInstance: ReactFlowInstance,
 ) {
-  const {template} = groupNode.node
-  const {flow} = groupNode.node;
-  const gNodes = _.cloneDeep(flow.data.nodes);
-  const gEdges = flow.data.edges;
+  const {template} = groupNode.node!
+  const {flow} = groupNode.node!;
+  const gNodes = _.cloneDeep(flow!.data!.nodes);
+  const gEdges = flow!.data!.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   ReactFlowInstance.getEdges().forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
     if (newEdge.target === groupNode.id) {
-      if (newEdge.targetHandle.split("|").length > 3) {
-        let type = newEdge.targetHandle.split("|")[0];
+      const targetHandle:targetHandleType = newEdge.data.targetHandle;
+      if (targetHandle.proxy) {
+        let type = targetHandle.type;
         let field = newEdge.targetHandle.split("|")[4];
         let proxy = newEdge.targetHandle.split("|")[3];
         let node = gNodes.find((n) => n.id === proxy);

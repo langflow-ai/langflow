@@ -17,12 +17,14 @@ import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data: olddata,
-  position,
+  xPos,
+  yPos,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
-  position: XYPosition;
+  xPos: number;
+  yPos: number;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
@@ -69,6 +71,7 @@ export default function GenericNode({
     <>
       <NodeToolbar>
         <NodeToolbarComponent
+          position={{ x: xPos, y: yPos }}
           data={data}
           setData={setData}
           deleteNode={deleteNode}

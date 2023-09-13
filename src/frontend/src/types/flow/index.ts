@@ -49,4 +49,5 @@ export type targetHandleType = {
   type: string;
   fieldName: string;
   id: string;
+  proxy?:{field:string, id:string}
 };
