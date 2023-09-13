@@ -180,6 +180,7 @@ export default function GenericNode({
                         type: data.node!.template[templateField].type,
                         id: data.id,
                         fieldName: templateField,
+                        Proxy: data.node!.template[templateField].Proxy,
                       })}
                       data={data}
                       setData={setData}
