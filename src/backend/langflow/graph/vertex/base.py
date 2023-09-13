@@ -40,7 +40,7 @@ class Vertex:
         return {
             edge.target.id: {edge.target_param: edge.result}
             for edge in self.edges
-            if edge.is_fulfilled
+            if edge.is_fulfilled and isinstance(edge.result, str)
         }
 
     def set_artifacts(self) -> None:

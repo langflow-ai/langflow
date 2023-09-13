@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from langflow.services.database.manager import DatabaseManager
     from langflow.services.settings.manager import SettingsManager
     from langflow.services.chat.manager import ChatManager
+    from langflow.services.cache.manager import CacheManager
     from sqlmodel import Session
 
 
@@ -24,3 +25,7 @@ def get_session() -> Generator["Session", None, None]:
 
 def get_chat_manager() -> "ChatManager":
     return service_manager.get(ServiceType.CHAT_MANAGER)
+
+
+def get_cache_manager() -> "CacheManager":
+    return service_manager.get(ServiceType.CACHE_MANAGER)

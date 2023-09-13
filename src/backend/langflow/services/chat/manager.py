@@ -2,19 +2,21 @@ from collections import defaultdict
 from fastapi import WebSocket, status
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.services.base import Service
-from langflow.services import service_manager
 from langflow.services.cache.manager import Subject
 from langflow.services.chat.utils import process_graph
 from langflow.interface.utils import pil_to_base64
-from langflow.services.schema import ServiceType
+from langflow.services.utils import get_cache_manager
 from loguru import logger
 
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from langflow.services.cache.flow import InMemoryCache
 import orjson
+
+if TYPE_CHECKING:
+    pass
 
 
 class ChatHistory(Subject):
@@ -50,7 +52,7 @@ class ChatManager(Service):
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.chat_history = ChatHistory()
-        self.cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
+        self.cache_manager = get_cache_manager()
         self.cache_manager.attach(self.update)
         self.in_memory_cache = InMemoryCache()
 
@@ -181,6 +183,12 @@ class ChatManager(Service):
 
         self.in_memory_cache.set(client_id, langchain_object)
         return client_id in self.in_memory_cache
+
+    def get_cache(self, client_id: str) -> Any:
+        """
+        Get the cache for a client.
+        """
+        return self.in_memory_cache.get(client_id)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)

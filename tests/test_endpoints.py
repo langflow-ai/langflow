@@ -343,3 +343,72 @@ def test_various_prompts(client, prompt, expected_input_variables):
     response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
+
+
+def test_get_vertices_flow_not_found(client, logged_in_headers):
+    response = client.get(
+        "/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers
+    )
+    assert (
+        response.status_code == 500
+    )  # Or whatever status code you've set for invalid ID
+
+
+def test_get_vertices(client, added_flow, logged_in_headers):
+    flow_id = added_flow["id"]
+    response = client.get(
+        f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
+    )
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    # The response should contain the list in this order
+    # ['ConversationBufferMemory-Lu2Nb', 'PromptTemplate-5Q0W8', 'ChatOpenAI-vy7fV', 'LLMChain-UjBh1']
+    # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
+    ids = [id.split("-")[0] for id in response.json()["ids"]]
+    assert ids == [
+        "ConversationBufferMemory",
+        "PromptTemplate",
+        "ChatOpenAI",
+        "LLMChain",
+    ]
+
+
+def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+    response = client.post(
+        "/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers
+    )
+    assert response.status_code == 500
+
+
+def test_build_vertex_invalid_vertex_id(client, added_flow, logged_in_headers):
+    flow_id = added_flow["id"]
+    response = client.post(
+        f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers
+    )
+    assert response.status_code == 500
+
+
+def test_build_all_vertices_in_sequence(client, added_flow, logged_in_headers):
+    flow_id = added_flow["id"]
+
+    # First, get all the vertices in the correct sequence
+    response = client.get(
+        f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
+    )
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    vertex_ids = response.json()["ids"]
+
+    # Now, iterate through each vertex and build it
+    for vertex_id in vertex_ids:
+        response = client.post(
+            f"/api/v1/build/{flow_id}/vertices/{vertex_id}", headers=logged_in_headers
+        )
+        json_response = response.json()
+        assert (
+            response.status_code == 200
+        ), f"Failed at vertex {vertex_id}: {json_response}"
+        assert "valid" in json_response
+        assert json_response["valid"], f"Vertex {vertex_id} is not valid."
+
+        # Your additional assertions like checking for params, results, and artifacts.
