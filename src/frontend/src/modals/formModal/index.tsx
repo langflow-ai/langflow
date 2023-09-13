@@ -27,7 +27,7 @@ import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getBuildStatus } from "../../controllers/API";
 import { TabsState } from "../../types/tabs";
-import { validateNodes } from "../../utils/reactflowUtils";
+import { validateNodes,processFlow } from "../../utils/reactflowUtils";
 
 export default function FormModal({
   flow,
@@ -368,7 +368,7 @@ export default function FormModal({
         tabsState[flow.id].formKeysData.template
       );
       sendAll({
-        ...reactFlowInstance?.toObject()!,
+        ... processFlow(reactFlowInstance?.toObject()!),
         inputs: inputs!,
         chatHistory,
         name: flow.name,

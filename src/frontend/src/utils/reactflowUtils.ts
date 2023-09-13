@@ -861,14 +861,13 @@ export function expandGroupNode(
   ReactFlowInstance.setEdges(edges);
 }
 
-export function processFLow(FlowObject: ReactFlowJsonObject) {
+export function processFlow(FlowObject: ReactFlowJsonObject) {
   let clonedFLow = _.cloneDeep(FlowObject);
   clonedFLow.nodes.forEach((node: NodeType) => {
-    if (node.type === "groupNode") {
-      processFLow(node.data.node!.flow!.data!);
+    if (node.data.node?.flow) {
+      processFlow(node.data.node!.flow!.data!);
       ungroupNode(node.data, clonedFLow);
     }
   });
-  console.log(clonedFLow);
   return clonedFLow;
 }
