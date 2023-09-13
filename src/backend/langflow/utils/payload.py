@@ -34,10 +34,10 @@ def get_root_node(graph):
     """
     incoming_edges = {edge.source for edge in graph.edges}
 
-    if not incoming_edges and len(graph.nodes) == 1:
-        return graph.nodes[0]
+    if not incoming_edges and len(graph.vertices) == 1:
+        return graph.vertices[0]
 
-    return next((node for node in graph.nodes if node not in incoming_edges), None)
+    return next((node for node in graph.vertices if node not in incoming_edges), None)
 
 
 def build_json(root, graph) -> Dict:

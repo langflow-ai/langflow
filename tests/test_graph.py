@@ -24,7 +24,7 @@ from langflow.utils.payload import get_root_node
 
 def get_node_by_type(graph, node_type: Type[Vertex]) -> Union[Vertex, None]:
     """Get a node by type"""
-    return next((node for node in graph.nodes if isinstance(node, node_type)), None)
+    return next((node for node in graph.vertices if isinstance(node, node_type)), None)
 
 
 def test_graph_structure(basic_graph):
@@ -162,8 +162,8 @@ def test_get_node_neighbors_basic(basic_graph):
 
 def test_get_node(basic_graph):
     """Test getting a single node"""
-    node_id = basic_graph.nodes[0].id
-    node = basic_graph.get_node(node_id)
+    node_id = basic_graph.vertices[0].id
+    node = basic_graph.get_vertex(node_id)
     assert isinstance(node, Vertex)
     assert node.id == node_id
 
@@ -171,8 +171,8 @@ def test_get_node(basic_graph):
 def test_build_nodes(basic_graph):
     """Test building nodes"""
 
-    assert len(basic_graph.nodes) == len(basic_graph._nodes)
-    for node in basic_graph.nodes:
+    assert len(basic_graph.vertices) == len(basic_graph._nodes)
+    for node in basic_graph.vertices:
         assert isinstance(node, Vertex)
 
 
@@ -312,7 +312,7 @@ def test_get_result_and_thought(basic_graph):
     llm_node._built = True
     langchain_object = basic_graph.build()
     # assert all nodes are built
-    assert all(node._built for node in basic_graph.nodes)
+    assert all(node._built for node in basic_graph.vertices)
     # now build again and check if FakeListLLM was used
 
     # Get the result and thought
