@@ -31,6 +31,39 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [showNode, setShowNode] = useState<boolean>(true);
+  const [handles, setHandles] = useState<boolean[] | []>([]);
+  let numberOfInputs: boolean[] = [];
+
+  function countHandles(): void {
+    numberOfInputs = Object.keys(data.node!.template)
+      .filter((templateField) => templateField.charAt(0) !== "_").map((templateCamp) => {
+        if (!data.node?.template[templateCamp].show) return false
+        switch (data.node?.template[templateCamp].type) {
+          case "str":
+            return false;
+          case "bool":
+            return false;
+          case "float":
+            return false;
+          case "code":
+            return false;
+          case "prompt":
+            return false;
+          case "file":
+            return false;
+          case "int":
+            return false;
+          default:
+            return true
+        }
+      })
+      setHandles(numberOfInputs)
+  };
+
+  useEffect(() => {
+    countHandles();
+  }, [])
+
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
@@ -51,7 +84,9 @@ export default function GenericNode({
         },
       });
       updateFlow(flow);
+      console.log(myFlow)
     }
+    countHandles();
   }, [data]);
 
   // New useEffect to watch for changes in sseData and update validation status
@@ -73,27 +108,28 @@ export default function GenericNode({
           setData={setData}
           deleteNode={deleteNode}
           setShowNode={setShowNode}
+          numberOfHandles={handles}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          showNode ? "w-96" : "w-32",
+          showNode ? "w-96" : "w-24 h-24 rounded-full",
           "generic-node-div",
         )}
       >
-        {data.node?.beta && (
+        {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
         <div>
-          <div className={"generic-node-div-title " + (!showNode ? "relative rounded-t-lg rounded-b-lg" : "justify-between rounded-t-lg")}>
-            <div className={"generic-node-title-arrangement " + (!showNode && "justify-center")}>
+          <div className={"generic-node-div-title " + (!showNode ? "relative rounded-full w-24 h-24" : "justify-between rounded-t-lg")}>
+            <div className={"generic-node-title-arrangement rounded-full" + (!showNode && "justify-center")}>
               <IconComponent
                 name={name}
-                className={"generic-node-icon " + (!showNode && "absolute left-10")}
+                className={"generic-node-icon " + (!showNode && "absolute left-7")}
                 iconColor={`${nodeColors[types[data.type]]}`}
               />
               {showNode && (
@@ -112,8 +148,7 @@ export default function GenericNode({
                   {Object.keys(data.node!.template)
                   .filter((templateField) => templateField.charAt(0) !== "_")
                   .map((templateField: string, idx) => (
-                    <div key={idx}>
-                      {data.node!.template[templateField].show &&
+                      data.node!.template[templateField].show &&
                       !data.node!.template[templateField].advanced && (
                         <ParameterComponent
                           key={
@@ -165,8 +200,7 @@ export default function GenericNode({
                           }
                           showNode={showNode}
                         />
-                      )}
-                    </div>))}
+                      )))}
                     <ParameterComponent
                       key={[data.type, data.id, ...data.node!.base_classes].join("|")}
                       data={data}

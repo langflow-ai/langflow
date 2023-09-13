@@ -32,7 +32,7 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
 
-export default function ParameterComponent({
+export default function  ParameterComponent({
   left,
   id,
   data,
@@ -181,11 +181,6 @@ export default function ParameterComponent({
 
   return (
     !showNode ? (
-      <div
-        ref={ref}
-        className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
-      >
-        {
           left &&
           (type === "str" ||
             type === "bool" ||
@@ -211,7 +206,7 @@ export default function ParameterComponent({
                   isValidConnection(connection, reactFlowInstance!)
                 }
                 className={classNames(
-                  left ? "-ml-0.5 " : "-mr-0.5 ",
+                  left ? "-ml-0.5 my-12 " : " -mr-0.4 my-12 ",
                   "h-3 w-3 rounded-full border-2 bg-background"
                 )}
                 style={{
@@ -220,8 +215,7 @@ export default function ParameterComponent({
                 }}
               ></Handle>
             </ShadTooltip>
-          )}
-      </ div>
+          )
     ) : (
       <div
         ref={ref}

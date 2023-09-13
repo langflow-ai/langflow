@@ -12,6 +12,7 @@ export default function NodeToolbarComponent({
   setData,
   deleteNode,
   setShowNode,
+  numberOfHandles,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -28,6 +29,15 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "int")
     ).length
   );
+
+  function canMinimize() {
+    let countHandles: number = 0;
+    numberOfHandles.forEach((bool) => {
+      if (bool) countHandles += 1;
+    });
+    if (countHandles > 1) return false;
+    return true;
+  }
 
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
@@ -119,11 +129,12 @@ export default function NodeToolbarComponent({
             </div>
           </ShadTooltip>
 
-          <ShadTooltip content="Minimize" side="top">
+          <ShadTooltip content={canMinimize() ? "Minimize" : "Only nodes with 1 or less input handles can minimize"} side="top">
             <button
               className="relative inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
-              onClick={() => {
-                setShowNode(prev => !prev);
+              onClick={(event) => {
+                if (canMinimize()) return setShowNode(prev => !prev);
+                event.preventDefault();
               }}
             >
               <IconComponent name="Minus" className="h-4 w-4" />
