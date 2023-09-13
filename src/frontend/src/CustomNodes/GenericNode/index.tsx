@@ -129,7 +129,7 @@ export default function GenericNode({
             <div className={"generic-node-title-arrangement rounded-full" + (!showNode && "justify-center")}>
               <IconComponent
                 name={name}
-                className={"generic-node-icon " + (!showNode && "absolute left-7")}
+                className={"generic-node-icon " + (!showNode && "absolute inset-x-6 h-12 w-12")}
                 iconColor={`${nodeColors[types[data.type]]}`}
               />
               {showNode && (
