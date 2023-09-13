@@ -6,6 +6,7 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
+import { ungroupNode } from "../../../../utils/reactflowUtils";
 
 export default function NodeToolbarComponent({
   data,
@@ -27,6 +28,7 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "int")
     ).length
   );
+  const isGroup = data.node?.flow ? true : false;
 
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
@@ -79,9 +81,9 @@ export default function NodeToolbarComponent({
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                  (data.node?.documentation === ""
-                    ? " text-muted-foreground"
-                    : " text-foreground")
+                (data.node?.documentation === ""
+                  ? " text-muted-foreground"
+                  : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -106,10 +108,10 @@ export default function NodeToolbarComponent({
               >
                 <div
                   className={classNames(
-                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                      (nodeLength == 0
-                        ? " text-muted-foreground"
-                        : " text-foreground")
+                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                    (nodeLength == 0
+                      ? " text-muted-foreground"
+                      : " text-foreground") +(isGroup?"":" rounded-r-md")
                   )}
                 >
                   <IconComponent name="Settings2" className="h-4 w-4 " />
@@ -117,6 +119,23 @@ export default function NodeToolbarComponent({
               </EditNodeModal>
             </div>
           </ShadTooltip>
+          {isGroup && (
+            <ShadTooltip content="Ungroup" side="top">
+              <button
+                className={classNames(
+                  "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                )}
+                onClick={(event) => {
+                  event.preventDefault();
+                  ungroupNode(data, { edges: reactFlowInstance.getEdges(), 
+                    nodes: reactFlowInstance.getNodes(), 
+                    viewport: reactFlowInstance.getViewport() })
+                }}
+              >
+                <IconComponent name="Ungroup" className="h-4 w-4" />
+              </button>
+            </ShadTooltip>
+          )}
         </span>
       </div>
     </>

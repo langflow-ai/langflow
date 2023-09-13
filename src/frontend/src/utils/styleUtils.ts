@@ -75,7 +75,8 @@ import {
   X,
   XCircle,
   Zap,
-  Group
+  Group,
+  Ungroup
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -304,4 +305,5 @@ export const nodeIconsLucide: iconsType = {
   Unplug,
   Group,
   ChevronUp,
+  Ungroup
 };
