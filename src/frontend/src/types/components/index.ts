@@ -405,6 +405,7 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  output?: validationStatusType | null;
 };
 
 export type parsedDataType = {

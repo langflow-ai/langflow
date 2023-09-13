@@ -70,6 +70,7 @@ export default function GenericNode({
           data={data}
           setData={setData}
           deleteNode={deleteNode}
+          output={validationStatus}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -158,9 +159,16 @@ export default function GenericNode({
           </div>
         </div>
 
-        <div className={"generic-node-desc " + (data.node?.description !== "" ? "py-5" : "pb-5")}>
+        <div
+          className={
+            "generic-node-desc " +
+            (data.node?.description !== "" ? "py-5" : "pb-5")
+          }
+        >
           {data.node?.description !== "" && (
-            <div className="generic-node-desc-text">{data.node?.description}</div>
+            <div className="generic-node-desc-text">
+              {data.node?.description}
+            </div>
           )}
 
           <>

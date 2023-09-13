@@ -11,6 +11,7 @@ export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  output,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -103,6 +104,7 @@ export default function NodeToolbarComponent({
                 data={data}
                 setData={setData}
                 nodeLength={nodeLength}
+                output={output}
               >
                 <div
                   className={classNames(

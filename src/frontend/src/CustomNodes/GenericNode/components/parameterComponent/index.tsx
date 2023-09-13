@@ -122,17 +122,18 @@ export default function ParameterComponent({
         return (
           <>
             {index === 0 && (
-                <span>
-                  {left ? "Avaliable input components:" : "Avaliable output components:"}
-                </span>
-              )
-            }
+              <span>
+                {left
+                  ? "Avaliable input components:"
+                  : "Avaliable output components:"}
+              </span>
+            )}
             <span
               key={index}
               className={classNames(
                 index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
               )}
-              >
+            >
               <div
                 className="h-5 w-5"
                 style={{
@@ -148,8 +149,7 @@ export default function ParameterComponent({
                 />
               </div>
               <span className="ps-2 text-xs text-foreground">
-                {nodeNames[item.family] ?? "Other"}
-                {" "}
+                {nodeNames[item.family] ?? "Other"}{" "}
                 <span className="text-xs">
                   {" "}
                   {item.type === "" ? "" : " - "}
@@ -294,7 +294,7 @@ export default function ParameterComponent({
               onChange={handleOnNewValue}
             />
           </div>
-        ) : left === true && type === "str" ? (
+        ) : left === true && type === "output" ? (
           <div className="mt-2 w-full">
             <OutputComponent
               disabled={disabled}

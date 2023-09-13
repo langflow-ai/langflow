@@ -17,8 +17,6 @@ export default function OutputComponent({
     }
   }, [disabled]);
 
-  console.log(value);
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex w-full gap-3">

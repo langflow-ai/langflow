@@ -8,6 +8,7 @@ import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
+import OutputComponent from "../../components/outputComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
@@ -24,6 +25,7 @@ import {
 import { limitScrollFieldsModal } from "../../constants/constants";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
+import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
 import { classNames } from "../../utils/utils";
@@ -36,11 +38,13 @@ const EditNodeModal = forwardRef(
       setData,
       nodeLength,
       children,
+      output,
     }: {
       data: NodeDataType;
       setData: (data: NodeDataType) => void;
       nodeLength: number;
       children: ReactNode;
+      output?: validationStatusType | null;
     },
     ref
   ) => {
@@ -196,6 +200,18 @@ const EditNodeModal = forwardRef(
                                       }}
                                     />
                                   )}
+                                </div>
+                              ) : myData.node?.template[templateParam].type ===
+                                "output" ? (
+                                <div className="ml-auto">
+                                  {" "}
+                                  <OutputComponent
+                                    disabled={disabled}
+                                    value={output}
+                                    onChange={(value) => {
+                                      handleOnNewValue(value, templateParam);
+                                    }}
+                                  />
                                 </div>
                               ) : myData.node?.template[templateParam].type ===
                                 "bool" ? (
