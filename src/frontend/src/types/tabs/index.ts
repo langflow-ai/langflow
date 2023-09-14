@@ -10,8 +10,8 @@ export type TabsContextType = {
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (
-    flow?: FlowType,
-    newProject?: Boolean
+    newProject: boolean,
+    flow?: FlowType
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
