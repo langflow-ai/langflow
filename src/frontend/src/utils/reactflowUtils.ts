@@ -815,6 +815,7 @@ export function expandGroupNode(
             if(inputTypes){
               newTargetHandle.inputTypes = inputTypes;
             }
+            newEdge.data.targetHandle = newTargetHandle;
             newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
           }
         }
@@ -824,6 +825,7 @@ export function expandGroupNode(
       newEdge.source = lastNode!.id;
       let newSourceHandle: sourceHandleType = scapeJSONParse(newEdge.sourceHandle!);
       newSourceHandle.id = lastNode!.id;
+      newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
     updatedEdges.push(newEdge);
