@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -130,8 +131,14 @@ export default function GenericModal({
       : "code-nohighlight";
   }
 
-  function validatePrompt(closeModal: boolean) {
-    postValidatePrompt(field_name, inputValue, nodeClass)
+  function validatePrompt(closeModal: boolean): void {
+    //nodeClass is always null on tweaks
+    if (nodeClass) {
+      const nodeClassCp = cloneDeep(nodeClass);
+      nodeClassCp["template"]["template"]["value"] = inputValue;
+      nodeClass = nodeClassCp;
+    }
+    postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
@@ -140,13 +147,18 @@ export default function GenericModal({
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setNodeClass!(apiReturn?.data?.frontend_node);
+            setModalOpen(closeModal);
           } else {
             setIsEdit(false);
             setSuccessData({
               title: "Prompt is ready",
             });
-            setNodeClass(apiReturn.data?.frontend_node);
-            setModalOpen(closeModal);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setModalOpen(closeModal);
             setValue(inputValue);
           }
         } else {
@@ -157,7 +169,6 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
-        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",

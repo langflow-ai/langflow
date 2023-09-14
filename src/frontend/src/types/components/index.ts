@@ -57,6 +57,16 @@ export type TextAreaComponentType = {
   editNode?: boolean;
 };
 
+export type PromptAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+};
+
 export type CodeAreaComponentType = {
   disabled: boolean;
   onChange: (value: string[] | string) => void;
@@ -101,18 +111,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {
