@@ -6,6 +6,8 @@ import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { typesContextType } from "../typesContext";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
+  autoFocus?: boolean;
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
@@ -17,6 +19,7 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
+  blurOnEnter?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;

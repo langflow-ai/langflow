@@ -315,7 +315,7 @@ export function updateEdgesHandleIds({
 }
 
 export function handleKeyDown(
-  e: React.KeyboardEvent<HTMLInputElement>,
+  e: React.KeyboardEvent<HTMLInputElement |HTMLTextAreaElement>,
   inputValue: string | string[] | null,
   block: string
 ) {
@@ -648,7 +648,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
         display_name: "group Node",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
-        description: "group Node",
+        description: "double click to edit description",
         template: generateNodeTemplate(data),
         flow: data,
       },

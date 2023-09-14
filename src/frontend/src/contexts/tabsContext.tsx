@@ -230,6 +230,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           edge.sourceHandle!
         );
         sourceHandleObject.baseClasses = template["base_classes"];
+        edge.data.sourceHandle = sourceHandleObject;
         edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
       }
     });
