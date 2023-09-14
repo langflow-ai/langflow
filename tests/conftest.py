@@ -33,11 +33,21 @@ def pytest_configure():
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
         Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
     )
+    pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
 
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
     """
+
+
+@pytest.fixture(autouse=True)
+def check_openai_api_key_in_environment_variables():
+    import os
+
+    assert (
+        os.environ.get("OPENAI_API_KEY") is not None
+    ), "OPENAI_API_KEY is not set in environment variables"
 
 
 @pytest.fixture()
@@ -221,10 +231,30 @@ def json_flow_with_prompt_and_history():
 
 
 @pytest.fixture
-def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
+def json_chat_input():
+    with open(pytest.CHAT_INPUT, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def added_flow_with_prompt_and_history(
+    client, json_flow_with_prompt_and_history, logged_in_headers
+):
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
+
+
+@pytest.fixture
+def added_flow_chat_input(client, json_chat_input, logged_in_headers):
+    flow = orjson.loads(json_chat_input)
+    data = flow["data"]
+    flow = FlowCreate(name="Chat Input", description="description", data=data)
     response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
