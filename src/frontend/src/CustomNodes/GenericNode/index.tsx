@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, get } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import { NodeToolbar, XYPosition, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -10,7 +10,7 @@ import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import { cleanEdges, scapedJSONStringfy } from "../../utils/reactflowUtils";
+import { cleanEdges, getGroupStatus, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
@@ -58,7 +58,7 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = sseData[data.id];
+    const relevantData = data.node?.flow?getGroupStatus(data.node.flow,sseData):sseData[data.id];
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
