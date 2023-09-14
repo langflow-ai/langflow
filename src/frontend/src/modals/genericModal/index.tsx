@@ -131,6 +131,7 @@ export default function GenericModal({
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setModalOpen(false);
           } else {
             setIsEdit(false);
             setSuccessData({
