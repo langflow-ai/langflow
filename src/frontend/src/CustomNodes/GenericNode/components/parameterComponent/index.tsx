@@ -244,7 +244,7 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
-        ) : left === true && type === "nested_dict" ? (
+        ) : left === true && type === "NestedDict" ? (
           <div className="mt-2 w-full">
             <DictComponent
               disabled={disabled}
