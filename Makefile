@@ -22,8 +22,8 @@ tests:
 	poetry run pytest tests -n auto
 
 format:
-	poetry run black .
-	poetry run ruff . --fix
+	poetry run black src/backend/langflow
+	poetry run ruff src/backend/langflow --fix
 	cd src/frontend && npm run format
 
 lint:
