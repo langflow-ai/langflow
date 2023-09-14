@@ -2,7 +2,6 @@ from typing import Optional
 from langflow import CustomComponent
 from langchain.text_splitter import Language
 from langchain.schema import Document
-from langflow.utils.util import build_loader_repr_from_documents
 
 
 class LanguageRecursiveTextSplitterComponent(CustomComponent):
@@ -78,5 +77,4 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
         )
 
         docs = splitter.split_documents(documents)
-        self.repr_value = build_loader_repr_from_documents(docs)
         return docs

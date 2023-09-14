@@ -19,7 +19,7 @@ def get_user_by_id(db: Session, id: UUID) -> Union[User, None]:
 
 
 def update_user(
-    user_db: User, user: UserUpdate, db: Session = Depends(get_session)
+    user_db: Union[User, None], user: UserUpdate, db: Session = Depends(get_session)
 ) -> User:
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")

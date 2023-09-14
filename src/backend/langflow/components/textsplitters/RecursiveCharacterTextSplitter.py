@@ -74,6 +74,5 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
         )
 
         docs = splitter.split_documents(documents)
-        # self.repr_value = build_loader_repr_from_documents(docs)
         self.repr_value = separators
         return docs
