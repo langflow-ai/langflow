@@ -112,7 +112,7 @@ export default function CodeAreaModal({
   useEffect(() => {
     // Function to be executed after the state changes
     const delayedFunction = setTimeout(() => {
-      if (error?.detail.error !== undefined) {
+      if (error?.detail?.error !== undefined) {
         //trigger to update the height, does not really apply any height
         setHeight("90%");
       }
@@ -165,7 +165,7 @@ export default function CodeAreaModal({
           <div
             className={
               "w-full transition-all delay-500 " +
-              (error?.detail.error !== undefined ? "h-2/6" : "h-0")
+              (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
             }
           >
             <div className="mt-1 h-full w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
