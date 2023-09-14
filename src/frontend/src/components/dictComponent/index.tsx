@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { DictComponentType } from "../../types/components";
 
+import DictAreaModal from "../../modals/dictAreaModal";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
-import DictAreaModal from "../../modals/dictAreaModal";
 
 export default function DictComponent({
   value,
@@ -27,19 +27,19 @@ export default function DictComponent({
       {
         <div className="flex w-full gap-3">
           <DictAreaModal
-          value={value}
-          onChange={(obj) => {
-            onChange(obj);
-          }}
+            value={value}
+            onChange={(obj) => {
+              onChange(obj);
+            }}
           >
-          <Input
-            disabled={true}
-            type="text"
-            className={
-              editNode ? "input-edit-node cursor-pointer" : "cursor-pointer"
-            }
-            placeholder="Click edit your dictionary..."
-          />
+            <Input
+              disabled={true}
+              type="text"
+              className={
+                editNode ? "input-edit-node cursor-pointer" : "cursor-pointer"
+              }
+              placeholder="Click to edit your dictionary..."
+            />
           </DictAreaModal>
         </div>
       }
