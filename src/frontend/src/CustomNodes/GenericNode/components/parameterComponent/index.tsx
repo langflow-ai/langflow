@@ -375,11 +375,10 @@ export default function ParameterComponent({
             <DictComponent
               disabled={disabled}
               editNode={false}
-              value={obj}
+              value={data.node!.template[name].value ?? obj}
               onChange={(newValue) => {
                 setObj(newValue);
                 data.node!.template[name].value = newValue;
-                console.log(data);
               }}
             />
           </div>
@@ -388,7 +387,7 @@ export default function ParameterComponent({
             <KeypairListComponent
               disabled={disabled}
               editNode={false}
-              value={dictArr}
+              value={data.node!.template[name].value ?? dict}
               duplicateKey={errorDuplicateKey}
               onChange={(newValue: string[]) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
