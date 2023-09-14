@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Text
 from langflow.api.v1.schemas import ChatMessage
 from langflow.services.utils import get_chat_manager
 from langflow import CustomComponent
@@ -8,11 +8,18 @@ from loguru import logger
 
 class ChatOutput(CustomComponent):
     display_name = "Chat Output"
+    description = "Used to send a message to the chat."
+
+    field_config = {
+        "code": {
+            "show": False,
+        }
+    }
 
     def build_config(self):
-        return {"message": {"input_types": ["str"]}}
+        return {"message": {"input_types": ["Text"]}}
 
-    def build(self, message: Optional[str], is_ai: bool = False) -> str:
+    def build(self, message: Optional[Text], is_ai: bool = False) -> Text:
         if not message:
             return ""
         try:
@@ -28,5 +35,5 @@ class ChatOutput(CustomComponent):
         except Exception as exc:
             logger.exception(exc)
             logger.debug(f"Error sending message to chat: {exc}")
-
+        self.repr_value = message
         return message
