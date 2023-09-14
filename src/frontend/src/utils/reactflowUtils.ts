@@ -871,3 +871,18 @@ export function processFlow(FlowObject: ReactFlowJsonObject) {
   });
   return clonedFLow;
 }
+
+export function getGroupStatus(flow: FlowType,ssData:{[key:string]:{valid:boolean,params:string}}) {
+  let Nodestatus:Array<string> = [];
+  const {nodes} = flow.data!;
+  const ids = nodes.map((n:NodeType) => n.data.id);
+  ids.forEach((id) => {
+    if(!ssData[id]){
+      return ssData[id];
+    }
+    if(!ssData[id].valid){
+      return {valid:false,params:ssData[id].params}
+    }
+  })
+  return {valid:true,params:"Built sucessfully ✨"}
+}
