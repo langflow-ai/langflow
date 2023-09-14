@@ -52,7 +52,7 @@ const TabsContextInitialValue: TabsContextType = {
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: async (flowData?: any) => "",
+  addFlow: async (newProject:boolean,flowData?: FlowType) => "",
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
@@ -324,7 +324,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       // parse the text into a JSON object
       let flow: FlowType = JSON.parse(text);
 
-      id = await addFlow(flow, newProject);
+      id = await addFlow(newProject,flow);
     } else {
       // create a file input
       const input = document.createElement("input");
@@ -339,7 +339,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-            const flowId = await addFlow(flow, newProject);
+            const flowId = await addFlow(newProject,flow);
             resolve(flowId);
           }
         };
@@ -485,8 +485,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   const addFlow = async (
+    newProject?: Boolean,
     flow?: FlowType,
-    newProject?: Boolean
   ): Promise<String | undefined> => {
     if (newProject) {
       let flowData = extractDataFromFlow(flow!);
