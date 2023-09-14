@@ -245,7 +245,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 ## Deploy on Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/Emy2sU?referralCode=MnPSdg)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
 ## Deploy on Render
 
