@@ -82,15 +82,18 @@ class ContractEdge(Edge):
         if not self.source._built:
             self.source.build(force=force)
 
-        self.result = self.source._built_object
+        if self.matched_type == "Text":
+            self.result = self.source._built_result
+        else:
+            self.result = self.source._built_object
 
         self.target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    def get_result(self):
+    def get_result(self, force: bool = False):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
-            self.fulfill()
+            self.fulfill(force)
         return self.result
 
     def __repr__(self) -> str:
