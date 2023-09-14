@@ -9,3 +9,6 @@ services:
     branch: main
     healthCheckPath: /health
     autoDeploy: false
+    disk:
+      name: langflow-data
+      mountPath: /home/user/.cache/langflow
