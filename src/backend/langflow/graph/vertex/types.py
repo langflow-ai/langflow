@@ -178,6 +178,7 @@ class PromptVertex(StatelessVertex):
     def _custom_build(self, *args, **kwargs):
         force = kwargs.get("force", False)
         user_id = kwargs.get("user_id", None)
+        tools = kwargs.get("tools", [])
         if not self._built or force:
             if (
                 "input_variables" not in self.params
