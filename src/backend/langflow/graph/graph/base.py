@@ -1,4 +1,4 @@
-from typing import Dict, Generator, List, Type, Union
+from typing import Any, Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
@@ -11,7 +11,6 @@ from langflow.graph.vertex.types import (
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from loguru import logger
-from langchain.chains.base import Chain
 
 
 class Graph:
@@ -101,7 +100,7 @@ class Graph:
         ]
         return connected_nodes
 
-    def build(self) -> Chain:
+    def build(self) -> Any:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
