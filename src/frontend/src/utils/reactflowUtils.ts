@@ -200,10 +200,9 @@ export function validateNode(
                 e.targetHandle.split("|")[2] === n.id
             )
           ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
+            `${type} is missing ${template.display_name || toNormalCase(template[t].name)
+            }.`,
+          ]
           : []
       ),
     [] as string[]
@@ -239,7 +238,6 @@ export function handleKeyDown(
   inputValue: string | string[] | null,
   block: string
 ) {
-  console.log(e, inputValue, block);
   //condition to fix bug control+backspace on Windows/Linux
   if (
     (typeof inputValue === "string" &&
