@@ -179,7 +179,11 @@ export default function GenericModal({
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <BaseModal open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal
+      onChangeOpenModal={(open) => {}}
+      open={modalOpen}
+      setOpen={setModalOpen}
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
