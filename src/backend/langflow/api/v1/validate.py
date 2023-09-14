@@ -77,7 +77,7 @@ def add_new_variables_to_template(input_variables, prompt_request):
                 show=True,
                 advanced=False,
                 multiline=True,
-                input_types=["Document", "BaseOutputParser"],
+                input_types=["Document", "BaseOutputParser", "str"],
                 value="",  # Set the value to empty string
             )
             if variable in prompt_request.frontend_node.template:

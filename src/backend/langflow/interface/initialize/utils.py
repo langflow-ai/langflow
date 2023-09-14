@@ -49,7 +49,7 @@ def handle_format_kwargs(prompt, params: Dict):
 def handle_partial_variables(prompt, format_kwargs: Dict):
     partial_variables = format_kwargs.copy()
     partial_variables = {
-        key: value for key, value in partial_variables.items() if value
+        key: value for key, value in partial_variables.items() if value or value == ""
     }
     # Remove handle_keys otherwise LangChain raises an error
     partial_variables.pop("handle_keys", None)

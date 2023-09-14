@@ -144,30 +144,27 @@ class TextSplitterVertex(StatefulVertex):
 class ChainVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
-        self.steps = [self._build, self._run]
+        self.steps = [self._custom_build, self._run]
 
-    def build(
-        self,
-        force: bool = False,
-        user_id=None,
-        *args,
-        **kwargs,
-    ) -> Any:
-        if not self._built or force:
-            # Check if the chain requires a PromptVertex
-            for key, value in self.params.items():
-                if isinstance(value, PromptVertex):
-                    # Build the PromptVertex, passing the tools if available
-                    tools = kwargs.get("tools", None)
-                    self.params[key] = value.build(tools=tools, force=force)
+    def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
+        for key, value in self.params.items():
+            if isinstance(value, PromptVertex):
+                # Build the PromptVertex, passing the tools if available
+                tools = kwargs.get("tools", None)
+                self.params[key] = value.build(tools=tools, force=force)
 
-            self._build(user_id=user_id)
-
-        return self._built_object
+        self._build(user_id=user_id)
 
     def set_artifacts(self) -> None:
         if self._built_object and hasattr(self._built_object, "input_keys"):
             self.artifacts = dict(input_keys=self._built_object.input_keys)
+
+    def _built_object_repr(self):
+        if isinstance(self._built_object, str):
+            return self._built_object
+        return super()._built_object_repr()
 
 
 class PromptVertex(StatelessVertex):

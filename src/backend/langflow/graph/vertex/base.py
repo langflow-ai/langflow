@@ -164,8 +164,9 @@ class Vertex:
 
         self._built = True
 
-    def _run(self, user_id: str, inputs: dict):
+    def _run(self, user_id: str, inputs: Optional[dict] = None):
         # user_id is just for compatibility with the other build methods
+        inputs = inputs or {}
         inputs = {key: value or "" for key, value in inputs.items()}
         if hasattr(self._built_object, "input_keys"):
             # test if all keys are in inputs
@@ -295,16 +296,15 @@ class Vertex:
         self.artifacts = {}
         self.steps_ran = []
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    def build(self, force: bool = False, user_id=None) -> Any:
         if force:
             self._reset()
 
         # Run one step
-        if self.steps:
-            step = self.steps.pop(0)
-            self.steps_ran.append(step)
-            step(user_id=user_id)
-
+        for step in self.steps:
+            if step not in self.steps_ran:
+                step(user_id=user_id)
+                self.steps_ran.append(step)
         return self._built_object
 
     def add_edge(self, edge: "ContractEdge") -> None:

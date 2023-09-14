@@ -175,7 +175,7 @@ def build_vertex(
             raise ValueError("Invalid vertex")
         try:
             if isinstance(vertex, StatelessVertex) or not vertex._built:
-                vertex.build(user_id=current_user.id, force=True, inputs=inputs)
+                vertex.build(user_id=current_user.id, force=True)
             params = vertex._built_object_repr()
             valid = True
             result_dict = vertex.get_result_dict()
