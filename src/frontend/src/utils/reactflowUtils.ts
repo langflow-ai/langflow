@@ -744,7 +744,9 @@ export function ungroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    updatedEdges.push(newEdge);
+    if(newEdge.target === groupNode.id || newEdge.source === groupNode.id){
+      updatedEdges.push(newEdge);
+    }
   });  
   //update template values
   Object.keys(template).forEach((key) => {
@@ -828,7 +830,9 @@ export function expandGroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    updatedEdges.push(newEdge);
+    if(newEdge.target === groupNode.id || newEdge.source === groupNode.id){
+      updatedEdges.push(newEdge);
+    }
   });
   //update template values
   Object.keys(template).forEach((key) => {
