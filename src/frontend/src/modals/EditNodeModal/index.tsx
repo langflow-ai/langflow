@@ -82,7 +82,7 @@ const EditNodeModal = forwardRef(
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
         <BaseModal.Header description={myData.node?.description!}>
-          <span className="pr-2">{myData.type}</span>
+          <span className="pr-2">{myData.node?.display_name}</span>
           <Badge variant="secondary">ID: {myData.id}</Badge>
         </BaseModal.Header>
         <BaseModal.Content>
