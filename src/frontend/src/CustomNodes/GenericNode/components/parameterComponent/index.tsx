@@ -115,14 +115,7 @@ export default function ParameterComponent({
   });
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const [dict, setDict] = useState({
-    key1: "value1",
-    key2: "value2",
-    key3: "value3",
-    key4: "value4",
-    key5: "value5",
-    key6: "value6",
-  } as {});
+  const [dict, setDict] = useState({} as {});
   const [dictArr, setDictArr] = useState([] as string[]);
 
   useEffect(() => {
