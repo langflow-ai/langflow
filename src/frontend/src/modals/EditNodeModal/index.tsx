@@ -101,12 +101,7 @@ const EditNodeModal = forwardRef(
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
     const [dict, setDict] = useState({
-      key1: "value1",
-      key2: "value2",
-      key3: "value3",
-      key4: "value4",
-      key5: "value5",
-      key6: "value6",
+      yourKey: "yourValue",
     } as {});
     const [dictArr, setDictArr] = useState([] as string[]);
 
