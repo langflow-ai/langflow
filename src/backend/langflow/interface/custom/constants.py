@@ -11,6 +11,7 @@ from langchain.schema import BaseOutputParser
 from langchain.schema.memory import BaseMemory
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.agents.agent import AgentExecutor
+from langflow.field_typing.base import Text
 
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
@@ -38,6 +39,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "bool": bool,
     "list": list,
     "dict": dict,
+    "Text": Text,
 }
 
 

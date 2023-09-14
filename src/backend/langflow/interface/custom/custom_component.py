@@ -21,9 +21,12 @@ class CustomComponent(Component, extra=Extra.allow):
     code_class_base_inheritance = "CustomComponent"
     function_entrypoint_name = "build"
     function: Optional[Callable] = None
-    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
+
+    @property
+    def return_type_valid_list(self):
+        return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
 
     def __init__(self, **data):
         super().__init__(**data)
