@@ -203,7 +203,7 @@ const EditNodeModal = forwardRef(
                                       }}
                                     />
                                   ) : myData.node?.template[templateParam]
-                                      .type === "nested_dict" ? (
+                                      .type === "NestedDict" ? (
                                     <div className="mt-2 w-full">
                                       <DictComponent
                                         disabled={disabled}
