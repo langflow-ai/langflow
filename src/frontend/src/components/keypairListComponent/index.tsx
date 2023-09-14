@@ -2,8 +2,6 @@ import { useEffect } from "react";
 import { KeyPairListComponentType } from "../../types/components";
 
 import _ from "lodash";
-import { TypeModal } from "../../constants/enums";
-import GenericModal from "../../modals/genericModal";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
@@ -13,7 +11,7 @@ export default function KeypairListComponent({
   onChange,
   disabled,
   editNode = false,
-  duplicateKey
+  duplicateKey,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
@@ -56,9 +54,8 @@ export default function KeypairListComponent({
   //     />
   //   </div>
   // )
-  
 
- const handleChangeKey = (event, idx) => {
+  const handleChangeKey = (event, idx) => {
     const newInputList = _.cloneDeep(value);
     const oldKey = Object.keys(newInputList[idx])[0];
     const updatedObj = { [event.target.value]: newInputList[idx][oldKey] };
@@ -89,10 +86,8 @@ export default function KeypairListComponent({
                 type="text"
                 value={key}
                 className={classNames(
-                  editNode
-                    ? "input-edit-node"
-                    : "",
-                    duplicateKey ? "input-invalid" : ""
+                  editNode ? "input-edit-node" : "",
+                  duplicateKey ? "input-invalid" : ""
                 )}
                 placeholder="Type key..."
                 onChange={(event) => handleChangeKey(event, index)}
@@ -103,23 +98,17 @@ export default function KeypairListComponent({
                   }
                 }}
               />
-              <GenericModal
-                type={TypeModal.TEXT}
+
+              <Input
+                disabled={false}
+                type="text"
                 value={obj[key]}
-                buttonText="Save"
-                modalTitle="Edit Value"
-                setValue={(value: string) => {
-                  handleChangeValue(value, index);
-                }}
-              >
-                <Input
-                  disabled={true}
-                  type="text"
-                  value={obj[key]}
-                  className={editNode ? "input-edit-node cursor-pointer" : "cursor-pointer"}
-                  placeholder="Click to input a value..."
-                />
-              </GenericModal>
+                className={editNode ? "input-edit-node" : ""}
+                placeholder="Click to input a value..."
+                onChange={(event) =>
+                  handleChangeValue(event.target.value, index)
+                }
+              />
 
               {index === value.length - 1 ? (
                 <button

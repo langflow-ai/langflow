@@ -103,8 +103,6 @@ export default function ParameterComponent({
   const [obj, setObj] = useState({
     arr: ["test", 123456, false, null],
     boolean: false,
-    longString:
-      "long string long string long string long string long string long string",
     number: 123456,
     try: {
       k1: 123,
@@ -239,34 +237,6 @@ export default function ParameterComponent({
           type === "int") &&
         !optionalHandle ? (
           <></>
-        ) : left === true && type === "NestedDict" ? (
-          <div className="mt-2 w-full">
-            <DictComponent
-              disabled={disabled}
-              editNode={false}
-              value={obj}
-              onChange={(newValue) => {
-                setObj(newValue);
-              }}
-            />
-          </div>
-        ) : left === true && type === "dict" ? (
-          <div className="mt-2 w-full">
-            <KeypairListComponent
-              disabled={disabled}
-              editNode={false}
-              value={dictArr}
-              duplicateKey={errorDuplicateKey}
-              onChange={(newValue: string[]) => {
-                setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                if (hasDuplicateKeys(newValue)) {
-                  setDictArr(newValue);
-                } else {
-                  setDict(convertArrayToObj(newValue));
-                }
-              }}
-            />
-          </div>
         ) : (
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
@@ -398,6 +368,37 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+            />
+          </div>
+        ) : left === true && type === "NestedDict" ? (
+          <div className="mt-2 w-full">
+            <DictComponent
+              disabled={disabled}
+              editNode={false}
+              value={obj}
+              onChange={(newValue) => {
+                setObj(newValue);
+                data.node!.template[name].value = newValue;
+                console.log(data);
+              }}
+            />
+          </div>
+        ) : left === true && type === "dict" ? (
+          <div className="mt-2 w-full">
+            <KeypairListComponent
+              disabled={disabled}
+              editNode={false}
+              value={dictArr}
+              duplicateKey={errorDuplicateKey}
+              onChange={(newValue: string[]) => {
+                setErrorDuplicateKey(hasDuplicateKeys(newValue));
+                if (hasDuplicateKeys(newValue)) {
+                  setDictArr(newValue);
+                } else {
+                  setDict(convertArrayToObj(newValue));
+                  data.node!.template[name].value = convertArrayToObj(newValue);
+                }
+              }}
             />
           </div>
         ) : (

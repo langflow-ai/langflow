@@ -220,10 +220,9 @@ export function validateNode(
                 edge.targetHandle.split("|")[2] === node.id
             )
           ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
+            `${type} is missing ${template.display_name || toNormalCase(template[t].name)
+            }.`,
+          ]
           : []
       ),
     [] as string[]
@@ -290,7 +289,7 @@ export function getConnectedNodes(
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
-export function convertObjToArray(singleObject){
+export function convertObjToArray(singleObject) {
   let arrConverted: any = [];
   for (const key in singleObject) {
     if (singleObject.hasOwnProperty(key)) {
@@ -303,7 +302,7 @@ export function convertObjToArray(singleObject){
   return arrConverted;
 }
 
-export function convertArrayToObj(newValue){
+export function convertArrayToObj(newValue) {
   const flattenedObject = {};
   for (const obj of newValue) {
     for (const key in obj) {
@@ -319,12 +318,12 @@ export function convertArrayToObj(newValue){
 export function hasDuplicateKeys(array) {
   const keys = {};
   for (const obj of array) {
-      for (const key in obj) {
-          if (keys[key]) {
-              return true; 
-          }
-          keys[key] = true;
+    for (const key in obj) {
+      if (keys[key]) {
+        return true;
       }
+      keys[key] = true;
+    }
   }
-  return false; 
+  return false;
 }
