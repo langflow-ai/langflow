@@ -843,6 +843,7 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node.template[field].show = show;
       gNodes[nodeIndex].data.node.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node.template[field].display_name = display_name;
+      gNodes[nodeIndex].selected=false;
     }
   });
 
