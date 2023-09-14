@@ -1,5 +1,5 @@
 import ast
-from langflow.graph.utils import UnbuiltObject
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
@@ -24,6 +24,7 @@ class Vertex:
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = UnbuiltObject()
+        self._built_result = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
         self.steps: List[Callable] = [self._build]
@@ -35,13 +36,13 @@ class Vertex:
         """
         Returns a dictionary with the result of the build process.
         """
+        edge_results = {}
         for edge in self.edges:
-            edge.fulfill(force=force)
-        return {
-            edge.target.id: {edge.target_param: edge.result}
-            for edge in self.edges
-            if edge.is_fulfilled and isinstance(edge.result, str)
-        }
+            if edge.is_fulfilled and isinstance(edge.get_result(force=force), str):
+                if edge.target.id not in edge_results:
+                    edge_results[edge.target.id] = {}
+                edge_results[edge.target.id][edge.target_param] = edge.get_result()
+        return edge_results
 
     def set_artifacts(self) -> None:
         pass
@@ -174,7 +175,7 @@ class Vertex:
             for key in self._built_object.input_keys:
                 if key not in inputs:
                     inputs[key] = ""
-        self._built_object = self._built_object.run(inputs)
+        self._built_result = self._built_object.run(inputs)
 
     def _build_each_node_in_params_dict(self):
         """
@@ -201,11 +202,11 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    def _build_node_and_update_params(self, key, node, user_id=None):
+    def _build_node_and_update_params(self, key, node: "Vertex", user_id=None):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
-        result = node.build(user_id)
+        result = node.build(user_id, requester=self)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -220,6 +221,7 @@ class Vertex:
         self.params[key] = []
         for node in nodes:
             built = node.build(user_id)
+
             if isinstance(built, list):
                 if key not in self.params:
                     self.params[key] = []
@@ -293,19 +295,40 @@ class Vertex:
     def _reset(self):
         self._built = False
         self._built_object = UnbuiltObject()
+        self._built_result = UnbuiltResult()
         self.artifacts = {}
         self.steps_ran = []
 
-    def build(self, force: bool = False, user_id=None) -> Any:
+    def build(
+        self,
+        force: bool = False,
+        requester: Optional["Vertex"] = None,
+        user_id=None,
+        **kwargs,
+    ) -> Dict:
         if force:
             self._reset()
 
-        # Run one step
+        # Run steps
         for step in self.steps:
             if step not in self.steps_ran:
-                step(user_id=user_id)
+                step(user_id=user_id, **kwargs)
                 self.steps_ran.append(step)
-        return self._built_object
+
+        return self.get_requester_result(requester)
+
+    def get_requester_result(self, requester: Optional["Vertex"]):
+        # If the requester is None, this means that
+        # the Vertex is the root of the graph
+        if requester is None:
+            return self._built_object
+
+        # Get the requester edge
+        requester_edge = next(
+            (edge for edge in self.edges if edge.target.id == requester.id), None
+        )
+        # Return the result of the requester edge
+        return None if requester_edge is None else requester_edge.get_result()
 
     def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:
