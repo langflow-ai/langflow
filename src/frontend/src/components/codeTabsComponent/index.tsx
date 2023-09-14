@@ -56,7 +56,7 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    if (tweaks) {
+    if (tweaks && data) {
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {

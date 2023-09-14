@@ -75,7 +75,7 @@ export function cleanEdges({
 
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
   let newNodes = _.cloneDeep(data);
-  newNodes!.forEach((node: Node) => {
+  newNodes.forEach((node: Node) => {
     node.selected = false;
   });
   updateNodes(newNodes!);
