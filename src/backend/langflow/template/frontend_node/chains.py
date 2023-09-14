@@ -7,6 +7,9 @@ from langflow.template.template.base import Template
 
 
 class ChainFrontendNode(FrontendNode):
+    def add_extra_base_classes(self) -> None:
+        self.base_classes.append("Text")
+
     def add_extra_fields(self) -> None:
         if self.template.type_name == "ConversationalRetrievalChain":
             # add memory
