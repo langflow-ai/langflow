@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Union
 
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.graph.utils import flatten_list
@@ -12,6 +12,7 @@ class AgentVertex(StatelessVertex):
 
         self.tools: List[Union[ToolkitVertex, ToolVertex]] = []
         self.chains: List[ChainVertex] = []
+        self.steps: List[Callable] = [self._custom_build, self._run]
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
@@ -21,20 +22,18 @@ class AgentVertex(StatelessVertex):
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
-        if not self._built or force:
-            self._set_tools_and_chains()
-            # First, build the tools
-            for tool_node in self.tools:
-                tool_node.build(user_id=user_id)
+    def _custom_build(self, *args, **kwargs):
+        user_id = kwargs.get("user_id", None)
+        self._set_tools_and_chains()
+        # First, build the tools
+        for tool_node in self.tools:
+            tool_node.build(user_id=user_id)
 
-            # Next, build the chains and the rest
-            for chain_node in self.chains:
-                chain_node.build(tools=self.tools, user_id=user_id)
+        # Next, build the chains and the rest
+        for chain_node in self.chains:
+            chain_node.build(tools=self.tools, user_id=user_id)
 
-            self._build(user_id=user_id)
-
-        return self._built_object
+        self._build(user_id=user_id)
 
 
 class ToolVertex(StatelessVertex):
@@ -48,19 +47,21 @@ class LLMVertex(StatelessVertex):
 
     def __init__(self, data: Dict):
         super().__init__(data, base_type="llms")
+        self.steps: List[Callable] = [self._custom_build]
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    def _custom_build(self, *args, **kwargs):
         # LLM is different because some models might take up too much memory
-        # or time to load. So we only load them when we need them.ß
+        # or time to load. So we only load them when we need them.
+        # Avoid deepcopying the LLM
+        # that are loaded from a file
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
         if self.vertex_type == self.built_node_type:
-            return self.class_built_object
+            self._built_object = self.class_built_object
         if not self._built or force:
             self._build(user_id=user_id)
             self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
-        # Avoid deepcopying the LLM
-        # that are loaded from a file
-        return self._built_object
 
 
 class ToolkitVertex(StatelessVertex):
@@ -76,13 +77,15 @@ class FileToolVertex(ToolVertex):
 class WrapperVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
+        self.steps: List[Callable] = [self._custom_build]
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
             self._build(user_id=user_id)
-        return self._built_object
 
 
 class DocumentLoaderVertex(StatefulVertex):
@@ -170,15 +173,11 @@ class ChainVertex(StatelessVertex):
 class PromptVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
+        self.steps: List[Callable] = [self._custom_build]
 
-    def build(
-        self,
-        force: bool = False,
-        user_id=None,
-        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
-        *args,
-        **kwargs,
-    ) -> Any:
+    def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
         if not self._built or force:
             if (
                 "input_variables" not in self.params
@@ -217,7 +216,6 @@ class PromptVertex(StatelessVertex):
                 self.params.pop("input_variables", None)
 
             self._build(user_id=user_id)
-        return self._built_object
 
     def _built_object_repr(self):
         if (
