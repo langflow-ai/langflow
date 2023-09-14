@@ -42,7 +42,7 @@ import {
   scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { isWrappedWithClass } from "../../../../utils/utils";
+import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 import SelectionMenu from "../SelectionMenuComponent";
@@ -447,7 +447,7 @@ export default function Page({
                   <SelectionMenu isVisible={selectionMenuVisible} nodes={lastSelection?.nodes}
                   onClick={()=>{
                     if(validateSelection(lastSelection!).length===0){
-                      const {newFlow} = generateFlow(lastSelection!,reactFlowInstance!,"new Component");
+                      const {newFlow} = generateFlow(lastSelection!,reactFlowInstance!,getRandomName());
                       const newGroupNode = generateNodeFromFlow(newFlow)
                       setNodes((oldNodes)=>[...oldNodes.filter((oldNodes)=>!lastSelection?.nodes.some((selectionNode)=>selectionNode.id===oldNodes.id)),newGroupNode])
                       setEdges((oldEdges) =>
