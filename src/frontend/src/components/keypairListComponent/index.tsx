@@ -19,42 +19,6 @@ export default function KeypairListComponent({
     }
   }, [disabled]);
 
-  //when this feature is available, this code below must be in the parent component
-  // const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  // const [dict, setDict] = useState({
-  //   key1: "value1",
-  //   key2: "value2",
-  //   key3: "value3",
-  //   key4: "value4",
-  //   key5: "value5",
-  //   key6: "value6",
-  // } as {});
-  // const [dictArr, setDictArr] = useState([] as string[]);
-
-  // useEffect(() => {
-  //   setDictArr(convertObjToArray(dict));
-  // }, [dict]);
-
-  // left === true && type === "keypairlist" ? (
-  //   <div className="mt-2 w-full">
-  //     <KeypairListComponent
-  //       disabled={disabled}
-  //       editNode={false}
-  //       value={dictArr}
-  //       duplicateKey={errorDuplicateKey}
-  //       onChange={(newValue: string[]) => {
-  //         setErrorDuplicateKey(hasDuplicateKeys(newValue));
-  //         if(hasDuplicateKeys(newValue)){
-  //           setDictArr(newValue);
-  //         }
-  //         else{
-  //           setDict(convertArrayToObj(newValue));
-  //         }
-  //       }}
-  //     />
-  //   </div>
-  // )
-
   const handleChangeKey = (event, idx) => {
     const newInputList = _.cloneDeep(value);
     const oldKey = Object.keys(newInputList[idx])[0];
@@ -83,7 +47,7 @@ export default function KeypairListComponent({
             <div key={idx} className="flex w-full gap-3">
               <Input
                 type="text"
-                value={key}
+                value={key.trim()}
                 className={classNames(
                   editNode ? "input-edit-node" : "",
                   duplicateKey ? "input-invalid" : ""
