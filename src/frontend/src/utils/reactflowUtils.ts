@@ -534,7 +534,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     ) {
       template[key].advanced = true;
       if (template[key].dynamic) {
-        template[key].dynamic = false;
+        template[key].readonly = true;
       }
     }
   });
@@ -789,7 +789,7 @@ export function expandGroupNode(
 ) {
   const {template} = groupNode.node!
   const {flow} = groupNode.node!;
-  const gNodes = _.cloneDeep(flow!.data!.nodes);
+  const gNodes:NodeType[] = _.cloneDeep(flow!.data!.nodes);
   const gEdges = flow!.data!.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
@@ -840,17 +840,17 @@ export function expandGroupNode(
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
       let display_name: string;
-      let show = gNodes[nodeIndex].data.node.template[field].show;
-      let advanced = gNodes[nodeIndex].data.node.template[field].advanced;
-      if (gNodes[nodeIndex].data.node.template[field].display_name) {
-        display_name = gNodes[nodeIndex].data.node.template[field].display_name;
+      let show = gNodes[nodeIndex].data.node!.template[field].show;
+      let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
+      if (gNodes[nodeIndex].data.node!.template[field].display_name) {
+        display_name = gNodes[nodeIndex].data.node!.template[field].display_name;
       } else {
-        display_name = gNodes[nodeIndex].data.node.template[field].name;
+        display_name = gNodes[nodeIndex].data.node!.template[field].name;
       }
-      gNodes[nodeIndex].data.node.template[field] = template[key];
-      gNodes[nodeIndex].data.node.template[field].show = show;
-      gNodes[nodeIndex].data.node.template[field].advanced = advanced;
-      gNodes[nodeIndex].data.node.template[field].display_name = display_name;
+      gNodes[nodeIndex].data.node!.template[field] = template[key];
+      gNodes[nodeIndex].data.node!.template[field].show = show;
+      gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
+      gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
       gNodes[nodeIndex].selected=false;
     }
   });
