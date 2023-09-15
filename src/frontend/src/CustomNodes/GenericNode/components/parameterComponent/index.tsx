@@ -393,8 +393,6 @@ export default function ParameterComponent({
                   setDictArr(newValue);
                 } else {
                   setDictArr(newValue);
-                  console.log(newValue);
-
                   data.node!.template[name].value = newValue;
                 }
               }}
