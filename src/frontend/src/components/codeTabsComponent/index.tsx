@@ -633,6 +633,7 @@ export default function CodeTabsComponent({
                                               >
                                                 <div className="mx-auto">
                                                   <PromptAreaComponent
+                                                    readonly={node.data.node?.flow && node.data.node.template[templateField].dynamic? true : false}
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
@@ -688,6 +689,7 @@ export default function CodeTabsComponent({
                                               >
                                                 <div className="mx-auto">
                                                   <CodeAreaComponent
+                                                    readonly={node.data.node?.flow && node.data.node.template[templateField].dynamic? true : false}
                                                     disabled={false}
                                                     editNode={true}
                                                     value={

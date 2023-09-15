@@ -533,9 +533,6 @@ function updateGroupNodeTemplate(template: APITemplateType) {
       !input_types
     ) {
       template[key].advanced = true;
-      if (template[key].dynamic) {
-        template[key].readonly = true;
-      }
     }
   });
   return template;

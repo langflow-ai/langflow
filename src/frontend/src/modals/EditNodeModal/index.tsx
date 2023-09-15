@@ -297,6 +297,7 @@ const EditNodeModal = forwardRef(
                                 "prompt" ? (
                                 <div className="mx-auto">
                                   <PromptAreaComponent
+                                    readonly={myData.node?.flow && myData.node.template[templateParam].dynamic? true : false}
                                     field_name={templateParam}
                                     editNode={true}
                                     disabled={disabled}
@@ -317,6 +318,7 @@ const EditNodeModal = forwardRef(
                                 "code" ? (
                                 <div className="mx-auto">
                                   <CodeAreaComponent
+                                    readonly={myData.node?.flow && myData.node.template[templateParam].dynamic? true : false}
                                     dynamic={
                                       data.node!.template[templateParam]
                                         .dynamic ?? false

@@ -65,6 +65,7 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  readonly?: boolean;
 };
 
 export type CodeAreaComponentType = {
@@ -75,6 +76,7 @@ export type CodeAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   dynamic?: boolean;
+  readonly?: boolean;
 };
 
 export type FileComponentType = {

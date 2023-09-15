@@ -299,6 +299,7 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
+              readonly={data.node?.flow && data.node.template[name].dynamic?true:false}
               dynamic={data.node?.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
@@ -334,6 +335,7 @@ export default function ParameterComponent({
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
+              readonly={data.node?.flow && data.node.template[name].dynamic?true:false}
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
