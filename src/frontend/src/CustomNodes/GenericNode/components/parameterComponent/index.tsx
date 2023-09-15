@@ -119,10 +119,6 @@ export default function ParameterComponent({
   const [dictArr, setDictArr] = useState([] as string[]);
 
   useEffect(() => {
-    setDictArr(convertObjToArray(dict));
-  }, [dict]);
-
-  useEffect(() => {
     if (name === "openai_api_base") console.log(info);
     // @ts-ignore
     infoHtml.current = (
@@ -387,7 +383,7 @@ export default function ParameterComponent({
             <KeypairListComponent
               disabled={disabled}
               editNode={false}
-              value={data.node!.template[name].value ?? dict}
+              value={data.node!.template[name].value ?? convertObjToArray(dict)}
               duplicateKey={errorDuplicateKey}
               onChange={(newValue: string[]) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
