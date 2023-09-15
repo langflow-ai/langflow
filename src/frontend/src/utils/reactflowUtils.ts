@@ -307,7 +307,7 @@ export function convertArrayToObj(newValue) {
   for (const obj of newValue) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
-        flattenedObject[' ' + key] = obj[key]; //added space to dont order when add new keys to object
+        flattenedObject[key] = obj[key]; //added space to dont order when add new keys to object
       }
     }
   }
