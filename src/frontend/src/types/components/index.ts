@@ -425,6 +425,7 @@ export type codeAreaModalPropsType = {
   setNodeClass: (Class: APIClassType) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
+  readonly?: boolean;
 };
 
 export type chatMessagePropsType = {
@@ -449,6 +450,7 @@ export type genericModalPropsType = {
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
   children: ReactNode;
+  readonly?: boolean;
 };
 
 export type buttonBoxPropsType = {
