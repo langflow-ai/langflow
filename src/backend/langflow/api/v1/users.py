@@ -88,7 +88,7 @@ def read_all_users(
 def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: Session = Depends(get_current_active_user),
+    user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ) -> User:
     """
@@ -113,7 +113,7 @@ def patch_user(
 def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: Session = Depends(get_current_active_user),
+    user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ) -> User:
     """
