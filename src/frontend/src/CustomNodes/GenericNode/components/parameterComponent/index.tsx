@@ -383,7 +383,10 @@ export default function ParameterComponent({
             <KeypairListComponent
               disabled={disabled}
               editNode={false}
-              value={data.node!.template[name].value ?? convertObjToArray(dict)}
+              value={
+                convertObjToArray(data.node!.template[name].value) ??
+                convertObjToArray(dict)
+              }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue: string[]) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
