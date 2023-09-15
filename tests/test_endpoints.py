@@ -414,3 +414,31 @@ def test_build_all_vertices_in_sequence_with_chat_input(
         ), f"Failed at vertex {vertex_id}: {json_response}"
         assert "valid" in json_response
         assert json_response["valid"], json_response["params"]
+
+
+def test_build_all_vertices_in_sequence_with_two_outputs(
+    client, added_flow_two_outputs, logged_in_headers
+):
+    """This tests the case where a node has two outputs, one of which is Text and the other (in this case) is
+    a LLMChain. We need to make sure the correct output is passed in both cases."""
+    flow_id = added_flow_two_outputs["id"]
+
+    # First, get all the vertices in the correct sequence
+    response = client.get(
+        f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
+    )
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    vertex_ids = response.json()["ids"]
+
+    # Now, iterate through each vertex and build it
+    for vertex_id in vertex_ids:
+        response = client.post(
+            f"/api/v1/build/{flow_id}/vertices/{vertex_id}", headers=logged_in_headers
+        )
+        json_response = response.json()
+        assert (
+            response.status_code == 200
+        ), f"Failed at vertex {vertex_id}: {json_response}"
+        assert "valid" in json_response
+        assert json_response["valid"], json_response["params"]
