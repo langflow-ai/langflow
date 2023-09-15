@@ -298,21 +298,7 @@ export function convertObjToArray(singleObject) {
       arrConverted.push(newObj);
     }
   }
-
   return arrConverted;
-}
-
-export function convertArrayToObj(newValue) {
-  const flattenedObject = {};
-  for (const obj of newValue) {
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        flattenedObject[key] = obj[key]; //added space to dont order when add new keys to object
-      }
-    }
-  }
-  let newData = _.cloneDeep(flattenedObject);
-  return newData;
 }
 
 export function hasDuplicateKeys(array) {
