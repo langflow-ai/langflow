@@ -74,7 +74,6 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
-  console.log(data.node)
 
   return (
     <>
