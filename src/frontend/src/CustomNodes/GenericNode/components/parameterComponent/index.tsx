@@ -389,12 +389,8 @@ export default function ParameterComponent({
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                if (hasDuplicateKeys(newValue)) {
-                  setDictArr(newValue);
-                } else {
-                  setDictArr(newValue);
-                  data.node!.template[name].value = newValue;
-                }
+                setDictArr(newValue);
+                data.node!.template[name].value = newValue;
               }}
             />
           </div>
