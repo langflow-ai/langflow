@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
-from tests.utils import run_post
+from tests.utils import poll_task_status, run_post
 
 
 PROMPT_REQUEST = {
@@ -409,11 +409,11 @@ def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
     # session_id should be returned
     assert "session_id" in response.json()
     assert response.json()["session_id"] is not None
+    session_id1 = response.json()["session_id"]
     # New request with a different session_id
     # asking "What is my name?" should return "Gabriel"
     post_data = {
         "inputs": {"text": "What is my name?"},
-        "session_id": "other session id",
     }
     response = client.post(
         f"api/v1/process/{added_flow.get('id')}",
@@ -422,6 +422,7 @@ def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
     )
     assert response.status_code == 200, response.json()
     assert "Gabriel" not in response.json()["result"]["text"]
+    assert session_id1 != response.json()["session_id"]
 
 
 def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_api_key):
@@ -448,3 +449,30 @@ def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_a
         response_json = run_post(client, flow_id, headers, post_data)
 
         assert name in response_json["result"]["text"]
+
+
+# Test function without loop
+def test_async_task_processing(client, added_flow, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
+
+    # Run the /api/v1/process/{flow_id} endpoint with sync=False
+    response = client.post(
+        f"api/v1/process/{added_flow.get('id')}",
+        headers=headers,
+        json={**post_data, "sync": False},
+    )
+    assert response.status_code == 200, response.json()
+
+    # Extract the task ID from the response
+    task_id = response.json().get("id")
+    assert task_id is not None
+
+    # Polling the task status using the helper function
+    task_status_json = poll_task_status(client, headers, task_id)
+    assert task_status_json is not None, "Task did not complete in time"
+
+    # Validate that the task completed successfully and the result is as expected
+    assert "result" in task_status_json, task_status_json
+    assert "text" in task_status_json["result"], task_status_json["result"]
+    assert "Gabriel" in task_status_json["result"]["text"], task_status_json["result"]

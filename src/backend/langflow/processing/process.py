@@ -94,13 +94,13 @@ def get_build_result(data_graph, session_id):
     # otherwise, build the graph and return the result
     if session_id:
         logger.debug(f"Loading LangChain object from session {session_id}")
-        result = build_sorted_vertices(data_graph=data_graph, session_id=session_id)
+        result = build_sorted_vertices(data_graph=data_graph)
         if result is not None:
             logger.debug("Loaded LangChain object")
             return result
 
     logger.debug("Building langchain object")
-    return build_sorted_vertices(data_graph, session_id)
+    return build_sorted_vertices(data_graph)
 
 
 def load_langchain_object(

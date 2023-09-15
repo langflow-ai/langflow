@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, Any, Optional, Union
+from typing import Annotated, Any, Optional, Union
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 
@@ -33,8 +33,8 @@ from langflow.services.utils import get_session
 from langflow.worker import process_graph_cached_task
 from sqlmodel import Session
 
-if TYPE_CHECKING:
-    from langflow.services.task.manager import TaskService
+
+from langflow.services.task.manager import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -183,11 +183,17 @@ async def process_flow(
 async def get_task_status(task_id: str):
     task_service = get_task_service()
     task = task_service.get_task(task_id)
+    result = None
+    if task.ready():
+        result = task.result
+        if isinstance(result, dict) and "result" in result:
+            result = result["result"]
+        elif hasattr(result, "result"):
+            result = result.result
+
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return TaskStatusResponse(
-        status=task.status, result=task.result if task.ready() else None
-    )
+    return TaskStatusResponse(status=task.status, result=result)
 
 
 @router.post(
