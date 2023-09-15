@@ -27,6 +27,7 @@ export type TemplateVariableType = {
   placeholder?: string;
   list: boolean;
   show: boolean;
+  readonly: boolean;
   multiline?: boolean;
   value?: any;
   dynamic?:boolean;

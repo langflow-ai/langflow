@@ -13,6 +13,7 @@ export type NodeType = {
   type?: string;
   position: XYPosition;
   data: NodeDataType;
+  selected?: boolean;
 };
 
 export type NodeDataType = {
