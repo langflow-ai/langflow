@@ -27,8 +27,6 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
 import {
-  convertArrayToObj,
-  convertObjToArray,
   hasDuplicateKeys,
   isValidConnection,
 } from "../../../../utils/reactflowUtils";
@@ -113,10 +111,9 @@ export default function ParameterComponent({
   });
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const [dict, setDict] = useState({
-    yourKey: "yourValue",
-  } as {});
-  const [dictArr, setDictArr] = useState([] as string[]);
+  const [dictArr, setDictArr] = useState([
+    { yourKey: "yourValue" },
+  ] as Object[]);
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -384,18 +381,21 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                convertObjToArray(data.node!.template[name].value).length === 0
-                  ? convertObjToArray(dict)
-                  : convertObjToArray(data.node!.template[name].value)
+                data.node!.template[name].value?.length === 0 ||
+                !data.node!.template[name].value
+                  ? dictArr
+                  : data.node!.template[name].value
               }
               duplicateKey={errorDuplicateKey}
-              onChange={(newValue: string[]) => {
+              onChange={(newValue) => {
                 setErrorDuplicateKey(hasDuplicateKeys(newValue));
                 if (hasDuplicateKeys(newValue)) {
                   setDictArr(newValue);
                 } else {
-                  setDict(convertArrayToObj(newValue));
-                  data.node!.template[name].value = convertArrayToObj(newValue);
+                  setDictArr(newValue);
+                  console.log(newValue);
+
+                  data.node!.template[name].value = newValue;
                 }
               }}
             />

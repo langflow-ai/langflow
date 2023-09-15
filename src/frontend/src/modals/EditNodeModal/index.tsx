@@ -28,11 +28,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
-import {
-  convertArrayToObj,
-  convertObjToArray,
-  hasDuplicateKeys,
-} from "../../utils/reactflowUtils";
+import { hasDuplicateKeys } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -100,14 +96,9 @@ const EditNodeModal = forwardRef(
     });
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-    const [dict, setDict] = useState({
-      yourKey: "yourValue",
-    } as {});
-    const [dictArr, setDictArr] = useState([] as string[]);
-
-    useEffect(() => {
-      setDictArr(convertObjToArray(dict));
-    }, [dict]);
+    const [dictArr, setDictArr] = useState([
+      { yourKey: "yourValue" },
+    ] as Object[]);
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
@@ -214,19 +205,29 @@ const EditNodeModal = forwardRef(
                                     <div className="mt-2 w-full">
                                       <KeypairListComponent
                                         disabled={disabled}
-                                        editNode={true}
-                                        value={dictArr}
+                                        editNode={false}
+                                        value={
+                                          myData.node.template[templateParam]
+                                            .value?.length === 0 ||
+                                          !myData.node.template[templateParam]
+                                            .value
+                                            ? dictArr
+                                            : myData.node.template[
+                                                templateParam
+                                              ].value
+                                        }
                                         duplicateKey={errorDuplicateKey}
-                                        onChange={(newValue: string[]) => {
+                                        onChange={(newValue) => {
                                           setErrorDuplicateKey(
                                             hasDuplicateKeys(newValue)
                                           );
                                           if (hasDuplicateKeys(newValue)) {
                                             setDictArr(newValue);
                                           } else {
-                                            setDict(
-                                              convertArrayToObj(newValue)
-                                            );
+                                            setDictArr(newValue);
+                                            myData.node!.template[
+                                              templateParam
+                                            ].value = newValue;
                                           }
                                         }}
                                       />
