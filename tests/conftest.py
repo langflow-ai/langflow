@@ -17,7 +17,7 @@ from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseManager
+    from langflow.services.database.manager import DatabaseService
 
 
 def pytest_configure():
@@ -158,8 +158,8 @@ def session_getter_fixture(client):
     SQLModel.metadata.create_all(engine)
 
     @contextmanager
-    def blank_session_getter(db_manager: "DatabaseManager"):
-        with Session(db_manager.engine) as session:
+    def blank_session_getter(db_service: "DatabaseService"):
+        with Session(db_service.engine) as session:
             yield session
 
     yield blank_session_getter

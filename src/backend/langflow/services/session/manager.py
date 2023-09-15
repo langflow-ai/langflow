@@ -6,23 +6,23 @@ from langflow.services.cache.utils import compute_dict_hash
 from langflow.services.session.utils import session_id_generator
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import BaseCacheManager
+    from langflow.services.cache.base import BaseCacheService
 
 
-class SessionManager(Service):
-    name = "session_manager"
+class SessionService(Service):
+    name = "session_service"
 
-    def __init__(self, cache_manager):
-        self.cache_manager: "BaseCacheManager" = cache_manager
+    def __init__(self, cache_service):
+        self.cache_service: "BaseCacheService" = cache_service
 
     def load_session(self, key, data_graph):
         # Check if the data is cached
-        if key in self.cache_manager:
-            return self.cache_manager.get(key)
+        if key in self.cache_service:
+            return self.cache_service.get(key)
 
         # If not cached, build the graph and cache it
         graph, artifacts = build_sorted_vertices(data_graph)
-        self.cache_manager.set(key, (graph, artifacts))
+        self.cache_service.set(key, (graph, artifacts))
 
         return graph, artifacts
 
@@ -38,7 +38,7 @@ class SessionManager(Service):
         return self.build_key(session_id, data_graph=data_graph)
 
     def update_session(self, session_id, value):
-        self.cache_manager.set(session_id, value)
+        self.cache_service.set(session_id, value)
 
     def clear_session(self, session_id):
-        self.cache_manager.delete(session_id)
+        self.cache_service.delete(session_id)

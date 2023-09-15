@@ -12,7 +12,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
 )
 
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 
 router = APIRouter(tags=["Login"])
 
@@ -35,9 +35,9 @@ async def login_to_get_access_token(
 
 @router.get("/auto_login")
 async def auto_login(
-    db: Session = Depends(get_session), settings_manager=Depends(get_settings_manager)
+    db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
 ):
-    if settings_manager.auth_settings.AUTO_LOGIN:
+    if settings_service.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
     raise HTTPException(

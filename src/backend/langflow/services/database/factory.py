@@ -1,17 +1,17 @@
 from typing import TYPE_CHECKING
-from langflow.services.database.manager import DatabaseManager
+from langflow.services.database.manager import DatabaseService
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsManager
+    from langflow.services.settings.manager import SettingsService
 
 
-class DatabaseManagerFactory(ServiceFactory):
+class DatabaseServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(DatabaseManager)
+        super().__init__(DatabaseService)
 
-    def create(self, settings_manager: "SettingsManager"):
-        # Here you would have logic to create and configure a DatabaseManager
-        if not settings_manager.settings.DATABASE_URL:
+    def create(self, settings_service: "SettingsService"):
+        # Here you would have logic to create and configure a DatabaseService
+        if not settings_service.settings.DATABASE_URL:
             raise ValueError("No database URL provided")
-        return DatabaseManager(settings_manager.settings.DATABASE_URL)
+        return DatabaseService(settings_service.settings.DATABASE_URL)

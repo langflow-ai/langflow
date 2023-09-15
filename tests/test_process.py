@@ -1,5 +1,5 @@
 from langflow.processing.process import process_tweaks
-from langflow.services.utils import get_session_manager
+from langflow.services.utils import get_session_service
 
 
 def test_no_tweaks():
@@ -199,13 +199,13 @@ def test_tweak_not_in_template():
 
 def test_load_langchain_object_with_cached_session(client, basic_graph_data):
     # Provide a non-existent session_id
-    session_manager = get_session_manager()
+    session_service = get_session_service()
     session_id1 = "non-existent-session-id"
-    langchain_object1, artifacts1 = session_manager.load_session(
+    langchain_object1, artifacts1 = session_service.load_session(
         session_id1, basic_graph_data
     )
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_manager.load_session(
+    langchain_object2, artifacts2 = session_service.load_session(
         session_id1, basic_graph_data
     )
 
@@ -215,16 +215,16 @@ def test_load_langchain_object_with_cached_session(client, basic_graph_data):
 
 def test_load_langchain_object_with_no_cached_session(client, basic_graph_data):
     # Provide a non-existent session_id
-    session_manager = get_session_manager()
+    session_service = get_session_service()
     session_id1 = "non-existent-session-id"
-    session_id = session_manager.build_key(session_id1, basic_graph_data)
-    langchain_object1, artifacts1 = session_manager.load_session(
+    session_id = session_service.build_key(session_id1, basic_graph_data)
+    langchain_object1, artifacts1 = session_service.load_session(
         session_id, basic_graph_data
     )
     # Clear the cache
-    session_manager.clear_session(session_id)
+    session_service.clear_session(session_id)
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_manager.load_session(
+    langchain_object2, artifacts2 = session_service.load_session(
         session_id, basic_graph_data
     )
 
@@ -235,13 +235,13 @@ def test_load_langchain_object_with_no_cached_session(client, basic_graph_data):
 
 def test_load_langchain_object_without_session_id(client, basic_graph_data):
     # Provide a non-existent session_id
-    session_manager = get_session_manager()
+    session_service = get_session_service()
     session_id1 = None
-    langchain_object1, artifacts1 = session_manager.load_session(
+    langchain_object1, artifacts1 = session_service.load_session(
         session_id1, basic_graph_data
     )
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_manager.load_session(
+    langchain_object2, artifacts2 = session_service.load_session(
         session_id1, basic_graph_data
     )
 

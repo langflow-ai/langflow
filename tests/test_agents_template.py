@@ -31,15 +31,15 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
     }
 
     # Additional assertions for other template variables
-    assert template["callback_manager"] == {
+    assert template["callback_service"] == {
         "required": False,
         "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
         "password": False,
-        "name": "callback_manager",
-        "type": "BaseCallbackManager",
+        "name": "callback_service",
+        "type": "BaseCallbackService",
         "list": False,
         "advanced": False,
         "info": "",

@@ -13,12 +13,12 @@ from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, St
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
-from langflow.services.utils import get_cache_manager, get_session
+from langflow.services.utils import get_cache_service, get_session
 from loguru import logger
-from langflow.services.utils import get_chat_manager
+from langflow.services.utils import get_chat_service
 from sqlmodel import Session
-from langflow.services.chat.manager import ChatManager
-from langflow.services.cache.manager import BaseCacheManager
+from langflow.services.chat.manager import ChatService
+from langflow.services.cache.manager import BaseCacheService
 
 
 router = APIRouter(tags=["Chat"])
@@ -30,7 +30,7 @@ async def chat(
     websocket: WebSocket,
     token: str = Query(...),
     db: Session = Depends(get_session),
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
 ):
     """Websocket endpoint for chat."""
     try:
@@ -45,8 +45,8 @@ async def chat(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
             )
 
-        if client_id in chat_manager.cache_manager:
-            await chat_manager.handle_websocket(client_id, websocket)
+        if client_id in chat_service.cache_service:
+            await chat_service.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
             # if the flow is not built yet
@@ -71,8 +71,8 @@ async def init_build(
     graph_data: dict,
     flow_id: str,
     current_user=Depends(get_current_active_user),
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
-    cache_manager: "BaseCacheManager" = Depends(get_cache_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
+    cache_service: "BaseCacheService" = Depends(get_cache_service),
 ):
     """Initialize the build by storing graph data and returning a unique session ID."""
     try:
@@ -80,17 +80,17 @@ async def init_build(
             raise ValueError("No ID provided")
         # Check if already building
         if (
-            flow_id in cache_manager
-            and isinstance(cache_manager[flow_id], dict)
-            and cache_manager[flow_id].get("status") == BuildStatus.IN_PROGRESS
+            flow_id in cache_service
+            and isinstance(cache_service[flow_id], dict)
+            and cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS
         ):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
-        if flow_id in chat_manager.cache_manager:
-            chat_manager.cache_manager.delete(flow_id)
+        if flow_id in chat_service.cache_service:
+            chat_service.cache_service.delete(flow_id)
             logger.debug(f"Deleted flow {flow_id} from cache")
-        cache_manager[flow_id] = {
+        cache_service[flow_id] = {
             "graph_data": graph_data,
             "status": BuildStatus.STARTED,
             "user_id": current_user.id,
@@ -104,13 +104,13 @@ async def init_build(
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
 async def build_status(
-    flow_id: str, cache_manager: "BaseCacheManager" = Depends(get_cache_manager)
+    flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)
 ):
-    """Check the flow_id is in the cache_manager."""
+    """Check the flow_id is in the cache_service."""
     try:
         built = (
-            flow_id in cache_manager
-            and cache_manager[flow_id]["status"] == BuildStatus.SUCCESS
+            flow_id in cache_service
+            and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
         )
 
         return BuiltResponse(
@@ -125,8 +125,8 @@ async def build_status(
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(
     flow_id: str,
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
-    cache_manager: "BaseCacheManager" = Depends(get_cache_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
+    cache_service: "BaseCacheService" = Depends(get_cache_service),
 ):
     """Stream the build process based on stored flow data."""
 
@@ -134,18 +134,18 @@ async def stream_build(
         final_response = {"end_of_stream": True}
         artifacts = {}
         try:
-            if flow_id not in cache_manager:
+            if flow_id not in cache_service:
                 error_message = "Invalid session ID"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            if cache_manager[flow_id].get("status") == BuildStatus.IN_PROGRESS:
+            if cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS:
                 error_message = "Already building"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            graph_data = cache_manager[flow_id].get("graph_data")
-            cache_manager[flow_id]["user_id"]
+            graph_data = cache_service[flow_id].get("graph_data")
+            cache_service[flow_id]["user_id"]
 
             if not graph_data:
                 error_message = "No data provided"
@@ -158,7 +158,7 @@ async def stream_build(
             graph = Graph.from_payload(graph_data)
 
             number_of_nodes = len(graph.nodes)
-            cache_manager[flow_id]["status"] = BuildStatus.IN_PROGRESS
+            cache_service[flow_id]["status"] = BuildStatus.IN_PROGRESS
 
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
@@ -185,7 +185,7 @@ async def stream_build(
                     logger.exception(exc)
                     params = str(exc)
                     valid = False
-                    cache_manager[flow_id]["status"] = BuildStatus.FAILURE
+                    cache_service[flow_id]["status"] = BuildStatus.FAILURE
 
                 response = {
                     "valid": valid,
@@ -209,14 +209,14 @@ async def stream_build(
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-            chat_manager.set_cache(flow_id, langchain_object)
+            chat_service.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
-            chat_manager.chat_history.empty_history(flow_id)
-            cache_manager[flow_id]["status"] = BuildStatus.SUCCESS
+            chat_service.chat_history.empty_history(flow_id)
+            cache_service[flow_id]["status"] = BuildStatus.SUCCESS
         except Exception as exc:
             logger.exception(exc)
             logger.error("Error while building the flow: %s", exc)
-            cache_manager[flow_id]["status"] = BuildStatus.FAILURE
+            cache_service[flow_id]["status"] = BuildStatus.FAILURE
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
             yield str(StreamData(event="message", data=final_response))

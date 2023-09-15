@@ -1,12 +1,12 @@
 import abc
 
 
-class BaseCacheManager(abc.ABC):
+class BaseCacheService(abc.ABC):
     """
     Abstract base class for a cache.
     """
 
-    name = "cache_manager"
+    name = "cache_service"
 
     @abc.abstractmethod
     def get(self, key):

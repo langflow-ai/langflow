@@ -7,11 +7,11 @@ from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
 from loguru import logger
 
-from .cache import cache_manager
+from .cache import cache_service
 import asyncio
 from typing import Any, Dict, List
 
-from langflow.services import service_manager, ServiceType
+from langflow.services import service_service, ServiceType
 import orjson
 
 
@@ -42,15 +42,15 @@ class ChatHistory(Subject):
         self.history[client_id] = []
 
 
-class ChatManager(Service):
-    name = "chat_manager"
+class ChatService(Service):
+    name = "chat_service"
 
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.chat_history = ChatHistory()
-        self.chat_cache = cache_manager
+        self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
-        self.cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
+        self.cache_service = service_service.get(ServiceType.CACHE_MANAGER)
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""
@@ -179,8 +179,8 @@ class ChatManager(Service):
             "result": langchain_object,
             "type": type(langchain_object),
         }
-        self.cache_manager.upsert(client_id, result_dict)
-        return client_id in self.cache_manager
+        self.cache_service.upsert(client_id, result_dict)
+        return client_id in self.cache_service
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
@@ -202,7 +202,7 @@ class ChatManager(Service):
                     continue
 
                 with self.chat_cache.set_client_id(client_id):
-                    if langchain_object := self.cache_manager.get(client_id).get(
+                    if langchain_object := self.cache_service.get(client_id).get(
                         "result"
                     ):
                         await self.process_message(client_id, payload, langchain_object)

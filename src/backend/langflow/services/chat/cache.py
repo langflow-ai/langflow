@@ -50,10 +50,10 @@ class AsyncSubject:
             await observer()
 
 
-class CacheManager(Subject, Service):
+class CacheService(Subject, Service):
     """Manages cache for different clients and notifies observers on changes."""
 
-    name = "cache_manager"
+    name = "cache_service"
 
     def __init__(self):
         super().__init__()
@@ -150,4 +150,4 @@ class CacheManager(Subject, Service):
         return list(self.current_cache.values())[-1]
 
 
-cache_manager = CacheManager()
+cache_service = CacheService()

@@ -1,41 +1,41 @@
-from langflow.services import ServiceType, service_manager
+from langflow.services import ServiceType, service_service
 from typing import TYPE_CHECKING, Generator
 
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseManager
-    from langflow.services.settings.manager import SettingsManager
-    from langflow.services.cache.manager import BaseCacheManager
-    from langflow.services.session.manager import SessionManager
-    from langflow.services.task.manager import TaskManager
-    from langflow.services.chat.manager import ChatManager
+    from langflow.services.database.manager import DatabaseService
+    from langflow.services.settings.manager import SettingsService
+    from langflow.services.cache.manager import BaseCacheService
+    from langflow.services.session.manager import SessionService
+    from langflow.services.task.manager import TaskService
+    from langflow.services.chat.manager import ChatService
     from sqlmodel import Session
 
 
-def get_settings_manager() -> "SettingsManager":
-    return service_manager.get(ServiceType.SETTINGS_MANAGER)
+def get_settings_service() -> "SettingsService":
+    return service_service.get(ServiceType.SETTINGS_MANAGER)
 
 
-def get_db_manager() -> "DatabaseManager":
-    return service_manager.get(ServiceType.DATABASE_MANAGER)
+def get_db_service() -> "DatabaseService":
+    return service_service.get(ServiceType.DATABASE_MANAGER)
 
 
 def get_session() -> Generator["Session", None, None]:
-    db_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
-    yield from db_manager.get_session()
+    db_service = service_service.get(ServiceType.DATABASE_MANAGER)
+    yield from db_service.get_session()
 
 
-def get_cache_manager() -> "BaseCacheManager":
-    return service_manager.get(ServiceType.CACHE_MANAGER)
+def get_cache_service() -> "BaseCacheService":
+    return service_service.get(ServiceType.CACHE_MANAGER)
 
 
-def get_session_manager() -> "SessionManager":
-    return service_manager.get(ServiceType.SESSION_MANAGER)
+def get_session_service() -> "SessionService":
+    return service_service.get(ServiceType.SESSION_MANAGER)
 
 
-def get_task_manager() -> "TaskManager":
-    return service_manager.get(ServiceType.TASK_MANAGER)
+def get_task_service() -> "TaskService":
+    return service_service.get(ServiceType.TASK_MANAGER)
 
 
-def get_chat_manager() -> "ChatManager":
-    return service_manager.get(ServiceType.CHAT_MANAGER)
+def get_chat_service() -> "ChatService":
+    return service_service.get(ServiceType.CHAT_MANAGER)

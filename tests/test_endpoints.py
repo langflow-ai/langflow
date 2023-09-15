@@ -2,7 +2,7 @@ import uuid
 from langflow.processing.process import Result
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.api_key import ApiKey
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
@@ -111,8 +111,8 @@ def test_process_flow_invalid_api_key(client, flow, monkeypatch):
     from langflow.api.v1 import endpoints
     from langflow.services.database.models.api_key import crud
 
-    settings_manager = get_settings_manager()
-    settings_manager.auth_settings.AUTO_LOGIN = False
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
 
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
@@ -170,8 +170,8 @@ def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_k
     from langflow.api.v1 import endpoints
     from langflow.services.database.models.api_key import crud
 
-    settings_manager = get_settings_manager()
-    settings_manager.auth_settings.AUTO_LOGIN = False
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
 
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
@@ -208,8 +208,8 @@ def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
     from langflow.api.v1 import endpoints
     from langflow.services.database.models.api_key import crud
 
-    settings_manager = get_settings_manager()
-    settings_manager.auth_settings.AUTO_LOGIN = False
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
 
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")

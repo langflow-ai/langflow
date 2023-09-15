@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.services.utils import get_db_manager
+from langflow.services.utils import get_db_service
 from langflow.interface.custom.utils import extract_inner_type
 
 from langflow.utils import validate
@@ -179,8 +179,8 @@ class CustomComponent(Component, extra=Extra.allow):
         from langflow.processing.process import build_sorted_vertices
         from langflow.processing.process import process_tweaks
 
-        db_manager = get_db_manager()
-        with session_getter(db_manager) as session:
+        db_service = get_db_service()
+        with session_getter(db_service) as session:
             graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
         if not graph_data:
             raise ValueError(f"Flow {flow_id} not found")
@@ -193,8 +193,8 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError("Session is invalid")
         try:
             get_session = get_session or session_getter
-            db_manager = get_db_manager()
-            with get_session(db_manager) as session:
+            db_service = get_db_service()
+            with get_session(db_service) as session:
                 flows = session.query(Flow).filter(Flow.user_id == self.user_id).all()
             return flows
         except Exception as e:
@@ -209,8 +209,8 @@ class CustomComponent(Component, extra=Extra.allow):
         get_session: Optional[Callable] = None,
     ) -> Flow:
         get_session = get_session or session_getter
-        db_manager = get_db_manager()
-        with get_session(db_manager) as session:
+        db_service = get_db_service()
+        with get_session(db_service) as session:
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:

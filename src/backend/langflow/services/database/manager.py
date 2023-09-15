@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from langflow.services.base import Service
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Session, create_engine
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
 
 
-class DatabaseManager(Service):
-    name = "database_manager"
+class DatabaseService(Service):
+    name = "database_service"
 
     def __init__(self, database_url: str):
         self.database_url = database_url
@@ -30,10 +30,10 @@ class DatabaseManager(Service):
 
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         if (
-            settings_manager.settings.DATABASE_URL
-            and settings_manager.settings.DATABASE_URL.startswith("sqlite")
+            settings_service.settings.DATABASE_URL
+            and settings_service.settings.DATABASE_URL.startswith("sqlite")
         ):
             connect_args = {"check_same_thread": False}
         else:
@@ -162,12 +162,12 @@ class DatabaseManager(Service):
     def teardown(self):
         logger.debug("Tearing down database")
         try:
-            settings_manager = get_settings_manager()
+            settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the FIRST_SUPERUSER to get the user
-            if settings_manager.auth_settings.AUTO_LOGIN:
+            if settings_service.auth_settings.AUTO_LOGIN:
                 logger.debug("Removing default superuser")
-                username = settings_manager.auth_settings.FIRST_SUPERUSER
+                username = settings_service.auth_settings.FIRST_SUPERUSER
                 with Session(self.engine) as session:
                     user = get_user_by_username(session, username)
                     session.delete(user)
