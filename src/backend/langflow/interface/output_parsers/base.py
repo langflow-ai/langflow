@@ -4,7 +4,7 @@ from langchain import output_parsers
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 
 from langflow.template.frontend_node.output_parsers import OutputParserFrontendNode
 from loguru import logger
@@ -24,7 +24,7 @@ class OutputParserCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
-            settings_manager = get_settings_manager()
+            settings_service = get_settings_service()
             self.type_dict = {
                 output_parser_name: import_class(
                     f"langchain.output_parsers.{output_parser_name}"
@@ -35,8 +35,8 @@ class OutputParserCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: output_parser
                 for name, output_parser in self.type_dict.items()
-                if name in settings_manager.settings.OUTPUT_PARSERS
-                or settings_manager.settings.DEV
+                if name in settings_service.settings.OUTPUT_PARSERS
+                or settings_service.settings.DEV
             }
         return self.type_dict
 

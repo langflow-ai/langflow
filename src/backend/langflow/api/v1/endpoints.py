@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, Any, Optional, Union
+from typing import TYPE_CHECKING, Annotated, Any, Optional, Union
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 
@@ -7,7 +7,7 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_manager, get_task_manager
+from langflow.services.utils import get_settings_service, get_task_service
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
@@ -33,7 +33,8 @@ from langflow.services.utils import get_session
 from langflow.worker import process_graph_cached_task
 from sqlmodel import Session
 
-from langflow.services.task.manager import TaskManager
+if TYPE_CHECKING:
+    from langflow.services.task.manager import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -41,21 +42,21 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 def get_all(
-    settings_manager=Depends(get_settings_manager),
+    settings_service=Depends(get_settings_service),
 ):
     logger.debug("Building langchain types dict")
     native_components = build_langchain_types_dict()
     # custom_components is a list of dicts
     # need to merge all the keys into one dict
     custom_components_from_file: dict[str, Any] = {}
-    if settings_manager.settings.COMPONENTS_PATH:
+    if settings_service.settings.COMPONENTS_PATH:
         logger.info(
-            f"Building custom components from {settings_manager.settings.COMPONENTS_PATH}"
+            f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
         )
 
         custom_component_dicts = []
         processed_paths = []
-        for path in settings_manager.settings.COMPONENTS_PATH:
+        for path in settings_service.settings.COMPONENTS_PATH:
             if str(path) in processed_paths:
                 continue
             custom_component_dict = build_langchain_custom_component_list_from_path(
@@ -99,7 +100,7 @@ async def process_flow(
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
-    task_manager: "TaskManager" = Depends(get_task_manager),
+    task_service: "TaskService" = Depends(get_task_service),
     api_key_user: User = Depends(api_key_security),
     sync: Annotated[bool, Body(embed=True)] = True,  # noqa: F821
 ):
@@ -133,9 +134,9 @@ async def process_flow(
             except Exception as exc:
                 logger.error(f"Error processing tweaks: {exc}")
         if sync:
-            task_id, result = await task_manager.launch_and_await_task(
+            task_id, result = await task_service.launch_and_await_task(
                 process_graph_cached_task
-                if task_manager.use_celery
+                if task_service.use_celery
                 else process_graph_cached,
                 graph_data,
                 inputs,
@@ -145,9 +146,9 @@ async def process_flow(
             task_result = result.result
             session_id = result.session_id
         else:
-            task_id, task = await task_manager.launch_task(
+            task_id, task = await task_service.launch_task(
                 process_graph_cached_task
-                if task_manager.use_celery
+                if task_service.use_celery
                 else process_graph_cached,
                 graph_data,
                 inputs,
@@ -180,8 +181,8 @@ async def process_flow(
 
 @router.get("/task/{task_id}/status", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str):
-    task_manager = get_task_manager()
-    task = task_manager.get_task(task_id)
+    task_service = get_task_service()
+    task = task_service.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskStatusResponse(

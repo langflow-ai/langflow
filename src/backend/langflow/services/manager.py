@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from langflow.services.base import Service
 
 
-class ServiceManager:
+class ServiceService:
     """
     Manages the creation of different services.
     """
@@ -95,7 +95,7 @@ class ServiceManager:
         self.dependencies = {}
 
 
-service_manager = ServiceManager()
+service_service = ServiceService()
 
 
 def initialize_services():
@@ -106,67 +106,67 @@ def initialize_services():
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.settings import factory as settings_factory
-    from langflow.services.session import factory as session_manager_factory
+    from langflow.services.session import factory as session_service_factory
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
 
-    service_manager.register_factory(settings_factory.SettingsManagerFactory())
-    service_manager.register_factory(
-        database_factory.DatabaseManagerFactory(),
+    service_service.register_factory(settings_factory.SettingsServiceFactory())
+    service_service.register_factory(
+        database_factory.DatabaseServiceFactory(),
         dependencies=[ServiceType.SETTINGS_MANAGER],
     )
-    service_manager.register_factory(
-        cache_factory.CacheManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+    service_service.register_factory(
+        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_manager.register_factory(
-        auth_factory.AuthManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+    service_service.register_factory(
+        auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_manager.register_factory(chat_factory.ChatManagerFactory())
-    service_manager.register_factory(
-        session_manager_factory.SessionManagerFactory(),
+    service_service.register_factory(chat_factory.ChatServiceFactory())
+    service_service.register_factory(
+        session_service_factory.SessionServiceFactory(),
         dependencies=[ServiceType.CACHE_MANAGER],
     )
-    service_manager.register_factory(
-        task_factory.TaskManagerFactory(),
+    service_service.register_factory(
+        task_factory.TaskServiceFactory(),
     )
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_service.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_service.get(ServiceType.DATABASE_MANAGER)
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_service.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_service.get(ServiceType.DATABASE_MANAGER)
 
 
-def initialize_settings_manager():
+def initialize_settings_service():
     """
     Initialize the settings manager.
     """
     from langflow.services.settings import factory as settings_factory
 
-    service_manager.register_factory(settings_factory.SettingsManagerFactory())
+    service_service.register_factory(settings_factory.SettingsServiceFactory())
 
 
-def initialize_session_manager():
+def initialize_session_service():
     """
     Initialize the session manager.
     """
-    from langflow.services.session import factory as session_manager_factory  # type: ignore
+    from langflow.services.session import factory as session_service_factory  # type: ignore
     from langflow.services.cache import factory as cache_factory
 
-    initialize_settings_manager()
+    initialize_settings_service()
 
-    service_manager.register_factory(
-        cache_factory.CacheManagerFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+    service_service.register_factory(
+        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_manager.register_factory(
-        session_manager_factory.SessionManagerFactory(),
+    service_service.register_factory(
+        session_service_factory.SessionServiceFactory(),
         dependencies=[ServiceType.CACHE_MANAGER],
     )
 
@@ -175,4 +175,4 @@ def teardown_services():
     """
     Teardown all the services.
     """
-    service_manager.teardown()
+    service_service.teardown()

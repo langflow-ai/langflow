@@ -6,8 +6,8 @@ from langflow.processing.process import (
     generate_result,
     process_inputs,
 )
-from langflow.services.manager import initialize_session_manager
-from langflow.services.utils import get_session_manager
+from langflow.services.manager import initialize_session_service
+from langflow.services.utils import get_session_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -40,16 +40,16 @@ def process_graph_cached_task(
     clear_cache=False,
     session_id=None,
 ) -> Tuple[Any, str]:
-    initialize_session_manager()
-    session_manager = get_session_manager()
+    initialize_session_service()
+    session_service = get_session_service()
     if clear_cache:
-        session_manager.clear_session(session_id)
-    # Load the graph using SessionManager
-    langchain_object, artifacts = session_manager.load_session(session_id, data_graph)
+        session_service.clear_session(session_id)
+    # Load the graph using SessionService
+    langchain_object, artifacts = session_service.load_session(session_id, data_graph)
     processed_inputs = process_inputs(inputs, artifacts)
     result = generate_result(langchain_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
-    session_manager.update_session(session_id, (langchain_object, artifacts))
+    session_service.update_session(session_id, (langchain_object, artifacts))
 
     return result, session_id

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
 from langchain.chains.base import Chain
 from langchain.agents import AgentExecutor
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField
@@ -27,11 +27,11 @@ class LangChainTypeCreator(BaseModel, ABC):
     @property
     def docs_map(self) -> Dict[str, str]:
         """A dict with the name of the component as key and the documentation link as value."""
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         if self.name_docs_dict is None:
             try:
                 type_settings = getattr(
-                    settings_manager.settings, self.type_name.upper()
+                    settings_service.settings, self.type_name.upper()
                 )
                 self.name_docs_dict = {
                     name: value_dict["documentation"]

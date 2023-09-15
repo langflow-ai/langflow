@@ -2,15 +2,15 @@ from datetime import datetime
 from langflow.services.auth.utils import create_super_user, get_password_hash
 
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_manager
+from langflow.services.utils import get_settings_service
 import pytest
 from langflow.services.database.models.user import UserUpdate
 
 
 @pytest.fixture
 def super_user(client, session):
-    settings_manager = get_settings_manager()
-    auth_settings = settings_manager.auth_settings
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
     return create_super_user(
         db=session,
         username=auth_settings.FIRST_SUPERUSER,
@@ -20,8 +20,8 @@ def super_user(client, session):
 
 @pytest.fixture
 def super_user_headers(client, super_user):
-    settings_manager = get_settings_manager()
-    auth_settings = settings_manager.auth_settings
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
     login_data = {
         "username": auth_settings.FIRST_SUPERUSER,
         "password": auth_settings.FIRST_SUPERUSER_PASSWORD,

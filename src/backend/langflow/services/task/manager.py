@@ -19,8 +19,8 @@ except ImportError:
     USE_CELERY = False
 
 
-class TaskManager(Service):
-    name = "task_manager"
+class TaskService(Service):
+    name = "task_service"
 
     def __init__(self):
         self.backend = self.get_backend()
@@ -33,7 +33,7 @@ class TaskManager(Service):
             return CeleryBackend()
         return AnyIOBackend()
 
-    # In your TaskManager class
+    # In your TaskService class
     async def launch_and_await_task(
         self,
         task_func: Callable[..., Any],
