@@ -23,6 +23,7 @@ export default function CodeAreaModal({
   setNodeClass,
   children,
   dynamic,
+  readonly=false
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
@@ -147,6 +148,7 @@ export default function CodeAreaModal({
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
+              readOnly={readonly}
               value={code}
               mode="python"
               height={height ?? "100%"}
@@ -181,7 +183,7 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            <Button className="mt-3" onClick={handleClick} type="submit">
+            <Button disabled={readonly} className="mt-3" onClick={handleClick} type="submit">
               Check & Save
             </Button>
           </div>
