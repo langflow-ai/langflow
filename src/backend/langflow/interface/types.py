@@ -320,7 +320,7 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
             status_code=400,
             detail={
                 "error": (
-                    "Invalid type convertion: " + e
+                    "Invalid type convertion"
                 ),
                 "traceback": traceback.format_exc(),
             },
