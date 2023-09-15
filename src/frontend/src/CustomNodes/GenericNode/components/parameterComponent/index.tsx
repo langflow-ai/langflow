@@ -384,8 +384,9 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                convertObjToArray(data.node!.template[name].value) ??
-                convertObjToArray(dict)
+                convertObjToArray(data.node!.template[name].value).length === 0
+                  ? convertObjToArray(dict)
+                  : convertObjToArray(data.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue: string[]) => {

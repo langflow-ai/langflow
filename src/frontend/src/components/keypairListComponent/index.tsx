@@ -82,7 +82,6 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-3">
               <Input
-                disabled={disabled}
                 type="text"
                 value={key}
                 className={classNames(
@@ -100,7 +99,6 @@ export default function KeypairListComponent({
               />
 
               <Input
-                disabled={false}
                 type="text"
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}

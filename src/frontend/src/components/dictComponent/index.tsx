@@ -33,10 +33,11 @@ export default function DictComponent({
             }}
           >
             <Input
-              disabled={true}
               type="text"
               className={
-                editNode ? "input-edit-node cursor-pointer" : "cursor-pointer"
+                editNode
+                  ? "input-edit-node input-disable pointer-events-none cursor-pointer"
+                  : "input-disable pointer-events-none cursor-pointer"
               }
               placeholder="Click to edit your dictionary..."
             />
