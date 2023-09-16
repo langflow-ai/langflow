@@ -126,6 +126,7 @@ testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
+markers = ["async_test"]
 
 
 [tool.ruff]
