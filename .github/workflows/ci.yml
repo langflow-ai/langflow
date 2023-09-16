@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and start services
         working-directory: ./deploy
-        run: docker compose up --exit-code-from tests tests queue celeryworker db -d
+        run: docker compose up --exit-code-from tests tests queue celeryworker db
         continue-on-error: true
 
       - name: Stop services
