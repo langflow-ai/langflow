@@ -292,7 +292,7 @@ class RedisCache(BaseCacheService, Service):
 
     def __contains__(self, key):
         """Check if the key is in the cache."""
-        return self._client.exists(key)
+        return False if key is None else self._client.exists(key)
 
     def __getitem__(self, key):
         """Retrieve an item from the cache using the square bracket notation."""
