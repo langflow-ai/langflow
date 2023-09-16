@@ -452,6 +452,7 @@ def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_a
 
 
 # Test function without loop
+@pytest.mark.async_test
 def test_async_task_processing(client, added_flow, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
