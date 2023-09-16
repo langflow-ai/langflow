@@ -1,0 +1,63 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      # Step 1: Checkout code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Setup cache for Docker layers
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # Step 3: Setup Docker and Docker Compose
+      - name: Set up Docker
+        run: docker --version && docker-compose --version
+
+      # Step 4: Build Docker containers and start services (e.g., Redis, Celery)
+      - name: Build and start services
+        working-directory: ./deploy
+        run: docker-compose up --build -d
+        continue-on-error: true
+
+    - name: Build and run tests
+      run: |
+        docker-compose -f docker-compose.yml up --exit-code-from tests tests queue celeryworker db -d
+        container_id=$(docker ps -a -q --filter "name=tests")
+        docker cp ${container_id}:/path/in/container/to/test/results ./test-results
+
+    - name: Upload test report
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-report
+        path: ./test-results
+
+      # Step 6: Capture test results and store as an artifact
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: path/to/your/test-results/ # Update this to where pytest stores test results
+
+      # Step 7: Cleanup - Stop and remove Docker containers
+      - name: Stop services
+        run: docker-compose down
