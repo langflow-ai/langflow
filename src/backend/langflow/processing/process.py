@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import json
 from pathlib import Path
 from langchain.schema import AgentAction
@@ -13,6 +12,8 @@ from langflow.graph import Graph
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -146,8 +147,7 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     return result
 
 
-@dataclass
-class Result:
+class Result(BaseModel):
     result: Any
     session_id: str
 
@@ -173,7 +173,7 @@ async def process_graph_cached(
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (langchain_object, artifacts))
 
-    return Result(result, session_id)
+    return Result(result=result, session_id=session_id)
 
 
 def load_flow_from_json(
