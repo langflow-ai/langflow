@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 from typing import TYPE_CHECKING
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
 from langflow.processing.process import (
+    Result,
     generate_result,
     process_inputs,
 )
@@ -44,6 +45,10 @@ def process_graph_cached_task(
     session_service = get_session_service()
     if clear_cache:
         session_service.clear_session(session_id)
+    if session_id is None:
+        session_id = session_service.generate_key(
+            session_id=session_id, data_graph=data_graph
+        )
     # Load the graph using SessionService
     langchain_object, artifacts = session_service.load_session(session_id, data_graph)
     processed_inputs = process_inputs(inputs, artifacts)
@@ -52,4 +57,4 @@ def process_graph_cached_task(
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (langchain_object, artifacts))
 
-    return result, session_id
+    return Result(result=result, session_id=session_id).dict()

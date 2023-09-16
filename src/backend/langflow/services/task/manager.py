@@ -1,4 +1,4 @@
-from typing import Any, Callable, Union
+from typing import Any, Callable, Coroutine, Union
 import logging
 
 from langflow.services.base import Service
@@ -51,7 +51,8 @@ class TaskService(Service):
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> Any:
-        return await self.backend.launch_task(task_func, *args, **kwargs)
+        task = self.backend.launch_task(task_func, *args, **kwargs)
+        return await task if isinstance(task, Coroutine) else task
 
     def get_task(self, task_id: Union[int, str]) -> Any:
         return self.backend.get_task(task_id)
