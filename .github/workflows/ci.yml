@@ -14,11 +14,9 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
-      # Step 1: Checkout code from the repository
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Step 2: Setup cache for Docker layers
       - name: Cache Docker layers
         uses: actions/cache@v2
         with:
@@ -27,16 +25,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      # Step 3: Setup Docker and Docker Compose
       - name: Set up Docker
         run: docker --version && docker-compose --version
 
-      # Step 4: Build Docker containers and start services (e.g., Redis, Celery)
       - name: Build and start services
         working-directory: ./deploy
         run: docker compose up --exit-code-from tests tests queue celeryworker db -d
         continue-on-error: true
 
-      # Step 7: Cleanup - Stop and remove Docker containers
       - name: Stop services
         run: docker compose down
