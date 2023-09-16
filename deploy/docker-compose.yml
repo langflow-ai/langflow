@@ -68,7 +68,7 @@ services:
         # to disable www redirection remove the section: ${STACK_NAME?Variable not set}-www-redirect,
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
 
-  backend:
+  backend: &backend
     image: "ogabrielluiz/langflow:latest"
     build:
       context: ../
@@ -136,7 +136,7 @@ services:
       test: "exit 0"
 
   celeryworker:
-    image: "ogabrielluiz/langflow:latest"
+    <<: *backend
     env_file:
       - .env
     build:
@@ -149,7 +149,7 @@ services:
       replicas: 1
 
   flower:
-    image: "ogabrielluiz/langflow:latest"
+    <<: *backend
     env_file:
       - .env
     networks:
@@ -226,6 +226,17 @@ services:
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
         - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.rule=PathPrefix(`/grafana`)
         - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
+
+  tests:
+    <<: *backend
+    env_file:
+      - .env
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    command: pytest -v  --cov=langflow --cov-report=term-missing --cov-report=xml --cov-report=html -m async_test
+    healthcheck:
+      test: "exit 0"
 
 volumes:
   grafana_data:
