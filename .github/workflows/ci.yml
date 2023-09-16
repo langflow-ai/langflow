@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: "Async API tests"
 
 on:
   push:
