@@ -30,7 +30,7 @@ def build_template_from_function(
 
             variables = {"_type": _type}
             for class_field_items, value in _class.__fields__.items():
-                if class_field_items in ["callback_service"]:
+                if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
@@ -84,7 +84,7 @@ def build_template_from_class(
 
             if "__fields__" in _class.__dict__:
                 for class_field_items, value in _class.__fields__.items():
-                    if class_field_items in ["callback_service"]:
+                    if class_field_items in ["callback_manager"]:
                         continue
                     variables[class_field_items] = {}
                     for name_, value_ in value.__repr_args__():
