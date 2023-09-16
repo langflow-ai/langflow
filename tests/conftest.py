@@ -31,7 +31,7 @@ def pytest_configure():
         Path(__file__).parent.absolute() / "data" / "Openapi.json"
     )
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
-        Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
+        Path(__file__).parent.absolute() / "data" / "BasicChatwithPromptandHistory.json"
     )
 
     pytest.CODE_WITH_SYNTAX_ERROR = """
