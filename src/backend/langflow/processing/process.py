@@ -130,9 +130,8 @@ def process_graph_cached(
     elif isinstance(langchain_object, Document):
         result = langchain_object.dict()
     else:
-        raise ValueError(
-            f"Unknown langchain_object type: {type(langchain_object).__name__}"
-        )
+        logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+
     return result
 
 

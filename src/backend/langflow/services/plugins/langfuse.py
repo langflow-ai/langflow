@@ -16,7 +16,7 @@ class LangfuseInstance:
 
     @classmethod
     def create(cls):
-        logger.debug("Creating Langfuse instance")
+        logger.debug("Checking Langfuse credentials")
         from langflow.settings import settings
         from langfuse import Langfuse  # type: ignore
 
