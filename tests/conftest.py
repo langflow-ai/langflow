@@ -33,7 +33,9 @@ def pytest_configure():
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
         Path(__file__).parent.absolute() / "data" / "BasicChatwithPromptandHistory.json"
     )
-
+    pytest.VECTOR_STORE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "Vector_store.json"
+    )
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -108,6 +110,12 @@ def json_flow():
 @pytest.fixture
 def json_flow_with_prompt_and_history():
     with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def json_vector_store():
+    with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
 
 
@@ -229,4 +237,18 @@ def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
+    return response.json()
+
+
+@pytest.fixture
+def added_vector_store(client, json_vector_store, logged_in_headers):
+    vector_store = orjson.loads(json_vector_store)
+    data = vector_store["data"]
+    vector_store = FlowCreate(name="Vector Store", description="description", data=data)
+    response = client.post(
+        "api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers
+    )
+    assert response.status_code == 201
+    assert response.json()["name"] == vector_store.name
+    assert response.json()["data"] == vector_store.data
     return response.json()
