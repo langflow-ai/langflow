@@ -119,7 +119,8 @@ class InMemoryCache(BaseCacheService, Service):
 
     def get_or_set(self, key, value):
         """
-        Retrieve an item from the cache. If the item does not exist, set it with the provided value.
+        Retrieve an item from the cache. If the item does not exist,
+        set it with the provided value.
 
         Args:
             key: The key of the item.
@@ -207,13 +208,15 @@ class RedisCache(BaseCacheService, Service):
             host (str, optional): Redis host.
             port (int, optional): Redis port.
             db (int, optional): Redis DB.
-            expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
+            expiration_time (int, optional): Time in seconds after which a
+            ached item expires. Default is 1 hour.
         """
         try:
             import redis
         except ImportError as exc:
             raise ImportError(
-                "RedisCache requires the redis-py package. Please install Langflow with the deploy extra: pip install langflow[deploy]"
+                "RedisCache requires the redis-py package."
+                " Please install Langflow with the deploy extra: pip install langflow[deploy]"
             ) from exc
 
         self._client = redis.StrictRedis(host=host, port=port, db=db)
@@ -253,7 +256,12 @@ class RedisCache(BaseCacheService, Service):
             key: The key of the item.
             value: The value to cache.
         """
-        self._client.setex(key, self.expiration_time, pickle.dumps(value))
+        try:
+            self._client.setex(key, self.expiration_time, pickle.dumps(value))
+        except TypeError as exc:
+            raise TypeError(
+                "RedisCache only accepts values that can be pickled. "
+            ) from exc
 
     def upsert(self, key, value):
         """
