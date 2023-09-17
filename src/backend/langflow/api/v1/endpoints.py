@@ -30,7 +30,15 @@ from langflow.interface.types import (
 )
 
 from langflow.services.utils import get_session
-from langflow.worker import process_graph_cached_task
+
+try:
+    from langflow.worker import process_graph_cached_task
+except ImportError:
+
+    def process_graph_cached_task(*args, **kwargs):
+        raise NotImplementedError("Celery is not installed")
+
+
 from sqlmodel import Session
 
 
@@ -143,7 +151,10 @@ async def process_flow(
                 clear_cache,
                 session_id,
             )
-            task_result = result.result
+            if isinstance(result, dict) and "result" in result:
+                task_result = result["result"]
+            else:
+                task_result = result.result
             session_id = result.session_id
         else:
             task_id, task = await task_service.launch_task(
