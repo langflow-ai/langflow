@@ -451,6 +451,23 @@ def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_a
         assert name in response_json["result"]["text"]
 
 
+def test_vector_store_in_process(client, added_vector_store, created_api_key):
+    # Run the /api/v1/process/{flow_id} endpoint
+    headers = {"x-api-key": created_api_key.api_key}
+    post_data = {"inputs": {"input": "What is Langflow?"}}
+    response = client.post(
+        f"api/v1/process/{added_vector_store.get('id')}",
+        headers=headers,
+        json=post_data,
+    )
+    assert response.status_code == 200, response.json()
+    # Check the response
+    assert "Langflow" in response.json()["result"]["output"]
+    # session_id should be returned
+    assert "session_id" in response.json()
+    assert response.json()["session_id"] is not None
+
+
 # Test function without loop
 @pytest.mark.async_test
 def test_async_task_processing(client, added_flow, created_api_key):
@@ -477,3 +494,37 @@ def test_async_task_processing(client, added_flow, created_api_key):
     assert "result" in task_status_json, task_status_json
     assert "text" in task_status_json["result"], task_status_json["result"]
     assert "Gabriel" in task_status_json["result"]["text"], task_status_json["result"]
+
+
+# Test function without loop
+@pytest.mark.async_test
+def test_async_task_processing_vector_store(
+    client, added_vector_store, created_api_key
+):
+    headers = {"x-api-key": created_api_key.api_key}
+    post_data = {"inputs": {"input": "What is Langflow?"}}
+
+    # Run the /api/v1/process/{flow_id} endpoint with sync=False
+    response = client.post(
+        f"api/v1/process/{added_vector_store.get('id')}",
+        headers=headers,
+        json={**post_data, "sync": False},
+    )
+    assert response.status_code == 200, response.json()
+    assert "result" in response.json()
+    assert "FAILURE" not in response.json()["result"]
+
+    # Extract the task ID from the response
+    task_id = response.json().get("id")
+    assert task_id is not None
+
+    # Polling the task status using the helper function
+    task_status_json = poll_task_status(client, headers, task_id, max_attempts=40)
+    assert task_status_json is not None, "Task did not complete in time"
+
+    # Validate that the task completed successfully and the result is as expected
+    assert "result" in task_status_json, task_status_json
+    assert "output" in task_status_json["result"], task_status_json["result"]
+    assert "Langflow is" in task_status_json["result"]["output"], task_status_json[
+        "result"
+    ]
