@@ -27,6 +27,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
 import {
+  convertObjToArray,
   hasDuplicateKeys,
   isValidConnection,
 } from "../../../../utils/reactflowUtils";
@@ -384,7 +385,7 @@ export default function ParameterComponent({
                 data.node!.template[name].value?.length === 0 ||
                 !data.node!.template[name].value
                   ? dictArr
-                  : data.node!.template[name].value
+                  : convertObjToArray(data.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
