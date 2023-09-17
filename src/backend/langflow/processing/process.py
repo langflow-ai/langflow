@@ -6,7 +6,7 @@ from langflow.interface.run import (
     get_memory_key,
     update_memory_keys,
 )
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.graph import Graph
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
@@ -130,9 +130,8 @@ def process_graph_cached(
     elif isinstance(langchain_object, Document):
         result = langchain_object.dict()
     else:
-        raise ValueError(
-            f"Unknown langchain_object type: {type(langchain_object).__name__}"
-        )
+        logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+
     return result
 
 
