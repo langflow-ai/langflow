@@ -67,7 +67,7 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
             langchain_object.verbose = True
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            langchain_object.return_intermediate_steps = True
+            langchain_object.return_intermediate_steps = False
 
         fix_memory_inputs(langchain_object)
 
