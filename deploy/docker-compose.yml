@@ -234,7 +234,7 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
-    command: pytest -v  --cov=langflow --cov-report=term-missing --cov-report=xml --cov-report=html -m async_test
+    command: pytest -vv -n auto
     healthcheck:
       test: "exit 0"
 
