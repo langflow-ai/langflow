@@ -141,45 +141,54 @@ export default function ParameterComponent({
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
-          <span
-            key={index}
-            className={classNames(
-              index > 0 ? "mt-2 flex items-center" : "flex items-center"
+          <>
+            {index === 0 && (
+              <span>
+                {left
+                  ? "Avaliable input components:"
+                  : "Avaliable output components:"}
+              </span>
             )}
-          >
-            <div
-              className="h-5 w-5"
-              style={{
-                color: nodeColors[item.family],
-              }}
+            <span
+              key={index}
+              className={classNames(
+                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
+              )}
             >
-              <Icon
+              <div
                 className="h-5 w-5"
-                strokeWidth={1.5}
                 style={{
-                  color: nodeColors[item.family] ?? nodeColors.unknown,
+                  color: nodeColors[item.family],
                 }}
-              />
-            </div>
-            <span className="ps-2 text-xs text-foreground">
-              {nodeNames[item.family] ?? "Other"}
-              <span className="text-xs">
-                {" "}
-                {item.type === "" ? "" : " - "}
-                {item.type.split(", ").length > 2
-                  ? item.type.split(", ").map((el, index) => (
-                      <React.Fragment key={el + index}>
-                        <span>
-                          {index === item.type.split(", ").length - 1
-                            ? el
-                            : (el += `, `)}
-                        </span>
-                      </React.Fragment>
-                    ))
-                  : item.type}
+              >
+                <Icon
+                  className="h-5 w-5"
+                  strokeWidth={1.5}
+                  style={{
+                    color: nodeColors[item.family] ?? nodeColors.unknown,
+                  }}
+                />
+              </div>
+              <span className="ps-2 text-xs text-foreground">
+                {nodeNames[item.family] ?? "Other"}{" "}
+                <span className="text-xs">
+                  {" "}
+                  {item.type === "" ? "" : " - "}
+                  {item.type.split(", ").length > 2
+                    ? item.type.split(", ").map((el, index) => (
+                        <React.Fragment key={el + index}>
+                          <span>
+                            {index === item.type.split(", ").length - 1
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
+                    : item.type}
+                </span>
               </span>
             </span>
-          </span>
+          </>
         );
       });
     } else {

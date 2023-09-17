@@ -27,7 +27,7 @@ export default function Header(): JSX.Element {
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
-  const { stars } = useContext(darkContext);
+  const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
 
   return (
@@ -139,9 +139,7 @@ export default function Header(): JSX.Element {
                   <button
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      gradients[
-                        parseInt(userData?.id ?? "", 10) % gradients.length
-                      ]
+                      (userData?.profile_image ?? gradients[gradientIndex])
                     }
                   />
                 </DropdownMenuTrigger>
@@ -156,6 +154,12 @@ export default function Header(): JSX.Element {
                       Admin Page
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => navigate("/account/settings")}
+                  >
+                    Profile Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={() => {

@@ -298,7 +298,14 @@ export default function Page({
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        uploadFlow(false, event.dataTransfer.files.item(0)!);
+        if (event.dataTransfer.files.item(0)!.type === "application/json") {
+          uploadFlow(true, event.dataTransfer.files.item(0)!);
+        } else {
+          setErrorData({
+            title: "Invalid file type",
+            list: ["Please upload a JSON file"],
+          });
+        }
       }
     },
     // Specify dependencies for useCallback

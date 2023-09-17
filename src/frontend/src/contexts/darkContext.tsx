@@ -7,6 +7,8 @@ const initialValue = {
   setDark: () => {},
   stars: 0,
   setStars: (stars) => 0,
+  gradientIndex: 0,
+  setGradientIndex: () => 0,
 };
 
 export const darkContext = createContext<darkContextType>(initialValue);
@@ -16,6 +18,7 @@ export function DarkProvider({ children }) {
     JSON.parse(window.localStorage.getItem("isDark")!) ?? false
   );
   const [stars, setStars] = useState<number>(0);
+  const [gradientIndex, setGradientIndex] = useState<number>(0);
 
   useEffect(() => {
     async function fetchStars() {
@@ -23,6 +26,9 @@ export function DarkProvider({ children }) {
       setStars(starsCount);
     }
     fetchStars();
+    const min = 0;
+    const max = 30;
+    setGradientIndex(Math.floor(Math.random() * (max - min + 1)) + min);
   }, []);
 
   useEffect(() => {
@@ -41,6 +47,8 @@ export function DarkProvider({ children }) {
         stars,
         dark,
         setDark,
+        setGradientIndex,
+        gradientIndex,
       }}
     >
       {children}
