@@ -28,7 +28,10 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
-import { hasDuplicateKeys } from "../../utils/reactflowUtils";
+import {
+  convertObjToArray,
+  hasDuplicateKeys,
+} from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -212,9 +215,11 @@ const EditNodeModal = forwardRef(
                                           !myData.node.template[templateParam]
                                             .value
                                             ? dictArr
-                                            : myData.node.template[
-                                                templateParam
-                                              ].value
+                                            : convertObjToArray(
+                                                myData.node.template[
+                                                  templateParam
+                                                ].value
+                                              )
                                         }
                                         duplicateKey={errorDuplicateKey}
                                         onChange={(newValue) => {
