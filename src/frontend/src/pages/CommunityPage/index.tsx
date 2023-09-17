@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
+import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 export default function CommunityPage(): JSX.Element {
@@ -74,7 +75,14 @@ export default function CommunityPage(): JSX.Element {
           new and powerful features.
         </span>
         <div className="community-pages-flows-panel">
-          {!loadingExamples &&
+          {loadingExamples ? (
+            <>
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+            </>
+          ) : (
             examples.map((flow, idx) => (
               <CardComponent
                 key={idx}
@@ -99,7 +107,8 @@ export default function CommunityPage(): JSX.Element {
                   </Button>
                 }
               />
-            ))}
+            ))
+          )}
         </div>
       </div>
     </>

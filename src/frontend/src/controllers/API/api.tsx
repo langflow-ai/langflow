@@ -33,7 +33,10 @@ function ApiInterceptor() {
             }
 
             const res = await renewAccessToken(refreshToken);
-            login(res?.data?.access_token, res?.data?.refresh_token);
+            if (res?.data?.access_token && res?.data?.refresh_token) {
+              login(res?.data?.access_token, res?.data?.refresh_token);
+            }
+
             try {
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
