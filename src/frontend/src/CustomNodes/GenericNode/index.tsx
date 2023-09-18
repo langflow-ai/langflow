@@ -123,8 +123,8 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          " transition-all ",
-          showNode ? " w-96 duration-500 ease-in-out scale-100" : " transform-width duration-500 w-26 h-26 rounded-full scale-95",
+          " transition-transform ",
+          showNode ? " rounded-lg transform w-96 duration-500 ease-in-out scale-100 " : " rounded-full transform transform-width duration-500 w-26 h-26 scale-90 ",
           "generic-node-div",
         )}
       >
@@ -134,7 +134,7 @@ export default function GenericNode({
           </div>
         )}
         <div>
-          <div className={"generic-node-div-title " + (!showNode ? "relative rounded-full w-24 h-24" : "justify-between rounded-t-lg")}>
+          <div className={"generic-node-div-title " + (!showNode ? " relative rounded-full w-24 h-24 " : " justify-between rounded-t-lg ")}>
             <div className={"generic-node-title-arrangement rounded-full" + (!showNode && "justify-center")}>
               <IconComponent
                 name={name}
