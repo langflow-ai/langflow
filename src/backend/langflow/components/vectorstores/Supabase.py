@@ -37,9 +37,9 @@ class SupabaseComponent(CustomComponent):
         api_key: str,
         url: str,
         table_name: str,
+        embeddings: Embeddings,
         query_name: Optional[str] = None,
         documents: Optional[Document] = None,
-        embeddings: Optional[Embeddings] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         supabase: Client = create_client(supabase_key=api_key, supabase_url=url)
 
