@@ -174,7 +174,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
-  onClick?: () => void
+  onClick?: () => void;
 };
 
 export type InputProps = {

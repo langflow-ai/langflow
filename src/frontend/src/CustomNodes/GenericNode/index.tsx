@@ -35,10 +35,11 @@ export default function GenericNode({
 
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)
-      .filter((templateField) => templateField.charAt(0) !== "_").map((templateCamp) => {
+      .filter((templateField) => templateField.charAt(0) !== "_")
+      .map((templateCamp) => {
         const { template } = data.node!;
-        if (template[templateCamp].input_types) return true
-        if (!template[templateCamp].show) return false
+        if (template[templateCamp].input_types) return true;
+        if (!template[templateCamp].show) return false;
         switch (template[templateCamp].type) {
           case "str":
             return false;
@@ -55,15 +56,15 @@ export default function GenericNode({
           case "int":
             return false;
           default:
-            return true
+            return true;
         }
-      })
-      setHandles(numberOfInputs)
-  };
+      });
+    setHandles(numberOfInputs);
+  }
 
   useEffect(() => {
     countHandles();
-  }, [])
+  }, []);
 
   // State for outline color
   const { sseData, isBuilding } = useSSE();
@@ -91,10 +92,9 @@ export default function GenericNode({
 
   useEffect(() => {
     setTimeout(() => {
-      updateNodeInternals(data.id)
-    }, 400)
-    
-  }, [showNode])
+      updateNodeInternals(data.id);
+    }, 300);
+  }, [showNode]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -124,8 +124,10 @@ export default function GenericNode({
         className={classNames(
           selected ? "border border-ring" : "border",
           " transition-transform ",
-          showNode ? " rounded-lg transform w-96 duration-500 ease-in-out scale-100 " : " rounded-full transform transform-width duration-500 w-26 h-26 scale-90 ",
-          "generic-node-div",
+          showNode
+            ? " w-96 scale-100 transform rounded-lg duration-500 ease-in-out "
+            : " transform-width w-26 h-26 scale-90 transform rounded-full duration-500 ",
+          "generic-node-div"
         )}
       >
         {data.node?.beta && showNode && (
@@ -134,11 +136,26 @@ export default function GenericNode({
           </div>
         )}
         <div>
-          <div className={"generic-node-div-title " + (!showNode ? " relative rounded-full w-24 h-24 " : " justify-between rounded-t-lg ")}>
-            <div className={"generic-node-title-arrangement rounded-full" + (!showNode && "justify-center")}>
+          <div
+            className={
+              "generic-node-div-title " +
+              (!showNode
+                ? " relative h-24 w-24 rounded-full "
+                : " justify-between rounded-t-lg ")
+            }
+          >
+            <div
+              className={
+                "generic-node-title-arrangement rounded-full" +
+                (!showNode && "justify-center")
+              }
+            >
               <IconComponent
                 name={name}
-                className={"generic-node-icon " + (!showNode && "absolute inset-x-6 h-12 w-12")}
+                className={
+                  "generic-node-icon " +
+                  (!showNode && "absolute inset-x-6 h-12 w-12")
+                }
                 iconColor={`${nodeColors[types[data.type]]}`}
               />
               {showNode && (
@@ -155,83 +172,96 @@ export default function GenericNode({
               {!showNode && (
                 <>
                   {Object.keys(data.node!.template)
-                  .filter((templateField) => templateField.charAt(0) !== "_")
-                  .map((templateField: string, idx) => (
-                      data.node!.template[templateField].show &&
-                      !data.node!.template[templateField].advanced && (
-                        <ParameterComponent
-                          key={
-                            (data.node!.template[templateField].input_types?.join(
-                              ";"
-                            ) ?? data.node!.template[templateField].type) +
-                            "|" +
-                            templateField +
-                            "|" +
-                            data.id
-                          }
-                          data={data}
-                          setData={setData}
-                          color={
-                            nodeColors[
-                              types[data.node?.template[templateField].type!]
-                            ] ??
-                            nodeColors[data.node?.template[templateField].type!] ??
-                            nodeColors.unknown
-                          }
-                          title={
-                            data.node?.template[templateField].display_name
-                              ? data.node.template[templateField].display_name
-                              : data.node?.template[templateField].name
-                              ? toTitleCase(data.node.template[templateField].name)
-                              : toTitleCase(templateField)
-                          }
-                          info={data.node?.template[templateField].info}
-                          name={templateField}
-                          tooltipTitle={
-                            data.node?.template[templateField].input_types?.join(
-                              "\n"
-                            ) ?? data.node?.template[templateField].type
-                          }
-                          required={data.node?.template[templateField].required}
-                          id={
-                            (data.node?.template[templateField].input_types?.join(
-                              ";"
-                            ) ?? data.node?.template[templateField].type) +
-                            "|" +
-                            templateField +
-                            "|" +
-                            data.id
-                          }
-                          left={true}
-                          type={data.node?.template[templateField].type}
-                          optionalHandle={
-                            data.node?.template[templateField].input_types
-                          }
-                          showNode={showNode}
-                        />
-                      )))}
-                    <ParameterComponent
-                      key={[data.type, data.id, ...data.node!.base_classes].join("|")}
-                      data={data}
-                      setData={setData}
-                      color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                      title={
-                        data.node?.output_types && data.node.output_types.length > 0
-                          ? data.node.output_types.join("|")
-                          : data.type
-                      }
-                      tooltipTitle={data.node?.base_classes.join("\n")}
-                      id={[data.type, data.id, ...data.node!.base_classes].join("|")}
-                      type={data.node?.base_classes.join("|")}
-                      left={false}
-                      showNode={showNode}
-                    />
+                    .filter((templateField) => templateField.charAt(0) !== "_")
+                    .map(
+                      (templateField: string, idx) =>
+                        data.node!.template[templateField].show &&
+                        !data.node!.template[templateField].advanced && (
+                          <ParameterComponent
+                            key={
+                              (data.node!.template[
+                                templateField
+                              ].input_types?.join(";") ??
+                                data.node!.template[templateField].type) +
+                              "|" +
+                              templateField +
+                              "|" +
+                              data.id
+                            }
+                            data={data}
+                            setData={setData}
+                            color={
+                              nodeColors[
+                                types[data.node?.template[templateField].type!]
+                              ] ??
+                              nodeColors[
+                                data.node?.template[templateField].type!
+                              ] ??
+                              nodeColors.unknown
+                            }
+                            title={
+                              data.node?.template[templateField].display_name
+                                ? data.node.template[templateField].display_name
+                                : data.node?.template[templateField].name
+                                ? toTitleCase(
+                                    data.node.template[templateField].name
+                                  )
+                                : toTitleCase(templateField)
+                            }
+                            info={data.node?.template[templateField].info}
+                            name={templateField}
+                            tooltipTitle={
+                              data.node?.template[
+                                templateField
+                              ].input_types?.join("\n") ??
+                              data.node?.template[templateField].type
+                            }
+                            required={
+                              data.node?.template[templateField].required
+                            }
+                            id={
+                              (data.node?.template[
+                                templateField
+                              ].input_types?.join(";") ??
+                                data.node?.template[templateField].type) +
+                              "|" +
+                              templateField +
+                              "|" +
+                              data.id
+                            }
+                            left={true}
+                            type={data.node?.template[templateField].type}
+                            optionalHandle={
+                              data.node?.template[templateField].input_types
+                            }
+                            showNode={showNode}
+                          />
+                        )
+                    )}
+                  <ParameterComponent
+                    key={[data.type, data.id, ...data.node!.base_classes].join(
+                      "|"
+                    )}
+                    data={data}
+                    setData={setData}
+                    color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                    title={
+                      data.node?.output_types &&
+                      data.node.output_types.length > 0
+                        ? data.node.output_types.join("|")
+                        : data.type
+                    }
+                    tooltipTitle={data.node?.base_classes.join("\n")}
+                    id={[data.type, data.id, ...data.node!.base_classes].join(
+                      "|"
+                    )}
+                    type={data.node?.base_classes.join("|")}
+                    left={false}
+                    showNode={showNode}
+                  />
                 </>
               )}
-
             </div>
-
-
 
             {showNode && (
               <div className="round-button-div">
@@ -296,9 +326,18 @@ export default function GenericNode({
         </div>
 
         {showNode && (
-          <div className={(showNode ? "generic-node-desc " + (data.node?.description !== "" && showNode ? "py-5" : "pb-5") : "")}>
+          <div
+            className={
+              showNode
+                ? "generic-node-desc " +
+                  (data.node?.description !== "" && showNode ? "py-5" : "pb-5")
+                : ""
+            }
+          >
             {data.node?.description !== "" && showNode && (
-              <div className="generic-node-desc-text">{data.node?.description}</div>
+              <div className="generic-node-desc-text">
+                {data.node?.description}
+              </div>
             )}
 
             <>
@@ -324,14 +363,18 @@ export default function GenericNode({
                           nodeColors[
                             types[data.node?.template[templateField].type!]
                           ] ??
-                          nodeColors[data.node?.template[templateField].type!] ??
+                          nodeColors[
+                            data.node?.template[templateField].type!
+                          ] ??
                           nodeColors.unknown
                         }
                         title={
                           data.node?.template[templateField].display_name
                             ? data.node.template[templateField].display_name
                             : data.node?.template[templateField].name
-                            ? toTitleCase(data.node.template[templateField].name)
+                            ? toTitleCase(
+                                data.node.template[templateField].name
+                              )
                             : toTitleCase(templateField)
                         }
                         info={data.node?.template[templateField].info}

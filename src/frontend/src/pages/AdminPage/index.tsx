@@ -190,7 +190,7 @@ export default function AdminPage() {
           setSuccessData({
             title: "Success! New user added!",
           });
-        })
+        });
       })
       .catch((error) => {
         setErrorData({
