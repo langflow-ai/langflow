@@ -289,8 +289,8 @@ def add_base_classes(frontend_node, return_types: List[str]):
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
+    """Build a custom component template for the langchain"""
     try:
-        """Build a custom component template for the langchain"""
         logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component)
 
@@ -316,7 +316,7 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         )
         logger.debug("Added base classes")
         return frontend_node
-    except Exception as e:
+    except Exception as exc:
         raise HTTPException(
             status_code=400,
             detail={
@@ -325,7 +325,7 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
                 ),
                 "traceback": traceback.format_exc(),
             },
-        )
+        ) from exc
 
 
 def load_files_from_path(path: str):
