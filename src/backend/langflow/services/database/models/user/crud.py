@@ -6,6 +6,7 @@ from langflow.services.database.models.user.user import User, UserUpdate
 from langflow.services.utils import get_session
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
+from typing import Optional
 
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -19,7 +20,7 @@ def get_user_by_id(db: Session, id: UUID) -> Union[User, None]:
 
 
 def update_user(
-    user_db: User, user: UserUpdate, db: Session = Depends(get_session)
+    user_db: Optional[User], user: UserUpdate, db: Session = Depends(get_session)
 ) -> User:
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")

@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
 
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_HOST: Optional[str] = None
+
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
         if not value:
