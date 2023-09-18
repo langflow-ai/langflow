@@ -166,7 +166,7 @@ class DatabaseManager(Service):
         try:
             settings_manager = get_settings_manager()
             # remove the default superuser if auto_login is enabled
-            # using the FIRST_SUPERUSER to get the user
+            # using the SUPERUSER to get the user
             if settings_manager.auth_settings.AUTO_LOGIN:
                 logger.debug("Removing default superuser")
                 username = settings_manager.auth_settings.SUPERUSER
