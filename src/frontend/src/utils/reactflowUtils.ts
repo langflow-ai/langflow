@@ -292,6 +292,9 @@ export function getConnectedNodes(
 }
 
 export function convertObjToArray(singleObject) {
+
+  if (Array.isArray(singleObject)) return singleObject;
+
   let arrConverted: any = [];
   for (const key in singleObject) {
     if (singleObject.hasOwnProperty(key)) {

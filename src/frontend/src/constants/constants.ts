@@ -115,9 +115,9 @@ export const EDIT_DIALOG_SUBTITLE =
 export const CODE_PROMPT_DIALOG_SUBTITLE =
   "Edit your Python code. This code snippet accepts module import and a single function definition. Make sure that your function returns a string.";
 
-  
+
 export const CODE_DICT_DIALOG_SUBTITLE =
-"Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want.";
+  "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. The editor uses eval(<input-value>). While in edit mode, you can enter ({}) or ([]), which will cause the result of eval to become a new object or array.";
 
 /**
  * The base text for subtitle of Prompt Dialog
