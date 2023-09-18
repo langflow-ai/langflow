@@ -200,9 +200,10 @@ export function validateNode(
                 e.targetHandle.split("|")[2] === n.id
             )
           ? [
-            `${type} is missing ${template.display_name || toNormalCase(template[t].name)
-            }.`,
-          ]
+              `${type} is missing ${
+                template.display_name || toNormalCase(template[t].name)
+              }.`,
+            ]
           : []
       ),
     [] as string[]
