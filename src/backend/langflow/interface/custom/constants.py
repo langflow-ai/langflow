@@ -11,6 +11,7 @@ from langchain.schema import BaseOutputParser
 from langchain.schema.memory import BaseMemory
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.agents.agent import AgentExecutor
+from langchain.schema.language_model import BaseLanguageModel
 
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
@@ -18,6 +19,7 @@ LANGCHAIN_BASE_TYPES = {
     "Tool": Tool,
     "BaseLLM": BaseLLM,
     "PromptTemplate": PromptTemplate,
+    "BaseLanguageModel": BaseLanguageModel,
     "BaseLoader": BaseLoader,
     "Document": Document,
     "TextSplitter": TextSplitter,
