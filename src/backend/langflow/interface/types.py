@@ -289,32 +289,43 @@ def add_base_classes(frontend_node, return_types: List[str]):
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
-    """Build a custom component template for the langchain"""
-    logger.debug("Building custom component template")
-    frontend_node = build_frontend_node(custom_component)
+    try:
+        """Build a custom component template for the langchain"""
+        logger.debug("Building custom component template")
+        frontend_node = build_frontend_node(custom_component)
 
-    if frontend_node is None:
-        return None
-    logger.debug("Built base frontend node")
-    template_config = custom_component.build_template_config
+        if frontend_node is None:
+            return None
+        logger.debug("Built base frontend node")
+        template_config = custom_component.build_template_config
 
-    update_attributes(frontend_node, template_config)
-    logger.debug("Updated attributes")
-    field_config = build_field_config(custom_component)
-    logger.debug("Built field config")
-    add_extra_fields(
-        frontend_node, field_config, custom_component.get_function_entrypoint_args
-    )
-    logger.debug("Added extra fields")
-    frontend_node = add_code_field(
-        frontend_node, custom_component.code, field_config.get("code", {})
-    )
-    logger.debug("Added code field")
-    add_base_classes(
-        frontend_node, custom_component.get_function_entrypoint_return_type
-    )
-    logger.debug("Added base classes")
-    return frontend_node
+        update_attributes(frontend_node, template_config)
+        logger.debug("Updated attributes")
+        field_config = build_field_config(custom_component)
+        logger.debug("Built field config")
+        add_extra_fields(
+            frontend_node, field_config, custom_component.get_function_entrypoint_args
+        )
+        logger.debug("Added extra fields")
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
+        logger.debug("Added code field")
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        logger.debug("Added base classes")
+        return frontend_node
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
+                "traceback": traceback.format_exc(),
+            },
+        )
 
 
 def load_files_from_path(path: str):
