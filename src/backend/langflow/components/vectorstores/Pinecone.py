@@ -36,6 +36,11 @@ class PineconeComponent(CustomComponent):
             },
             "embeddings": {"display_name": "Embeddings"},
             "code": {"display_name": "Code", "show": False},
+            "dimension": {
+                "display_name": "Dimension",
+                "advanced": True,
+                "info": "Dimension of the embeddings. Only required if you are creating a new index.",
+            },
         }
 
     def build(
@@ -46,6 +51,7 @@ class PineconeComponent(CustomComponent):
         namespace: str,
         embeddings: Embeddings,
         documents: Optional[Document] = None,
+        dimension: Optional[int] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         pinecone.init(
             api_key=api_key,  # find at app.pinecone.io
@@ -56,7 +62,9 @@ class PineconeComponent(CustomComponent):
         if index_name not in pinecone.list_indexes():
             if isinstance(embeddings, OpenAIEmbeddings):
                 # we create a new index
-                pinecone.create_index(name=index_name, metric="cosine", dimension=1536)
+                pinecone.create_index(
+                    name=index_name, metric="cosine", dimension=dimension
+                )
             else:
                 # I don't know the dimension of the embeddings so raise an error
                 raise ValueError(
