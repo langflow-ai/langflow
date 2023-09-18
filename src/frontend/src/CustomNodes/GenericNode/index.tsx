@@ -115,7 +115,8 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          showNode ? "w-96" : "w-26 h-26 rounded-full",
+          " transition-all ",
+          showNode ? " w-96 duration-500 ease-in-out scale-100" : "transform-width w-26 h-26 rounded-full scale-50",
           "generic-node-div",
         )}
       >
