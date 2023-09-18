@@ -49,6 +49,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  proxy?: {field: string, id: string};
 };
 export type InputListComponentType = {
   value: string[];
