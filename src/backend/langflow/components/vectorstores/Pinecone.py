@@ -17,6 +17,7 @@ class PineconeComponent(CustomComponent):
 
     display_name: str = "Pinecone (Custom Component)"
     description: str = "Implementation of Vector Store using Pinecone"
+    # TODO: add documentation and update the link
     documentation = (
         "https://python.langchain.com/docs/integrations/vectorstores/pinecone"
     )
