@@ -276,8 +276,6 @@ def format_dict(
         value["password"] = is_password_field(key)
         value["multiline"] = is_multiline_field(key)
 
-        replace_dict_type_with_code(value)
-
         if key == "dict_":
             set_dict_file_attributes(value)
 
