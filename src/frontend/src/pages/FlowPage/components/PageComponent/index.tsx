@@ -363,7 +363,7 @@ export default function Page({
     edgeUpdateSuccessful.current = true;
   }, []);
 
-  const [selectionEnded, setSelectionEnded] = useState(false);
+  const [selectionEnded, setSelectionEnded] = useState(true);
 
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
