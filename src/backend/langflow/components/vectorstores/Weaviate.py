@@ -30,6 +30,12 @@ class WeaviateComponent(CustomComponent):
             },
             "documents": {"display_name": "Documents", "is_list": True},
             "embeddings": {"display_name": "Embedding"},
+            "client_kwargs": {
+                "display_name": "Client Arguments",
+                "advanced": True,
+                "info": "Additional keyword arguments to pass to the Weaviate client.",
+                "field_type": "code",
+            },
         }
 
     def build(
@@ -42,10 +48,13 @@ class WeaviateComponent(CustomComponent):
         index_name: Optional[str] = None,
         text_key: Optional[str] = None,
         by_text: Optional[bool] = True,
+        client_kwargs: Optional[dict] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         # Initialize Weaviate client with API key and URL
         try:
-            client = weaviate.Client(weaviate_url, api_key=weaviate_api_key)
+            client = weaviate.Client(
+                url=weaviate_url, api_key=weaviate_api_key, **client_kwargs
+            )
         except Exception as exc:
             raise ValueError(f"Error initializing Weaviate client: {exc}") from exc
         # If documents are not provided, return a Weaviate instance
