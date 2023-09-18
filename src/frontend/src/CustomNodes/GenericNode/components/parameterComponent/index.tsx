@@ -123,8 +123,8 @@ export default function ParameterComponent({
             {index === 0 && (
               <span>
                 {left
-                  ? "Components to connect into:"
-                  : "Components to connect to:"}
+                  ? "Avaliable input components:"
+                  : "Avaliable output components:"}
               </span>
             )}
             <span
