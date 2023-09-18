@@ -19,6 +19,7 @@ import IntComponent from "../../../../components/intComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
@@ -67,7 +68,9 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-  const { reactFlowInstance } = useContext(typesContext);
+  const groupedEdge = useRef(null);
+
+  const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
   let disabled =
     reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ??
     false;
@@ -108,7 +111,8 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj = groupByFamily(myData, tooltipTitle!, left, flow!);
+    let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
+    groupedEdge.current = groupedObj;
 
     if (groupedObj && groupedObj.length > 0) {
       //@ts-ignore
@@ -218,29 +222,37 @@ export default function ParameterComponent({
         !optionalHandle ? (
           <></>
         ) : (
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
-            content={refHtml.current}
-            side={left ? "left" : "right"}
-          >
-            <Handle
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              id={id}
-              isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance!)
-              }
-              className={classNames(
-                left ? "-ml-0.5 " : "-mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
-              )}
-              style={{
-                borderColor: color,
-                top: position,
-              }}
-            ></Handle>
-          </ShadTooltip>
+          <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+            <div className="flex">
+              <ShadTooltip
+                styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+                delayDuration={0}
+                content={refHtml.current}
+                side={left ? "left" : "right"}
+              >
+                <Handle
+                  type={left ? "target" : "source"}
+                  position={left ? Position.Left : Position.Right}
+                  id={id}
+                  isValidConnection={(connection) =>
+                    isValidConnection(connection, reactFlowInstance!)
+                  }
+                  className={classNames(
+                    left ? "-ml-0.5 " : "-mr-0.5 ",
+                    "h-3 w-3 rounded-full border-2 bg-background"
+                  )}
+                  style={{
+                    borderColor: color,
+                    top: position,
+                  }}
+                  onClick={() => {
+                    setFilterEdge(groupedEdge.current);
+                  }}
+                ></Handle>
+              </ShadTooltip>
+            </div>
+            <span className="text-status-red">{required ? " *" : ""}</span>
+          </Button>
         )}
 
         {left === true &&

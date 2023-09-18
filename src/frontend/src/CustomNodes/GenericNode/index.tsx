@@ -25,7 +25,8 @@ export default function GenericNode({
   const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const { types, deleteNode, reactFlowInstance } = useContext(typesContext);
+  const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
+    useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
@@ -84,7 +85,12 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div className="generic-node-div-title">
+        <div
+          className="generic-node-div-title"
+          onClick={() => {
+            setFilterEdge([]);
+          }}
+        >
           <div className="generic-node-title-arrangement">
             <IconComponent
               name={name}
