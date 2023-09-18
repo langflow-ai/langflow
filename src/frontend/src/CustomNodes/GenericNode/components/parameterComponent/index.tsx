@@ -33,7 +33,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, extractIdFromLongId, groupByFamily } from "../../../../utils/utils";
+import { classNames, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -48,7 +48,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
-  proxy
+  proxy,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -185,10 +185,13 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {proxy ? (<ShadTooltip content={<span>{proxy.id}</span>}>
-            
-            <span>{title}</span>
-          </ShadTooltip>):title}
+          {proxy ? (
+            <ShadTooltip content={<span>{proxy.id}</span>}>
+              <span>{title}</span>
+            </ShadTooltip>
+          ) : (
+            title
+          )}
           <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
@@ -302,7 +305,11 @@ export default function ParameterComponent({
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
-              readonly={data.node?.flow && data.node.template[name].dynamic?true:false}
+              readonly={
+                data.node?.flow && data.node.template[name].dynamic
+                  ? true
+                  : false
+              }
               dynamic={data.node?.template[name].dynamic ?? false}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
@@ -338,7 +345,11 @@ export default function ParameterComponent({
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
-              readonly={data.node?.flow && data.node.template[name].dynamic?true:false}
+              readonly={
+                data.node?.flow && data.node.template[name].dynamic
+                  ? true
+                  : false
+              }
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;

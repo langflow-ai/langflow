@@ -44,8 +44,8 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
-import ExtraSidebar from "../extraSidebarComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import ExtraSidebar from "../extraSidebarComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -444,30 +444,47 @@ export default function Page({
                    [&>button]:border-b-border hover:[&>button]:bg-border"
                     ></Controls>
                   )}
-                  <SelectionMenu isVisible={selectionMenuVisible} nodes={lastSelection?.nodes}
-                  onClick={()=>{
-                    if(validateSelection(lastSelection!,edges).length===0){
-                      const {newFlow} = generateFlow(lastSelection!,reactFlowInstance!,getRandomName());
-                      const newGroupNode = generateNodeFromFlow(newFlow)
-                      setNodes((oldNodes)=>[...oldNodes.filter((oldNodes)=>!lastSelection?.nodes.some((selectionNode)=>selectionNode.id===oldNodes.id)),newGroupNode])
-                      setEdges((oldEdges) =>
-                      oldEdges.filter(
-                        (oldEdge) =>
-                          !lastSelection!.nodes.some(
-                            (selectionNode) =>
-                              selectionNode.id === oldEdge.target ||
-                              selectionNode.id === oldEdge.source
+                  <SelectionMenu
+                    isVisible={selectionMenuVisible}
+                    nodes={lastSelection?.nodes}
+                    onClick={() => {
+                      if (
+                        validateSelection(lastSelection!, edges).length === 0
+                      ) {
+                        const { newFlow } = generateFlow(
+                          lastSelection!,
+                          reactFlowInstance!,
+                          getRandomName()
+                        );
+                        const newGroupNode = generateNodeFromFlow(newFlow);
+                        setNodes((oldNodes) => [
+                          ...oldNodes.filter(
+                            (oldNodes) =>
+                              !lastSelection?.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldNodes.id
+                              )
+                          ),
+                          newGroupNode,
+                        ]);
+                        setEdges((oldEdges) =>
+                          oldEdges.filter(
+                            (oldEdge) =>
+                              !lastSelection!.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldEdge.target ||
+                                  selectionNode.id === oldEdge.source
+                              )
                           )
-                      )
-                    );
-                    }
-                    else{
-                      setErrorData({
-                        title: "Invalid selection",
-                        list: validateSelection(lastSelection!,edges),
-                      });
-                    }
-                  }}/>
+                        );
+                      } else {
+                        setErrorData({
+                          title: "Invalid selection",
+                          list: validateSelection(lastSelection!, edges),
+                        });
+                      }
+                    }}
+                  />
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />

@@ -180,7 +180,7 @@ export default function CodeTabsComponent({
           key={idx} // Remember to add a unique key prop
         >
           {idx < 4 ? (
-            <div className="w-full h-full flex flex-col">
+            <div className="flex h-full w-full flex-col">
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"
@@ -633,7 +633,14 @@ export default function CodeTabsComponent({
                                               >
                                                 <div className="mx-auto">
                                                   <PromptAreaComponent
-                                                    readonly={node.data.node?.flow && node.data.node.template[templateField].dynamic? true : false}
+                                                    readonly={
+                                                      node.data.node?.flow &&
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].dynamic
+                                                        ? true
+                                                        : false
+                                                    }
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
@@ -689,7 +696,14 @@ export default function CodeTabsComponent({
                                               >
                                                 <div className="mx-auto">
                                                   <CodeAreaComponent
-                                                    readonly={node.data.node?.flow && node.data.node.template[templateField].dynamic? true : false}
+                                                    readonly={
+                                                      node.data.node?.flow &&
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].dynamic
+                                                        ? true
+                                                        : false
+                                                    }
                                                     disabled={false}
                                                     editNode={true}
                                                     value={

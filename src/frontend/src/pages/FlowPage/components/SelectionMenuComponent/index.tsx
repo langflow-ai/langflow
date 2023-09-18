@@ -1,4 +1,4 @@
-import {useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 export default function SelectionMenu({ onClick, nodes, isVisible }) {

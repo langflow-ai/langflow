@@ -1,6 +1,5 @@
 import { Edge, Node } from "reactflow";
 import { FlowType, NodeType } from "../flow";
-import { generateFlow } from "../../utils/reactflowUtils";
 
 export type cleanEdgesType = {
   flow: {
@@ -20,9 +19,9 @@ export type updateEdgesHandleIdsType = {
   edges: Edge[];
 };
 
-export type generateFlowType = { newFlow: FlowType; removedEdges: Edge[] }
+export type generateFlowType = { newFlow: FlowType; removedEdges: Edge[] };
 
 export type findLastNodeType = {
   nodes: NodeType[];
   edges: Edge[];
-}
+};

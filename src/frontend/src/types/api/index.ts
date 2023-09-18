@@ -17,8 +17,14 @@ export type APIClassType = {
   beta?: boolean;
   documentation: string;
   error?: string;
-  flow?:FlowType;
-  [key: string]: Array<string> | string | APITemplateType | boolean | FlowType | undefined;
+  flow?: FlowType;
+  [key: string]:
+    | Array<string>
+    | string
+    | APITemplateType
+    | boolean
+    | FlowType
+    | undefined;
 };
 
 export type TemplateVariableType = {
@@ -30,8 +36,8 @@ export type TemplateVariableType = {
   readonly: boolean;
   multiline?: boolean;
   value?: any;
-  dynamic?:boolean;
-  proxy?:{id:string,field:string}
+  dynamic?: boolean;
+  proxy?: { id: string; field: string };
   input_types?: Array<string>;
   [key: string]: any;
 };

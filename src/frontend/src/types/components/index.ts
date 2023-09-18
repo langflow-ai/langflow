@@ -49,7 +49,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
-  proxy?: {field: string, id: string};
+  proxy?: { field: string; id: string };
 };
 export type InputListComponentType = {
   value: string[];
@@ -395,7 +395,7 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
-  position:XYPosition;
+  position: XYPosition;
 };
 
 export type parsedDataType = {
