@@ -39,9 +39,9 @@ class FAISSComponent(CustomComponent):
         self,
         persistence: str,
         index_name: str,
+        embeddings: Embeddings,
         folder_path: Optional[str] = None,
         documents: Optional[Document] = None,
-        embeddings: Optional[Embeddings] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         if persistence == "LocalDirectory" and not folder_path:
             raise ValueError("Folder path is required for local directory persistence")
