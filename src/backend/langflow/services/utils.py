@@ -11,7 +11,7 @@ def setup_superuser():
     """
     Setup the superuser.
     """
-    # We will use the FIRST_SUPERUSER and FIRST_SUPERUSER_PASSWORD
+    # We will use the SUPERUSER and SUPERUSER_PASSWORD
     # vars on settings_manager.auth_settings to create the superuser
     # if it does not exist.
     settings_manager = get_settings_manager()
