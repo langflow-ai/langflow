@@ -119,7 +119,8 @@ export default function NodeToolbarComponent({
               >
                 <div
                   className={classNames(
-                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" + (!canMinimize() && " rounded-r-md ") +
+                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                      (!canMinimize() && " rounded-r-md ") +
                       (nodeLength == 0
                         ? " text-muted-foreground"
                         : " text-foreground")
@@ -136,11 +137,14 @@ export default function NodeToolbarComponent({
               <button
                 className="relative inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={(event) => {
-                  setShowNode(prev => !prev);
-                  updateNodeInternals(data.id)
+                  setShowNode((prev) => !prev);
+                  updateNodeInternals(data.id);
                 }}
               >
-                <IconComponent name={showNode ? "Minus" : "Square"} className="h-4 w-4" />
+                <IconComponent
+                  name={showNode ? "Minus" : "Square"}
+                  className="h-4 w-4"
+                />
               </button>
             </ShadTooltip>
           )}

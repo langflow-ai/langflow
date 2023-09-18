@@ -48,6 +48,7 @@ import {
   MessageCircle,
   MessageSquare,
   MessagesSquare,
+  Minus,
   MoonIcon,
   MoreHorizontal,
   Paperclip,
@@ -61,6 +62,7 @@ import {
   Settings2,
   Shield,
   Sparkles,
+  Square,
   SunIcon,
   TerminalSquare,
   Trash2,
@@ -78,8 +80,6 @@ import {
   X,
   XCircle,
   Zap,
-  Minus,
-  Square,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -91,7 +91,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
-import {GradientSparkles} from "../icons/GradientSparkles";
+import { GradientSparkles } from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
