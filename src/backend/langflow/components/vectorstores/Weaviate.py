@@ -1,10 +1,11 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
+from langchain.vectorstores.weaviate import Weaviate
 from langchain.schema import BaseRetriever
+from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
-import weaviate
+import weaviate  # type: ignore
 
 
 class WeaviateComponent(CustomComponent):
@@ -37,27 +38,35 @@ class WeaviateComponent(CustomComponent):
         weaviate_url: str,
         documents: Optional[Document] = None,
         embeddings: Optional[Embeddings] = None,
+        attributes: List[str] = [],
+        index_name: Optional[str] = None,
+        text_key: Optional[str] = None,
+        by_text: Optional[bool] = True,
     ) -> Union[VectorStore, BaseRetriever]:
-        """
-        Builds the Vector Store.
-        Args:
-        - weaviate_api_key: api used to authenticate with
-        - weaviate_url: url of the server
-        - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
-        - documents (Optional[Document]): The documents to use for the Vector Store.
-        Returns:
-        - Union[VectorStore, BaseRetriever]: The Vector Store or BaseRetriever object.
-        """
-
         # Initialize Weaviate client with API key and URL
-        client = weaviate.Client(weaviate_url, api_key=weaviate_api_key)
+        try:
+            client = weaviate.Client(weaviate_url, api_key=weaviate_api_key)
+        except Exception as exc:
+            raise ValueError(f"Error initializing Weaviate client: {exc}") from exc
+        # If documents are not provided, return a Weaviate instance
+        if not documents:
+            weaviate_client = weaviate.Client(weaviate_url, api_key=weaviate_api_key)
 
-        # Store the embeddings in Weaviate
-        references = []
-        for embedding in embeddings:
-            ref = client.data_object.create(
-                {"vector": embedding.vector}
-            )  # Placeholder method
-            references.append(ref)
-
-        return VectorStore(references=references)
+            return Weaviate(
+                client=weaviate_client,
+                index_name=index_name,
+                text_key=text_key,
+                by_text=by_text,
+                attributes=attributes,
+                embedding=embeddings,
+            )
+        # If documents are provided, return a Weaviate instance with documents
+        return Weaviate.from_documents(
+            client=client,
+            documents=documents,
+            embedding=embeddings,
+            index_name=index_name,
+            text_key=text_key,
+            attributes=attributes,
+            by_text=by_text,
+        )
