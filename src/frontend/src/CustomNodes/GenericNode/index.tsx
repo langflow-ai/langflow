@@ -274,6 +274,7 @@ export default function GenericNode({
                       optionalHandle={
                         data.node?.template[templateField].input_types
                       }
+                      proxy={data.node?.template[templateField].proxy}
                     />
                   ) : (
                     <></>

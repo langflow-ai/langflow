@@ -33,7 +33,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import { classNames, extractIdFromLongId, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -48,6 +48,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
+  proxy
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -98,7 +99,6 @@ export default function ParameterComponent({
   };
 
   useEffect(() => {
-    if (name === "openai_api_base") console.log(info);
     // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
@@ -185,7 +185,9 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {title}
+          {proxy ? (<ShadTooltip content={<span>{proxy.id}</span>}>
+            <span>{title}</span>
+          </ShadTooltip>):title}
           <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
