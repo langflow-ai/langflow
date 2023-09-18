@@ -12,6 +12,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import initialize_services, teardown_services
 from langflow.services.plugins.langfuse import LangfuseInstance
+from langflow.services.utils import setup_superuser
 from langflow.utils.logger import configure
 
 
