@@ -89,6 +89,13 @@ export default function GenericNode({
     countHandles();
   }, [data]);
 
+  useEffect(() => {
+    setTimeout(() => {
+      updateNodeInternals(data.id)
+    }, 400)
+    
+  }, [showNode])
+
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
     const relevantData = sseData[data.id];
@@ -117,7 +124,7 @@ export default function GenericNode({
         className={classNames(
           selected ? "border border-ring" : "border",
           " transition-all ",
-          showNode ? " w-96 duration-500 ease-in-out scale-100" : "transform-width w-26 h-26 rounded-full scale-75",
+          showNode ? " w-96 duration-500 ease-in-out scale-100" : " transform-width duration-500 w-26 h-26 rounded-full scale-95",
           "generic-node-div",
         )}
       >
