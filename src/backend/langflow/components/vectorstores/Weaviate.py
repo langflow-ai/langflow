@@ -42,12 +42,12 @@ class WeaviateComponent(CustomComponent):
         self,
         weaviate_api_key: str,
         weaviate_url: str,
-        documents: Optional[Document] = None,
-        embeddings: Optional[Embeddings] = None,
+        index_name: str,
+        embeddings: Embeddings,
+        text_key: str = "text",
+        by_text: bool = True,
+        documents: Optional[List[Document]] = None,
         attributes: List[str] = [],
-        index_name: Optional[str] = None,
-        text_key: Optional[str] = None,
-        by_text: Optional[bool] = True,
         client_kwargs: Optional[dict] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         # Initialize Weaviate client with API key and URL

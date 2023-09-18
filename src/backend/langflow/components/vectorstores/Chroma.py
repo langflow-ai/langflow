@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import Chroma
@@ -6,7 +6,7 @@ from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
-from chromadb.config import Settings
+from chromadb.config import Settings  # type: ignore
 
 
 class ChromaComponent(CustomComponent):
@@ -60,7 +60,7 @@ class ChromaComponent(CustomComponent):
         chroma_server_ssl_enabled: bool,
         persist_directory: Optional[str] = None,
         embedding: Optional[Embeddings] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
@@ -73,7 +73,8 @@ class ChromaComponent(CustomComponent):
         - collection_name (str): The name of the collection.
         - persist_directory (Optional[str]): The directory to persist the Vector Store to.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - persistance (str): The type of persistance to use for the Vector Store (e.g. In-Memory, Local Directory, Container).
+        - persistance (str): The type of persistance to use for the Vector Store (e.g. In-Memory,
+        Local Directory, Container).
         - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
         - documents (Optional[Document]): The documents to use for the Vector Store.
         - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.

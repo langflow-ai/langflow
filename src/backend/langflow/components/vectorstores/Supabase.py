@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import SupabaseVectorStore
@@ -39,7 +39,7 @@ class SupabaseComponent(CustomComponent):
         table_name: str,
         embeddings: Embeddings,
         query_name: Optional[str] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         supabase: Client = create_client(supabase_key=api_key, supabase_url=url)
 

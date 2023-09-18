@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import Pinecone
@@ -34,7 +34,10 @@ class PineconeComponent(CustomComponent):
             "documents": {
                 "display_name": "Documents",
                 "is_list": True,
-                "info": "Documents to be added to the index. Only required if you are adding new documents to the index.",
+                "info": (
+                    "Documents to be added to the index. Only required"
+                    " if you are adding new documents to the index.",
+                ),
             },
             "namespace": {
                 "display_name": "Namespace",
@@ -55,7 +58,7 @@ class PineconeComponent(CustomComponent):
         index_name: str,
         namespace: str,
         embeddings: Embeddings,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
         dimension: Optional[int] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         pinecone.init(

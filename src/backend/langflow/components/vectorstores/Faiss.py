@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import FAISS
@@ -41,20 +41,24 @@ class FAISSComponent(CustomComponent):
         index_name: str,
         embeddings: Embeddings,
         folder_path: Optional[str] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         if persistence == "LocalDirectory" and not folder_path:
             raise ValueError("Folder path is required for local directory persistence")
 
-        if documents is None:
+        # Load if persistence is LocalDirectory
+        if documents is None and folder_path is not None:
             return FAISS.load_local(
                 folder_path=folder_path, embeddings=embeddings, index_name=index_name
             )
 
+        if documents is None:
+            raise ValueError("Documents must be provided in the params")
+
         db = FAISS.from_documents(documents=documents, embedding=embeddings)
 
         # Save if persistence is LocalDirectory
-        if persistence == "LocalDirectory":
+        if persistence == "LocalDirectory" and folder_path is not None:
             db.save_local(folder_path=folder_path, index_name=index_name)
 
         return db

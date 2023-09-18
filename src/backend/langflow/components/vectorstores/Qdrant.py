@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import Qdrant
@@ -47,12 +47,12 @@ class QdrantComponent(CustomComponent):
         self,
         collection_name: str,
         persistence: str,
-        path: str = None,
-        url: str = None,
-        api_key: str = None,
+        path: Optional[str] = None,
+        url: Optional[str] = None,
+        api_key: Optional[str] = None,
         prefer_grpc: bool = True,
         embedding: Optional[Embeddings] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
         def initialize_qdrant(class_object: Type[Qdrant], params: dict):

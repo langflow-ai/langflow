@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores import Vectara
@@ -31,7 +31,7 @@ class VectaraComponent(CustomComponent):
         vectara_corpus_id: str,
         vectara_api_key: str,
         embedding: Optional[Embeddings] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         # If documents, then we need to create a Vectara instance using .from_documents
         if documents is not None and embedding is not None:
