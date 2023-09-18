@@ -589,17 +589,19 @@ function isHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
+  scapedJSONStringfy({ type: field.type, fieldName: key, id: nodeId })
   if (field.proxy) {
     if (
       edges.some(
         (e) =>
           e.targetHandle ===
-          customStringify({
+          scapedJSONStringfy({
             type: field.type,
             fieldName: key,
             id: nodeId,
             proxy: { id: field.proxy!.id, field: field.proxy!.field },
-          })
+            inputTypes: field.input_types,
+          } as targetHandleType)
       )
     ) {
       return true;
@@ -609,7 +611,9 @@ function isHandleConnected(
       edges.some(
         (e) =>
           e.targetHandle ===
-          customStringify({ type: field.type, fieldName: key, id: nodeId })
+          scapedJSONStringfy({ type: field.type, fieldName: key,
+             id: nodeId,
+             inputTypes:field.input_types} as targetHandleType)
       )
     ) {
       return true;
