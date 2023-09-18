@@ -42,9 +42,6 @@ ANTHROPIC_MODELS = [
     "claude-instant-v1.0",
 ]
 
-# litellm supported LLMs
-import litellm
-LITELLM_MODELS = litellm.model_list
 
 DEFAULT_PYTHON_FUNCTION = """
 def python_function(text: str) -> str:

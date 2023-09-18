@@ -450,8 +450,6 @@ def add_options_to_field(
         "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
         "Anthropic": constants.ANTHROPIC_MODELS,
         "ChatAnthropic": constants.ANTHROPIC_MODELS,
-        "ChatLiteLLM": constants.LITELLM_MODELS,
-
     }
 
     if class_name in options_map and key == "model_name":
