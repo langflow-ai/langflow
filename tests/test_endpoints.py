@@ -1,7 +1,7 @@
 import uuid
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.api_key import ApiKey
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS

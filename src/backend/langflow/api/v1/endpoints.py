@@ -6,7 +6,7 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
@@ -27,7 +27,7 @@ from langflow.interface.types import (
     build_langchain_custom_component_list_from_path,
 )
 
-from langflow.services.utils import get_session
+from langflow.services.getters import get_session
 from sqlmodel import Session
 
 # build router

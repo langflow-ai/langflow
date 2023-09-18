@@ -4,7 +4,7 @@ from langchain import retrievers
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
 from loguru import logger

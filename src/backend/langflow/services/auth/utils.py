@@ -12,7 +12,7 @@ from langflow.services.database.models.user.crud import (
     get_user_by_username,
     update_user_last_login_at,
 )
-from langflow.services.utils import get_session, get_settings_manager
+from langflow.services.getters import get_session, get_settings_manager
 from sqlmodel import Session
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")
@@ -37,15 +37,13 @@ async def api_key_security(
     result: Optional[Union[ApiKey, User]] = None
     if settings_manager.auth_settings.AUTO_LOGIN:
         # Get the first user
-        if not settings_manager.auth_settings.FIRST_SUPERUSER:
+        if not settings_manager.auth_settings.SUPERUSER:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing first superuser credentials",
             )
 
-        result = get_user_by_username(
-            db, settings_manager.auth_settings.FIRST_SUPERUSER
-        )
+        result = get_user_by_username(db, settings_manager.auth_settings.SUPERUSER)
 
     elif not query_param and not header_param:
         raise HTTPException(
@@ -182,8 +180,8 @@ def create_super_user(
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
     settings_manager = get_settings_manager()
-    username = settings_manager.auth_settings.FIRST_SUPERUSER
-    password = settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
+    username = settings_manager.auth_settings.SUPERUSER
+    password = settings_manager.auth_settings.SUPERUSER_PASSWORD
     if not username or not password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

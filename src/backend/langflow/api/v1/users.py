@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.services.utils import get_session
+from langflow.services.getters import get_session
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,

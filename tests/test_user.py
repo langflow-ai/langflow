@@ -2,7 +2,7 @@ from datetime import datetime
 from langflow.services.auth.utils import create_super_user, get_password_hash
 
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 import pytest
 from langflow.services.database.models.user import UserUpdate
 
@@ -13,8 +13,8 @@ def super_user(client, session):
     auth_settings = settings_manager.auth_settings
     return create_super_user(
         db=session,
-        username=auth_settings.FIRST_SUPERUSER,
-        password=auth_settings.FIRST_SUPERUSER_PASSWORD,
+        username=auth_settings.SUPERUSER,
+        password=auth_settings.SUPERUSER_PASSWORD,
     )
 
 
@@ -23,8 +23,8 @@ def super_user_headers(client, super_user):
     settings_manager = get_settings_manager()
     auth_settings = settings_manager.auth_settings
     login_data = {
-        "username": auth_settings.FIRST_SUPERUSER,
-        "password": auth_settings.FIRST_SUPERUSER_PASSWORD,
+        "username": auth_settings.SUPERUSER,
+        "password": auth_settings.SUPERUSER_PASSWORD,
     }
     response = client.post("/api/v1/login", data=login_data)
     assert response.status_code == 200
