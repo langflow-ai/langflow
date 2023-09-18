@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 
 
 def test_llms_settings(client: TestClient, logged_in_headers):

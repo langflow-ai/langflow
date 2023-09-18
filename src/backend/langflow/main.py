@@ -40,9 +40,11 @@ def create_app():
 
     app.on_event("startup")(initialize_services)
     app.on_event("startup")(initialize_database)
+    app.on_event("startup")(setup_superuser)
     app.on_event("startup")(setup_llm_caching)
-    app.on_event("shutdown")(teardown_services)
     app.on_event("startup")(LangfuseInstance.update)
+
+    app.on_event("shutdown")(teardown_services)
     app.on_event("shutdown")(LangfuseInstance.teardown)
     return app
 

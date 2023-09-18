@@ -1,6 +1,10 @@
 from pathlib import Path
 from typing import Optional
 import secrets
+from langflow.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+)
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 from pydantic import BaseSettings, Field, validator
@@ -31,8 +35,8 @@ class AuthSettings(BaseSettings):
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
     AUTO_LOGIN: bool = False
-    FIRST_SUPERUSER: str = "langflow"
-    FIRST_SUPERUSER_PASSWORD: str = "langflow"
+    SUPERUSER: str = DEFAULT_SUPERUSER
+    SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -40,6 +44,10 @@ class AuthSettings(BaseSettings):
         validate_assignment = True
         extra = "ignore"
         env_prefix = "LANGFLOW_"
+
+    def reset_credentials(self):
+        self.SUPERUSER = DEFAULT_SUPERUSER
+        self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 
     @validator("SECRET_KEY", pre=True)
     def get_secret_key(cls, value, values):

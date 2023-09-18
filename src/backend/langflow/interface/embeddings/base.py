@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.embeddings import EmbeddingFrontendNode

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from langflow.services.base import Service
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Session, create_engine
@@ -169,7 +169,7 @@ class DatabaseManager(Service):
             # using the FIRST_SUPERUSER to get the user
             if settings_manager.auth_settings.AUTO_LOGIN:
                 logger.debug("Removing default superuser")
-                username = settings_manager.auth_settings.FIRST_SUPERUSER
+                username = settings_manager.auth_settings.SUPERUSER
                 with Session(self.engine) as session:
                     user = get_user_by_username(session, username)
                     session.delete(user)
