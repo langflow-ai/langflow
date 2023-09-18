@@ -131,6 +131,7 @@ def process_graph_cached(
         result = langchain_object.dict()
     else:
         logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+        result = langchain_object
 
     return result
 
