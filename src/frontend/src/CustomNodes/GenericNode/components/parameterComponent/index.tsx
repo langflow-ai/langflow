@@ -80,7 +80,9 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean | Object[]
+  ): void => {
     let newData = cloneDeep(data);
     newData.node!.template[name].value = newValue;
     setData(newData);
@@ -99,22 +101,7 @@ export default function ParameterComponent({
     renderTooltips();
   };
 
-  const [obj, setObj] = useState({
-    arr: ["test", 123456, false, null],
-    boolean: false,
-    number: 123456,
-    try: {
-      k1: 123,
-      k2: "123",
-      k3: false,
-    },
-    string: "string",
-  });
-
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const [dictArr, setDictArr] = useState([
-    { yourKey: "yourValue" },
-  ] as Object[]);
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -237,6 +224,8 @@ export default function ParameterComponent({
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
+          type === "dict" ||
+          type === "NestedDict" ||
           type === "int") &&
         !optionalHandle ? (
           <></>
@@ -378,10 +367,22 @@ export default function ParameterComponent({
             <DictComponent
               disabled={disabled}
               editNode={false}
-              value={data.node!.template[name].value ?? obj}
+              value={
+                data.node!.template[name].value ?? {
+                  arr: ["test", 123456, false, null],
+                  boolean: false,
+                  number: 123456,
+                  try: {
+                    k1: 123,
+                    k2: "123",
+                    k3: false,
+                  },
+                  string: "string",
+                }
+              }
               onChange={(newValue) => {
-                setObj(newValue);
                 data.node!.template[name].value = newValue;
+                handleOnNewValue(newValue);
               }}
             />
           </div>
@@ -393,14 +394,14 @@ export default function ParameterComponent({
               value={
                 data.node!.template[name].value?.length === 0 ||
                 !data.node!.template[name].value
-                  ? dictArr
+                  ? [{ yourKey: "yourValue" }]
                   : convertObjToArray(data.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
-                setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                setDictArr(newValue);
                 data.node!.template[name].value = newValue;
+                setErrorDuplicateKey(hasDuplicateKeys(newValue));
+                handleOnNewValue(newValue);
               }}
             />
           </div>
