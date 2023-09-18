@@ -14,7 +14,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
-  readonly=false
+  readonly = false,
 }: TextAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {

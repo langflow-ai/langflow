@@ -5,8 +5,11 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import {
+  expandGroupNode,
+  updateFlowPosition,
+} from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
-import { expandGroupNode, ungroupNode, updateFlowPosition } from "../../../../utils/reactflowUtils";
 
 export default function NodeToolbarComponent({
   data,
@@ -82,9 +85,9 @@ export default function NodeToolbarComponent({
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                (data.node?.documentation === ""
-                  ? " text-muted-foreground"
-                  : " text-foreground")
+                  (data.node?.documentation === ""
+                    ? " text-muted-foreground"
+                    : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -110,9 +113,10 @@ export default function NodeToolbarComponent({
                 <div
                   className={classNames(
                     "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                    (nodeLength == 0
-                      ? " text-muted-foreground"
-                      : " text-foreground") +(isGroup?"":" rounded-r-md")
+                      (nodeLength == 0
+                        ? " text-muted-foreground"
+                        : " text-foreground") +
+                      (isGroup ? "" : " rounded-r-md")
                   )}
                 >
                   <IconComponent name="Settings2" className="h-4 w-4 " />
@@ -128,8 +132,8 @@ export default function NodeToolbarComponent({
                 )}
                 onClick={(event) => {
                   event.preventDefault();
-                  updateFlowPosition(position,data.node?.flow!)
-                  expandGroupNode(data,reactFlowInstance)
+                  updateFlowPosition(position, data.node?.flow!);
+                  expandGroupNode(data, reactFlowInstance);
                 }}
               >
                 <IconComponent name="Ungroup" className="h-4 w-4" />

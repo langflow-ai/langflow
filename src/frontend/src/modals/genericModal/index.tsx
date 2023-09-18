@@ -34,7 +34,7 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
-  readonly=false,
+  readonly = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -285,7 +285,7 @@ export default function GenericModal({
               )}
             </div>
             <Button
-            disabled={readonly}
+              disabled={readonly}
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:

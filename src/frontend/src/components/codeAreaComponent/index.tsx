@@ -12,7 +12,7 @@ export default function CodeAreaComponent({
   nodeClass,
   dynamic,
   setNodeClass,
-  readonly=false
+  readonly = false,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)

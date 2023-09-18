@@ -140,9 +140,9 @@ const EditNodeModal = forwardRef(
                           <TableRow key={index} className="h-10">
                             <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                               {myData.node?.template[templateParam].display_name
-                                ? myData.node.template[templateParam].display_name
-                                : myData.node?.template[templateParam]
-                                    .name}
+                                ? myData.node.template[templateParam]
+                                    .display_name
+                                : myData.node?.template[templateParam].name}
                             </TableCell>
                             <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
                               {myData.node?.template[templateParam].type ===
@@ -297,7 +297,13 @@ const EditNodeModal = forwardRef(
                                 "prompt" ? (
                                 <div className="mx-auto">
                                   <PromptAreaComponent
-                                    readonly={myData.node?.flow && myData.node.template[templateParam].dynamic? true : false}
+                                    readonly={
+                                      myData.node?.flow &&
+                                      myData.node.template[templateParam]
+                                        .dynamic
+                                        ? true
+                                        : false
+                                    }
                                     field_name={templateParam}
                                     editNode={true}
                                     disabled={disabled}
@@ -318,7 +324,13 @@ const EditNodeModal = forwardRef(
                                 "code" ? (
                                 <div className="mx-auto">
                                   <CodeAreaComponent
-                                    readonly={myData.node?.flow && myData.node.template[templateParam].dynamic? true : false}
+                                    readonly={
+                                      myData.node?.flow &&
+                                      myData.node.template[templateParam]
+                                        .dynamic
+                                        ? true
+                                        : false
+                                    }
                                     dynamic={
                                       data.node!.template[templateParam]
                                         .dynamic ?? false

@@ -6,7 +6,7 @@ import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
 export default function InputComponent({
-  autoFocus =false,
+  autoFocus = false,
   onBlur,
   value,
   onChange,
@@ -17,7 +17,7 @@ export default function InputComponent({
   editNode = false,
   placeholder = "Type something...",
   className,
-  blurOnEnter=false
+  blurOnEnter = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -33,8 +33,8 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
-          ref={refInput}
-          onBlur={onBlur}
+            ref={refInput}
+            onBlur={onBlur}
             autoFocus={autoFocus}
             type={password && !pwdVisible ? "password" : "text"}
             value={value}
@@ -55,7 +55,7 @@ export default function InputComponent({
             }}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
-              if(blurOnEnter && e.key === "Enter") refInput.current?.blur();
+              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
           />
         </Form.Control>
@@ -83,7 +83,7 @@ export default function InputComponent({
           }}
           onKeyDown={(e) => {
             handleKeyDown(e, value, "");
-            if(blurOnEnter && e.key === "Enter") refInput.current?.blur();
+            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
         />
       )}

@@ -32,6 +32,7 @@ import {
   Gift,
   GitFork,
   GithubIcon,
+  Group,
   Hammer,
   HelpCircle,
   Home,
@@ -63,6 +64,7 @@ import {
   TerminalSquare,
   Trash2,
   Undo,
+  Ungroup,
   Unplug,
   Upload,
   UserCog2,
@@ -75,8 +77,6 @@ import {
   X,
   XCircle,
   Zap,
-  Group,
-  Ungroup
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -305,5 +305,5 @@ export const nodeIconsLucide: iconsType = {
   Unplug,
   Group,
   ChevronUp,
-  Ungroup
+  Ungroup,
 };

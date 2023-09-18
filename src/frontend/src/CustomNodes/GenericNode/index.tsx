@@ -1,21 +1,26 @@
-import { cloneDeep, get } from "lodash";
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { NodeToolbar, XYPosition, useUpdateNodeInternals } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import InputComponent from "../../components/inputComponent";
+import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import { cleanEdges, getGroupStatus, handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
+import {
+  cleanEdges,
+  getGroupStatus,
+  handleKeyDown,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import InputComponent from "../../components/inputComponent";
-import { Textarea } from "../../components/ui/textarea";
 
 export default function GenericNode({
   data: olddata,
@@ -66,7 +71,9 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = data.node?.flow ? getGroupStatus(data.node.flow, sseData) : sseData[data.id];
+    const relevantData = data.node?.flow
+      ? getGroupStatus(data.node.flow, sseData)
+      : sseData[data.id];
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
@@ -105,8 +112,8 @@ export default function GenericNode({
               iconColor={`${nodeColors[types[data.type]]}`}
             />
             <div className="generic-node-tooltip-div">
-              {data.node?.flow && inputName ?
-                <div >
+              {data.node?.flow && inputName ? (
+                <div>
                   <InputComponent
                     autoFocus
                     onBlur={() => {
@@ -123,13 +130,17 @@ export default function GenericNode({
                     password={false}
                     blurOnEnter={true}
                   />
-                </div> : <ShadTooltip content={data.node?.display_name}>
-                  <div className="generic-node-tooltip-div text-primary" onDoubleClick={() => setInputName(true)}>
+                </div>
+              ) : (
+                <ShadTooltip content={data.node?.display_name}>
+                  <div
+                    className="generic-node-tooltip-div text-primary"
+                    onDoubleClick={() => setInputName(true)}
+                  >
                     {data.node?.display_name}
                   </div>
                 </ShadTooltip>
-              }
-
+              )}
             </div>
           </div>
           <div className="round-button-div">
@@ -151,10 +162,10 @@ export default function GenericNode({
                     <div className="max-h-96 overflow-auto">
                       {typeof validationStatus.params === "string"
                         ? validationStatus.params
-                          .split("\n")
-                          .map((line: string, index: number) => (
-                            <div key={index}>{line}</div>
-                          ))
+                            .split("\n")
+                            .map((line: string, index: number) => (
+                              <div key={index}>{line}</div>
+                            ))
                         : ""}
                     </div>
                   )
@@ -192,7 +203,7 @@ export default function GenericNode({
         </div>
 
         <div className="generic-node-desc">
-          {data.node?.flow && inputDescription ?
+          {data.node?.flow && inputDescription ? (
             <Textarea
               autoFocus
               onBlur={() => {
@@ -205,10 +216,15 @@ export default function GenericNode({
                 }
               }}
               value={nodeDescription}
-              onChange={(e)=>setNodeDescription(e.target.value)}
+              onChange={(e) => setNodeDescription(e.target.value)}
               onKeyDown={(e) => {
                 handleKeyDown(e, nodeDescription, "");
-                if(e.key === "Enter" && e.shiftKey === false && e.ctrlKey === false && e.altKey === false){
+                if (
+                  e.key === "Enter" &&
+                  e.shiftKey === false &&
+                  e.ctrlKey === false &&
+                  e.altKey === false
+                ) {
                   setInputDescription(false);
                   if (nodeDescription.trim() !== "") {
                     setNodeDescription(nodeDescription);
@@ -218,9 +234,15 @@ export default function GenericNode({
                   }
                 }
               }}
-            /> :
-            <div className="generic-node-desc-text" onDoubleClick={() => setInputDescription(true)}>{data.node?.description}</div>
-          }
+            />
+          ) : (
+            <div
+              className="generic-node-desc-text"
+              onDoubleClick={() => setInputDescription(true)}
+            >
+              {data.node?.description}
+            </div>
+          )}
 
           <>
             {Object.keys(data.node!.template)
@@ -228,7 +250,7 @@ export default function GenericNode({
               .map((templateField: string, idx) => (
                 <div key={idx}>
                   {data.node!.template[templateField].show &&
-                    !data.node!.template[templateField].advanced ? (
+                  !data.node!.template[templateField].advanced ? (
                     <ParameterComponent
                       key={scapedJSONStringfy({
                         inputTypes:
@@ -242,7 +264,7 @@ export default function GenericNode({
                       setData={setData}
                       color={
                         nodeColors[
-                        types[data.node?.template[templateField].type!]
+                          types[data.node?.template[templateField].type!]
                         ] ??
                         nodeColors[data.node?.template[templateField].type!] ??
                         nodeColors.unknown
@@ -251,8 +273,8 @@ export default function GenericNode({
                         data.node?.template[templateField].display_name
                           ? data.node.template[templateField].display_name
                           : data.node?.template[templateField].name
-                            ? toTitleCase(data.node.template[templateField].name)
-                            : toTitleCase(templateField)
+                          ? toTitleCase(data.node.template[templateField].name)
+                          : toTitleCase(templateField)
                       }
                       info={data.node?.template[templateField].info}
                       name={templateField}
