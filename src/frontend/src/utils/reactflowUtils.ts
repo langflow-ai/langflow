@@ -486,8 +486,18 @@ export function concatFlows(
 }
 
 export function validateSelection(
-  selection: OnSelectionChangeParams
+  selection: OnSelectionChangeParams,
+  edges: Edge[]
 ): Array<string> {
+  //add edges to selection if selection mode selected only nodes
+  if(selection.edges.length === 0){
+    selection.edges = edges.filter(
+      (edge) =>
+        selection.nodes.some((node) => node.id === edge.target) &&
+        selection.nodes.some((node) => node.id === edge.source)
+    );
+  }
+  
   let errorsArray: Array<string> = [];
   // check if there is more than one node
   if (selection.nodes.length < 2) {

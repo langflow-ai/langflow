@@ -446,7 +446,7 @@ export default function Page({
                   )}
                   <SelectionMenu isVisible={selectionMenuVisible} nodes={lastSelection?.nodes}
                   onClick={()=>{
-                    if(validateSelection(lastSelection!).length===0){
+                    if(validateSelection(lastSelection!,edges).length===0){
                       const {newFlow} = generateFlow(lastSelection!,reactFlowInstance!,getRandomName());
                       const newGroupNode = generateNodeFromFlow(newFlow)
                       setNodes((oldNodes)=>[...oldNodes.filter((oldNodes)=>!lastSelection?.nodes.some((selectionNode)=>selectionNode.id===oldNodes.id)),newGroupNode])
@@ -464,7 +464,7 @@ export default function Page({
                     else{
                       setErrorData({
                         title: "Invalid selection",
-                        list: validateSelection(lastSelection!),
+                        list: validateSelection(lastSelection!,edges),
                       });
                     }
                   }}/>
