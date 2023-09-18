@@ -25,7 +25,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase, truncateLongId } from "./utils";
+import { extractIdFromLongId, toNormalCase, toTitleCase, truncateDisplayName, truncateLongId } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges({
@@ -567,13 +567,12 @@ export function mergeNodeTemplates({
           } else {
             template[key + "_" + node.id].display_name =
             //data id already has the node name on it
-              truncateLongId(node.data.id) +
-              " - " +
-              (nodeTemplate[key].display_name
-                ? nodeTemplate[key].display_name
-                : nodeTemplate[key].name
-                ? toTitleCase(nodeTemplate[key].name)
-                : toTitleCase(key));
+            (nodeTemplate[key].display_name
+              ? nodeTemplate[key].display_name
+              : nodeTemplate[key].name
+              ? toTitleCase(nodeTemplate[key].name)
+              : toTitleCase(key)) + " - "+ truncateDisplayName(node.data.node?.display_name!) +"-" +
+              extractIdFromLongId(node.data.id)
           }
         }
       });
