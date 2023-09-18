@@ -130,24 +130,35 @@ export default function GenericModal({
       : "code-nohighlight";
   }
 
-  function validatePrompt(closeModal: boolean) {
-    postValidatePrompt(field_name, inputValue, nodeClass)
+  function validatePrompt(closeModal: boolean): void {
+    //nodeClass is always null on tweaks
+
+    postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
+          setValue(inputValue);
+          apiReturn.data.frontend_node["template"]["template"]["value"] =
+            inputValue;
+          setNodeClass!(apiReturn?.data?.frontend_node);
+
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setModalOpen(closeModal);
           } else {
             setIsEdit(false);
             setSuccessData({
               title: "Prompt is ready",
             });
-            setNodeClass(apiReturn.data?.frontend_node);
-            setModalOpen(closeModal);
-            setValue(inputValue);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            ) {
+              setModalOpen(closeModal);
+            }
           }
         } else {
           setIsEdit(true);
@@ -157,7 +168,6 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
-        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
@@ -169,7 +179,11 @@ export default function GenericModal({
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <BaseModal open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal
+      onChangeOpenModal={(open) => {}}
+      open={modalOpen}
+      setOpen={setModalOpen}
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
@@ -295,9 +309,7 @@ export default function GenericModal({
                     setModalOpen(false);
                     break;
                   case TypeModal.PROMPT:
-                    !inputValue || inputValue === ""
-                      ? setModalOpen(false)
-                      : validatePrompt(false);
+                    validatePrompt(false);
                     break;
 
                   default:
