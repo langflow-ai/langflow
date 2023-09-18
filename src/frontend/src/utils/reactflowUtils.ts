@@ -534,6 +534,9 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     ) {
       template[key].advanced = true;
     }
+    if(type==="code" && template[key].proxy?.id.includes("CustomComponent")){
+      template[key].show = false;
+    }
   });
   return template;
 }
