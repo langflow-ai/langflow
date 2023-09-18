@@ -30,7 +30,11 @@ class PineconeComponent(CustomComponent):
             },
             "environment": {"display_name": "Environment"},
             "index_name": {"display_name": "Index Name"},
-            "documents": {"display_name": "Documents", "is_list": True},
+            "documents": {
+                "display_name": "Documents",
+                "is_list": True,
+                "info": "Documents to be added to the index. Only required if you are adding new documents to the index.",
+            },
             "namespace": {
                 "display_name": "Namespace",
             },
