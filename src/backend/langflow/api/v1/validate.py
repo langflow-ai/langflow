@@ -53,6 +53,16 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
 
 def get_old_custom_fields(prompt_request):
     try:
+        if (
+            len(prompt_request.frontend_node.custom_fields) == 1
+            and prompt_request.name == ""
+        ):
+            # If there is only one custom field and the name is empty string
+            # then we are dealing with the first prompt request after the node was created
+            prompt_request.name = list(
+                prompt_request.frontend_node.custom_fields.keys()
+            )[0]
+
         old_custom_fields = prompt_request.frontend_node.custom_fields[
             prompt_request.name
         ].copy()
