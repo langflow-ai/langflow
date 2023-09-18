@@ -125,7 +125,7 @@ export default function GenericNode({
                   />
                 </div> : <ShadTooltip content={data.node?.display_name}>
                   <div className="generic-node-tooltip-div text-primary" onDoubleClick={() => setInputName(true)}>
-                    {nodeName}
+                    {data.node?.display_name}
                   </div>
                 </ShadTooltip>
               }
@@ -219,7 +219,7 @@ export default function GenericNode({
                 }
               }}
             /> :
-            <div className="generic-node-desc-text" onDoubleClick={() => setInputDescription(true)}>{nodeDescription}</div>
+            <div className="generic-node-desc-text" onDoubleClick={() => setInputDescription(true)}>{data.node?.description}</div>
           }
 
           <>
