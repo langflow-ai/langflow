@@ -13,6 +13,7 @@ export default function NodeToolbarComponent({
   deleteNode,
   setShowNode,
   numberOfHandles,
+  showNode,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -130,14 +131,14 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
 
           {canMinimize() && (
-            <ShadTooltip content={"Minimize"} side="top">
+            <ShadTooltip content={showNode ? "Minimize" : "Expand"} side="top">
               <button
                 className="relative inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={(event) => {
                   setShowNode(prev => !prev);
                 }}
               >
-                <IconComponent name="Minus" className="h-4 w-4" />
+                <IconComponent name={showNode ? "Minus" : "Square"} className="h-4 w-4" />
               </button>
             </ShadTooltip>
           )}
