@@ -430,23 +430,23 @@ chat_input_field: Input key that you want the chat to send the user message with
 }
 
 export function truncateLongId(id: string): string {
-  let [componentName,newId] = id.split("-");
-  if (componentName.length>15){
-    componentName = componentName.slice(0,10);
+  let [componentName, newId] = id.split("-");
+  if (componentName.length > 15) {
+    componentName = componentName.slice(0, 15);
     componentName += "...";
-    return componentName+"-"+newId;
+    return componentName + "-" + newId;
   }
   return id;
 }
 
 export function extractIdFromLongId(id: string): string {
-  let [_,newId] = id.split("-");
+  let [_, newId] = id.split("-");
   return newId;
 }
 
 export function truncateDisplayName(name: string): string {
-  if (name.length>15){
-    name = name.slice(0,10);
+  if (name.length > 15) {
+    name = name.slice(0, 15);
     name += "...";
   }
   return name;
