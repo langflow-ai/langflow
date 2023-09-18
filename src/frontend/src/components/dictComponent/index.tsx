@@ -17,6 +17,10 @@ export default function DictComponent({
     }
   }, [disabled]);
 
+  useEffect(() => {
+    if (value) onChange(value);
+  }, [value]);
+
   return (
     <div
       className={classNames(
