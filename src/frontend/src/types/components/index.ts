@@ -401,6 +401,7 @@ export type nodeToolbarPropsType = {
   setData: (newState: NodeDataType) => void;
   setShowNode: (boolean: any) => void;
   numberOfHandles: boolean[] | [];
+  showNode: boolean;
 };
 
 export type parsedDataType = {

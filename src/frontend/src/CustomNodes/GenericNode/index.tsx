@@ -109,6 +109,7 @@ export default function GenericNode({
           deleteNode={deleteNode}
           setShowNode={setShowNode}
           numberOfHandles={handles}
+          showNode={showNode}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -116,7 +117,7 @@ export default function GenericNode({
         className={classNames(
           selected ? "border border-ring" : "border",
           " transition-all ",
-          showNode ? " w-96 duration-500 ease-in-out scale-100" : "transform-width w-26 h-26 rounded-full scale-50",
+          showNode ? " w-96 duration-500 ease-in-out scale-100" : "transform-width w-26 h-26 rounded-full scale-75",
           "generic-node-div",
         )}
       >
