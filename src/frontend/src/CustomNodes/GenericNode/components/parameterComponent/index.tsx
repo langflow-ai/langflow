@@ -186,6 +186,7 @@ export default function ParameterComponent({
           }
         >
           {proxy ? (<ShadTooltip content={<span>{proxy.id}</span>}>
+            
             <span>{title}</span>
           </ShadTooltip>):title}
           <span className="text-status-red">{required ? " *" : ""}</span>
