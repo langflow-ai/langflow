@@ -229,7 +229,7 @@ export function validateNode(
         template[t].value !== "")
     ) {
       if (hasDuplicateKeys(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) contains duplicate keys with the same values.`);
-      if (hasEmptyKey(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) contains keys with empty values.`);
+      if (hasEmptyKey(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) field must not be empty.`);
     }
     return errors;
   }, [] as string[]);
