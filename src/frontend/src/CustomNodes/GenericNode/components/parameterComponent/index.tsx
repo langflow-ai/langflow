@@ -90,6 +90,9 @@ export default function ParameterComponent({
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
+      if (!prev[tabId]) {
+        return prev;
+      }
       return {
         ...prev,
         [tabId]: {
