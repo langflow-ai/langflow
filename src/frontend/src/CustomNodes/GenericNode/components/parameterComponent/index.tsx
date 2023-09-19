@@ -9,6 +9,7 @@ import React, {
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -16,6 +17,7 @@ import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
+import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
@@ -24,7 +26,12 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
-import { isValidConnection } from "../../../../utils/reactflowUtils";
+import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+  isValidConnection,
+} from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -74,13 +81,18 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean | Object[]
+  ): void => {
     let newData = cloneDeep(data);
     newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
+      if (!prev[tabId]) {
+        return prev;
+      }
       return {
         ...prev,
         [tabId]: {
@@ -92,6 +104,8 @@ export default function ParameterComponent({
     });
     renderTooltips();
   };
+
+  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
     if (name === "openai_api_base") console.log(info);
@@ -214,6 +228,8 @@ export default function ParameterComponent({
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
+          type === "dict" ||
+          type === "NestedDict" ||
           type === "int") &&
         !optionalHandle ? (
           <></>
@@ -348,6 +364,42 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+            />
+          </div>
+        ) : left === true && type === "NestedDict" ? (
+          <div className="mt-2 w-full">
+            <DictComponent
+              disabled={disabled}
+              editNode={false}
+              value={
+                data.node!.template[name].value ?? {
+                  yourkey: "value",
+                }
+              }
+              onChange={(newValue) => {
+                data.node!.template[name].value = newValue;
+                handleOnNewValue(newValue);
+              }}
+            />
+          </div>
+        ) : left === true && type === "dict" ? (
+          <div className="mt-2 w-full">
+            <KeypairListComponent
+              disabled={disabled}
+              editNode={false}
+              value={
+                data.node!.template[name].value?.length === 0 ||
+                !data.node!.template[name].value
+                  ? [{ "": "" }]
+                  : convertObjToArray(data.node!.template[name].value)
+              }
+              duplicateKey={errorDuplicateKey}
+              onChange={(newValue) => {
+                const valueToNumbers = convertValuesToNumbers(newValue);
+                data.node!.template[name].value = valueToNumbers;
+                setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                handleOnNewValue(valueToNumbers);
+              }}
             />
           </div>
         ) : (

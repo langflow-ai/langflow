@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
+import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -8,6 +9,7 @@ import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
+import KeypairListComponent from "../../components/keypairListComponent";
 import PromptAreaComponent from "../../components/promptComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
@@ -26,6 +28,10 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
+import {
+  convertObjToArray,
+  hasDuplicateKeys,
+} from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
@@ -77,6 +83,25 @@ const EditNodeModal = forwardRef(
     useEffect(() => {
       setMyData(data); // reset data to what it is on node when opening modal
     }, [modalOpen]);
+
+    const [obj, setObj] = useState({
+      arr: ["test", 123456, false, null],
+      boolean: false,
+      longString:
+        "long string long string long string long string long string long string",
+      number: 123456,
+      try: {
+        k1: 123,
+        k2: "123",
+        k3: false,
+      },
+      string: "string",
+    });
+
+    const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
+    const [dictArr, setDictArr] = useState([
+      { yourKey: "yourValue" },
+    ] as Object[]);
 
     return (
       <BaseModal size="large-h-full" open={modalOpen} setOpen={setModalOpen}>
@@ -166,6 +191,52 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "NestedDict" ? (
+                                    <div className="mt-2 w-full">
+                                      <DictComponent
+                                        disabled={disabled}
+                                        editNode={true}
+                                        value={obj}
+                                        onChange={(newValue) => {
+                                          setObj(newValue);
+                                        }}
+                                      />
+                                    </div>
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "dict" ? (
+                                    <div className="mt-2 w-full">
+                                      <KeypairListComponent
+                                        disabled={disabled}
+                                        editNode={false}
+                                        value={
+                                          myData.node.template[templateParam]
+                                            .value?.length === 0 ||
+                                          !myData.node.template[templateParam]
+                                            .value
+                                            ? dictArr
+                                            : convertObjToArray(
+                                                myData.node.template[
+                                                  templateParam
+                                                ].value
+                                              )
+                                        }
+                                        duplicateKey={errorDuplicateKey}
+                                        onChange={(newValue) => {
+                                          setErrorDuplicateKey(
+                                            hasDuplicateKeys(newValue)
+                                          );
+                                          if (hasDuplicateKeys(newValue)) {
+                                            setDictArr(newValue);
+                                          } else {
+                                            setDictArr(newValue);
+                                            myData.node!.template[
+                                              templateParam
+                                            ].value = newValue;
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   ) : myData.node.template[templateParam]
                                       .multiline ? (
                                     <TextAreaComponent

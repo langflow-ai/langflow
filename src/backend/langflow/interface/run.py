@@ -59,7 +59,7 @@ def get_memory_key(langchain_object):
         "history": "chat_history",
     }
     # Check if memory_key attribute exists
-    if hasattr(langchain_object.memory, 'memory_key'):
+    if hasattr(langchain_object.memory, "memory_key"):
         memory_key = langchain_object.memory.memory_key
         return mem_key_dict.get(memory_key)
     else:
@@ -90,5 +90,4 @@ def update_memory_keys(langchain_object, possible_new_mem_key):
         try:
             setattr(langchain_object.memory, attr, key)
         except ValueError as exc:
-            logger.debug(
-                f"{langchain_object.memory} has no attribute {attr} ({exc})")
+            logger.debug(f"{langchain_object.memory} has no attribute {attr} ({exc})")

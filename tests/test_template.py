@@ -135,7 +135,7 @@ def test_format_dict():
     }
     expected_output = {
         "field1": {
-            "type": "code",  # Mapping type is replaced with dict which is replaced with code
+            "type": "dict[str, int]",  # Mapping type is replaced with dict which is replaced with code
             "required": False,
             "list": False,
             "show": False,
@@ -249,7 +249,7 @@ def test_format_dict():
     }
     expected_output = {
         "field1": {
-            "type": "code",
+            "type": "Dict[str, int]",
             "required": False,
             "list": False,
             "show": False,
