@@ -359,11 +359,16 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
+                const clone = cloneDeep(data);
+                clone.node = nodeClass;
+                setData(clone);
               }}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
+              onChange={(e) => {
+                handleOnNewValue(e);
+              }}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
