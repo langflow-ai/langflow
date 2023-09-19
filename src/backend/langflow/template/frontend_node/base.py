@@ -140,7 +140,7 @@ class FrontendNode(BaseModel):
     @staticmethod
     def handle_dict_type(field: TemplateField, _type: str) -> str:
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
-        if "dict" in _type.lower() and key == "dict_":
+        if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
             field.suffixes = [".json", ".yaml", ".yml"]
             field.file_types = ["json", "yaml", "yml"]
