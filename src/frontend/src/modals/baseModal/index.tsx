@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 import React from "react";
 import {
@@ -68,12 +68,16 @@ interface BaseModalProps {
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full";
+
+  disable?: boolean;
+  onChangeOpenModal?: (open: boolean) => void;
 }
 function BaseModal({
   open,
   setOpen,
   children,
   size = "large",
+  onChangeOpenModal,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header
@@ -126,6 +130,12 @@ function BaseModal({
       height = "h-[80vh]";
       break;
   }
+
+  useEffect(() => {
+    if (onChangeOpenModal) {
+      onChangeOpenModal(open);
+    }
+  }, [open]);
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (

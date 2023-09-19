@@ -29,7 +29,6 @@ pre {
   animation: slideUp 300ms ease-out;
 }
 
-
 .gradient-end {
   animation: gradient-motion-end 3s infinite forwards;
 }
@@ -50,4 +49,22 @@ select:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0px 1000px #fff6d0 inset;
   box-shadow: 0 0 0px 1000px #fff6d0 inset;
   color: black;
+}
+.ace_scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.ace_scrollbar::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+}
+
+.ace_scrollbar::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 999px;
+}
+
+.ace_scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #bbb;
+  border-radius: 999px;
 }
