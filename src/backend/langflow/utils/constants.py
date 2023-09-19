@@ -48,4 +48,14 @@ def python_function(text: str) -> str:
     return text
 """
 
-DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
+DIRECT_TYPES = [
+    "str",
+    "bool",
+    "dict",
+    "int",
+    "float",
+    "Any",
+    "prompt",
+    "code",
+    "NestedDict",
+]

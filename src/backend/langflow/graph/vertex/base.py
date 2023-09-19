@@ -122,6 +122,19 @@ class Vertex:
                     except Exception as exc:
                         logger.debug(f"Error parsing code: {exc}")
                         params[key] = value.get("value")
+                elif value.get("type") in ["dict", "NestedDict"]:
+                    # When dict comes from the frontend it comes as a
+                    # list of dicts, so we need to convert it to a dict
+                    # before passing it to the build method
+                    _value = value.get("value")
+                    if isinstance(_value, list):
+                        params[key] = {
+                            k: v
+                            for item in value.get("value", [])
+                            for k, v in item.items()
+                        }
+                    elif isinstance(_value, dict):
+                        params[key] = _value
                 else:
                     params[key] = value.get("value")
 
