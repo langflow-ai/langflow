@@ -15,7 +15,6 @@ class PostRequest(CustomComponent):
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "headers": {
             "display_name": "Headers",
-            "field_type": "code",
             "info": "The headers to send with the request.",
         },
         "code": {"show": False},
