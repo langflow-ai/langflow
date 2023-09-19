@@ -373,10 +373,6 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name].value ?? {
-                  arr: ["test", 123456, false, null],
-                  try: {
-                    k1: 123,
-                  },
                   yourkey: "value",
                 }
               }
