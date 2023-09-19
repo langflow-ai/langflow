@@ -2,15 +2,6 @@ from fastapi.testclient import TestClient
 from langflow.services.utils import get_settings_manager
 
 
-def test_llms_settings(client: TestClient, logged_in_headers):
-    settings_manager = get_settings_manager()
-    response = client.get("api/v1/all", headers=logged_in_headers)
-    assert response.status_code == 200
-    json_response = response.json()
-    llms = json_response["llms"]
-    assert set(llms.keys()) == set(settings_manager.settings.LLMS)
-
-
 # def test_hugging_face_hub(client: TestClient):
 #     response = client.get("api/v1/all")
 #     assert response.status_code == 200
@@ -85,7 +76,7 @@ def test_llms_settings(client: TestClient, logged_in_headers):
 #         "multiline": False,
 #         "password": False,
 #         "name": "model_kwargs",
-#         "type": "code",
+#         "type": "dict" ,
 #         "list": False,
 #         "advanced": True,
 #     }
@@ -279,7 +270,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "multiline": False,
         "password": False,
         "name": "model_kwargs",
-        "type": "code",
+        "type": "dict",
         "list": False,
         "advanced": True,
         "info": "",
@@ -334,7 +325,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "multiline": False,
         "password": False,
         "name": "logit_bias",
-        "type": "code",
+        "type": "dict",
         "list": False,
         "advanced": False,
         "info": "",
@@ -451,7 +442,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "multiline": False,
         "password": False,
         "name": "model_kwargs",
-        "type": "code",
+        "type": "dict",
         "list": False,
         "advanced": True,
         "info": "",

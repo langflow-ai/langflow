@@ -55,7 +55,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "multiline": False,
         "password": False,
         "name": "partial_variables",
-        "type": "code",
+        "type": "dict",
         "list": False,
         "advanced": False,
         "info": "",
