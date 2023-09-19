@@ -174,7 +174,7 @@ class DocumentLoaderFrontNode(FrontendNode):
                 required=True,
                 show=True,
                 name="metadata",
-                value="{}",
+                value={},
                 display_name="Metadata",
                 multiline=False,
             )
