@@ -142,7 +142,7 @@ export default function NodeToolbarComponent({
                 }}
               >
                 <IconComponent
-                  name={showNode ? "Minus" : "Square"}
+                  name={showNode ? "Minimize2" : "Maximize2"}
                   className="h-4 w-4"
                 />
               </button>
