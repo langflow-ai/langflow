@@ -219,21 +219,34 @@ export function validateNode(
             edge.targetHandle.split("|")[2] === node.id
         )
     ) {
-      errors.push(`${type} is missing ${template.display_name || toNormalCase(template[t].name)}.`);
+      errors.push(
+        `${type} is missing ${
+          template.display_name || toNormalCase(template[t].name)
+        }.`
+      );
     } else if (
-      (template[t].type === "dict") &&
+      template[t].type === "dict" &&
       template[t].required &&
       template[t].show &&
       (template[t].value !== undefined ||
         template[t].value !== null ||
         template[t].value !== "")
     ) {
-      if (hasDuplicateKeys(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) contains duplicate keys with the same values.`);
-      if (hasEmptyKey(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) field must not be empty.`);
+      if (hasDuplicateKeys(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) contains duplicate keys with the same values.`
+        );
+      if (hasEmptyKey(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) field must not be empty.`
+        );
     }
     return errors;
   }, [] as string[]);
-
 }
 
 export function validateNodes(reactFlowInstance: ReactFlowInstance) {
@@ -299,7 +312,6 @@ export function getConnectedNodes(
 }
 
 export function convertObjToArray(singleObject) {
-
   if (Array.isArray(singleObject)) return singleObject;
 
   let arrConverted: any = [];
@@ -329,7 +341,7 @@ export function hasDuplicateKeys(array) {
 export function hasEmptyKey(objArray) {
   for (const obj of objArray) {
     for (const key in obj) {
-      if (obj.hasOwnProperty(key) && key === '') {
+      if (obj.hasOwnProperty(key) && key === "") {
         return true; // Found an empty key
       }
     }
@@ -346,10 +358,10 @@ export function convertValuesToNumbers(arr) {
         if (/\s/g.test(value)) {
           value = value.trim();
         }
-        newObj[key] = value === "" || isNaN(value) ? value.toString() : Number(value);
+        newObj[key] =
+          value === "" || isNaN(value) ? value.toString() : Number(value);
       }
     }
     return newObj;
   });
 }
-
