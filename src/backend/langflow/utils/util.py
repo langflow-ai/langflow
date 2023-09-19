@@ -405,14 +405,6 @@ def is_multiline_field(key: str) -> bool:
     }
 
 
-def replace_dict_type_with_code(value: Dict[str, Any]) -> None:
-    """
-    Replaces the type value with 'code' if the type is a dict.
-    """
-    if "dict" in value["type"].lower():
-        value["type"] = "code"
-
-
 def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     """
     Sets the file attributes for the 'dict_' key.
