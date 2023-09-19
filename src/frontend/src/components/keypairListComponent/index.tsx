@@ -70,7 +70,7 @@ export default function KeypairListComponent({
                 type="text"
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
-                placeholder="Click to input a value..."
+                placeholder="Type a value..."
                 onChange={(event) =>
                   handleChangeValue(event.target.value, index)
                 }
