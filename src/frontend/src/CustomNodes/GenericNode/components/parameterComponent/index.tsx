@@ -374,14 +374,10 @@ export default function ParameterComponent({
               value={
                 data.node!.template[name].value ?? {
                   arr: ["test", 123456, false, null],
-                  boolean: false,
-                  number: 123456,
                   try: {
                     k1: 123,
-                    k2: "123",
-                    k3: false,
                   },
-                  string: "string",
+                  yourkey: "value",
                 }
               }
               onChange={(newValue) => {
