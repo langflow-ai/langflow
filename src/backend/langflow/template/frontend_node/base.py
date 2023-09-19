@@ -175,7 +175,6 @@ class FrontendNode(BaseModel):
             "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
             "Anthropic": constants.ANTHROPIC_MODELS,
             "ChatAnthropic": constants.ANTHROPIC_MODELS,
-            "ChatLiteLLM": constants.LITELLM_MODELS,
         }
         if name in model_dict and key == "model_name":
             field.options = model_dict[name]
