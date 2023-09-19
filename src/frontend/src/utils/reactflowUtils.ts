@@ -221,7 +221,7 @@ export function validateNode(
     ) {
       errors.push(`${type} is missing ${template.display_name || toNormalCase(template[t].name)}.`);
     } else if (
-      (template[t].type === "dict" || template[t].type === "NestedDict") &&
+      (template[t].type === "dict") &&
       template[t].required &&
       template[t].show &&
       (template[t].value !== undefined ||
