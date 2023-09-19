@@ -28,6 +28,7 @@ import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
 import {
   convertObjToArray,
+  convertValuesToNumbers,
   hasDuplicateKeys,
   isValidConnection,
 } from "../../../../utils/reactflowUtils";
@@ -399,9 +400,10 @@ export default function ParameterComponent({
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
-                data.node!.template[name].value = newValue;
-                setErrorDuplicateKey(hasDuplicateKeys(newValue));
-                handleOnNewValue(newValue);
+                const valueToNumbers = convertValuesToNumbers(newValue);
+                data.node!.template[name].value = valueToNumbers;
+                setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                handleOnNewValue(valueToNumbers);
               }}
             />
           </div>

@@ -318,3 +318,20 @@ export function hasDuplicateKeys(array) {
   }
   return false;
 }
+
+export function convertValuesToNumbers(arr) {
+  return arr.map((obj) => {
+    const newObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        let value = obj[key];
+        if (/\s/g.test(value)) {
+          value = value.trim();
+        }
+        newObj[key] = value === "" || isNaN(value) ? value.toString() : Number(value);
+      }
+    }
+    return newObj;
+  });
+}
+
