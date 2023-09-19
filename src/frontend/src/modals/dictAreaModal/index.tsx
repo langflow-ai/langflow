@@ -4,7 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
@@ -20,6 +20,10 @@ export default function DictAreaModal({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [dictObj, setDictObj] = useState(value);
+
+  useEffect(() => {
+    if (value) setDictObj(value);
+  }, [value]);
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
