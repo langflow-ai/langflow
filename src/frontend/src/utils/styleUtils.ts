@@ -1,6 +1,7 @@
 import {
   ArrowUpToLine,
   Bell,
+  BookMarked,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -78,7 +79,6 @@ import {
   X,
   XCircle,
   Zap,
-  BookMarked
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -309,5 +309,5 @@ export const nodeIconsLucide: iconsType = {
   Key,
   Unplug,
   BookMarked,
-  ChevronUp
+  ChevronUp,
 };
