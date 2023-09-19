@@ -129,8 +129,9 @@ class Vertex:
                     _value = value.get("value")
                     if isinstance(_value, list):
                         params[key] = {
-                            item["key"]: item["value"]
+                            k: v
                             for item in value.get("value", [])
+                            for k, v in item.items()
                         }
                     elif isinstance(_value, dict):
                         params[key] = _value
