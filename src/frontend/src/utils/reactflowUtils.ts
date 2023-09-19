@@ -204,29 +204,36 @@ export function validateNode(
     node: { template },
   } = node.data;
 
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (template[t].value === undefined ||
-            template[t].value === null ||
-            template[t].value === "") &&
-          !reactFlowInstance
-            .getEdges()
-            .some(
-              (edge) =>
-                edge.targetHandle?.split("|")[1] === t &&
-                edge.targetHandle.split("|")[2] === node.id
-            )
-          ? [
-            `${type} is missing ${template.display_name || toNormalCase(template[t].name)
-            }.`,
-          ]
-          : []
-      ),
-    [] as string[]
-  );
+  return Object.keys(template).reduce((errors: Array<string>, t) => {
+    if (
+      template[t].required &&
+      template[t].show &&
+      (template[t].value === undefined ||
+        template[t].value === null ||
+        template[t].value === "") &&
+      !reactFlowInstance
+        .getEdges()
+        .some(
+          (edge) =>
+            edge.targetHandle?.split("|")[1] === t &&
+            edge.targetHandle.split("|")[2] === node.id
+        )
+    ) {
+      errors.push(`${type} is missing ${template.display_name || toNormalCase(template[t].name)}.`);
+    } else if (
+      (template[t].type === "dict" || template[t].type === "NestedDict") &&
+      template[t].required &&
+      template[t].show &&
+      (template[t].value !== undefined ||
+        template[t].value !== null ||
+        template[t].value !== "")
+    ) {
+      if (hasDuplicateKeys(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) contains duplicate keys with the same values.`);
+      if (hasEmptyKey(template[t].value)) errors.push(`${type} (${template.display_name || template[t].name}) contains keys with empty values.`);
+    }
+    return errors;
+  }, [] as string[]);
+
 }
 
 export function validateNodes(reactFlowInstance: ReactFlowInstance) {
@@ -317,6 +324,17 @@ export function hasDuplicateKeys(array) {
     }
   }
   return false;
+}
+
+export function hasEmptyKey(objArray) {
+  for (const obj of objArray) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && key === '') {
+        return true; // Found an empty key
+      }
+    }
+  }
+  return false; // No empty keys found
 }
 
 export function convertValuesToNumbers(arr) {
