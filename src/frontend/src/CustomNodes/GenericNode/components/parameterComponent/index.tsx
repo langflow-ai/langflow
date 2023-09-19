@@ -251,7 +251,6 @@ export default function ParameterComponent({
                 ></Handle>
               </ShadTooltip>
             </div>
-            <span className="text-status-red">{required ? " *" : ""}</span>
           </Button>
         )}
 

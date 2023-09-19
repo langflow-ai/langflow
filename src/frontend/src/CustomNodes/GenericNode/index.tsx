@@ -85,12 +85,7 @@ export default function GenericNode({
             <div className="beta-badge-content">BETA</div>
           </div>
         )}
-        <div
-          className="generic-node-div-title"
-          onClick={() => {
-            setFilterEdge([]);
-          }}
-        >
+        <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
               name={name}
