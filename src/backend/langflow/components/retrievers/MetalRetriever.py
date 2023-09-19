@@ -14,7 +14,7 @@ class MetalRetrieverComponent(CustomComponent):
             "api_key": {"display_name": "API Key", "password": True},
             "client_id": {"display_name": "Client ID", "password": True},
             "index_id": {"display_name": "Index ID"},
-            "params": {"display_name": "Parameters", "field_type": "code"},
+            "params": {"display_name": "Parameters"},
             "code": {"show": False},
         }
 
