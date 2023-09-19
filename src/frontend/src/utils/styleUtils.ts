@@ -80,6 +80,8 @@ import {
   X,
   XCircle,
   Zap,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
@@ -312,4 +314,6 @@ export const nodeIconsLucide: iconsType = {
   ChevronUp,
   Minus,
   Square,
+  Minimize2,
+  Maximize2,
 };
