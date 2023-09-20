@@ -1,4 +1,5 @@
 from langflow.services.auth.utils import create_super_user
+from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import (
@@ -18,17 +19,16 @@ def setup_superuser():
     # if it does not exist.
     settings_manager = get_settings_manager()
     if settings_manager.auth_settings.AUTO_LOGIN:
-        logger.debug("AUTO_LOGIN is set to True. Not creating superuser automatically.")
-        return
+        logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
 
     session = next(get_session())
     username = settings_manager.auth_settings.SUPERUSER
     password = settings_manager.auth_settings.SUPERUSER_PASSWORD
     if username == DEFAULT_SUPERUSER and password == DEFAULT_SUPERUSER_PASSWORD:
-        logger.debug(
-            "Using default superuser credentials. Please change them in production."
-        )
-        return
+        logger.debug("Default superuser credentials detected.")
+        logger.debug("Creating default superuser.")
+    else:
+        logger.debug("Creating superuser.")
 
     try:
         from langflow.services.database.models.user.user import User
@@ -136,6 +136,8 @@ def initialize_services():
     # Test cache connection
     service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    db_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
     # Setup the superuser
-    setup_superuser()
+    initialize_database()
+    if db_manager.ready:
+        setup_superuser()
