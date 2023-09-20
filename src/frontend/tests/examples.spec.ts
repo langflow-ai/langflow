@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("test_examples", () => {
   test("", async ({ page }) => {
@@ -6,13 +6,13 @@ test.describe("test_examples", () => {
       url: "**/api/v1/**",
       update: false,
     });
-    const id = process.env.FLOWID??"123";
-    const apiKey = process.env.APIKEY_OPEN_AI??"openAIkey";
+    const id = process.env.FLOWID ?? "123";
+    const apiKey = process.env.APIKEY_OPEN_AI ?? "openAIkey";
     await page.route("**/api/v1/flows/", async (route) => {
       if (route.request().method() === "POST") {
         route.fulfill({
           status: 201,
-          body: JSON.stringify({  id }),
+          body: JSON.stringify({ id }),
         });
       }
     });
@@ -23,10 +23,9 @@ test.describe("test_examples", () => {
       .locator(".card-component-footer-arrangement > .inline-flex")
       .first()
       .click();
-      await page.waitForURL("http://localhost:3000/flow/123",{timeout:1000})
-      await page.getByPlaceholder('Type something...').nth(1).click();
-      await page.getByPlaceholder('Type something...').nth(1).fill(apiKey);
-      await page.locator('.round-button-form').click();
-
+    await page.waitForURL("http://localhost:3000/flow/123", { timeout: 1000 });
+    await page.getByPlaceholder("Type something...").nth(1).click();
+    await page.getByPlaceholder("Type something...").nth(1).fill(apiKey);
+    await page.locator(".round-button-form").click();
   });
 });
