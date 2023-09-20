@@ -27,10 +27,11 @@ def test_setup_superuser(
             DEFAULT_SUPERUSER_PASSWORD
         )
 
+    ADMIN_USER_NAME = "admin_user"
     # Test when username and password are default
     mock_settings_manager.auth_settings = Mock()
     mock_settings_manager.auth_settings.AUTO_LOGIN = False
-    mock_settings_manager.auth_settings.SUPERUSER = "admin"
+    mock_settings_manager.auth_settings.SUPERUSER = ADMIN_USER_NAME
     mock_settings_manager.auth_settings.SUPERUSER_PASSWORD = "password"
     mock_settings_manager.auth_settings.reset_credentials = Mock(
         side_effect=reset_mock_credentials
@@ -46,20 +47,20 @@ def test_setup_superuser(
     setup_superuser()
     mock_session.query.assert_called_once_with(User)
     actual_expr = mock_session.query.return_value.filter.call_args[0][0]
-    expected_expr = User.username == "admin"
+    expected_expr = User.username == ADMIN_USER_NAME
 
     assert str(actual_expr) == str(expected_expr)
     mock_create_super_user.assert_called_once_with(
-        db=mock_session, username="admin", password="password"
+        db=mock_session, username=ADMIN_USER_NAME, password="password"
     )
     # Test that superuser credentials are reset
     mock_settings_manager.auth_settings.reset_credentials.assert_called_once()
-    assert mock_settings_manager.auth_settings.SUPERUSER != "admin"
+    assert mock_settings_manager.auth_settings.SUPERUSER != ADMIN_USER_NAME
     assert mock_settings_manager.auth_settings.SUPERUSER_PASSWORD != "password"
 
     # Test when superuser already exists
     mock_settings_manager.auth_settings.AUTO_LOGIN = False
-    mock_settings_manager.auth_settings.SUPERUSER = "admin"
+    mock_settings_manager.auth_settings.SUPERUSER = ADMIN_USER_NAME
     mock_settings_manager.auth_settings.SUPERUSER_PASSWORD = "password"
     mock_user = Mock()
     mock_user.is_superuser = True
@@ -67,7 +68,7 @@ def test_setup_superuser(
     setup_superuser()
     mock_session.query.assert_called_with(User)
     actual_expr = mock_session.query.return_value.filter.call_args[0][0]
-    expected_expr = User.username == "admin"
+    expected_expr = User.username == ADMIN_USER_NAME
 
     assert str(actual_expr) == str(expected_expr)
 
@@ -108,9 +109,10 @@ def test_teardown_superuser_default_superuser(
 def test_teardown_superuser_no_default_superuser(
     mock_get_session, mock_get_settings_manager
 ):
+    ADMIN_USER_NAME = "admin_user"
     mock_settings_manager = MagicMock()
     mock_settings_manager.auth_settings.AUTO_LOGIN = False
-    mock_settings_manager.auth_settings.SUPERUSER = "admin"
+    mock_settings_manager.auth_settings.SUPERUSER = ADMIN_USER_NAME
     mock_settings_manager.auth_settings.SUPERUSER_PASSWORD = "password"
     mock_get_settings_manager.return_value = mock_settings_manager
 
