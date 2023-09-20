@@ -51,7 +51,11 @@ module.exports = {
       type: "category",
       label: "Step-by-Step Guides",
       collapsed: false,
-      items: ["guides/loading_document", "guides/chatprompttemplate_guide"],
+      items: [
+        "guides/loading_document",
+        "guides/chatprompttemplate_guide",
+        "guides/langfuse_integration",
+      ],
     },
     // {
     //   type: 'category',

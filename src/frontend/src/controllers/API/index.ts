@@ -6,6 +6,8 @@ import {
   APIObjectType,
   LoginType,
   Users,
+  changeUser,
+  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
@@ -393,16 +395,18 @@ export async function autoLogin() {
 
 export async function renewAccessToken(token: string) {
   try {
-    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    if (token) {
+      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    }
   } catch (error) {
     console.log("Error:", error);
     throw error;
   }
 }
 
-export async function getLoggedUser(): Promise<Users> {
+export async function getLoggedUser(): Promise<Users | null> {
   try {
-    const res = await api.get(`${BASE_URL_API}user`);
+    const res = await api.get(`${BASE_URL_API}users/whoami`);
 
     if (res.status === 200) {
       return res.data;
@@ -411,14 +415,16 @@ export async function getLoggedUser(): Promise<Users> {
     console.log("Error:", error);
     throw error;
   }
+  return null;
 }
 
-export async function addUser(user: UserInputType): Promise<Users> {
+export async function addUser(user: UserInputType): Promise<Array<Users>> {
   try {
-    const res = await api.post(`${BASE_URL_API}user`, user);
-    if (res.status === 200) {
-      return res.data;
+    const res = await api.post(`${BASE_URL_API}users/`, user);
+    if (res.status !== 201) {
+      throw new Error(res.data.detail);
     }
+    return res.data;
   } catch (error) {
     console.log("Error:", error);
     throw error;
@@ -428,10 +434,10 @@ export async function addUser(user: UserInputType): Promise<Users> {
 export async function getUsersPage(
   skip: number,
   limit: number
-): Promise<[Users]> {
+): Promise<Array<Users>> {
   try {
     const res = await api.get(
-      `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
+      `${BASE_URL_API}users/?skip=${skip}&limit=${limit}`
     );
     if (res.status === 200) {
       return res.data;
@@ -440,11 +446,12 @@ export async function getUsersPage(
     console.log("Error:", error);
     throw error;
   }
+  return [];
 }
 
 export async function deleteUser(user_id: string) {
   try {
-    const res = await api.delete(`${BASE_URL_API}user/${user_id}`);
+    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
     if (res.status === 200) {
       return res.data;
     }
@@ -454,9 +461,24 @@ export async function deleteUser(user_id: string) {
   }
 }
 
-export async function updateUser(user_id: string, user: Users) {
+export async function updateUser(user_id: string, user: changeUser) {
   try {
-    const res = await api.patch(`${BASE_URL_API}user/${user_id}`, user);
+    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function resetPassword(user_id: string, user: resetPasswordType) {
+  try {
+    const res = await api.patch(
+      `${BASE_URL_API}users/${user_id}/reset-password`,
+      user
+    );
     if (res.status === 200) {
       return res.data;
     }
