@@ -21,5 +21,12 @@ test.describe("Login Tests", () => {
     await page.getByPlaceholder("Password").click();
     await page.getByPlaceholder("Password").fill("test");
     await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Community Examples" }).click();
+    await page.waitForSelector(".community-pages-flows-panel");
+    expect(
+      await page
+        .locator(".community-pages-flows-panel")
+        .evaluate((el) => el.children)
+    ).toBeTruthy();
   });
 });
