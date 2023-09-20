@@ -49,6 +49,24 @@ class AuthSettings(BaseSettings):
         self.SUPERUSER = DEFAULT_SUPERUSER
         self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 
+    # If autologin is true, then we need to set the credentials to
+    # the default values
+    # so we need to validate the superuser and superuser_password
+    # fields
+    @validator("SUPERUSER", "SUPERUSER_PASSWORD", pre=True)
+    def validate_superuser(cls, value, values):
+        if values.get("AUTO_LOGIN"):
+            if value != DEFAULT_SUPERUSER:
+                value = DEFAULT_SUPERUSER
+                logger.debug("Resetting superuser to default value")
+            if values.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
+                values["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
+                logger.debug("Resetting superuser password to default value")
+
+            return value
+
+        return value
+
     @validator("SECRET_KEY", pre=True)
     def get_secret_key(cls, value, values):
         config_dir = values.get("CONFIG_DIR")

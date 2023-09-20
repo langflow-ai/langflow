@@ -61,6 +61,7 @@ class ServiceManager:
         self.services[service_name] = self.factories[service_name].create(
             **dependent_services
         )
+        self.services[service_name].set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType):
         """
