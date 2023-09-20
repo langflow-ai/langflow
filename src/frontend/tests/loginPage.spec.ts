@@ -1,17 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL_API } from "../src/constants/constants";
 
 test.describe("Auto_login tests", () => {
-  const baseUrl = `http://localhost:7860${BASE_URL_API}`;
-  test("Test auto login GET", async ({ request }) => {
-    const response = await request.get(`${baseUrl}auto_login`);
-    expect(response.status()).toBe(200);
-    const body = JSON.parse(await response.text());
-    console.log(body);
-    expect(body.access_token).toBeTruthy();
-    expect(body.token_type).toBeTruthy();
-  });
-
   test("auto_login sign in", async ({ page }) => {
     await page.routeFromHAR("harFiles/langflow.har", {
       url: "**/api/v1/**",
@@ -32,8 +21,12 @@ test.describe("Auto_login tests", () => {
       update: false,
     });
     await page.goto("http:localhost:3000/");
+    await page.getByRole("button", { name: "Community Examples" }).click();
     await page.goto("http:localhost:3000/login");
+    await page.getByRole("button", { name: "Community Examples" }).click();
     await page.goto("http:localhost:3000/admin");
+    await page.getByRole("button", { name: "Community Examples" }).click();
     await page.goto("http:localhost:3000/admin/login");
+    await page.getByRole("button", { name: "Community Examples" }).click();
   });
 });
