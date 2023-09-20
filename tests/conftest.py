@@ -15,6 +15,9 @@ from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+# we need to import tmpdir
+import tempfile
+
 if TYPE_CHECKING:
     from langflow.services.database.manager import DatabaseManager
 
@@ -46,14 +49,14 @@ async def async_client() -> AsyncGenerator:
 
 
 # Create client fixture for FastAPI
-@pytest.fixture(scope="module", autouse=True)
-def client():
-    from langflow.main import create_app
+# @pytest.fixture(scope="module", autouse=True)
+# def client():
+#     from langflow.main import create_app
 
-    app = create_app()
+#     app = create_app()
 
-    with TestClient(app) as client:
-        yield client
+#     with TestClient(app) as client:
+#         yield client
 
 
 def get_graph(_type="basic"):
@@ -111,8 +114,13 @@ def session_fixture():
         yield session
 
 
-@pytest.fixture(name="client")
-def client_fixture(session: Session):
+@pytest.fixture(name="client", autouse=True)
+def client_fixture(session: Session, monkeypatch):
+    # Set the database url to a test database
+    db_dir = tempfile.mkdtemp()
+    db_path = Path(db_dir) / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+
     def get_session_override():
         return session
 
@@ -124,6 +132,9 @@ def client_fixture(session: Session):
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+    monkeypatch.undo()
+    # clear the temp db
+    db_path.unlink()
 
 
 # @contextmanager
