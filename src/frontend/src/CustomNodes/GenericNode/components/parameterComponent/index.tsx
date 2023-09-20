@@ -52,6 +52,7 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
+  showNode,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -192,7 +193,43 @@ export default function ParameterComponent({
     renderTooltips();
   }, [tooltipTitle, flow]);
 
-  return (
+  return !showNode ? (
+    left &&
+    (type === "str" ||
+      type === "bool" ||
+      type === "float" ||
+      type === "code" ||
+      type === "prompt" ||
+      type === "file" ||
+      type === "int") &&
+    !optionalHandle ? (
+      <></>
+    ) : (
+      <ShadTooltip
+        styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+        delayDuration={0}
+        content={refHtml.current}
+        side={left ? "left" : "right"}
+      >
+        <Handle
+          type={left ? "target" : "source"}
+          position={left ? Position.Left : Position.Right}
+          id={id}
+          isValidConnection={(connection) =>
+            isValidConnection(connection, reactFlowInstance!)
+          }
+          className={classNames(
+            left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
+            "h-3 w-3 rounded-full border-2 bg-background"
+          )}
+          style={{
+            borderColor: color,
+            top: position,
+          }}
+        ></Handle>
+      </ShadTooltip>
+    )
+  ) : (
     <div
       ref={ref}
       className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"

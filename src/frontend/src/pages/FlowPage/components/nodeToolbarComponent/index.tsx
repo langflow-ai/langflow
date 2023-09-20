@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { useReactFlow } from "reactflow";
+import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TabsContext } from "../../../../contexts/tabsContext";
@@ -11,6 +11,9 @@ export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  setShowNode,
+  numberOfHandles,
+  showNode,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -27,6 +30,16 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "int")
     ).length
   );
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  function canMinimize() {
+    let countHandles: number = 0;
+    numberOfHandles.forEach((bool) => {
+      if (bool) countHandles += 1;
+    });
+    if (countHandles > 1) return false;
+    return true;
+  }
 
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
@@ -106,7 +119,8 @@ export default function NodeToolbarComponent({
               >
                 <div
                   className={classNames(
-                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                      (!canMinimize() && " rounded-r-md ") +
                       (nodeLength == 0
                         ? " text-muted-foreground"
                         : " text-foreground")
@@ -117,6 +131,23 @@ export default function NodeToolbarComponent({
               </EditNodeModal>
             </div>
           </ShadTooltip>
+
+          {canMinimize() && (
+            <ShadTooltip content={showNode ? "Minimize" : "Expand"} side="top">
+              <button
+                className="relative inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                onClick={(event) => {
+                  setShowNode((prev) => !prev);
+                  updateNodeInternals(data.id);
+                }}
+              >
+                <IconComponent
+                  name={showNode ? "Minimize2" : "Maximize2"}
+                  className="h-4 w-4"
+                />
+              </button>
+            </ShadTooltip>
+          )}
         </span>
       </div>
     </>

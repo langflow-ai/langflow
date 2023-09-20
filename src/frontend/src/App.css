@@ -6,6 +6,13 @@
   text-align: center;
 }
 
+.react-flow__node {
+	width: auto;
+	height: auto;
+	border-radius: auto;
+	min-width: inherit;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
