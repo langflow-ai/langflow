@@ -9,7 +9,6 @@ from langflow.api import router
 
 
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.database.utils import initialize_database
 from langflow.services.utils import initialize_services
 from langflow.services.plugins.langfuse import LangfuseInstance
 from langflow.services.utils import (
@@ -42,7 +41,6 @@ def create_app():
     app.include_router(router)
 
     app.on_event("startup")(initialize_services)
-    app.on_event("startup")(initialize_database)
     app.on_event("startup")(setup_llm_caching)
     app.on_event("startup")(LangfuseInstance.update)
 
