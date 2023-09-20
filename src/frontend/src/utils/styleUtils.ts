@@ -44,10 +44,12 @@ import {
   Link,
   Lock,
   LucideSend,
+  Maximize2,
   Menu,
   MessageCircle,
   MessageSquare,
   MessagesSquare,
+  Minimize2,
   Minus,
   MoonIcon,
   MoreHorizontal,
@@ -80,8 +82,6 @@ import {
   X,
   XCircle,
   Zap,
-  Minimize2,
-  Maximize2,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
