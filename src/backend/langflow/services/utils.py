@@ -111,8 +111,6 @@ def initialize_session_manager():
         dependencies=[ServiceType.CACHE_MANAGER],
     )
 
-    setup_superuser()
-
 
 def initialize_services():
     """
@@ -139,3 +137,5 @@ def initialize_services():
     service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
     service_manager.get(ServiceType.DATABASE_MANAGER)
+    # Setup the superuser
+    setup_superuser()
