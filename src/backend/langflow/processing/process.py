@@ -146,9 +146,8 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     elif isinstance(langchain_object, Document):
         result = langchain_object.dict()
     else:
-        raise ValueError(
-            f"Unknown langchain_object type: {type(langchain_object).__name__}"
-        )
+        logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+        result = langchain_object
 
     return result
 

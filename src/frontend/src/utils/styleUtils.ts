@@ -1,6 +1,7 @@
 import {
   ArrowUpToLine,
   Bell,
+  BookMarked,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -307,5 +308,6 @@ export const nodeIconsLucide: iconsType = {
   UserCog2,
   Key,
   Unplug,
+  BookMarked,
   ChevronUp,
 };

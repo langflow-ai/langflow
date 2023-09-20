@@ -56,7 +56,7 @@ def display_results(results):
 
 def update_settings(
     config: str,
-    cache: str,
+    cache: Optional[str] = None,
     dev: bool = False,
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
@@ -154,10 +154,10 @@ def run(
     log_file: Path = typer.Option(
         "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
     ),
-    cache: str = typer.Option(
+    cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
-        default="SQLiteCache",
+        default=None,
     ),
     jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
