@@ -19,7 +19,9 @@ export default function InputListComponent({
   }, [disabled]);
 
   // @TODO Recursive Character Text Splitter - the value might be in string format, whereas the InputListComponent specifically requires an array format. To ensure smooth operation and prevent potential errors, it's crucial that we handle the conversion from a string to an array with the string as its element.
-  typeof value === "string" ? (value = [value]) : (value = value);
+  if (typeof value === "string") {
+    value = [value];
+  }
 
   return (
     <div

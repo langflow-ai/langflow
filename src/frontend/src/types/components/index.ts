@@ -54,7 +54,32 @@ export type InputListComponentType = {
   editNode?: boolean;
 };
 
+export type KeyPairListComponentType = {
+  value: any;
+  onChange: (value: Object[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+  duplicateKey?: boolean;
+};
+
+export type DictComponentType = {
+  value: any;
+  onChange: (value) => void;
+  disabled: boolean;
+  editNode?: boolean;
+};
+
 export type TextAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+};
+
+export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
