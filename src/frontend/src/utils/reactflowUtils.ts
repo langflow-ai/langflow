@@ -163,7 +163,7 @@ export function updateIds(
 
   newFlow.nodes.forEach((node: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId(node.data.type);
+    let newId = getNodeId(node.data.node?.flow ? "GroupNode" : node.data.type);
     idsMap[node.id] = newId;
     node.id = newId;
     node.data.id = newId;
@@ -180,6 +180,9 @@ export function updateIds(
       ...sourceHandleObject,
       id: edge.source,
     });
+    if (edge.data?.sourceHandle?.id) {
+      edge.data.sourceHandle.id = edge.source;
+    }
     const targetHandleObject: targetHandleType = scapeJSONParse(
       edge.targetHandle!
     );
@@ -187,6 +190,9 @@ export function updateIds(
       ...targetHandleObject,
       id: edge.target,
     });
+    if (edge.data?.targetHandle?.id) {
+      edge.data.targetHandle.id = edge.target;
+    }
     edge.id =
       "reactflow__edge-" +
       edge.source +
