@@ -368,7 +368,7 @@ export default function FormModal({
         tabsState[flow.id].formKeysData.template
       );
       sendAll({
-        ...processFlow(reactFlowInstance?.toObject()!),
+        ...reactFlowInstance?.toObject()!,
         inputs: inputs!,
         chatHistory,
         name: flow.name,

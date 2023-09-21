@@ -10,7 +10,7 @@ import { FlowType } from "../../../types/flow";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { parsedDataType } from "../../../types/components";
 import { TabsState } from "../../../types/tabs";
-import { validateNodes } from "../../../utils/reactflowUtils";
+import { processFlow, validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
 
@@ -128,7 +128,7 @@ export default function BuildTrigger({
     // Step 3: Wait for the stream to finish
     while (!finished) {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      finished = validationResults.length === flow.data!.nodes.length;
+      finished = validationResults.length === processFlow(flow.data!).nodes.length;
     }
     // Step 4: Return true if all nodes are valid, false otherwise
     return validationResults.every((result) => result);
