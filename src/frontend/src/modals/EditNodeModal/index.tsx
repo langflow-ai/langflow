@@ -1,12 +1,5 @@
 import { cloneDeep } from "lodash";
-import {
-  ReactNode,
-  forwardRef,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
@@ -49,19 +42,22 @@ const EditNodeModal = forwardRef(
       setData,
       nodeLength,
       children,
+      open,
+      onClose,
     }: {
       data: NodeDataType;
       setData: (data: NodeDataType) => void;
       nodeLength: number;
       children: ReactNode;
+      open?: boolean;
+      onClose?: (close: boolean) => void;
     },
     ref
   ) => {
-    const [modalOpen, setModalOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(open ?? false);
+    const [myData, setMyData] = useState(data);
     const { setTabsState, tabId } = useContext(TabsContext);
     const { reactFlowInstance } = useContext(typesContext);
-    const myData = useRef(data);
-
     let disabled =
       reactFlowInstance
         ?.getEdges()
@@ -70,17 +66,18 @@ const EditNodeModal = forwardRef(
     function changeAdvanced(n) {
       let newData = cloneDeep(data);
       newData.node!.template[n].advanced = !newData.node!.template[n].advanced;
-      myData.current = newData;
+      setMyData(newData);
     }
 
     const handleOnNewValue = (newValue: any, name) => {
       let newData = cloneDeep(data);
       newData.node!.template[name].value = newValue;
-      myData.current = newData;
+      setMyData(newData);
     };
 
     useEffect(() => {
-      myData.current = data;
+      setMyData(data); // reset data to what it is on node when opening modal
+      onClose!(modalOpen);
     }, [modalOpen]);
 
     const [obj, setObj] = useState({
@@ -109,11 +106,11 @@ const EditNodeModal = forwardRef(
         setOpen={setModalOpen}
         onChangeOpenModal={(open) => {
           let newData = cloneDeep(data);
-          myData.current = newData;
+          setMyData(newData);
         }}
       >
         <BaseModal.Trigger>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={myData.current.node?.description!}>
+        <BaseModal.Header description={myData.node?.description!}>
           <span className="pr-2">{myData.type}</span>
           <Badge variant="secondary">ID: {myData.id}</Badge>
         </BaseModal.Header>
@@ -148,65 +145,58 @@ const EditNodeModal = forwardRef(
                       </TableRow>
                     </TableHeader>
                     <TableBody className="p-0">
-                      {Object.keys(myData.current.node!.template)
+                      {Object.keys(myData.node!.template)
                         .filter(
                           (templateParam) =>
                             templateParam.charAt(0) !== "_" &&
-                            myData.current.node?.template[templateParam].show &&
-                            (myData.current.node.template[templateParam]
-                              .type === "str" ||
-                              myData.current.node.template[templateParam]
-                                .type === "bool" ||
-                              myData.current.node.template[templateParam]
-                                .type === "float" ||
-                              myData.current.node.template[templateParam]
-                                .type === "code" ||
-                              myData.current.node.template[templateParam]
-                                .type === "prompt" ||
-                              myData.current.node.template[templateParam]
-                                .type === "file" ||
-                              myData.current.node.template[templateParam]
-                                .type === "int")
+                            myData.node?.template[templateParam].show &&
+                            (myData.node.template[templateParam].type ===
+                              "str" ||
+                              myData.node.template[templateParam].type ===
+                                "bool" ||
+                              myData.node.template[templateParam].type ===
+                                "float" ||
+                              myData.node.template[templateParam].type ===
+                                "code" ||
+                              myData.node.template[templateParam].type ===
+                                "prompt" ||
+                              myData.node.template[templateParam].type ===
+                                "file" ||
+                              myData.node.template[templateParam].type ===
+                                "int")
                         )
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
                             <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
-                              {myData.current.node?.template[templateParam].name
-                                ? myData.current.node.template[templateParam]
-                                    .name
-                                : myData.current.node?.template[templateParam]
+                              {myData.node?.template[templateParam].name
+                                ? myData.node.template[templateParam].name
+                                : myData.node?.template[templateParam]
                                     .display_name}
                             </TableCell>
                             <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
-                              {myData.current.node?.template[templateParam]
-                                .type === "str" &&
-                              !myData.current.node.template[templateParam]
-                                .options ? (
+                              {myData.node?.template[templateParam].type ===
+                                "str" &&
+                              !myData.node.template[templateParam].options ? (
                                 <div className="mx-auto">
-                                  {myData.current.node.template[templateParam]
-                                    .list ? (
+                                  {myData.node.template[templateParam].list ? (
                                     <InputListComponent
                                       editNode={true}
                                       disabled={disabled}
                                       value={
-                                        !myData.current.node.template[
-                                          templateParam
-                                        ].value ||
-                                        myData.current.node.template[
-                                          templateParam
-                                        ].value === ""
+                                        !myData.node.template[templateParam]
+                                          .value ||
+                                        myData.node.template[templateParam]
+                                          .value === ""
                                           ? [""]
-                                          : myData.current.node.template[
-                                              templateParam
-                                            ].value
+                                          : myData.node.template[templateParam]
+                                              .value
                                       }
                                       onChange={(value: string[]) => {
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
-                                  ) : myData.current.node?.template[
-                                      templateParam
-                                    ].type === "NestedDict" ? (
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "NestedDict" ? (
                                     <div className="mt-2 w-full">
                                       <DictComponent
                                         disabled={disabled}
@@ -217,23 +207,20 @@ const EditNodeModal = forwardRef(
                                         }}
                                       />
                                     </div>
-                                  ) : myData.current.node?.template[
-                                      templateParam
-                                    ].type === "dict" ? (
+                                  ) : myData.node?.template[templateParam]
+                                      .type === "dict" ? (
                                     <div className="mt-2 w-full">
                                       <KeypairListComponent
                                         disabled={disabled}
                                         editNode={false}
                                         value={
-                                          myData.current.node.template[
-                                            templateParam
-                                          ].value?.length === 0 ||
-                                          !myData.current.node.template[
-                                            templateParam
-                                          ].value
+                                          myData.node.template[templateParam]
+                                            .value?.length === 0 ||
+                                          !myData.node.template[templateParam]
+                                            .value
                                             ? dictArr
                                             : convertObjToArray(
-                                                myData.current.node.template[
+                                                myData.node.template[
                                                   templateParam
                                                 ].value
                                               )
@@ -247,23 +234,21 @@ const EditNodeModal = forwardRef(
                                             setDictArr(newValue);
                                           } else {
                                             setDictArr(newValue);
-                                            myData.current.node!.template[
+                                            myData.node!.template[
                                               templateParam
                                             ].value = newValue;
                                           }
                                         }}
                                       />
                                     </div>
-                                  ) : myData.current.node.template[
-                                      templateParam
-                                    ].multiline ? (
+                                  ) : myData.node.template[templateParam]
+                                      .multiline ? (
                                     <TextAreaComponent
                                       disabled={disabled}
                                       editNode={true}
                                       value={
-                                        myData.current.node.template[
-                                          templateParam
-                                        ].value ?? ""
+                                        myData.node.template[templateParam]
+                                          .value ?? ""
                                       }
                                       onChange={(value: string | string[]) => {
                                         handleOnNewValue(value, templateParam);
@@ -274,14 +259,12 @@ const EditNodeModal = forwardRef(
                                       editNode={true}
                                       disabled={disabled}
                                       password={
-                                        myData.current.node.template[
-                                          templateParam
-                                        ].password ?? false
+                                        myData.node.template[templateParam]
+                                          .password ?? false
                                       }
                                       value={
-                                        myData.current.node.template[
-                                          templateParam
-                                        ].value ?? ""
+                                        myData.node.template[templateParam]
+                                          .value ?? ""
                                       }
                                       onChange={(value) => {
                                         handleOnNewValue(value, templateParam);
@@ -289,16 +272,14 @@ const EditNodeModal = forwardRef(
                                     />
                                   )}
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "bool" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "bool" ? (
                                 <div className="ml-auto">
                                   {" "}
                                   <ToggleShadComponent
                                     disabled={disabled}
                                     enabled={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value
+                                      myData.node.template[templateParam].value
                                     }
                                     setEnabled={(isEnabled) => {
                                       handleOnNewValue(
@@ -309,84 +290,76 @@ const EditNodeModal = forwardRef(
                                     size="small"
                                   />
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "float" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "float" ? (
                                 <div className="mx-auto">
                                   <FloatComponent
                                     disabled={disabled}
                                     editNode={true}
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? ""
+                                      myData.node.template[templateParam]
+                                        .value ?? ""
                                     }
                                     onChange={(value) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
                                   />
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "str" &&
-                                myData.current.node.template[templateParam]
-                                  .options ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                  "str" &&
+                                myData.node.template[templateParam].options ? (
                                 <div className="mx-auto">
                                   <Dropdown
                                     numberOfOptions={nodeLength}
                                     editNode={true}
                                     options={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].options
+                                      myData.node.template[templateParam]
+                                        .options
                                     }
                                     onSelect={(value) =>
                                       handleOnNewValue(value, templateParam)
                                     }
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? "Choose an option"
+                                      myData.node.template[templateParam]
+                                        .value ?? "Choose an option"
                                     }
                                   ></Dropdown>
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "int" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "int" ? (
                                 <div className="mx-auto">
                                   <IntComponent
                                     disabled={disabled}
                                     editNode={true}
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? ""
+                                      myData.node.template[templateParam]
+                                        .value ?? ""
                                     }
                                     onChange={(value) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
                                   />
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "file" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "file" ? (
                                 <div className="mx-auto">
                                   <InputFileComponent
                                     editNode={true}
                                     disabled={disabled}
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? ""
+                                      myData.node.template[templateParam]
+                                        .value ?? ""
                                     }
                                     onChange={(value: string | string[]) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
                                     fileTypes={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].fileTypes
+                                      myData.node.template[templateParam]
+                                        .fileTypes
                                     }
                                     suffixes={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].suffixes
+                                      myData.node.template[templateParam]
+                                        .suffixes
                                     }
                                     onFileChange={(filePath: string) => {
                                       data.node!.template[
@@ -395,29 +368,28 @@ const EditNodeModal = forwardRef(
                                     }}
                                   ></InputFileComponent>
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "prompt" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "prompt" ? (
                                 <div className="mx-auto">
                                   <PromptAreaComponent
                                     field_name={templateParam}
                                     editNode={true}
                                     disabled={disabled}
-                                    nodeClass={myData.current.node}
+                                    nodeClass={myData.node}
                                     setNodeClass={(nodeClass) => {
-                                      myData.current.node = nodeClass;
+                                      myData.node = nodeClass;
                                     }}
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? ""
+                                      myData.node.template[templateParam]
+                                        .value ?? ""
                                     }
                                     onChange={(value: string | string[]) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
                                   />
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "code" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "code" ? (
                                 <div className="mx-auto">
                                   <CodeAreaComponent
                                     dynamic={
@@ -431,17 +403,16 @@ const EditNodeModal = forwardRef(
                                     disabled={disabled}
                                     editNode={true}
                                     value={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].value ?? ""
+                                      myData.node.template[templateParam]
+                                        .value ?? ""
                                     }
                                     onChange={(value: string | string[]) => {
                                       handleOnNewValue(value, templateParam);
                                     }}
                                   />
                                 </div>
-                              ) : myData.current.node?.template[templateParam]
-                                  .type === "Any" ? (
+                              ) : myData.node?.template[templateParam].type ===
+                                "Any" ? (
                                 "-"
                               ) : (
                                 <div className="hidden"></div>
@@ -451,9 +422,8 @@ const EditNodeModal = forwardRef(
                               <div className="items-center text-center">
                                 <ToggleShadComponent
                                   enabled={
-                                    !myData.current.node?.template[
-                                      templateParam
-                                    ].advanced
+                                    !myData.node?.template[templateParam]
+                                      .advanced
                                   }
                                   setEnabled={(e) =>
                                     changeAdvanced(templateParam)
