@@ -921,16 +921,18 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } }
 ) {
-  let Nodestatus: Array<string> = [];
+  let status = { valid: true, params: "Built sucessfully ✨" };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
+  ids.forEach((id)=>console.log(ssData[id]))
   ids.forEach((id) => {
     if (!ssData[id]) {
-      return ssData[id];
+      status = ssData[id]
+      return
     }
     if (!ssData[id].valid) {
-      return { valid: false, params: ssData[id].params };
+      status =  { valid: false, params: ssData[id].params };
     }
   });
-  return { valid: true, params: "Built sucessfully ✨" };
+  return status;
 }
