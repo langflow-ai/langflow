@@ -168,8 +168,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         if (!flow.data) {
           return;
         }
-        processFlowEdges(flow);
-        processFlowNodes(flow);
+        processDataFromFlow(flow, false);
       } catch (e) {}
     });
   }
@@ -177,10 +176,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
     if (checkOldEdgesHandles(flow.data.edges)) {
-      console.log("old edges");
       const newEdges = updateEdgesHandleIds(flow.data);
       flow.data.edges = newEdges;
     }
+    //update edges colors
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555" };
@@ -208,6 +207,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (Object.keys(template["template"]).length > 0) {
         updateDisplay_name(node, template);
         updateNodeBaseClasses(node, template);
+        //update baseclasses in edges
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
@@ -523,14 +523,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const processDataFromFlow = (flow: FlowType) => {
+  const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     let data = flow?.data ? flow.data : null;
     if (data) {
       processFlowEdges(flow);
       processFlowNodes(flow);
+      //add animation to text type edges
       updateEdges(data.edges);
-      updateNodes(data.nodes, data.edges);
-      updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
+      // updateNodes(data.nodes, data.edges);
+      if (refreshIds) updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
     return data;
