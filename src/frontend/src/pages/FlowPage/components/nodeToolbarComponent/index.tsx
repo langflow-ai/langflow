@@ -54,12 +54,17 @@ export default function NodeToolbarComponent({
 
   const handleSelectChange = (event) => {
     setSelectedValue(event);
-    event.includes("advanced")
-      ? setShowModalAdvanced(true)
-      : setShowModalAdvanced(false);
-    console.log(showModalAdvanced);
+    if (event.includes("advanced")) {
+      return setShowModalAdvanced(true);
+    }
+    setShowModalAdvanced(false);
+    if (event.includes("show")) {
+      setShowNode((prev) => !prev);
+      updateNodeInternals(data.id);
+    }
   };
 
+  console.log(selectedValue);
   return (
     <>
       <div className="w-26 h-10">
@@ -127,23 +132,6 @@ export default function NodeToolbarComponent({
             </a>
           </ShadTooltip>
 
-          {canMinimize() && (
-            <ShadTooltip content={showNode ? "Minimize" : "Expand"} side="top">
-              <button
-                className="relative inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
-                onClick={(event) => {
-                  setShowNode((prev) => !prev);
-                  updateNodeInternals(data.id);
-                }}
-              >
-                <IconComponent
-                  name={showNode ? "Minimize2" : "Maximize2"}
-                  className="h-4 w-4"
-                />
-              </button>
-            </ShadTooltip>
-          )}
-
           <Select onValueChange={handleSelectChange} value={selectedValue}>
             <ShadTooltip content="More" side="top">
               <SelectTrigger>
@@ -174,6 +162,17 @@ export default function NodeToolbarComponent({
                   Edit{" "}
                 </div>{" "}
               </SelectItem>
+              {canMinimize() && (
+                <SelectItem value={getRandomKeyByssmm() + "show"}>
+                  <div className="flex">
+                    <IconComponent
+                      name={showNode ? "Minimize2" : "Maximize2"}
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />
+                    {showNode ? "Minimize" : "Expand"}
+                  </div>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 
