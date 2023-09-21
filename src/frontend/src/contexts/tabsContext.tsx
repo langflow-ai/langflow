@@ -584,7 +584,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     flowData: ReactFlowJsonObject | null,
     flow: FlowType
   ) => ({
-    description: flow.description ?? getRandomDescription(),
+    description: flow?.description ?? getRandomDescription(),
     name: flow?.name ?? getRandomName(),
     data: flowData,
     id: "",
