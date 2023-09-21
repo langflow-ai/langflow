@@ -25,6 +25,10 @@ class Graph:
     ) -> None:
         self._nodes = nodes
         self._edges = edges
+        self._graph_data = {"nodes": nodes, "edges": edges}
+        self._graph_data = process_flow(self._graph_data)
+        self._nodes = self._graph_data["nodes"]
+        self._edges = self._graph_data["edges"]
         self._build_graph()
 
     @classmethod
