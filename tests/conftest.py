@@ -29,6 +29,9 @@ def pytest_configure():
     pytest.OPENAPI_EXAMPLE_PATH = (
         Path(__file__).parent.absolute() / "data" / "Openapi.json"
     )
+    pytest.GROUPED_CHAT_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
+    )
 
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
@@ -98,6 +101,12 @@ def openapi_graph():
 @pytest.fixture
 def json_flow():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def grouped_chat_json_flow():
+    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
         return f.read()
 
 
