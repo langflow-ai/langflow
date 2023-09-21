@@ -87,7 +87,7 @@ def get_all(
     "/process/{flow_id}",
     response_model=ProcessResponse,
 )
-async def process_flow(
+async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[dict] = None,
