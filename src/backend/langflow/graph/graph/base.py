@@ -2,6 +2,7 @@ from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     FileToolVertex,
@@ -39,6 +40,7 @@ class Graph:
         """
         if "data" in payload:
             payload = payload["data"]
+            payload = process_flow(payload)
         try:
             nodes = payload["nodes"]
             edges = payload["edges"]
