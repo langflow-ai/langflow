@@ -555,6 +555,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
+      if (node.data.node?.flow) return;
       if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
