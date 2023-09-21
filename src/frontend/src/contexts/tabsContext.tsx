@@ -198,6 +198,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function processFlowNodes(flow: FlowType) {
     if (!flow.data || !flow.data.nodes) return;
     flow.data.nodes.forEach((node: NodeType) => {
+      if (node.data.node?.flow) return;
       if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
