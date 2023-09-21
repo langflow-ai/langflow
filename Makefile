@@ -28,7 +28,7 @@ format:
 
 lint:
 # skip .venv folder
-	poetry run mypy --exclude .venv .
+	poetry run mypy --exclude .venv ./src/backend/langflow
 	poetry run black . --check
 	poetry run ruff . --fix
 
