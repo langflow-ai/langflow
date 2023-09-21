@@ -490,15 +490,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     flow?: FlowType
   ): Promise<String | undefined> => {
     if (newProject) {
-      let flowData = extractDataFromFlow(flow!);
-      if (flowData.description == "") {
-        flowData.description = getRandomDescription();
-      }
+      let flowData = flow
+        ? processDataFromFlow(flow)
+        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow!);
-      processFlowEdges(newFlow);
-      processFlowNodes(newFlow);
 
       const flowName = addVersionToDuplicates(newFlow, flows);
 
@@ -526,9 +523,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const extractDataFromFlow = (flow: FlowType) => {
+  const processDataFromFlow = (flow: FlowType) => {
     let data = flow?.data ? flow.data : null;
-    const description = flow?.description ? flow.description : "";
     if (data) {
       processFlowEdges(flow);
       processFlowNodes(flow);
@@ -537,7 +533,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
-    return { data, description };
+    return data;
   };
 
   const updateEdges = (edges: Edge[]) => {
@@ -584,12 +580,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   };
 
   const createNewFlow = (
-    flowData: { data: ReactFlowJsonObject | null; description: string },
+    flowData: ReactFlowJsonObject | null,
     flow: FlowType
   ) => ({
-    description: flowData.description,
+    description: flow.description ?? getRandomDescription(),
     name: flow?.name ?? getRandomName(),
-    data: flowData.data,
+    data: flowData,
     id: "",
   });
 
