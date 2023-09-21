@@ -10,7 +10,7 @@ import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
 
-export default function Chat({ flow }: ChatType) {
+export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
@@ -44,11 +44,11 @@ export default function Chat({ flow }: ChatType) {
   }, [flow]);
 
   const prevNodesRef = useRef<any[] | undefined>();
-  const nodes = useNodes();
+  const nodes: NodeType[] = useNodes();
   useEffect(() => {
     const prevNodes = prevNodesRef.current;
     const currentNodes = nodes.map((node: NodeType) =>
-      _.cloneDeep(node.data.node.template)
+      _.cloneDeep(node.data.node?.template)
     );
     if (
       tabsState &&
@@ -62,8 +62,7 @@ export default function Chat({ flow }: ChatType) {
       tabsState &&
       tabsState[flow.id] &&
       tabsState[flow.id].formKeysData &&
-      tabsState[flow.id].formKeysData.input_keys &&
-      Object.keys(tabsState[flow.id].formKeysData.input_keys).length > 0
+      tabsState[flow.id].formKeysData.input_keys !== null
     ) {
       setCanOpen(true);
     } else {

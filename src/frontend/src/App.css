@@ -3,45 +3,85 @@
 @tailwind utilities;
 
 .App {
-	text-align: center;
+  text-align: center;
+}
+
+.react-flow__node {
+	width: auto;
+	height: auto;
+	border-radius: auto;
+	min-width: inherit;
 }
 
 .App-logo {
-	height: 40vmin;
-	pointer-events: none;
+  height: 40vmin;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-	.App-logo {
-		animation: App-logo-spin infinite 20s linear;
-	}
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
 }
 
 .App-header {
-	background-color: #282c34;
-	min-height: 100vh;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	font-size: calc(10px + 2vmin);
-	color: white;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
 }
 
 .App-link {
-	color: #61dafb;
+  color: #61dafb;
 }
 
 @keyframes App-logo-spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @font-face {
-	font-family: text-security-disc;
-	src: url("assets/text-security-disc.woff") format("woff");
+  font-family: text-security-disc;
+  src: url("assets/text-security-disc.woff") format("woff");
+}
+
+.json-view {
+  height: 370px !important;
+  background-color: #2c2c2c !important;
+  border-radius: 10px !important;
+  padding: 10px !important;
+}
+
+.jv-indent {
+  overflow-y: auto !important;
+  max-height: 310px !important;
+  border-radius: 10px;
+}
+
+.jv-indent::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 10px;
+}
+
+.jv-indent::-webkit-scrollbar-track {
+  background-color: #f1f1f1 !important;
+  border-radius: 10px;
+}
+
+.jv-indent::-webkit-scrollbar-thumb {
+  background-color: #ccc !important;
+  border-radius: 999px !important;
+}
+
+.jv-indent::-webkit-scrollbar-thumb:hover {
+  background-color: #bbb !important;
 }

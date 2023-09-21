@@ -8,12 +8,18 @@ import {
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants/constants";
 import { alertContext } from "../../../contexts/alertContext";
+import { chatTriggerPropType } from "../../../types/components";
 import IconComponent from "../../genericIconComponent";
 
-export default function ChatTrigger({ open, setOpen, isBuilt, canOpen }) {
+export default function ChatTrigger({
+  open,
+  setOpen,
+  isBuilt,
+  canOpen,
+}: chatTriggerPropType): JSX.Element {
   const { setErrorData } = useContext(alertContext);
 
-  function handleClick() {
+  function handleClick(): void {
     if (isBuilt) {
       if (canOpen) {
         setOpen(true);

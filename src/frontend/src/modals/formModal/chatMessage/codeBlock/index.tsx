@@ -3,16 +3,12 @@ import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { programmingLanguages } from "../../../../constants/constants";
+import { Props } from "../../../../types/components";
 
-interface Props {
-  language: string;
-  value: string;
-}
-
-export function CodeBlock({ language, value }) {
+export function CodeBlock({ language, value }: Props): JSX.Element {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = (): void => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
     }
@@ -25,7 +21,7 @@ export function CodeBlock({ language, value }) {
       }, 2000);
     });
   };
-  const downloadAsFile = () => {
+  const downloadAsFile = (): void => {
     const fileExtension = programmingLanguages[language] || ".file";
     const suggestedFileName = `${"generated-code"}${fileExtension}`;
     const fileName = window.prompt("enter file name", suggestedFileName);

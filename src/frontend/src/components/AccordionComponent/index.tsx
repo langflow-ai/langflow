@@ -12,12 +12,12 @@ export default function AccordionComponent({
   children,
   open = [],
   keyValue,
-}: AccordionComponentType) {
+}: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
     open.length === 0 ? "" : getOpenAccordion()
   );
 
-  function getOpenAccordion() {
+  function getOpenAccordion(): string {
     let value = "";
     open.forEach((el) => {
       if (el == trigger) {
@@ -28,8 +28,8 @@ export default function AccordionComponent({
     return value;
   }
 
-  function handleClick() {
-    value === "" ? setValue(keyValue) : setValue("");
+  function handleClick(): void {
+    value === "" ? setValue(keyValue!) : setValue("");
   }
 
   return (
@@ -40,7 +40,7 @@ export default function AccordionComponent({
         value={value}
         onValueChange={setValue}
       >
-        <AccordionItem value={keyValue} className="border-b">
+        <AccordionItem value={keyValue!} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();

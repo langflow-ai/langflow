@@ -3,9 +3,14 @@ services:
   - type: web
     name: langflow
     runtime: docker
-    plan: free
     dockerfilePath: ./Dockerfile
     repo: https://github.com/logspace-ai/langflow
     branch: main
     healthCheckPath: /health
     autoDeploy: false
+    envVars:
+      - key: LANGFLOW_DATABASE_URL
+        value: sqlite:////home/user/.cache/langflow/langflow.db
+    disk:
+      name: langflow-data
+      mountPath: /home/user/.cache/langflow

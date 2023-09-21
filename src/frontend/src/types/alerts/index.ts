@@ -1,12 +1,12 @@
 export type ErrorAlertType = {
   title: string;
-  list: Array<string>;
+  list: Array<string> | undefined;
   id: string;
   removeAlert: (id: string) => void;
 };
 export type NoticeAlertType = {
   title: string;
-  link: string;
+  link: string | undefined;
   id: string;
   removeAlert: (id: string) => void;
 };

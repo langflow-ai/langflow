@@ -3,6 +3,10 @@ from typing import Any, Union
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
+class UnbuiltObject:
+    pass
+
+
 def validate_prompt(prompt: str):
     """Validate prompt."""
     if extract_input_variables_from_prompt(prompt):

@@ -1,30 +1,35 @@
-import logging
+from typing import Optional
+from loguru import logger
 from pathlib import Path
-
 from rich.logging import RichHandler
 
-logger = logging.getLogger("langflow")
 
+def configure(log_level: str = "DEBUG", log_file: Optional[Path] = None):
+    log_format = "<green>{time:HH:mm:ss}</green> - <level>{level: <8}</level> - <level>{message}</level>"
+    logger.remove()  # Remove default handlers
 
-def configure(log_level: str = "DEBUG", log_file: Path = None):  # type: ignore
-    log_format = "%(asctime)s - %(levelname)s - %(message)s"
-    log_level_value = getattr(logging, log_level.upper(), logging.INFO)
-
-    logging.basicConfig(
-        level=log_level_value,
-        format=log_format,
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)],
+    # Configure loguru to use RichHandler
+    logger.configure(
+        handlers=[
+            {
+                "sink": RichHandler(rich_tracebacks=True, markup=True),
+                "format": log_format,
+                "level": log_level.upper(),
+            }
+        ]
     )
 
     if log_file:
         log_file = Path(log_file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
 
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(logging.Formatter(log_format))
-        logger.addHandler(file_handler)
+        logger.add(
+            sink=str(log_file),
+            level=log_level.upper(),
+            format=log_format,
+            rotation="10 MB",  # Log rotation based on file size
+        )
 
-    logger.info(f"Logger set up with log level: {log_level_value}({log_level})")
+    logger.info(f"Logger set up with log level: {log_level}")
     if log_file:
         logger.info(f"Log file: {log_file}")

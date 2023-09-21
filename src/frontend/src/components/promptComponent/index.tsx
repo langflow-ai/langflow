@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { TypeModal } from "../../constants/enums";
 import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
-import { TextAreaComponentType } from "../../types/components";
+import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 
 export default function PromptAreaComponent({
@@ -14,7 +14,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+}: PromptAreaComponentType) {
   useEffect(() => {
     if (disabled) {
       onChange("");
@@ -23,9 +23,9 @@ export default function PromptAreaComponent({
 
   useEffect(() => {
     if (value !== "" && !editNode) {
-      postValidatePrompt(field_name, value, nodeClass).then((apiReturn) => {
+      postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
         if (apiReturn.data) {
-          setNodeClass(apiReturn.data.frontend_node);
+          setNodeClass!(apiReturn.data.frontend_node);
           // need to update reactFlowInstance to re-render the nodes.
         }
       });
@@ -39,8 +39,8 @@ export default function PromptAreaComponent({
         value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
-        setValue={(t: string) => {
-          onChange(t);
+        setValue={(value: string) => {
+          onChange(value);
         }}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}

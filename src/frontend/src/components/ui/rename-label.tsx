@@ -15,22 +15,22 @@ export default function RenameLabel(props) {
   useEffect(() => {
     if (isRename) {
       setMyValue(props.value);
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
           setIsRename(false);
           props.setValue("");
         }
       });
       if (inputRef.current) {
         setTimeout(() => {
-          inputRef.current.focus();
+          inputRef.current?.focus();
         }, 100);
       }
     }
     resizeInput();
   }, [isRename]);
 
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const resizeInput = () => {
     const input = inputRef.current;
@@ -67,8 +67,8 @@ export default function RenameLabel(props) {
             }
           }}
           value={myValue}
-          onChange={(e) => {
-            setMyValue(e.target.value);
+          onChange={(event) => {
+            setMyValue(event.target.value);
           }}
         />
       ) : (

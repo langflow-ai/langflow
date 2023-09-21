@@ -7,7 +7,7 @@ import { SingleAlertComponentType } from "../../../../types/alerts";
 export default function SingleAlert({
   dropItem,
   removeAlert,
-}: SingleAlertComponentType) {
+}: SingleAlertComponentType): JSX.Element {
   const [show, setShow] = useState(true);
   const type = dropItem.type;
 
