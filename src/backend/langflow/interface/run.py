@@ -1,6 +1,7 @@
-from langflow.cache.utils import memoize_dict
+from typing import Any, Dict, Tuple
+from langflow.services.cache.utils import memoize_dict
 from langflow.graph import Graph
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 @memoize_dict(maxsize=10)
@@ -15,7 +16,7 @@ def build_langchain_object_with_caching(data_graph):
 
 
 @memoize_dict(maxsize=10)
-def build_sorted_vertices_with_caching(data_graph):
+def build_sorted_vertices_with_caching(data_graph) -> Tuple[Any, Dict]:
     """
     Build langchain object from data_graph.
     """
@@ -57,8 +58,12 @@ def get_memory_key(langchain_object):
         "chat_history": "history",
         "history": "chat_history",
     }
-    memory_key = langchain_object.memory.memory_key
-    return mem_key_dict.get(memory_key)
+    # Check if memory_key attribute exists
+    if hasattr(langchain_object.memory, "memory_key"):
+        memory_key = langchain_object.memory.memory_key
+        return mem_key_dict.get(memory_key)
+    else:
+        return None  # or some other default value or action
 
 
 def update_memory_keys(langchain_object, possible_new_mem_key):

@@ -14,9 +14,7 @@ env:
 
 jobs:
   if_release:
-    if: |
-      ${{ github.event.pull_request.merged == true }}
-      && ${{ contains(github.event.pull_request.labels.*.name, 'pre-release') }}
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -40,6 +38,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
+          prerelease: true
           tag: v${{ steps.check-version.outputs.version }}
           commit: main
       - name: Publish to PyPI

@@ -1,5 +1,5 @@
-import json
 from typing import Optional
+from langflow.services.database.models.base import orjson_dumps
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -89,7 +89,7 @@ class LLMFrontendNode(FrontendNode):
         if field.name == "config":
             field.show = True
             field.advanced = True
-            field.value = json.dumps(CTRANSFORMERS_DEFAULT_CONFIG, indent=2)
+            field.value = orjson_dumps(CTRANSFORMERS_DEFAULT_CONFIG, indent_2=True)
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -131,7 +131,7 @@ class LLMFrontendNode(FrontendNode):
         if display_name := display_names_dict.get(field.name):
             field.display_name = display_name
         if field.name == "model_kwargs":
-            field.field_type = "code"
+            field.field_type = "dict"
             field.advanced = True
             field.show = True
         elif field.name in [

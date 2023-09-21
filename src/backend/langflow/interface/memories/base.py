@@ -2,10 +2,11 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
-from langflow.settings import settings
+from langflow.services.utils import get_settings_manager
+
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 from langflow.custom.customs import get_custom_nodes
 
@@ -48,10 +49,12 @@ class MemoryCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        settings_manager = get_settings_manager()
         return [
             memory.__name__
             for memory in self.type_to_loader_dict.values()
-            if memory.__name__ in settings.MEMORIES or settings.DEV
+            if memory.__name__ in settings_manager.settings.MEMORIES
+            or settings_manager.settings.DEV
         ]
 
 

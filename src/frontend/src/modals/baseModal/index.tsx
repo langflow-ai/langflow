@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 import React from "react";
 import {
@@ -9,23 +9,36 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+import { modalHeaderType } from "../../types/components";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
 type FooterProps = { children: ReactNode };
-type TriggerProps = { children: ReactNode };
+type TriggerProps = {
+  children: ReactNode;
+  asChild?: boolean;
+  disable?: boolean;
+};
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
 };
-const Trigger: React.FC<ContentProps> = ({ children }) => {
-  return <>{children}</>;
+const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
+  return (
+    <DialogTrigger
+      className={asChild ? "" : "w-full"}
+      hidden={children ? false : true}
+      asChild={asChild}
+    >
+      {children}
+    </DialogTrigger>
+  );
 };
 
-const Header: React.FC<{ children: ReactNode; description: string }> = ({
+const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
   children,
   description,
-}) => {
+}: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -46,15 +59,25 @@ interface BaseModalProps {
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
+
   disable?: boolean;
-  size?: "smaller" | "small" | "medium" | "large" | "large-h-full";
+  onChangeOpenModal?: (open: boolean) => void;
 }
 function BaseModal({
   open,
   setOpen,
-  disable = false,
   children,
   size = "large",
+  onChangeOpenModal,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header
@@ -73,6 +96,10 @@ function BaseModal({
   let height: string;
 
   switch (size) {
+    case "x-small":
+      minWidth = "min-w-[20vw]";
+      height = "h-[10vh]";
+      break;
     case "smaller":
       minWidth = "min-w-[40vw]";
       height = "h-[27vh]";
@@ -81,9 +108,15 @@ function BaseModal({
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
       break;
+    case "small-h-full":
+      minWidth = "min-w-[40vw]";
+      break;
     case "medium":
       minWidth = "min-w-[60vw]";
       height = "h-[60vh]";
+      break;
+    case "medium-h-full":
+      minWidth = "min-w-[60vw]";
       break;
     case "large":
       minWidth = "min-w-[80vw]";
@@ -98,18 +131,21 @@ function BaseModal({
       break;
   }
 
+  useEffect(() => {
+    if (onChangeOpenModal) {
+      onChangeOpenModal(open);
+    }
+  }, [open]);
+
   //UPDATE COLORS AND STYLE CLASSSES
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        className={"w-full " + (disable ? "button-disable" : "")}
-        hidden={triggerChild ? false : true}
-      >
-        {triggerChild}
-      </DialogTrigger>
+      {triggerChild}
       <DialogContent className={minWidth}>
-        {headerChild}
-        <div className={`mt-2 flex flex-col ${height} w-full `}>
+        <div className="truncate-doubleline word-break-break-word">
+          {headerChild}
+        </div>
+        <div className={`mt-2 flex flex-col ${height!} w-full `}>
           {ContentChild}
         </div>
         {ContentFooter && (

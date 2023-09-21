@@ -1,8 +1,9 @@
 import ast
+from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
-from langflow.interface.listing import ALL_TYPES_DICT
+from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import sync_to_async
 
 
@@ -22,7 +23,7 @@ class Vertex:
         self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
-        self._built_object = None
+        self._built_object = UnbuiltObject()
         self._built = False
         self.artifacts: Dict[str, Any] = {}
 
@@ -62,7 +63,7 @@ class Vertex:
         )
 
         if self.base_type is None:
-            for base_type, value in ALL_TYPES_DICT.items():
+            for base_type, value in lazy_load_dict.ALL_TYPES_DICT.items():
                 if self.vertex_type in value:
                     self.base_type = base_type
                     break
@@ -121,6 +122,19 @@ class Vertex:
                     except Exception as exc:
                         logger.debug(f"Error parsing code: {exc}")
                         params[key] = value.get("value")
+                elif value.get("type") in ["dict", "NestedDict"]:
+                    # When dict comes from the frontend it comes as a
+                    # list of dicts, so we need to convert it to a dict
+                    # before passing it to the build method
+                    _value = value.get("value")
+                    if isinstance(_value, list):
+                        params[key] = {
+                            k: v
+                            for item in value.get("value", [])
+                            for k, v in item.items()
+                        }
+                    elif isinstance(_value, dict):
+                        params[key] = _value
                 else:
                     params[key] = value.get("value")
 
@@ -132,13 +146,13 @@ class Vertex:
         # Add _type to params
         self.params = params
 
-    def _build(self):
+    def _build(self, user_id=None):
         """
         Initiate the build process.
         """
         logger.debug(f"Building {self.vertex_type}")
         self._build_each_node_in_params_dict()
-        self._get_and_instantiate_class()
+        self._get_and_instantiate_class(user_id)
         self._validate_built_object()
 
         self._built = True
@@ -168,23 +182,25 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    def _build_node_and_update_params(self, key, node):
+    def _build_node_and_update_params(self, key, node, user_id=None):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
-        result = node.build()
+        result = node.build(user_id)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
 
-    def _build_list_of_nodes_and_update_params(self, key, nodes):
+    def _build_list_of_nodes_and_update_params(
+        self, key, nodes: List["Vertex"], user_id=None
+    ):
         """
         Iterates over a list of nodes, builds each and updates the params dictionary.
         """
         self.params[key] = []
         for node in nodes:
-            built = node.build()
+            built = node.build(user_id)
             if isinstance(built, list):
                 if key not in self.params:
                     self.params[key] = []
@@ -214,7 +230,7 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    def _get_and_instantiate_class(self):
+    def _get_and_instantiate_class(self, user_id=None):
         """
         Gets the class from a dictionary and instantiates it with the params.
         """
@@ -225,6 +241,7 @@ class Vertex:
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
+                user_id=user_id,
             )
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
@@ -245,12 +262,18 @@ class Vertex:
         """
         Checks if the built object is None and raises a ValueError if so.
         """
-        if self._built_object is None:
-            raise ValueError(f"Node type {self.vertex_type} not found")
+        if isinstance(self._built_object, UnbuiltObject):
+            raise ValueError(f"{self.vertex_type}: {self._built_object_repr()}")
+        elif self._built_object is None:
+            message = f"{self.vertex_type} returned None."
+            if self.base_type == "custom_components":
+                message += " Make sure your build method returns a component."
 
-    def build(self, force: bool = False) -> Any:
+            raise ValueError(message)
+
+    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
-            self._build()
+            self._build(user_id, *args, **kwargs)
 
         return self._built_object
 

@@ -4,7 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -13,7 +13,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
+import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -23,30 +23,22 @@ export default function CodeAreaModal({
   setNodeClass,
   children,
   dynamic,
-}: {
-  setValue: (value: string) => void;
-  value: string;
-  nodeClass?: APIClassType;
-  children: ReactNode;
-  setNodeClass?: (Class: APIClassType) => void;
-  dynamic?: boolean;
-}) {
+}: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
-  const [height, setHeight] = useState(null);
+  const [height, setHeight] = useState<string | null>(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
-    detail: { error: string; traceback: string };
-  }>(null);
+    detail: { error: string | undefined; traceback: string | undefined };
+  } | null>(null);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
     // do not run handleClick
-    if (dynamic && Object.keys(nodeClass.template).length > 2) {
+    if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
-    processCode();
   }, []);
 
   function processNonDynamicField() {
@@ -90,7 +82,7 @@ export default function CodeAreaModal({
   }
 
   function processDynamicField() {
-    postCustomComponent(code, nodeClass)
+    postCustomComponent(code, nodeClass!)
       .then((apiReturn) => {
         const { data } = apiReturn;
         if (data) {
@@ -172,18 +164,18 @@ export default function CodeAreaModal({
           </div>
           <div
             className={
-              "w-full transition-all delay-500 " +
-              (error?.detail.error !== undefined ? "h-2/6" : "h-0")
+              "whitespace-break-spaces transition-all delay-500" +
+              (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
             }
           >
-            <div className="mt-1 h-full w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
+            <div className="mt-1 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
               <h1 className="text-lg text-destructive">
                 {error?.detail?.error}
               </h1>
               <div className="ml-2 w-full text-sm text-status-red word-break-break-word">
-                <pre className="w-full word-break-break-word">
+                <span className="w-full word-break-break-word">
                   {error?.detail?.traceback}
-                </pre>
+                </span>
               </div>
             </div>
           </div>

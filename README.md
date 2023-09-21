@@ -245,7 +245,7 @@ print(run_flow("Your message", flow_id=FLOW_ID, tweaks=TWEAKS))
 
 ## Deploy on Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/Emy2sU?referralCode=MnPSdg)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
 ## Deploy on Render
 
@@ -274,6 +274,8 @@ flow("Hey, have you heard of Langflow?")
 # 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
+
+---
 
 Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions and showcase your projects! 🦾
 

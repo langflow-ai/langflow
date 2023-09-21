@@ -1,9 +1,11 @@
 import ast
 import contextlib
-from typing import Any
+from typing import Any, List
+from langflow.api.utils import merge_nested_dicts_with_renaming
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
@@ -28,9 +30,8 @@ from langflow.template.frontend_node.custom_components import (
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import get_base_classes
-from langflow.api.utils import merge_nested_dicts
 
 import re
 import warnings
@@ -84,6 +85,8 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 
 
 def process_type(field_type: str):
+    if field_type.startswith("list") or field_type.startswith("List"):
+        return extract_inner_type(field_type)
     return "prompt" if field_type == "Prompt" else field_type
 
 
@@ -100,6 +103,7 @@ def add_new_custom_field(
     # if it is, update the value
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
+    field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
@@ -110,7 +114,9 @@ def add_new_custom_field(
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
-    field_config["is_list"] = is_list or field_config.get("is_list", False)
+    field_config["is_list"] = (
+        is_list or field_config.get("is_list", False) or field_contains_list
+    )
 
     if "name" in field_config:
         warnings.warn(
@@ -172,7 +178,7 @@ def extract_type_from_optional(field_type):
     Returns:
     str: The extracted type, or an empty string if no type was found.
     """
-    match = re.search(r"\[(.*?)\]", field_type)
+    match = re.search(r"\[(.*?)\]$", field_type)
     return match[1] if match else None
 
 
@@ -190,14 +196,16 @@ def build_frontend_node(custom_component: CustomComponent):
 
 def update_attributes(frontend_node, template_config):
     """Update the display name and description of a frontend node"""
-    if "display_name" in template_config:
-        frontend_node["display_name"] = template_config["display_name"]
-
-    if "description" in template_config:
-        frontend_node["description"] = template_config["description"]
-
-    if "beta" in template_config:
-        frontend_node["beta"] = template_config["beta"]
+    attributes = [
+        "display_name",
+        "description",
+        "beta",
+        "documentation",
+        "output_types",
+    ]
+    for attribute in attributes:
+        if attribute in template_config:
+            frontend_node[attribute] = template_config[attribute]
 
 
 def build_field_config(custom_component: CustomComponent):
@@ -257,55 +265,67 @@ def get_field_properties(extra_field):
     return field_name, field_type, field_value, field_required
 
 
-def add_base_classes(frontend_node, return_type):
+def add_base_classes(frontend_node, return_types: List[str]):
     """Add base classes to the frontend node"""
-    if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": (
-                    "Invalid return type should be one of: "
-                    f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
-                ),
-                "traceback": traceback.format_exc(),
-            },
-        )
+    for return_type in return_types:
+        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Invalid return type should be one of: "
+                        f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
 
-    return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
-    base_classes = get_base_classes(return_type_instance)
+        return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
+        base_classes = get_base_classes(return_type_instance)
 
-    for base_class in base_classes:
-        if base_class not in CLASSES_TO_REMOVE:
-            frontend_node.get("base_classes").append(base_class)
+        for base_class in base_classes:
+            if base_class not in CLASSES_TO_REMOVE:
+                frontend_node.get("base_classes").append(base_class)
 
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
-    logger.debug("Building custom component template")
-    frontend_node = build_frontend_node(custom_component)
+    try:
+        logger.debug("Building custom component template")
+        frontend_node = build_frontend_node(custom_component)
 
-    if frontend_node is None:
-        return None
-    logger.debug("Built base frontend node")
-    template_config = custom_component.build_template_config
+        if frontend_node is None:
+            return None
+        logger.debug("Built base frontend node")
+        template_config = custom_component.build_template_config
 
-    update_attributes(frontend_node, template_config)
-    logger.debug("Updated attributes")
-    field_config = build_field_config(custom_component)
-    logger.debug("Built field config")
-    add_extra_fields(
-        frontend_node, field_config, custom_component.get_function_entrypoint_args
-    )
-    logger.debug("Added extra fields")
-    frontend_node = add_code_field(
-        frontend_node, custom_component.code, field_config.get("code", {})
-    )
-    logger.debug("Added code field")
-    add_base_classes(
-        frontend_node, custom_component.get_function_entrypoint_return_type
-    )
-    logger.debug("Added base classes")
-    return frontend_node
+        update_attributes(frontend_node, template_config)
+        logger.debug("Updated attributes")
+        field_config = build_field_config(custom_component)
+        logger.debug("Built field config")
+        add_extra_fields(
+            frontend_node, field_config, custom_component.get_function_entrypoint_args
+        )
+        logger.debug("Added extra fields")
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
+        logger.debug("Added code field")
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        logger.debug("Added base classes")
+        return frontend_node
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
 
 
 def load_files_from_path(path: str):
@@ -334,7 +354,9 @@ def build_valid_menu(valid_components):
         valid_menu[menu_name] = {}
 
         for component in menu_item["components"]:
-            logger.debug(f"Building component: {component}")
+            logger.debug(
+                f"Building component: {component.get('name'), component.get('output_types')}"
+            )
             try:
                 component_name = component["name"]
                 component_code = component["code"]
@@ -423,4 +445,4 @@ def build_langchain_custom_component_list_from_path(path: str):
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)
 
-    return merge_nested_dicts(valid_menu, invalid_menu)
+    return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
