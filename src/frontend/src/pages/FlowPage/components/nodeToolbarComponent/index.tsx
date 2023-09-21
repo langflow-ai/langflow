@@ -10,8 +10,8 @@ import {
 } from "../../../../components/ui/select-custom";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
-import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
@@ -145,7 +145,7 @@ export default function NodeToolbarComponent({
           )}
 
           <Select onValueChange={handleSelectChange} value={selectedValue}>
-            <ShadTooltip content="More" side="top" >
+            <ShadTooltip content="More" side="top">
               <SelectTrigger>
                 <div>
                   <div
