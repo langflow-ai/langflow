@@ -368,7 +368,7 @@ export function getCurlCode(
     window.location.host
   }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json' \\
-  -d '{"inputs": ${inputs}, "tweaks": ${
+  -d '{"inputs": ${inputs},"api_key": "...", "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
@@ -426,6 +426,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   `
       : ""
   }host_url="http://localhost:7860"
+  api_key="..."
 ></langflow-chat>`;
 }
 
