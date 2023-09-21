@@ -20,7 +20,7 @@ export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
-  const [isDisabled, setDisableBtn] = useState<boolean>(true)
+  const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
   const { password, cnfPassword, username } = inputState;
   const { setErrorData, setSuccessData } = useContext(alertContext);
