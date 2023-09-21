@@ -316,7 +316,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * The resulting JSON object is passed to the addFlow function.
    */
   async function uploadFlow(
-    newProject?: boolean,
+    newProject: boolean,
     file?: File
   ): Promise<String | undefined> {
     let id;
@@ -486,7 +486,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   const addFlow = async (
-    newProject?: Boolean,
+    newProject: Boolean,
     flow?: FlowType
   ): Promise<String | undefined> => {
     if (newProject) {
