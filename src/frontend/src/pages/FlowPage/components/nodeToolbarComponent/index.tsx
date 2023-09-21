@@ -64,7 +64,6 @@ export default function NodeToolbarComponent({
     }
   };
 
-  console.log(selectedValue);
   return (
     <>
       <div className="w-26 h-10">
