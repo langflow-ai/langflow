@@ -72,7 +72,8 @@ class InMemoryCache(BaseCacheService, Service):
             ):
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                return item["value"]
+                unpickled = pickle.loads(item["value"])
+                return unpickled
             else:
                 self.delete(key)
         return None
@@ -94,7 +95,9 @@ class InMemoryCache(BaseCacheService, Service):
             elif self.max_size and len(self._cache) >= self.max_size:
                 # Remove least recently used item
                 self._cache.popitem(last=False)
-            self._cache[key] = {"value": value, "time": time.time()}
+            # pickle locally to mimic Redis
+            pickled = pickle.dumps(value)
+            self._cache[key] = {"value": pickled, "time": time.time()}
 
     def upsert(self, key, value):
         """
@@ -257,7 +260,10 @@ class RedisCache(BaseCacheService, Service):
             value: The value to cache.
         """
         try:
-            self._client.setex(key, self.expiration_time, pickle.dumps(value))
+            if pickled := pickle.dumps(value):
+                result = self._client.setex(key, self.expiration_time, pickled)
+                if not result:
+                    raise ValueError("RedisCache could not set the value.")
         except TypeError as exc:
             raise TypeError(
                 "RedisCache only accepts values that can be pickled. "

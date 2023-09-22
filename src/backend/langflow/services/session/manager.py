@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
 from langflow.services.cache.utils import compute_dict_hash
-
+from loguru import logger
 from langflow.services.session.utils import session_id_generator
 
 if TYPE_CHECKING:
@@ -20,8 +20,12 @@ class SessionService(Service):
         if key in self.cache_service:
             return self.cache_service.get(key)
 
+        if key is None:
+            key = self.generate_key(session_id=None, data_graph=data_graph)
+
         # If not cached, build the graph and cache it
         graph, artifacts = build_sorted_vertices(data_graph)
+
         self.cache_service.set(key, (graph, artifacts))
 
         return graph, artifacts
