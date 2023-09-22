@@ -1,4 +1,3 @@
-from unittest import mock
 from unittest.mock import patch, Mock, MagicMock, call
 from langflow.services.database.models.user.user import User
 from langflow.services.settings.constants import (
@@ -6,7 +5,6 @@ from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from langflow.services.utils import (
-    initialize_settings_service,
     setup_superuser,
     teardown_superuser,
 )

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Optional, Tuple
 import anyio
 from langflow.services.task.backends.base import TaskBackend
 from loguru import logger
@@ -39,7 +39,7 @@ class AnyIOBackend(TaskBackend):
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Tuple[str, AnyIOTaskResult]:
+    ) -> Tuple[Optional[str], Optional[AnyIOTaskResult]]:
         """
         Launch a new task in an asynchronous manner.
 

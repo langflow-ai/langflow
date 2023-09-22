@@ -1,4 +1,3 @@
-from langflow.services.auth import service
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
@@ -147,7 +146,7 @@ def initialize_services():
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
     # Test database connection
-    db_service = service_manager.get(ServiceType.DATABASE_SERVICE)
+    service_manager.get(ServiceType.DATABASE_SERVICE)
     # Setup the superuser
     initialize_database()
     session = next(get_session())

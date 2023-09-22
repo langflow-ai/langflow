@@ -37,7 +37,7 @@ class Vertex:
         self.artifacts: Dict[str, Any] = {}
         self.task_id: Optional[str] = None
         self.is_task = is_task
-        self.params = params
+        self.params = params or {}
 
     def reset_params(self):
         for edge in self.edges:

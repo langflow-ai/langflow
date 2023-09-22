@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Union
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.utils import flatten_list
 from langflow.interface.utils import extract_input_variables_from_prompt
-from zmq import has
 
 
 class AgentVertex(Vertex):
@@ -127,8 +126,8 @@ class EmbeddingVertex(Vertex):
 class VectorStoreVertex(Vertex):
     def __init__(self, data: Dict, params=None):
         super().__init__(data, base_type="vectorstores")
-        if params:
-            self.params = params
+
+        self.params = params or {}
 
     # VectorStores may contain databse connections
     # so we need to define the __reduce__ method and the __setstate__ method
@@ -264,7 +263,7 @@ class PromptVertex(Vertex):
                 self.params["input_variables"] = list(
                     set(self.params["input_variables"])
                 )
-            else:
+            elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
             self._build(user_id=user_id)
