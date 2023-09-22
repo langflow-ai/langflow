@@ -164,10 +164,10 @@ class DatabaseService(Service):
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
-            # using the FIRST_SUPERUSER to get the user
+            # using the SUPERUSER to get the user
             if settings_service.auth_settings.AUTO_LOGIN:
                 logger.debug("Removing default superuser")
-                username = settings_service.auth_settings.FIRST_SUPERUSER
+                username = settings_service.auth_settings.SUPERUSER
                 with Session(self.engine) as session:
                     user = get_user_by_username(session, username)
                     session.delete(user)

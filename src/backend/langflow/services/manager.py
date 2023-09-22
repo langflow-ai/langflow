@@ -62,6 +62,7 @@ class ServiceManager:
         self.services[service_name] = self.factories[service_name].create(
             **dependent_services
         )
+        self.services[service_name].set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType):
         """
@@ -113,34 +114,34 @@ def initialize_services():
     service_manager.register_factory(settings_factory.SettingsServiceFactory())
     service_manager.register_factory(
         database_factory.DatabaseServiceFactory(),
-        dependencies=[ServiceType.SETTINGS_MANAGER],
+        dependencies=[ServiceType.SETTINGS_SERVICE],
     )
     service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
     )
 
     service_manager.register_factory(
-        auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+        auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
     )
 
     service_manager.register_factory(chat_factory.ChatServiceFactory())
     service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
-        dependencies=[ServiceType.CACHE_MANAGER],
+        dependencies=[ServiceType.CACHE_SERVICE],
     )
     service_manager.register_factory(
         task_factory.TaskServiceFactory(),
     )
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_SERVICE)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_SERVICE)
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_SERVICE)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_SERVICE)
 
 
 def reinitialize_services():
@@ -155,23 +156,23 @@ def reinitialize_services():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
 
-    service_manager.update(ServiceType.SETTINGS_MANAGER)
-    service_manager.update(ServiceType.DATABASE_MANAGER)
-    service_manager.update(ServiceType.CACHE_MANAGER)
-    service_manager.update(ServiceType.CHAT_MANAGER)
-    service_manager.update(ServiceType.SESSION_MANAGER)
-    service_manager.update(ServiceType.AUTH_MANAGER)
-    service_manager.update(ServiceType.TASK_MANAGER)
+    service_manager.update(ServiceType.SETTINGS_SERVICE)
+    service_manager.update(ServiceType.DATABASE_SERVICE)
+    service_manager.update(ServiceType.CACHE_SERVICE)
+    service_manager.update(ServiceType.CHAT_SERVICE)
+    service_manager.update(ServiceType.SESSION_SERVICE)
+    service_manager.update(ServiceType.AUTH_SERVICE)
+    service_manager.update(ServiceType.TASK_SERVICE)
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_SERVICE)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_SERVICE)
 
     # Test cache connection
-    service_manager.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_SERVICE)
     # Test database connection
-    service_manager.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_SERVICE)
 
 
 def initialize_settings_service():
@@ -193,12 +194,12 @@ def initialize_session_service():
     initialize_settings_service()
 
     service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
+        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
     )
 
     service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
-        dependencies=[ServiceType.CACHE_MANAGER],
+        dependencies=[ServiceType.CACHE_SERVICE],
     )
 
 
