@@ -51,15 +51,75 @@ async def async_client() -> AsyncGenerator:
         yield client
 
 
-# Create client fixture for FastAPI
-@pytest.fixture(scope="module", autouse=True)
-def client():
+@pytest.fixture(name="session")
+def session_fixture():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture(name="client")
+def client_fixture(session: Session):
+    def get_session_override():
+        return session
+
     from langflow.main import create_app
 
     app = create_app()
 
+    app.dependency_overrides[get_session] = get_session_override
     with TestClient(app) as client:
         yield client
+    app.dependency_overrides.clear()
+
+
+class Config:
+    broker_url = "redis://localhost:6379/0"
+    result_backend = "redis://localhost:6379/0"
+
+
+@pytest.fixture(name="distributed_env")
+def setup_env(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "redis")
+    monkeypatch.setenv("LANGFLOW_REDIS_HOST", "queue")
+    monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+    monkeypatch.setenv("LANGFLOW_REDIS_DB", "0")
+    monkeypatch.setenv("LANGFLOW_REDIS_EXPIRE", "3600")
+    monkeypatch.setenv("LANGFLOW_REDIS_PASSWORD", "")
+    monkeypatch.setenv("FLOWER_UNAUTHENTICATED_API", "True")
+    monkeypatch.setenv("BROKER_URL", "redis://queue:6379/0")
+    monkeypatch.setenv("RESULT_BACKEND", "redis://queue:6379/0")
+    monkeypatch.setenv("C_FORCE_ROOT", "true")
+
+
+@pytest.fixture(name="distributed_client")
+def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
+    # Here we load the .env from ../deploy/.env
+    from dotenv import load_dotenv
+    from langflow.services.task import manager
+    from langflow.core import celery_app
+    from langflow.services.manager import reinitialize_services, initialize_services
+
+    # monkeypatch langflow.services.task.manager.USE_CELERY to True
+    monkeypatch.setattr(manager, "USE_CELERY", True)
+    monkeypatch.setattr(
+        celery_app, "celery_app", celery_app.make_celery("langflow", Config)
+    )
+
+    def get_session_override():
+        return session
+
+    from langflow.main import create_app
+
+    app = create_app()
+
+    app.dependency_overrides[get_session] = get_session_override
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
 
 
 def get_graph(_type="basic"):
@@ -117,31 +177,6 @@ def json_flow_with_prompt_and_history():
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
-
-
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-
-
-@pytest.fixture(name="client")
-def client_fixture(session: Session):
-    def get_session_override():
-        return session
-
-    from langflow.main import create_app
-
-    app = create_app()
-
-    app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.clear()
 
 
 # @contextmanager
