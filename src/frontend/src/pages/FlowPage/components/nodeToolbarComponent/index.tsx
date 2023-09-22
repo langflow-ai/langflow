@@ -131,67 +131,58 @@ export default function NodeToolbarComponent({
             </a>
           </ShadTooltip>
 
-          {isMinimal ? (
-            <Select onValueChange={handleSelectChange} value={selectedValue}>
-              <ShadTooltip content="More" side="top">
-                <SelectTrigger>
-                  <div>
-                    <div
-                      className={classNames(
-                        "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                          (nodeLength == 0
-                            ? " text-muted-foreground"
-                            : " text-foreground")
-                      )}
-                    >
-                      <IconComponent
-                        name="MoreHorizontal"
-                        className="relative left-2 h-4 w-4"
-                      />
-                    </div>
+          <Select onValueChange={handleSelectChange} value={selectedValue}>
+            <ShadTooltip content="More" side="top">
+              <SelectTrigger>
+                <div>
+                  <div
+                    className={classNames(
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                        (nodeLength == 0
+                          ? " text-muted-foreground"
+                          : " text-foreground")
+                    )}
+                  >
+                    <IconComponent
+                      name="MoreHorizontal"
+                      className="relative left-2 h-4 w-4"
+                    />
                   </div>
-                </SelectTrigger>
-              </ShadTooltip>
-              <SelectContent>
-                <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+                </div>
+              </SelectTrigger>
+            </ShadTooltip>
+            <SelectContent>
+              <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Settings2"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  Edit{" "}
+                </div>{" "}
+              </SelectItem>
+              <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+                <div className="flex">
+                  <IconComponent
+                    name="SaveAll"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  Save{" "}
+                </div>{" "}
+              </SelectItem>
+              {isMinimal && (
+                <SelectItem value={getRandomKeyByssmm() + "show"}>
                   <div className="flex">
                     <IconComponent
-                      name="Settings2"
+                      name={showNode ? "Minimize2" : "Maximize2"}
                       className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Edit{" "}
-                  </div>{" "}
+                    />
+                    {showNode ? "Minimize" : "Expand"}
+                  </div>
                 </SelectItem>
-                {isMinimal && (
-                  <SelectItem value={getRandomKeyByssmm() + "show"}>
-                    <div className="flex">
-                      <IconComponent
-                        name={showNode ? "Minimize2" : "Maximize2"}
-                        className="relative top-0.5 mr-2 h-4 w-4"
-                      />
-                      {showNode ? "Minimize" : "Expand"}
-                    </div>
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          ) : (
-            <ShadTooltip content="Edit" side="top">
-              <div>
-                <button
-                  onClick={() => setShowModalAdvanced(true)}
-                  className={classNames(
-                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1  ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                      (nodeLength == 0
-                        ? " text-muted-foreground"
-                        : " text-foreground")
-                  )}
-                >
-                  <IconComponent name="Settings2" className="h-4 w-4 " />
-                </button>
-              </div>
-            </ShadTooltip>
-          )}
+              )}
+            </SelectContent>
+          </Select>
 
           {showModalAdvanced && (
             <EditNodeModal

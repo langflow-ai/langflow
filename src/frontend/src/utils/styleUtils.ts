@@ -60,6 +60,7 @@ import {
   Redo,
   Rocket,
   Save,
+  SaveAll,
   Scissors,
   Search,
   Settings2,
@@ -318,4 +319,5 @@ export const nodeIconsLucide: iconsType = {
   Square,
   Minimize2,
   Maximize2,
+  SaveAll,
 };
