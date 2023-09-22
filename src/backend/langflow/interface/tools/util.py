@@ -4,7 +4,6 @@ import textwrap
 from typing import Dict, Union
 
 from langchain.agents.tools import Tool
-from loguru import logger
 
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
