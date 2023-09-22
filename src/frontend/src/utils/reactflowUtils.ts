@@ -818,7 +818,7 @@ export function expandGroupNode(
   groupNode: NodeDataType,
   ReactFlowInstance: ReactFlowInstance
 ) {
-  const { template } = groupNode.node!;
+  const { template } = _.cloneDeep(groupNode.node!);
   const { flow } = groupNode.node!;
   const gNodes: NodeType[] = _.cloneDeep(flow!.data!.nodes);
   const gEdges = flow!.data!.edges;
