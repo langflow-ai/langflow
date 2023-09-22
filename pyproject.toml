@@ -111,6 +111,7 @@ pytest-mock = "^3.11.1"
 pytest-xdist = "^3.3.1"
 types-pywin32 = "^306.0.0.4"
 types-redis = "^4.6.0.5"
+pytest-sugar = "^0.9.7"
 
 
 [tool.poetry.extras]
