@@ -1,8 +1,7 @@
 from langflow.core.celery_app import celery_app
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 from typing import TYPE_CHECKING
 
-from langflow.interface.run import build_sorted_vertices
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
 from langflow.processing.process import (
     Result,
@@ -42,7 +41,7 @@ def process_graph_cached_task(
     inputs: Optional[dict] = None,
     clear_cache=False,
     session_id=None,
-) -> Tuple[Any, str]:
+) -> Dict[str, Any]:
     initialize_session_service()
     session_service = get_session_service()
     if clear_cache:
