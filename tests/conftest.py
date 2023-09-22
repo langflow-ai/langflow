@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import AsyncGenerator, TYPE_CHECKING
 
@@ -9,7 +10,7 @@ from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
 import orjson
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_manager
+from langflow.services.getters import get_db_service, get_session
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -92,21 +93,24 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     from langflow.core import celery_app
     from langflow.services.manager import reinitialize_services, initialize_services
 
+    db_dir = tempfile.mkdtemp()
+    db_path = Path(db_dir) / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
     # monkeypatch langflow.services.task.manager.USE_CELERY to True
-    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", False)
     # monkeypatch.setattr(manager, "USE_CELERY", True)
     monkeypatch.setattr(
         celery_app, "celery_app", celery_app.make_celery("langflow", Config)
     )
 
-    def get_session_override():
-        return session
+    # def get_session_override():
+    #     return session
 
     from langflow.main import create_app
 
     app = create_app()
 
-    app.dependency_overrides[get_session] = get_session_override
+    # app.dependency_overrides[get_session] = get_session_override
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -176,10 +180,7 @@ def client_fixture(session: Session, monkeypatch):
     db_dir = tempfile.mkdtemp()
     db_path = Path(db_dir) / "test.db"
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", False)
-
-    def get_session_override():
-        return session
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
 
     from langflow.main import create_app
 
@@ -191,7 +192,8 @@ def client_fixture(session: Session, monkeypatch):
     # app.dependency_overrides.clear()
     monkeypatch.undo()
     # clear the temp db
-    db_path.unlink()
+    with suppress(FileNotFoundError):
+        db_path.unlink()
 
 
 # create a fixture for session_getter above
@@ -223,7 +225,7 @@ def test_user(client):
 
 @pytest.fixture(scope="function")
 def active_user(client):
-    db_manager = get_db_manager()
+    db_manager = get_db_service()
     with session_getter(db_manager) as session:
         user = User(
             username="activeuser",
@@ -231,6 +233,13 @@ def active_user(client):
             is_active=True,
             is_superuser=False,
         )
+        # check if user exists
+        if (
+            active_user := session.query(User)
+            .filter(User.username == user.username)
+            .first()
+        ):
+            return active_user
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -256,7 +265,7 @@ def flow(client, json_flow: str, active_user):
         name="test_flow", data=loaded_json.get("data"), user_id=active_user.id
     )
     flow = Flow(**flow_data.dict())
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         session.add(flow)
         session.commit()
         session.refresh(flow)

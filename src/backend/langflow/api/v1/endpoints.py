@@ -22,10 +22,6 @@ from langflow.api.v1.schemas import (
 )
 
 
-from langflow.interface.types import (
-    build_langchain_template_custom_component,
-)
-
 from langflow.services.getters import get_session
 
 try:
@@ -207,6 +203,10 @@ def get_version():
 async def custom_component(
     raw_code: CustomComponentCode,
 ):
+    from langflow.interface.types import (
+        build_langchain_template_custom_component,
+    )
+
     extractor = CustomComponent(code=raw_code.code)
     extractor.is_check_valid()
 

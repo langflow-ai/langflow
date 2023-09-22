@@ -1,10 +1,11 @@
+from collections import namedtuple
 import uuid
 from langflow.processing.process import Result
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.getters import get_settings_service
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_manager
+from langflow.services.getters import get_db_service
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
@@ -127,8 +128,14 @@ def created_api_key(active_user):
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_manager()
+    db_manager = get_db_service()
     with session_getter(db_manager) as session:
+        if (
+            existing_api_key := session.query(ApiKey)
+            .filter(ApiKey.api_key == api_key.api_key)
+            .first()
+        ):
+            return existing_api_key
         session.add(api_key)
         session.commit()
         session.refresh(api_key)
@@ -205,11 +212,33 @@ def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_k
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
 
+    def mock_process_graph_cached_task(*args, **kwargs):
+        return Result(result={}, session_id="session_id_mock")
+
+    # The task function is ran like this:
+    # if not self.use_celery:
+    #     return None, await task_func(*args, **kwargs)
+    # if not hasattr(task_func, "apply"):
+    #     raise ValueError(f"Task function {task_func} does not have an apply method")
+    # task = task_func.apply(args=args, kwargs=kwargs)
+    # result = task.get()
+    # return task.id, result
+    # So we need to mock the task function to return a task object
+    # and then mock the task object to return a result
+    # maybe a named tuple would be better here
+    task = namedtuple("task", ["id", "get"])
+    mock_process_graph_cached_task.apply = lambda *args, **kwargs: task(
+        id="task_id_mock", get=lambda: Result(result={}, session_id="session_id_mock")
+    )
+
     def mock_update_total_uses(*args, **kwargs):
         return created_api_key
 
     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
+    monkeypatch.setattr(
+        endpoints, "process_graph_cached_task", mock_process_graph_cached_task
+    )
 
     api_key = created_api_key.api_key
     headers = {"x-api-key": api_key}

@@ -37,7 +37,7 @@ def super_user_headers(client, super_user):
 
 @pytest.fixture
 def deactivated_user():
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
@@ -55,7 +55,7 @@ def test_user_waiting_for_approval(
     client,
 ):
     # Create a user that is not active and has never logged in
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="waitingforapproval",
             password=get_password_hash("testpassword"),
@@ -115,7 +115,7 @@ def test_data_consistency_after_delete(client, test_user, super_user_headers):
 
 def test_inactive_user(client):
     # Create a user that is not active and has a last_login_at value
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="inactiveuser",
             password=get_password_hash("testpassword"),
