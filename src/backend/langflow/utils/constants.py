@@ -49,3 +49,4 @@ def python_function(text: str) -> str:
 """
 
 DIRECT_TYPES = ["str", "bool", "code", "int", "float", "Any", "prompt"]
+PYTHON_BASIC_TYPES = [str, bool, int, float, tuple, list, dict, set]
