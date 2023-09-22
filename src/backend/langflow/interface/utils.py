@@ -10,7 +10,7 @@ from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from loguru import logger
 from langflow.services.chat.config import ChatConfig
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:

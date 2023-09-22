@@ -13,7 +13,7 @@ def initialize_database():
     logger.debug("Initializing database")
     from langflow.services import service_manager, ServiceType
 
-    database_service = service_manager.get(ServiceType.DATABASE_MANAGER)
+    database_service = service_manager.get(ServiceType.DATABASE_SERVICE)
     try:
         database_service.check_schema_health()
     except Exception as exc:

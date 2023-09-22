@@ -12,7 +12,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
 )
 
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_settings_service
 
 router = APIRouter(tags=["Login"])
 

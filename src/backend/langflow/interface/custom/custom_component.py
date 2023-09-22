@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.services.utils import get_db_service
+from langflow.services.getters import get_db_service
 from langflow.interface.custom.utils import extract_inner_type
 
 from langflow.utils import validate

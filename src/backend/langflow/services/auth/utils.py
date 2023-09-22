@@ -12,7 +12,7 @@ from langflow.services.database.models.user.crud import (
     get_user_by_username,
     update_user_last_login_at,
 )
-from langflow.services.utils import get_session, get_settings_service
+from langflow.services.getters import get_session, get_settings_service
 from sqlmodel import Session
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from langflow.services.base import Service
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_settings_service
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Session, create_engine

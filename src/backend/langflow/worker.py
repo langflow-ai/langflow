@@ -10,7 +10,7 @@ from langflow.processing.process import (
     process_inputs,
 )
 from langflow.services.manager import initialize_session_service
-from langflow.services.utils import get_session_service
+from langflow.services.getters import get_session_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex

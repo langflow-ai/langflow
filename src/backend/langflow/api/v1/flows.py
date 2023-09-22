@@ -12,8 +12,8 @@ from langflow.services.database.models.flow import (
     FlowUpdate,
 )
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_session
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_session
+from langflow.services.getters import get_settings_service
 import orjson
 from sqlmodel import Session
 from fastapi import APIRouter, Depends, HTTPException
