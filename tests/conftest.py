@@ -106,7 +106,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
 
     # monkeypatch langflow.services.task.manager.USE_CELERY to True
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", False)
-    monkeypatch.setattr(manager, "USE_CELERY", True)
+    # monkeypatch.setattr(manager, "USE_CELERY", True)
     monkeypatch.setattr(
         celery_app, "celery_app", celery_app.make_celery("langflow", Config)
     )
