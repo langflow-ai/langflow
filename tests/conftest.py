@@ -62,10 +62,11 @@ def session_fixture():
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(session: Session, monkeypatch):
     def get_session_override():
         return session
 
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", False)
     from langflow.main import create_app
 
     app = create_app()
@@ -104,6 +105,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     from langflow.services.manager import reinitialize_services, initialize_services
 
     # monkeypatch langflow.services.task.manager.USE_CELERY to True
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", False)
     monkeypatch.setattr(manager, "USE_CELERY", True)
     monkeypatch.setattr(
         celery_app, "celery_app", celery_app.make_celery("langflow", Config)
@@ -120,6 +122,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+    monkeypatch.undo()
 
 
 def get_graph(_type="basic"):
