@@ -30,6 +30,7 @@ class LangfuseInstance:
             cls._instance = Langfuse(
                 public_key=settings_manager.settings.LANGFUSE_PUBLIC_KEY,
                 secret_key=settings_manager.settings.LANGFUSE_SECRET_KEY,
+                host=settings_manager.settings.LANGFUSE_HOST,
             )
         else:
             logger.debug("No Langfuse credentials found")
