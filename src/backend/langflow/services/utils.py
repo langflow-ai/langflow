@@ -1,4 +1,4 @@
-from langflow.services import ServiceType, service_service
+from langflow.services import ServiceType, service_manager
 from typing import TYPE_CHECKING, Generator
 
 
@@ -14,35 +14,35 @@ if TYPE_CHECKING:
 
 def get_settings_service() -> "SettingsService":
     try:
-        return service_service.get(ServiceType.SETTINGS_MANAGER)
+        return service_manager.get(ServiceType.SETTINGS_MANAGER)
     except ValueError:
         # initialize settings service
         from langflow.services.manager import initialize_settings_service
 
         initialize_settings_service()
-        return service_service.get(ServiceType.SETTINGS_MANAGER)
+        return service_manager.get(ServiceType.SETTINGS_MANAGER)
 
 
 def get_db_service() -> "DatabaseService":
-    return service_service.get(ServiceType.DATABASE_MANAGER)
+    return service_manager.get(ServiceType.DATABASE_MANAGER)
 
 
 def get_session() -> Generator["Session", None, None]:
-    db_service = service_service.get(ServiceType.DATABASE_MANAGER)
+    db_service = service_manager.get(ServiceType.DATABASE_MANAGER)
     yield from db_service.get_session()
 
 
 def get_cache_service() -> "BaseCacheService":
-    return service_service.get(ServiceType.CACHE_MANAGER)
+    return service_manager.get(ServiceType.CACHE_MANAGER)
 
 
 def get_session_service() -> "SessionService":
-    return service_service.get(ServiceType.SESSION_MANAGER)
+    return service_manager.get(ServiceType.SESSION_MANAGER)
 
 
 def get_task_service() -> "TaskService":
-    return service_service.get(ServiceType.TASK_MANAGER)
+    return service_manager.get(ServiceType.TASK_MANAGER)
 
 
 def get_chat_service() -> "ChatService":
-    return service_service.get(ServiceType.CHAT_MANAGER)
+    return service_manager.get(ServiceType.CHAT_MANAGER)

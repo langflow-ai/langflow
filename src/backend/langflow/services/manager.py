@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from langflow.services.base import Service
 
 
-class ServiceService:
+class ServiceManager:
     """
     Manages the creation of different services.
     """
@@ -95,7 +95,7 @@ class ServiceService:
         self.dependencies = {}
 
 
-service_service = ServiceService()
+service_manager = ServiceManager()
 
 
 def initialize_services():
@@ -110,37 +110,37 @@ def initialize_services():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
 
-    service_service.register_factory(settings_factory.SettingsServiceFactory())
-    service_service.register_factory(
+    service_manager.register_factory(settings_factory.SettingsServiceFactory())
+    service_manager.register_factory(
         database_factory.DatabaseServiceFactory(),
         dependencies=[ServiceType.SETTINGS_MANAGER],
     )
-    service_service.register_factory(
+    service_manager.register_factory(
         cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_service.register_factory(
+    service_manager.register_factory(
         auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_service.register_factory(chat_factory.ChatServiceFactory())
-    service_service.register_factory(
+    service_manager.register_factory(chat_factory.ChatServiceFactory())
+    service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
         dependencies=[ServiceType.CACHE_MANAGER],
     )
-    service_service.register_factory(
+    service_manager.register_factory(
         task_factory.TaskServiceFactory(),
     )
 
     # Test cache connection
-    service_service.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_service.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_MANAGER)
 
     # Test cache connection
-    service_service.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_service.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_MANAGER)
 
 
 def reinitialize_services():
@@ -155,23 +155,23 @@ def reinitialize_services():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
 
-    service_service.update(ServiceType.SETTINGS_MANAGER)
-    service_service.update(ServiceType.DATABASE_MANAGER)
-    service_service.update(ServiceType.CACHE_MANAGER)
-    service_service.update(ServiceType.CHAT_MANAGER)
-    service_service.update(ServiceType.SESSION_MANAGER)
-    service_service.update(ServiceType.AUTH_MANAGER)
-    service_service.update(ServiceType.TASK_MANAGER)
+    service_manager.update(ServiceType.SETTINGS_MANAGER)
+    service_manager.update(ServiceType.DATABASE_MANAGER)
+    service_manager.update(ServiceType.CACHE_MANAGER)
+    service_manager.update(ServiceType.CHAT_MANAGER)
+    service_manager.update(ServiceType.SESSION_MANAGER)
+    service_manager.update(ServiceType.AUTH_MANAGER)
+    service_manager.update(ServiceType.TASK_MANAGER)
 
     # Test cache connection
-    service_service.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_service.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_MANAGER)
 
     # Test cache connection
-    service_service.get(ServiceType.CACHE_MANAGER)
+    service_manager.get(ServiceType.CACHE_MANAGER)
     # Test database connection
-    service_service.get(ServiceType.DATABASE_MANAGER)
+    service_manager.get(ServiceType.DATABASE_MANAGER)
 
 
 def initialize_settings_service():
@@ -180,7 +180,7 @@ def initialize_settings_service():
     """
     from langflow.services.settings import factory as settings_factory
 
-    service_service.register_factory(settings_factory.SettingsServiceFactory())
+    service_manager.register_factory(settings_factory.SettingsServiceFactory())
 
 
 def initialize_session_service():
@@ -192,11 +192,11 @@ def initialize_session_service():
 
     initialize_settings_service()
 
-    service_service.register_factory(
+    service_manager.register_factory(
         cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_MANAGER]
     )
 
-    service_service.register_factory(
+    service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
         dependencies=[ServiceType.CACHE_MANAGER],
     )
@@ -206,4 +206,4 @@ def teardown_services():
     """
     Teardown all the services.
     """
-    service_service.teardown()
+    service_manager.teardown()
