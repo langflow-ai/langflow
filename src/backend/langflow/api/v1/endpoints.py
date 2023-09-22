@@ -26,7 +26,7 @@ from langflow.interface.types import (
     build_langchain_template_custom_component,
 )
 
-from langflow.services.utils import get_session
+from langflow.services.getters import get_session
 
 try:
     from langflow.worker import process_graph_cached_task

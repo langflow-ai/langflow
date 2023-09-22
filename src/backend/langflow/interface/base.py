@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
 from langchain.chains.base import Chain
 from langchain.agents import AgentExecutor
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_settings_service
 from pydantic import BaseModel
 
 from langflow.template.field.base import TemplateField

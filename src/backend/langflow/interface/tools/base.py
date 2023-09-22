@@ -15,7 +15,7 @@ from langflow.interface.tools.constants import (
     OTHER_TOOLS,
 )
 from langflow.interface.tools.util import get_tool_params
-from langflow.services.utils import get_settings_service
+from langflow.services.getters import get_settings_service
 
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
