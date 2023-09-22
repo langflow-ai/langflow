@@ -12,7 +12,7 @@ from .cache import cache_service
 import asyncio
 from typing import Any, Dict, List
 
-from langflow.services import service_service, ServiceType
+from langflow.services import service_manager, ServiceType
 import orjson
 
 
@@ -52,7 +52,7 @@ class ChatService(Service):
         self.chat_history = ChatHistory()
         self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
-        self.cache_service = service_service.get(ServiceType.CACHE_MANAGER)
+        self.cache_service = service_manager.get(ServiceType.CACHE_MANAGER)
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""
