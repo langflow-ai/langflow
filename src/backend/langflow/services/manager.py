@@ -148,13 +148,6 @@ def reinitialize_services():
     """
     Reinitialize all the services needed.
     """
-    from langflow.services.database import factory as database_factory
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.chat import factory as chat_factory
-    from langflow.services.settings import factory as settings_factory
-    from langflow.services.session import factory as session_service_factory
-    from langflow.services.auth import factory as auth_factory
-    from langflow.services.task import factory as task_factory
 
     service_manager.update(ServiceType.SETTINGS_SERVICE)
     service_manager.update(ServiceType.DATABASE_SERVICE)

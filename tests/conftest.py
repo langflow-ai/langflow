@@ -10,7 +10,7 @@ from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
 import orjson
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service, get_session
+from langflow.services.getters import get_db_service
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -88,10 +88,7 @@ def setup_env(monkeypatch):
 @pytest.fixture(name="distributed_client")
 def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     # Here we load the .env from ../deploy/.env
-    from dotenv import load_dotenv
-    from langflow.services.task import manager
     from langflow.core import celery_app
-    from langflow.services.manager import reinitialize_services, initialize_services
 
     db_dir = tempfile.mkdtemp()
     db_path = Path(db_dir) / "test.db"

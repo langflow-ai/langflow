@@ -117,7 +117,7 @@ async def process_flow(
             if isinstance(result, dict) and "result" in result:
                 task_result = result["result"]
                 session_id = result["session_id"]
-            else:
+            elif hasattr(result, "result") and hasattr(result, "session_id"):
                 task_result = result.result
 
                 session_id = result.session_id

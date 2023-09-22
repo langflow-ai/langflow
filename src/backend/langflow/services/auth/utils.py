@@ -37,13 +37,13 @@ async def api_key_security(
     result: Optional[Union[ApiKey, User]] = None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
-        if not settings_manager.auth_settings.SUPERUSER:
+        if not settings_service.auth_settings.SUPERUSER:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Missing first superuser credentials",
             )
 
-        result = get_user_by_username(db, settings_manager.auth_settings.SUPERUSER)
+        result = get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
     elif not query_param and not header_param:
         raise HTTPException(
@@ -179,9 +179,9 @@ def create_super_user(
 
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
-    settings_manager = get_settings_service()
-    username = settings_manager.auth_settings.SUPERUSER
-    password = settings_manager.auth_settings.SUPERUSER_PASSWORD
+    settings_service = get_settings_service()
+    username = settings_service.auth_settings.SUPERUSER
+    password = settings_service.auth_settings.SUPERUSER_PASSWORD
     if not username or not password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

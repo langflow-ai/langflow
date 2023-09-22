@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
 from langflow.services.cache.utils import compute_dict_hash
-from loguru import logger
 from langflow.services.session.utils import session_id_generator
 
 if TYPE_CHECKING:
