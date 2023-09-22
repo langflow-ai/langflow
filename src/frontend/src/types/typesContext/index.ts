@@ -18,6 +18,8 @@ export type typesContextType = {
   setData: (newState: {}) => void;
   fetchError: boolean;
   setFetchError: (newState: boolean) => void;
+  setFilterEdge: (newState) => void;
+  getFilterEdge: any[];
 };
 
 export type alertContextType = {
