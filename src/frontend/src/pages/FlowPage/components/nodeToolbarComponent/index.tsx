@@ -66,6 +66,7 @@ export default function NodeToolbarComponent({
         updateNodeInternals(data.id);
         break;
       case "SaveAll":
+        //TODO add logic to save node on backend and update toolbar
         downloadNode(createFlowComponent(data));
         break;
     }
