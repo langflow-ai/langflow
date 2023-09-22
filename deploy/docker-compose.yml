@@ -234,7 +234,7 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
-    command: pytest -vv -n auto
+    command: pytest -vv
     healthcheck:
       test: "exit 0"
 
