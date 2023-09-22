@@ -36,15 +36,16 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     }
     if (invalidName !== undefined) {
       if (!nameLists.current.includes(value)) {
-        setInvalidName(false);
+        setInvalidName!(false);
       } else {
-        setInvalidName(true);
+        setInvalidName!(true);
       }
-    }
-    if (!nameLists.current.includes(value)) {
-      setInvalidName!(false);
-    } else {
-      setInvalidName!(true);
+
+      if (!nameLists.current.includes(value)) {
+        setInvalidName!(false);
+      } else {
+        setInvalidName!(true);
+      }
     }
     setName(value);
   };

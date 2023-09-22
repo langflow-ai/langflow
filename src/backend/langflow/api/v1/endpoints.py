@@ -7,7 +7,7 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_service, get_task_service
+from langflow.services.getters import get_settings_service, get_task_service
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa

@@ -360,8 +360,8 @@ def superuser(
             # Verify that the superuser was created
             from langflow.services.database.models.user.user import User
 
-            user = session.query(User).filter(User.username == username).first()
-            if user is None:
+            user: User = session.query(User).filter(User.username == username).first()
+            if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
 
