@@ -171,8 +171,6 @@ prompts:
 textsplitters:
   CharacterTextSplitter:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter"
-  RecursiveCharacterTextSplitter:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/recursive_text_splitter"
 toolkits:
   OpenAPIToolkit:
     documentation: ""

@@ -18,6 +18,8 @@ export type typesContextType = {
   setData: (newState: {}) => void;
   fetchError: boolean;
   setFetchError: (newState: boolean) => void;
+  setFilterEdge: (newState) => void;
+  getFilterEdge: any[];
 };
 
 export type alertContextType = {
@@ -48,6 +50,8 @@ export type darkContextType = {
   setDark: (newState: {}) => void;
   stars: number;
   setStars: (stars: number) => void;
+  gradientIndex: number;
+  setGradientIndex: (index: number) => void;
 };
 
 export type locationContextType = {

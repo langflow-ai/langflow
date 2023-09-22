@@ -1,4 +1,5 @@
 from collections import defaultdict
+import uuid
 from fastapi import WebSocket, status
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
@@ -47,6 +48,7 @@ class ChatService(Service):
 
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
+        self.connection_ids: Dict[str, str] = {}
         self.chat_history = ChatHistory()
         self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
@@ -91,9 +93,13 @@ class ChatService(Service):
 
     async def connect(self, client_id: str, websocket: WebSocket):
         self.active_connections[client_id] = websocket
+        # This is to avoid having multiple clients with the same id
+        #! Temporary solution
+        self.connection_ids[client_id] = f"{client_id}-{uuid.uuid4()}"
 
     def disconnect(self, client_id: str):
         self.active_connections.pop(client_id, None)
+        self.connection_ids.pop(client_id, None)
 
     async def send_message(self, client_id: str, message: str):
         websocket = self.active_connections[client_id]
@@ -135,6 +141,7 @@ class ChatService(Service):
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
                 websocket=self.active_connections[client_id],
+                session_id=self.connection_ids[client_id],
             )
             self.set_cache(client_id, langchain_object)
         except Exception as e:

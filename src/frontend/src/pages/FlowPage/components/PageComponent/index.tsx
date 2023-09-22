@@ -64,8 +64,13 @@ export default function Page({
     setTabsState,
     tabId,
   } = useContext(TabsContext);
-  const { types, reactFlowInstance, setReactFlowInstance, templates } =
-    useContext(typesContext);
+  const {
+    types,
+    reactFlowInstance,
+    setReactFlowInstance,
+    templates,
+    setFilterEdge,
+  } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
@@ -298,7 +303,14 @@ export default function Page({
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        uploadFlow(false, event.dataTransfer.files.item(0)!);
+        if (event.dataTransfer.files.item(0)!.type === "application/json") {
+          uploadFlow(true, event.dataTransfer.files.item(0)!);
+        } else {
+          setErrorData({
+            title: "Invalid file type",
+            list: ["Please upload a JSON file"],
+          });
+        }
       }
     },
     // Specify dependencies for useCallback
@@ -375,6 +387,10 @@ export default function Page({
     []
   );
 
+  const onPaneClick = useCallback((flow) => {
+    setFilterEdge([]);
+  }, []);
+
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}
@@ -422,6 +438,7 @@ export default function Page({
                   zoomOnPinch={!view}
                   panOnDrag={!view}
                   proOptions={{ hideAttribution: true }}
+                  onPaneClick={onPaneClick}
                 >
                   <Background className="" />
                   {!view && (
