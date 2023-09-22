@@ -204,30 +204,49 @@ export function validateNode(
     node: { template },
   } = node.data;
 
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (template[t].value === undefined ||
-            template[t].value === null ||
-            template[t].value === "") &&
-          !reactFlowInstance
-            .getEdges()
-            .some(
-              (edge) =>
-                edge.targetHandle?.split("|")[1] === t &&
-                edge.targetHandle.split("|")[2] === node.id
-            )
-          ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
+  return Object.keys(template).reduce((errors: Array<string>, t) => {
+    if (
+      template[t].required &&
+      template[t].show &&
+      (template[t].value === undefined ||
+        template[t].value === null ||
+        template[t].value === "") &&
+      !reactFlowInstance
+        .getEdges()
+        .some(
+          (edge) =>
+            edge.targetHandle?.split("|")[1] === t &&
+            edge.targetHandle.split("|")[2] === node.id
+        )
+    ) {
+      errors.push(
+        `${type} is missing ${
+          template.display_name || toNormalCase(template[t].name)
+        }.`
+      );
+    } else if (
+      template[t].type === "dict" &&
+      template[t].required &&
+      template[t].show &&
+      (template[t].value !== undefined ||
+        template[t].value !== null ||
+        template[t].value !== "")
+    ) {
+      if (hasDuplicateKeys(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) contains duplicate keys with the same values.`
+        );
+      if (hasEmptyKey(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) field must not be empty.`
+        );
+    }
+    return errors;
+  }, [] as string[]);
 }
 
 export function validateNodes(reactFlowInstance: ReactFlowInstance) {
@@ -255,7 +274,9 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 }
 
 export function handleKeyDown(
-  e: React.KeyboardEvent<HTMLInputElement>,
+  e:
+    | React.KeyboardEvent<HTMLInputElement>
+    | React.KeyboardEvent<HTMLTextAreaElement>,
   inputValue: string | string[] | null,
   block: string
 ) {
@@ -288,4 +309,59 @@ export function getConnectedNodes(
   const sourceId = edge.source;
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
+
+export function convertObjToArray(singleObject) {
+  if (Array.isArray(singleObject)) return singleObject;
+
+  let arrConverted: any = [];
+  for (const key in singleObject) {
+    if (singleObject.hasOwnProperty(key)) {
+      const newObj = {};
+      newObj[key] = singleObject[key];
+      arrConverted.push(newObj);
+    }
+  }
+  return arrConverted;
+}
+
+export function hasDuplicateKeys(array) {
+  const keys = {};
+  for (const obj of array) {
+    for (const key in obj) {
+      if (keys[key]) {
+        return true;
+      }
+      keys[key] = true;
+    }
+  }
+  return false;
+}
+
+export function hasEmptyKey(objArray) {
+  for (const obj of objArray) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && key === "") {
+        return true; // Found an empty key
+      }
+    }
+  }
+  return false; // No empty keys found
+}
+
+export function convertValuesToNumbers(arr) {
+  return arr.map((obj) => {
+    const newObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        let value = obj[key];
+        if (/\s/g.test(value)) {
+          value = value.trim();
+        }
+        newObj[key] =
+          value === "" || isNaN(value) ? value.toString() : Number(value);
+      }
+    }
+    return newObj;
+  });
 }

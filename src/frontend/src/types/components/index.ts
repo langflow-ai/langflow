@@ -46,6 +46,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  showNode?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -54,7 +55,32 @@ export type InputListComponentType = {
   editNode?: boolean;
 };
 
+export type KeyPairListComponentType = {
+  value: any;
+  onChange: (value: Object[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+  duplicateKey?: boolean;
+};
+
+export type DictComponentType = {
+  value: any;
+  onChange: (value) => void;
+  disabled: boolean;
+  editNode?: boolean;
+};
+
 export type TextAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+};
+
+export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
@@ -173,6 +199,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
+  onClick?: () => void;
 };
 
 export type InputProps = {
@@ -233,6 +260,7 @@ export type PaginatorComponentType = {
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
+  asChild?: boolean;
   modalContent: string;
   modalContentTitle: string;
   cancelText: string;
@@ -253,12 +281,19 @@ export type UserManagementType = {
   icon: string;
   data?: any;
   index?: number;
+  asChild?: boolean;
   onConfirm: (index, data) => void;
 };
 
 export type loginInputStateType = {
   username: string;
   password: string;
+};
+
+export type patchUserInputStateType = {
+  password: string;
+  cnfPassword: string;
+  gradient: string;
 };
 
 export type UserInputType = {
@@ -389,6 +424,9 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  setShowNode: (boolean: any) => void;
+  numberOfHandles: boolean[] | [];
+  showNode: boolean;
 };
 
 export type parsedDataType = {

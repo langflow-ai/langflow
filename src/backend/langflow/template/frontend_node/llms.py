@@ -131,7 +131,7 @@ class LLMFrontendNode(FrontendNode):
         if display_name := display_names_dict.get(field.name):
             field.display_name = display_name
         if field.name == "model_kwargs":
-            field.field_type = "code"
+            field.field_type = "dict"
             field.advanced = True
             field.show = True
         elif field.name in [

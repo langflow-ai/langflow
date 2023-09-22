@@ -12,6 +12,7 @@ from langflow.graph import Graph
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from typing import Any, Dict, List, Optional, Tuple, Union
+from langchain.schema import Document
 
 from pydantic import BaseModel
 
@@ -139,10 +140,11 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
         logger.debug("Generated result and thought")
     elif isinstance(langchain_object, VectorStore):
         result = langchain_object.search(**inputs)
+    elif isinstance(langchain_object, Document):
+        result = langchain_object.dict()
     else:
-        raise ValueError(
-            f"Unknown langchain_object type: {type(langchain_object).__name__}"
-        )
+        logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+        result = langchain_object
 
     return result
 

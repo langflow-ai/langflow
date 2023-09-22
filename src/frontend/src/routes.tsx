@@ -9,6 +9,7 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
@@ -95,6 +96,14 @@ const Router = () => {
       />
 
       <Route path="/account">
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute>
+              <ProfileSettingsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="delete"
           element={
