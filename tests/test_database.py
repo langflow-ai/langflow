@@ -1,6 +1,6 @@
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_manager
+from langflow.services.getters import get_db_service
 import orjson
 import pytest
 
@@ -196,7 +196,7 @@ def test_download_file(
             FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
-    db_manager = get_db_manager()
+    db_manager = get_db_service()
     with session_getter(db_manager) as session:
         for flow in flow_list.flows:
             flow.user_id = active_user.id

@@ -14,42 +14,13 @@ if TYPE_CHECKING:
 
 def get_settings_service() -> "SettingsService":
     try:
-        return service_manager.get(ServiceType.SETTINGS_MANAGER)
+        return service_manager.get(ServiceType.SETTINGS_SERVICE)
     except ValueError:
         # initialize settings service
         from langflow.services.manager import initialize_settings_service
 
         initialize_settings_service()
-        return service_manager.get(ServiceType.SETTINGS_MANAGER)
-
-
-def get_db_service() -> "DatabaseService":
-    return service_manager.get(ServiceType.DATABASE_MANAGER)
-
-
-def get_session() -> Generator["Session", None, None]:
-    db_service = service_manager.get(ServiceType.DATABASE_MANAGER)
-    yield from db_service.get_session()
-
-
-def get_cache_service() -> "BaseCacheService":
-    return service_manager.get(ServiceType.CACHE_MANAGER)
-
-
-def get_session_service() -> "SessionService":
-    return service_manager.get(ServiceType.SESSION_MANAGER)
-
-
-def get_task_service() -> "TaskService":
-    return service_manager.get(ServiceType.TASK_MANAGER)
-
-
-def get_chat_service() -> "ChatService":
-    return service_manager.get(ServiceType.CHAT_MANAGER)
-
-
-def get_settings_service() -> "SettingsService":
-    return service_manager.get(ServiceType.SETTINGS_SERVICE)
+        return service_manager.get(ServiceType.SETTINGS_SERVICE)
 
 
 def get_db_service() -> "DatabaseService":
@@ -59,6 +30,18 @@ def get_db_service() -> "DatabaseService":
 def get_session() -> Generator["Session", None, None]:
     db_service = service_manager.get(ServiceType.DATABASE_SERVICE)
     yield from db_service.get_session()
+
+
+def get_cache_service() -> "BaseCacheService":
+    return service_manager.get(ServiceType.CACHE_SERVICE)
+
+
+def get_session_service() -> "SessionService":
+    return service_manager.get(ServiceType.SESSION_SERVICE)
+
+
+def get_task_service() -> "TaskService":
+    return service_manager.get(ServiceType.TASK_SERVICE)
 
 
 def get_chat_service() -> "ChatService":
