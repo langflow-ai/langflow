@@ -1,6 +1,8 @@
 from langflow.core.celery_app import celery_app
 from typing import Any, Dict, Optional, Tuple
 from typing import TYPE_CHECKING
+
+from langflow.interface.run import build_sorted_vertices
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
 from langflow.processing.process import (
     Result,
@@ -50,11 +52,12 @@ def process_graph_cached_task(
             session_id=session_id, data_graph=data_graph
         )
     # Load the graph using SessionService
-    langchain_object, artifacts = session_service.load_session(session_id, data_graph)
+    graph, artifacts = session_service.load_session(session_id, data_graph)
+    built_object = graph.build()
     processed_inputs = process_inputs(inputs, artifacts)
-    result = generate_result(langchain_object, processed_inputs)
+    result = generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
-    session_service.update_session(session_id, (langchain_object, artifacts))
+    session_service.update_session(session_id, (graph, artifacts))
 
     return Result(result=result, session_id=session_id).dict()
