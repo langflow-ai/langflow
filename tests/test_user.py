@@ -213,7 +213,9 @@ def test_normal_user_cant_delete_user(client, test_user, logged_in_headers):
 
 
 # If you still want to test the superuser endpoint
-def test_add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(client):
+def test_add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
+    client,
+):
     response = client.post("/api/v1/super_user")
     assert response.status_code == 200
     assert response.json()["username"] == "superuser"
