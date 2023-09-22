@@ -46,6 +46,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  showNode?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -198,6 +199,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
+  onClick?: () => void;
 };
 
 export type InputProps = {
@@ -422,6 +424,9 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  setShowNode: (boolean: any) => void;
+  numberOfHandles: boolean[] | [];
+  showNode: boolean;
 };
 
 export type parsedDataType = {

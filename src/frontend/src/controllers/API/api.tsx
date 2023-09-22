@@ -40,7 +40,9 @@ function ApiInterceptor() {
             try {
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
-                error.config.headers["Authorization"] = `Bearer ${accessToken}`;
+                error.config.headers["Authorization"] = `Bearer ${cookies.get(
+                  "access_token"
+                )}`;
                 const response = await axios.request(error.config);
                 return response;
               }
