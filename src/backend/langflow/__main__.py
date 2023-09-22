@@ -2,8 +2,9 @@ import sys
 import time
 import httpx
 from langflow.services.database.utils import session_getter
-from langflow.services.manager import initialize_services, initialize_settings_manager
-from langflow.services.utils import get_db_manager, get_settings_manager
+from langflow.services.utils import initialize_services
+from langflow.services.getters import get_db_manager, get_settings_manager
+from langflow.services.utils import initialize_settings_manager
 
 from multiprocess import Process, cpu_count  # type: ignore
 import platform
@@ -360,8 +361,8 @@ def superuser(
             # Verify that the superuser was created
             from langflow.services.database.models.user.user import User
 
-            user = session.query(User).filter(User.username == username).first()
-            if user is None:
+            user: User = session.query(User).filter(User.username == username).first()
+            if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
 

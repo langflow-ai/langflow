@@ -2,20 +2,22 @@ from datetime import datetime
 from langflow.services.auth.utils import create_super_user, get_password_hash
 
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_settings_manager
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_manager, get_settings_manager
 import pytest
 from langflow.services.database.models.user import UserUpdate
 
 
 @pytest.fixture
-def super_user(client, session):
+def super_user(client):
     settings_manager = get_settings_manager()
     auth_settings = settings_manager.auth_settings
-    return create_super_user(
-        db=session,
-        username=auth_settings.FIRST_SUPERUSER,
-        password=auth_settings.FIRST_SUPERUSER_PASSWORD,
-    )
+    with session_getter(get_db_manager()) as session:
+        return create_super_user(
+            db=session,
+            username=auth_settings.SUPERUSER,
+            password=auth_settings.SUPERUSER_PASSWORD,
+        )
 
 
 @pytest.fixture
@@ -23,8 +25,8 @@ def super_user_headers(client, super_user):
     settings_manager = get_settings_manager()
     auth_settings = settings_manager.auth_settings
     login_data = {
-        "username": auth_settings.FIRST_SUPERUSER,
-        "password": auth_settings.FIRST_SUPERUSER_PASSWORD,
+        "username": auth_settings.SUPERUSER,
+        "password": auth_settings.SUPERUSER_PASSWORD,
     }
     response = client.post("/api/v1/login", data=login_data)
     assert response.status_code == 200
@@ -34,29 +36,34 @@ def super_user_headers(client, super_user):
 
 
 @pytest.fixture
-def deactivated_user(session):
-    user = User(
-        username="deactivateduser",
-        password=get_password_hash("testpassword"),
-        is_active=False,
-        is_superuser=False,
-        last_login_at=datetime.now(),
-    )
-    session.add(user)
-    session.commit()
+def deactivated_user():
+    with session_getter(get_db_manager()) as session:
+        user = User(
+            username="deactivateduser",
+            password=get_password_hash("testpassword"),
+            is_active=False,
+            is_superuser=False,
+            last_login_at=datetime.now(),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
     return user
 
 
-def test_user_waiting_for_approval(client, session):
+def test_user_waiting_for_approval(
+    client,
+):
     # Create a user that is not active and has never logged in
-    user = User(
-        username="waitingforapproval",
-        password=get_password_hash("testpassword"),
-        is_active=False,
-        last_login_at=None,
-    )
-    session.add(user)
-    session.commit()
+    with session_getter(get_db_manager()) as session:
+        user = User(
+            username="waitingforapproval",
+            password=get_password_hash("testpassword"),
+            is_active=False,
+            last_login_at=None,
+        )
+        session.add(user)
+        session.commit()
 
     login_data = {"username": "waitingforapproval", "password": "testpassword"}
     response = client.post("/api/v1/login", data=login_data)
@@ -106,16 +113,17 @@ def test_data_consistency_after_delete(client, test_user, super_user_headers):
     assert all(user["id"] != user_id for user in response.json()["users"])
 
 
-def test_inactive_user(client, session):
+def test_inactive_user(client):
     # Create a user that is not active and has a last_login_at value
-    user = User(
-        username="inactiveuser",
-        password=get_password_hash("testpassword"),
-        is_active=False,
-        last_login_at="2023-01-01T00:00:00",  # Set to a valid datetime string
-    )
-    session.add(user)
-    session.commit()
+    with session_getter(get_db_manager()) as session:
+        user = User(
+            username="inactiveuser",
+            password=get_password_hash("testpassword"),
+            is_active=False,
+            last_login_at="2023-01-01T00:00:00",  # Set to a valid datetime string
+        )
+        session.add(user)
+        session.commit()
 
     login_data = {"username": "inactiveuser", "password": "testpassword"}
     response = client.post("/api/v1/login", data=login_data)

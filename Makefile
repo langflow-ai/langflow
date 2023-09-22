@@ -19,6 +19,7 @@ coverage:
 		--cov-report term-missing:skip-covered
 
 tests:
+	@make install_backend
 	poetry run pytest tests -n auto
 
 format:

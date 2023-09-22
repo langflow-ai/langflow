@@ -1,7 +1,8 @@
 import uuid
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.api_key import ApiKey
-from langflow.services.utils import get_settings_manager
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_manager, get_settings_manager
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
@@ -88,7 +89,7 @@ PROMPT_REQUEST = {
 
 
 @pytest.fixture
-def created_api_key(session, active_user):
+def created_api_key(active_user):
     hashed = get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
@@ -96,10 +97,11 @@ def created_api_key(session, active_user):
         api_key="random_key",
         hashed_api_key=hashed,
     )
-
-    session.add(api_key)
-    session.commit()
-    session.refresh(api_key)
+    db_manager = get_db_manager()
+    with session_getter(db_manager) as session:
+        session.add(api_key)
+        session.commit()
+        session.refresh(api_key)
     return api_key
 
 

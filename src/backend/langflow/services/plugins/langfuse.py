@@ -1,4 +1,4 @@
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_manager
 from langflow.utils.logger import logger
 
 ### Temporary implementation
