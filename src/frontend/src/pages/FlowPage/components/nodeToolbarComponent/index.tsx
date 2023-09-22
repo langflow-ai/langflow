@@ -11,7 +11,7 @@ import {
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
-import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
+import { classNames } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
@@ -53,14 +53,16 @@ export default function NodeToolbarComponent({
   const [selectedValue, setSelectedValue] = useState("");
 
   const handleSelectChange = (event) => {
-    setSelectedValue(event);
-    if (event.includes("advanced")) {
-      return setShowModalAdvanced(true);
-    }
-    setShowModalAdvanced(false);
-    if (event.includes("show")) {
-      setShowNode((prev) => !prev);
-      updateNodeInternals(data.id);
+    switch (event) {
+      case "advanced":
+        setShowModalAdvanced(true);
+        break;
+      case "show":
+        setShowNode((prev) => !prev);
+        updateNodeInternals(data.id);
+        break;
+      case "SaveAll":
+        console.log("SaveAll");
     }
   };
 
@@ -152,7 +154,7 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
-              <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+              <SelectItem value={"advanced"}>
                 <div className="flex">
                   <IconComponent
                     name="Settings2"
@@ -161,7 +163,7 @@ export default function NodeToolbarComponent({
                   Edit{" "}
                 </div>{" "}
               </SelectItem>
-              <SelectItem value={getRandomKeyByssmm() + "advanced"}>
+              <SelectItem value={"SaveAll"}>
                 <div className="flex">
                   <IconComponent
                     name="SaveAll"
@@ -171,7 +173,7 @@ export default function NodeToolbarComponent({
                 </div>{" "}
               </SelectItem>
               {isMinimal && (
-                <SelectItem value={getRandomKeyByssmm() + "show"}>
+                <SelectItem value={"show"}>
                   <div className="flex">
                     <IconComponent
                       name={showNode ? "Minimize2" : "Maximize2"}
