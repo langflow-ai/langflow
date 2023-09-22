@@ -299,6 +299,7 @@ export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
  */
 export function getPythonApiCode(
   flow: FlowType,
+  isAuth: boolean,
   tweak?: any[],
   tabsState?: TabsState
 ): string {
@@ -325,7 +326,9 @@ TWEAKS = ${
       : JSON.stringify(tweaks, null, 2)
   }
 
-def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
+    !isAuth ? `, apiKey: str=""` : ""
+  }) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -340,13 +343,16 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None) -> dict:
 
     if tweaks:
         payload["tweaks"] = tweaks
-
-    response = requests.post(api_url, json=payload)
+    ${!isAuth ? 'headers = {"api-key": apiKey}' : ""}
+    response = requests.post(api_url, json=payload,headers=headers)
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
 inputs = ${inputs}
-print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
+${!isAuth ? `api_key = "<your api key>"` : ""}
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
+    !isAuth ? `, apiKey=api_key` : ""
+  }))`;
 }
 
 /**
@@ -356,6 +362,7 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS))`;
  */
 export function getCurlCode(
   flow: FlowType,
+  isAuth: boolean,
   tweak?: any[],
   tabsState?: TabsState
 ): string {
@@ -367,7 +374,8 @@ export function getCurlCode(
   ${window.location.protocol}//${
     window.location.host
   }/api/v1/process/${flowId} \\
-  -H 'Content-Type: application/json' \\
+  -H 'Content-Type: application/json'\\
+  ${!isAuth ? `-H 'api-key: <your api key>'\\` : ""}
   -d '{"inputs": ${inputs}, "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
@@ -405,7 +413,11 @@ flow(inputs)`;
  * @param {string} flow - The current flow.
  * @returns {string} - The widget code
  */
-export function getWidgetCode(flow: FlowType, tabsState?: TabsState): string {
+export function getWidgetCode(
+  flow: FlowType,
+  isAuth: boolean,
+  tabsState?: TabsState
+): string {
   const flowId = flow.id;
   const flowName = flow.name;
   const inputs = buildInputs(tabsState!, flow.id);
@@ -425,7 +437,13 @@ chat_input_field: Input key that you want the chat to send the user message with
   chat_input_field="${chat_input_field}"
   `
       : ""
-  }host_url="http://localhost:7860"
+  }host_url="http://localhost:7860"${
+    !isAuth
+      ? `
+  api_key="..."`
+      : ""
+  }
+  
 ></langflow-chat>`;
 }
 

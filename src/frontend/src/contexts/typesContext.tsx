@@ -26,6 +26,8 @@ const initialValue: typesContextType = {
   setData: () => {},
   setFetchError: () => {},
   fetchError: false,
+  setFilterEdge: (filter) => {},
+  getFilterEdge: [],
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -39,6 +41,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [fetchError, setFetchError] = useState(false);
   const { setLoading } = useContext(alertContext);
   const { getAuthentication } = useContext(AuthContext);
+  const [getFilterEdge, setFilterEdge] = useState([]);
 
   useEffect(() => {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
@@ -113,6 +116,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         setData,
         fetchError,
         setFetchError,
+        setFilterEdge,
+        getFilterEdge,
       }}
     >
       {children}
