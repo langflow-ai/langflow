@@ -13,7 +13,14 @@ if TYPE_CHECKING:
 
 
 def get_settings_service() -> "SettingsService":
-    return service_service.get(ServiceType.SETTINGS_MANAGER)
+    try:
+        return service_service.get(ServiceType.SETTINGS_MANAGER)
+    except ValueError:
+        # initialize settings service
+        from langflow.services.manager import initialize_settings_service
+
+        initialize_settings_service()
+        return service_service.get(ServiceType.SETTINGS_MANAGER)
 
 
 def get_db_service() -> "DatabaseService":

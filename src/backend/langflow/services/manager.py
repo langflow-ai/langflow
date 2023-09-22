@@ -143,6 +143,37 @@ def initialize_services():
     service_service.get(ServiceType.DATABASE_MANAGER)
 
 
+def reinitialize_services():
+    """
+    Reinitialize all the services needed.
+    """
+    from langflow.services.database import factory as database_factory
+    from langflow.services.cache import factory as cache_factory
+    from langflow.services.chat import factory as chat_factory
+    from langflow.services.settings import factory as settings_factory
+    from langflow.services.session import factory as session_service_factory
+    from langflow.services.auth import factory as auth_factory
+    from langflow.services.task import factory as task_factory
+
+    service_service.update(ServiceType.SETTINGS_MANAGER)
+    service_service.update(ServiceType.DATABASE_MANAGER)
+    service_service.update(ServiceType.CACHE_MANAGER)
+    service_service.update(ServiceType.CHAT_MANAGER)
+    service_service.update(ServiceType.SESSION_MANAGER)
+    service_service.update(ServiceType.AUTH_MANAGER)
+    service_service.update(ServiceType.TASK_MANAGER)
+
+    # Test cache connection
+    service_service.get(ServiceType.CACHE_MANAGER)
+    # Test database connection
+    service_service.get(ServiceType.DATABASE_MANAGER)
+
+    # Test cache connection
+    service_service.get(ServiceType.CACHE_MANAGER)
+    # Test database connection
+    service_service.get(ServiceType.DATABASE_MANAGER)
+
+
 def initialize_settings_service():
     """
     Initialize the settings manager.
