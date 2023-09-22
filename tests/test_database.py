@@ -179,7 +179,11 @@ def test_upload_file(
 
 
 def test_download_file(
-    client: TestClient, session: Session, json_flow, active_user, logged_in_headers
+    client: TestClient,
+    session: Session,
+    json_flow,
+    active_user,
+    logged_in_headers,
 ):
     flow = orjson.loads(json_flow)
     data = flow["data"]
