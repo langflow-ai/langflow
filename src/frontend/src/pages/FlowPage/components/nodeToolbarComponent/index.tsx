@@ -11,6 +11,10 @@ import {
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import {
+  createFlowComponent,
+  downloadNode,
+} from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
@@ -62,7 +66,8 @@ export default function NodeToolbarComponent({
         updateNodeInternals(data.id);
         break;
       case "SaveAll":
-        console.log("SaveAll");
+        downloadNode(createFlowComponent(data));
+        break;
     }
   };
 

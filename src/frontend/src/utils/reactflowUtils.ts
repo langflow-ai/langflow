@@ -8,7 +8,7 @@ import {
 } from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
-import { FlowType, NodeType } from "../types/flow";
+import { FlowType, NodeDataType, NodeType } from "../types/flow";
 import {
   cleanEdgesType,
   unselectAllNodesType,
@@ -364,4 +364,36 @@ export function convertValuesToNumbers(arr) {
     }
     return newObj;
   });
+}
+
+export function createFlowComponent(nodeData: NodeDataType): FlowType {
+  const flowNode: FlowType = {
+    data: {
+      edges: [],
+      nodes: [
+        {
+          data: nodeData,
+          id: nodeData.id,
+          position: { x: 0, y: 0 },
+          type: "genericNode",
+        },
+      ],
+      viewport: { x: 1, y: 1, zoom: 1 },
+    },
+    description: nodeData.node?.description || "",
+    name: nodeData.node?.display_name || "",
+    id: nodeData.id || "",
+    isNode: true,
+  };
+  return flowNode;
+}
+
+export function downloadNode(NodeFLow: FlowType) {
+  const element = document.createElement("a");
+  const file = new Blob([JSON.stringify(NodeFLow)], {
+    type: "application/json",
+  });
+  element.href = URL.createObjectURL(file);
+  element.download = `${NodeFLow.name}.json`;
+  element.click();
 }
