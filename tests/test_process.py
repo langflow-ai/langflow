@@ -201,15 +201,11 @@ def test_load_langchain_object_with_cached_session(client, basic_graph_data):
     # Provide a non-existent session_id
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"
-    langchain_object1, artifacts1 = session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph1, artifacts1 = session_service.load_session(session_id1, basic_graph_data)
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph2, artifacts2 = session_service.load_session(session_id1, basic_graph_data)
 
-    assert id(langchain_object1) == id(langchain_object2)
+    assert graph1 == graph2
     assert artifacts1 == artifacts2
 
 
@@ -218,31 +214,22 @@ def test_load_langchain_object_with_no_cached_session(client, basic_graph_data):
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"
     session_id = session_service.build_key(session_id1, basic_graph_data)
-    langchain_object1, artifacts1 = session_service.load_session(
-        session_id, basic_graph_data
-    )
+    graph1, artifacts1 = session_service.load_session(session_id, basic_graph_data)
     # Clear the cache
     session_service.clear_session(session_id)
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_service.load_session(
-        session_id, basic_graph_data
-    )
+    graph2, artifacts2 = session_service.load_session(session_id, basic_graph_data)
 
-    assert id(langchain_object1) != id(
-        langchain_object2
-    )  # Since the cache was cleared, objects should be different
+    assert id(graph1) != id(graph2)
+    # Since the cache was cleared, objects should be different
 
 
 def test_load_langchain_object_without_session_id(client, basic_graph_data):
     # Provide a non-existent session_id
     session_service = get_session_service()
     session_id1 = None
-    langchain_object1, artifacts1 = session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph1, artifacts1 = session_service.load_session(session_id1, basic_graph_data)
     # Use the new session_id to get the langchain_object again
-    langchain_object2, artifacts2 = session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph2, artifacts2 = session_service.load_session(session_id1, basic_graph_data)
 
-    assert id(langchain_object1) == id(langchain_object2)
+    assert graph1 == graph2
