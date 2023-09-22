@@ -153,9 +153,11 @@ async def process_flow(
             )
             if isinstance(result, dict) and "result" in result:
                 task_result = result["result"]
+                session_id = result["session_id"]
             else:
                 task_result = result.result
-            session_id = result.session_id
+
+                session_id = result.session_id
         else:
             task_id, task = await task_service.launch_task(
                 process_graph_cached_task
