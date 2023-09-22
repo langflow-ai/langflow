@@ -83,9 +83,15 @@ WORKDIR $PYSETUP_PATH
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
-COPY ./src/backend ./src/backend
-COPY ./tests ./tests
-
+# Copy just one file to avoid rebuilding the whole image
+COPY ./src/backend/langflow/__init__.py ./src/backend/langflow/__init__.py
 # quicker install as runtime deps are already installed
 RUN --mount=type=cache,target=/root/.cache \
     poetry install --with=dev --extras deploy
+
+# copy in our app code
+COPY ./src/backend ./src/backend
+RUN --mount=type=cache,target=/root/.cache \
+    poetry install --with=dev --extras deploy
+COPY ./tests ./tests=
+
