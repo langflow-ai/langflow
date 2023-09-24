@@ -74,14 +74,14 @@ class Config:
 @pytest.fixture(name="distributed_env")
 def setup_env(monkeypatch):
     monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "redis")
-    monkeypatch.setenv("LANGFLOW_REDIS_HOST", "queue")
+    monkeypatch.setenv("LANGFLOW_REDIS_HOST", "result_backend")
     monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
     monkeypatch.setenv("LANGFLOW_REDIS_DB", "0")
     monkeypatch.setenv("LANGFLOW_REDIS_EXPIRE", "3600")
     monkeypatch.setenv("LANGFLOW_REDIS_PASSWORD", "")
     monkeypatch.setenv("FLOWER_UNAUTHENTICATED_API", "True")
-    monkeypatch.setenv("BROKER_URL", "redis://queue:6379/0")
-    monkeypatch.setenv("RESULT_BACKEND", "redis://queue:6379/0")
+    monkeypatch.setenv("BROKER_URL", "redis://result_backend:6379/0")
+    monkeypatch.setenv("RESULT_BACKEND", "redis://result_backend:6379/0")
     monkeypatch.setenv("C_FORCE_ROOT", "true")
 
 
