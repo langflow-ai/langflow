@@ -164,31 +164,3 @@ def delete_user(
     session.commit()
 
     return {"detail": "User deleted"}
-
-
-# TODO: REMOVE - Just for testing purposes
-@router.post("/super_user", response_model=User)
-def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
-    session: Session = Depends(get_session),
-) -> User:
-    """
-    Add a superuser for testing purposes.
-    (This should be removed in production)
-    """
-    new_user = User(
-        username="superuser",
-        password=get_password_hash("12345"),
-        is_active=True,
-        is_superuser=True,
-        last_login_at=None,
-    )
-
-    try:
-        session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-    except IntegrityError as e:
-        session.rollback()
-        raise HTTPException(status_code=400, detail="User exists") from e
-
-    return new_user
