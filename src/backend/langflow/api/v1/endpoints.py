@@ -126,6 +126,10 @@ async def process_flow(
 
                 session_id = result.session_id
         else:
+            logger.warning(
+                "This is an experimental feature and may not work as expected."
+                "Please report any issues to our GitHub repository."
+            )
             if session_id is None:
                 # Generate a session ID
                 session_id = get_session_service().generate_key(
