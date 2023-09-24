@@ -7,7 +7,12 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
-from langflow.services.getters import get_settings_service, get_task_service
+from langflow.services.getters import (
+    get_cache_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
@@ -122,6 +127,11 @@ async def process_flow(
 
                 session_id = result.session_id
         else:
+            if session_id is None:
+                # Generate a session ID
+                session_id = get_session_service().generate_key(
+                    session_id=session_id, data_graph=graph_data
+                )
             task_id, task = await task_service.launch_task(
                 process_graph_cached_task
                 if task_service.use_celery
@@ -132,7 +142,12 @@ async def process_flow(
                 session_id,
             )
             task_result = task.status
-        return ProcessResponse(result=task_result, id=task_id, session_id=session_id)
+        return ProcessResponse(
+            result=task_result,
+            id=task_id,
+            session_id=session_id,
+            backend=str(type(task_service.backend)),
+        )
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):

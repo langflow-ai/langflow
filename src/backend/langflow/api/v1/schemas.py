@@ -53,6 +53,7 @@ class ProcessResponse(BaseModel):
     result: Any
     id: Optional[str] = None
     session_id: Optional[str] = None
+    backend: str = None
 
 
 # TaskStatusResponse(
