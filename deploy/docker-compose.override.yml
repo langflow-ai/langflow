@@ -27,7 +27,7 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-traefik-public-http.rule=Host(`${DOMAIN?Variable not set}`)
       - traefik.http.services.${STACK_NAME?Variable not set}-traefik-public.loadbalancer.server.port=80
 
-  queue:
+  result_backend:
     ports:
       - "6379:6379"
 
@@ -60,6 +60,18 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-celeryworker-http.rule=PathPrefix(`/api/v1`) || PathPrefix(`/docs`) || PathPrefix(`/health`)
       - traefik.http.services.${STACK_NAME?Variable not set}-celeryworker.loadbalancer.server.port=7860
 
+  tests:
+    extends:
+      file: docker-compose.yml
+      service: backend
+    env_file:
+      - .env
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    command: pytest -vv
+    healthcheck:
+      test: "exit 0"
 networks:
   traefik-public:
     # For local dev, don't expect an external Traefik network

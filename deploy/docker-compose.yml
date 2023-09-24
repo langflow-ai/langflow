@@ -126,7 +126,7 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.tls.certresolver=le
         - traefik.http.services.${STACK_NAME?Variable not set}-pgadmin.loadbalancer.server.port=5050
 
-  queue:
+  result_backend:
     image: redis:6.2.5
     env_file:
       - .env
@@ -193,6 +193,20 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
         - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
 
+  broker:
+    # RabbitMQ management console
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin}
+    volumes:
+      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+    ports:
+      - 5672:5672
+      - 15672:15672
+
   prometheus:
     image: prom/prometheus:v2.37.9
     env_file:
@@ -226,17 +240,6 @@ services:
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
         - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.rule=PathPrefix(`/grafana`)
         - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
-
-  tests:
-    <<: *backend
-    env_file:
-      - .env
-    build:
-      context: ../
-      dockerfile: base.Dockerfile
-    command: pytest -vv
-    healthcheck:
-      test: "exit 0"
 
 volumes:
   grafana_data:
