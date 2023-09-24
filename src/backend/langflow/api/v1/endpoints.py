@@ -8,7 +8,6 @@ from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
 from langflow.services.getters import (
-    get_cache_service,
     get_session_service,
     get_settings_service,
     get_task_service,
