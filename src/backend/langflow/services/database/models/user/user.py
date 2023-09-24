@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 class User(SQLModelSerializable, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    stripe_id: Optional[str] = Field(unique=True)
+    stripe_subscription_status: Optional[str] = Field()
     username: str = Field(index=True, unique=True)
     password: str = Field()
     profile_image: Optional[str] = Field(default=None)
@@ -28,10 +30,13 @@ class User(SQLModelSerializable, table=True):
 class UserCreate(SQLModel):
     username: str = Field()
     password: str = Field()
+    stripe_subscription_status: Optional[str] = Field()
 
 
 class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
+    stripe_id: Optional[str] = Field(unique=True)
+    stripe_subscription_status: Optional[str] = Field()
     username: str = Field()
     profile_image: Optional[str] = Field()
     is_active: bool = Field()
@@ -42,6 +47,8 @@ class UserRead(SQLModel):
 
 
 class UserUpdate(SQLModel):
+    stripe_id: Optional[str] = Field(unique=True)
+    stripe_subscription_status: Optional[str] = Field()
     profile_image: Optional[str] = Field()
     password: Optional[str] = Field()
     is_active: Optional[bool] = Field()

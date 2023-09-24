@@ -1,4 +1,4 @@
-import { Edge, Node, Viewport } from "reactflow";
+import {Edge, Node, Viewport} from "reactflow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
@@ -91,8 +91,20 @@ export type resetPasswordType = {
   profile_image?: string;
 };
 
+export type StripeSubscriptionStatusT =
+  "active"
+  | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "past_due"
+  | "paused"
+  | "trialing"
+  | "unpaid"
+
 export type Users = {
   id: string;
+  stripe_id: string;
+  stripe_subscription_status: StripeSubscriptionStatusT;
   username: string;
   is_active: boolean;
   is_superuser: boolean;

@@ -9,6 +9,8 @@ from langflow.api.v1 import (
     users_router,
     api_key_router,
     login_router,
+    stripe_webhooks,
+    stripe_subscriptions
 )
 
 router = APIRouter(
@@ -22,3 +24,5 @@ router.include_router(flows_router)
 router.include_router(users_router)
 router.include_router(api_key_router)
 router.include_router(login_router)
+router.include_router(stripe_webhooks)
+router.include_router(stripe_subscriptions)

@@ -6,6 +6,8 @@ from langflow.api.v1.components import router as component_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.login import router as login_router
+from langflow.api.v1.stripe_webhooks import router as stripe_webhooks
+from langflow.api.v1.stripe_subscriptions import router as stripe_subscriptions
 
 __all__ = [
     "chat_router",
@@ -16,4 +18,6 @@ __all__ = [
     "users_router",
     "api_key_router",
     "login_router",
+    "stripe_webhooks",
+    "stripe_subscriptions"
 ]

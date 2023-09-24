@@ -1,24 +1,17 @@
-import { AxiosResponse } from "axios";
-import { ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API } from "../../constants/constants";
-import { api } from "../../controllers/API/api";
-import {
-  APIObjectType,
-  LoginType,
-  Users,
-  changeUser,
-  resetPasswordType,
-  sendAllProps,
-} from "../../types/api/index";
-import { UserInputType } from "../../types/components";
-import { FlowStyleType, FlowType } from "../../types/flow";
+import {AxiosResponse} from "axios";
+import {ReactFlowJsonObject} from "reactflow";
+import {BASE_URL_API} from "../../constants/constants";
+import {api} from "../../controllers/API/api";
+import {APIObjectType, changeUser, LoginType, resetPasswordType, sendAllProps, Users,} from "../../types/api/index";
+import {UserInputType} from "../../types/components";
+import {FlowStyleType, FlowType} from "../../types/flow";
 import {
   APIClassType,
   BuildStatusTypeAPI,
+  errorsTypeAPI,
   InitTypeAPI,
   PromptTypeAPI,
   UploadFileTypeAPI,
-  errorsTypeAPI,
 } from "./../../types/api/index";
 
 /**
@@ -515,6 +508,18 @@ export async function createApiKey(name: string) {
 export async function deleteApiKey(api_key: string) {
   try {
     const res = await api.delete(`${BASE_URL_API}api_key/${api_key}`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function attemptSubscribe(priceId: string) {
+  try {
+    const res = await api.post(`${BASE_URL_API}stripe_subscription/attempt/${priceId}`);
     if (res.status === 200) {
       return res.data;
     }

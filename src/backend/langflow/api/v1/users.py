@@ -1,4 +1,7 @@
 from uuid import UUID
+
+import stripe
+
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.database.models.user import (
     User,
@@ -38,7 +41,12 @@ def add_user(
     """
     new_user = User.from_orm(user)
     try:
+        customer: stripe.Customer = stripe.Customer.create(
+            email=user.username
+        )
+
         new_user.password = get_password_hash(user.password)
+        new_user.stripe_id = customer.stripe_id
 
         session.add(new_user)
         session.commit()

@@ -63,6 +63,9 @@ frontendc:
 install_backend:
 	poetry install
 
+run_backend:
+	python -m src.backend.langflow run --env-file .env --path src/frontend --log-level debug --no-open-browser
+
 backend:
 	make install_backend
 	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug

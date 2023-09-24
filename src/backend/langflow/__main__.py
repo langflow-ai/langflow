@@ -1,6 +1,9 @@
+import os
 import sys
 import time
 import httpx
+import stripe
+
 from langflow.services.database.utils import session_getter
 from langflow.services.utils import initialize_services
 from langflow.services.getters import get_db_manager, get_settings_manager
@@ -195,6 +198,8 @@ def run(
     # override env variables with .env file
     if env_file:
         load_dotenv(env_file, override=True)
+
+    stripe.api_key = os.getenv("LANGFLOW_STRIPE_KEY")
 
     if jcloud:
         return serve_on_jcloud()

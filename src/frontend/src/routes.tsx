@@ -1,8 +1,8 @@
-import { Route, Routes } from "react-router-dom";
-import { ProtectedAdminRoute } from "./components/authAdminGuard";
-import { ProtectedRoute } from "./components/authGuard";
-import { ProtectedLoginRoute } from "./components/authLoginGuard";
-import { CatchAllRoute } from "./components/catchAllRoutes";
+import {Route, Routes} from "react-router-dom";
+import {ProtectedAdminRoute} from "./components/authAdminGuard";
+import {ProtectedRoute} from "./components/authGuard";
+import {ProtectedLoginRoute} from "./components/authLoginGuard";
+import {CatchAllRoute} from "./components/catchAllRoutes";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
@@ -14,6 +14,8 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import PaymentPage from "./pages/PaymentPage";
+import {ProtectedPaymentRoute} from "./components/authPaymentGuard";
 
 const Router = () => {
   return (
@@ -22,7 +24,9 @@ const Router = () => {
         path="/"
         element={
           <ProtectedRoute>
-            <HomePage />
+            <ProtectedPaymentRoute>
+                <HomePage />
+            </ProtectedPaymentRoute>
           </ProtectedRoute>
         }
       />
@@ -30,7 +34,9 @@ const Router = () => {
         path="/community"
         element={
           <ProtectedRoute>
-            <CommunityPage />
+            <ProtectedPaymentRoute>
+                <CommunityPage />
+            </ProtectedPaymentRoute>
           </ProtectedRoute>
         }
       />
@@ -39,7 +45,9 @@ const Router = () => {
           path=""
           element={
             <ProtectedRoute>
-              <FlowPage />
+              <ProtectedPaymentRoute>
+                  <FlowPage />
+              </ProtectedPaymentRoute>
             </ProtectedRoute>
           }
         />
@@ -47,7 +55,9 @@ const Router = () => {
           path="view"
           element={
             <ProtectedRoute>
-              <ViewPage />
+              <ProtectedPaymentRoute>
+                  <ViewPage />
+              </ProtectedPaymentRoute>
             </ProtectedRoute>
           }
         />
@@ -56,7 +66,9 @@ const Router = () => {
         path="*"
         element={
           <ProtectedRoute>
-            <CatchAllRoute />
+            <ProtectedPaymentRoute>
+                <CatchAllRoute />
+            </ProtectedPaymentRoute>
           </ProtectedRoute>
         }
       />
@@ -83,6 +95,14 @@ const Router = () => {
           <ProtectedLoginRoute>
             <LoginAdminPage />
           </ProtectedLoginRoute>
+        }
+      />
+      <Route
+        path="/payment"
+        element={
+          <ProtectedRoute>
+            <PaymentPage />
+          </ProtectedRoute>
         }
       />
 

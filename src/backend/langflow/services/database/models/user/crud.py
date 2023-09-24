@@ -19,6 +19,10 @@ def get_user_by_id(db: Session, id: UUID) -> Union[User, None]:
     return db.query(User).filter(User.id == id).first()
 
 
+def get_user_by_stripe_id(db: Session, stripe_id: str) -> Union[User, None]:
+    return db.query(User).filter(User.stripe_id == stripe_id).first()
+
+
 def update_user(
     user_db: Optional[User], user: UserUpdate, db: Session = Depends(get_session)
 ) -> User:
