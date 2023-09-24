@@ -30,6 +30,7 @@ jobs:
         run: docker --version && docker-compose --version
 
       - name: "Create env file"
+        working-directory: ./deploy
         run: |
           echo "${{ secrets.ENV_FILE }}" > .env
 
