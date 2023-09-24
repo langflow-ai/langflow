@@ -1,9 +1,8 @@
-from locust import FastHttpUser, task, between, events
+from locust import FastHttpUser, task, between
 import random
 import time
 import orjson
 from rich import print
-import os
 import httpx
 from pathlib import Path
 
