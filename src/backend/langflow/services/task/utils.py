@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     with contextlib.suppress(ImportError):
-        from celery import Celery
+        from celery import Celery  # type: ignore
 
 
 def get_celery_worker_status(app: "Celery"):
