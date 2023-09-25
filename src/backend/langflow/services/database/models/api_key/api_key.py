@@ -26,7 +26,6 @@ class ApiKey(ApiKeyBase, table=True):
     user_id: UUID = Field(index=True, foreign_key="user.id")
     user: "User" = Relationship(
         back_populates="api_keys",
-        sa_relationship_kwargs={"cascade": "delete"},
     )
 
 
