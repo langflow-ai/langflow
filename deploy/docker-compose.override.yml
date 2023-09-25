@@ -72,6 +72,13 @@ services:
     command: pytest -vv
     healthcheck:
       test: "exit 0"
+    # override deploy labels to avoid conflicts with the backend service
+    labels:
+      - traefik.enable=true
+      - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+      - traefik.http.routers.${STACK_NAME?Variable not set}-tests-http.rule=PathPrefix(`/api/v1`) || PathPrefix(`/docs`) || PathPrefix(`/health`)
+      - traefik.http.services.${STACK_NAME?Variable not set}-tests.loadbalancer.server.port=7861
+
 networks:
   traefik-public:
     # For local dev, don't expect an external Traefik network
