@@ -73,6 +73,10 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
+    depends_on:
+      - db
+      - broker
+      - result_backend
     env_file:
       - .env
     volumes:
