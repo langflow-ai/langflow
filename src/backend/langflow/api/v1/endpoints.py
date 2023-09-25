@@ -159,7 +159,7 @@ async def process_flow(
 async def create_upload_file(file: UploadFile, flow_id: str):
     # Cache file
     try:
-        file_path = save_uploaded_file(file.file, folder_name=flow_id)
+        file_path = save_uploaded_file(file, folder_name=flow_id)
 
         return UploadFileResponse(
             flowId=flow_id,
