@@ -525,3 +525,7 @@ export function tabsArray(codes: string[], method: number) {
     },
   ];
 }
+
+export function checkLocalStorageKey(key: string): boolean {
+  return localStorage.getItem(key) !== null;
+}

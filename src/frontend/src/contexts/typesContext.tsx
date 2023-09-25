@@ -8,7 +8,10 @@ import {
 import { Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
+import { localStorageUserType } from "../types/entities";
+import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
+import { checkLocalStorageKey } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 
@@ -28,6 +31,7 @@ const initialValue: typesContextType = {
   fetchError: false,
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
+  saveComponent: (component: NodeDataType, key: string) => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -102,9 +106,23 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         .filter((edge) => edge.source !== idx && edge.target !== idx)
     );
   }
+
+  function saveComponent(component: NodeDataType, id: string) {
+    if (checkLocalStorageKey(id)) {
+      let savedComponents = localStorage.getItem(id)!;
+      let savedComponentsJSON: localStorageUserType =
+        JSON.parse(savedComponents);
+      let components = savedComponentsJSON.components;
+      components[component.type];
+      savedComponentsJSON.components = components;
+      localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
+    }
+  }
+
   return (
     <typesContext.Provider
       value={{
+        saveComponent,
         types,
         setTypes,
         reactFlowInstance,
