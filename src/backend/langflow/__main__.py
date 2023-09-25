@@ -1,27 +1,26 @@
+import platform
+import socket
 import sys
 import time
-import httpx
-from langflow.services.database.utils import session_getter
-from langflow.services.utils import initialize_services
-from langflow.services.getters import get_db_manager, get_settings_manager
-from langflow.services.utils import initialize_settings_manager
-
-from multiprocess import Process, cpu_count  # type: ignore
-import platform
+import webbrowser
 from pathlib import Path
 from typing import Optional
-import socket
-from rich.panel import Panel
+
+import httpx
+import typer
+from dotenv import load_dotenv
+from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
-from rich.table import Table
-import typer
-from langflow.main import setup_app
-from langflow.utils.logger import configure, logger
-import webbrowser
-from dotenv import load_dotenv
-
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_manager, get_settings_manager
+from langflow.services.utils import initialize_services, initialize_settings_manager
+from langflow.utils.logger import configure, logger
 
 console = Console()
 
@@ -80,52 +79,6 @@ def update_settings(
         settings_manager.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
-def serve_on_jcloud():
-    """
-    Deploy Langflow server on Jina AI Cloud
-    """
-    import asyncio
-    from importlib.metadata import version as mod_version
-
-    import click
-
-    try:
-        from lcserve.__main__ import serve_on_jcloud  # type: ignore
-    except ImportError:
-        click.secho(
-            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud "
-            "using `pip install langchain-serve`",
-            fg="red",
-        )
-        return
-
-    app_name = "langflow.lcserve:app"
-    app_dir = str(Path(__file__).parent)
-    version = mod_version("langflow")
-    base_image = "jinaai+docker://deepankarm/langflow"
-
-    click.echo("🚀 Deploying Langflow server on Jina AI Cloud")
-    app_id = asyncio.run(
-        serve_on_jcloud(
-            fastapi_app_str=app_name,
-            app_dir=app_dir,
-            uses=f"{base_image}:{version}",
-            name="langflow",
-        )
-    )
-    click.secho(
-        "🎉 Langflow server successfully deployed on Jina AI Cloud 🎉", fg="green"
-    )
-    click.secho(
-        "🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): ",
-        nl=False,
-        fg="green",
-    )
-    click.secho(f"https://{app_id}.wolf.jina.ai/", fg="blue")
-    click.secho("📖 Read more about managing the server: ", nl=False, fg="green")
-    click.secho("https://github.com/jina-ai/langchain-serve", fg="blue")
-
-
 @app.command()
 def run(
     host: str = typer.Option(
@@ -159,7 +112,6 @@ def run(
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default=None,
     ),
-    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
     # This variable does not work but is set by the .env file
     # and works with Pydantic
@@ -195,9 +147,6 @@ def run(
     # override env variables with .env file
     if env_file:
         load_dotenv(env_file, override=True)
-
-    if jcloud:
-        return serve_on_jcloud()
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(
