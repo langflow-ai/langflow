@@ -8,6 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
+import { AuthContext } from "../../../../contexts/authContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
@@ -41,6 +42,7 @@ export default function NodeToolbarComponent({
     ).length
   );
   const updateNodeInternals = useUpdateNodeInternals();
+  const { isAuthenticated, autoLogin, userData } = useContext(AuthContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -65,9 +67,20 @@ export default function NodeToolbarComponent({
         setShowNode((prev) => !prev);
         updateNodeInternals(data.id);
         break;
-      case "SaveAll":
+      case "Download":
         //TODO add logic to save node on backend and update toolbar
         downloadNode(createFlowComponent(data));
+        break;
+      case "SaveAll":
+        if (isAuthenticated) {
+          if (autoLogin) {
+            console.log("save all");
+          } else {
+          }
+        }
+        console.log(isAuthenticated);
+        console.log(userData);
+        console.log(autoLogin);
         break;
     }
   };
@@ -176,6 +189,15 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
                   Save{" "}
+                </div>{" "}
+              </SelectItem>
+              <SelectItem value={"Download"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Download"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  Download{" "}
                 </div>{" "}
               </SelectItem>
               {isMinimal && (

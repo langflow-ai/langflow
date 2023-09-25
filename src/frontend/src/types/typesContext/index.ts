@@ -1,6 +1,7 @@
 import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { AlertItemType } from "../alerts";
 import { APIClassType, APIDataType } from "../api";
+import { NodeDataType } from "../flow";
 
 const types: { [char: string]: string } = {};
 const template: { [char: string]: APIClassType } = {};
@@ -20,6 +21,7 @@ export type typesContextType = {
   setFetchError: (newState: boolean) => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  saveComponent: (component: NodeDataType, key: string) => void;
 };
 
 export type alertContextType = {
