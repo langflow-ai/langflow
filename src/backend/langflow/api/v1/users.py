@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.services.getters import get_session
+from langflow.services.getters import get_session, get_settings_service
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
@@ -32,6 +32,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 def add_user(
     user: UserCreate,
     session: Session = Depends(get_session),
+    settings_service=Depends(get_settings_service),
 ) -> User:
     """
     Add a new user to the database.
@@ -39,7 +40,7 @@ def add_user(
     new_user = User.from_orm(user)
     try:
         new_user.password = get_password_hash(user.password)
-
+        new_user.is_active = settings_service.settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
