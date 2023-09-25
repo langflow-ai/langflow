@@ -23,14 +23,22 @@ async def login_to_get_access_token(
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
 ):
-    if user := authenticate_user(form_data.username, form_data.password, db):
-        return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-    else:
+    try:
+        user = authenticate_user(form_data.username, form_data.password, db)
+
+        if user:
+            return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except Exception as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/auto_login")

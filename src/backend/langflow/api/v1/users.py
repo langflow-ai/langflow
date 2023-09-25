@@ -99,10 +99,12 @@ def patch_user(
         raise HTTPException(
             status_code=403, detail="You don't have the permission to update this user"
         )
-    if user_update.password and not user.is_superuser:
-        raise HTTPException(
-            status_code=400, detail="You can't change your password here"
-        )
+    if user_update.password:
+        if not user.is_superuser:
+            raise HTTPException(
+                status_code=400, detail="You can't change your password here"
+            )
+        user_update.password = get_password_hash(user_update.password)
 
     if user_db := get_user_by_id(session, user_id):
         return update_user(user_db, user_update, session)
