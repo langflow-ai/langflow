@@ -67,7 +67,7 @@ def read_current_user(
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
-    current_user: Session = Depends(get_current_active_superuser),
+    _: Session = Depends(get_current_active_superuser),
     session: Session = Depends(get_session),
 ) -> UsersResponse:
     """
