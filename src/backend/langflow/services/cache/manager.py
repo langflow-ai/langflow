@@ -7,6 +7,8 @@ from langflow.services.cache.base import BaseCacheService
 
 import pickle
 
+from loguru import logger
+
 
 class InMemoryCache(BaseCacheService, Service):
 
@@ -221,7 +223,10 @@ class RedisCache(BaseCacheService, Service):
                 "RedisCache requires the redis-py package."
                 " Please install Langflow with the deploy extra: pip install langflow[deploy]"
             ) from exc
-
+        logger.warning(
+            "RedisCache is an experimental feature and may not work as expected."
+            " Please report any issues to our GitHub repository."
+        )
         self._client = redis.StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
