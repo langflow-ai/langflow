@@ -109,7 +109,7 @@ services:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
       - default
     volumes:
-      - ./pgadmin:/var/lib/pgadmin
+      - pgadmin-data:/var/lib/pgadmin
     env_file:
       - .env
     deploy:
@@ -200,9 +200,9 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin}
     volumes:
-      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
-      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
-      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+      - rabbitmq_data:/etc/rabbitmq/
+      - rabbitmq_data:/var/lib/rabbitmq/
+      - rabbitmq_log:/var/log/rabbitmq/
     ports:
       - 5672:5672
       - 15672:15672
@@ -244,6 +244,9 @@ services:
 volumes:
   grafana_data:
   app-db-data:
+  rabbitmq_data:
+  rabbitmq_log:
+  pgadmin-data:
 
 networks:
   traefik-public:
