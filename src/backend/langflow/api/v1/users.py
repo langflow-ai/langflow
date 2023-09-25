@@ -40,7 +40,7 @@ def add_user(
     new_user = User.from_orm(user)
     try:
         new_user.password = get_password_hash(user.password)
-        new_user.is_active = settings_service.settings.NEW_USER_IS_ACTIVE
+        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
