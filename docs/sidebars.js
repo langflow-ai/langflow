@@ -52,6 +52,7 @@ module.exports = {
       label: "Step-by-Step Guides",
       collapsed: false,
       items: [
+        "guides/login",
         "guides/loading_document",
         "guides/chatprompttemplate_guide",
         "guides/langfuse_integration",
