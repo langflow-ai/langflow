@@ -10,6 +10,7 @@ import {
 } from "../../../../components/ui/select-custom";
 import { AuthContext } from "../../../../contexts/authContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
+import { typesContext } from "../../../../contexts/typesContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import {
@@ -54,6 +55,7 @@ export default function NodeToolbarComponent({
   }
   const isMinimal = canMinimize();
   const { paste } = useContext(TabsContext);
+  const { saveComponent } = useContext(typesContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
@@ -73,14 +75,8 @@ export default function NodeToolbarComponent({
         break;
       case "SaveAll":
         if (isAuthenticated) {
-          if (autoLogin) {
-            console.log("save all");
-          } else {
-          }
+          saveComponent(data, autoLogin ? "auto" : userData?.id!);
         }
-        console.log(isAuthenticated);
-        console.log(userData);
-        console.log(autoLogin);
         break;
     }
   };
