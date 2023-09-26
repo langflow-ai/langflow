@@ -5,7 +5,7 @@ from langchain.agents import types
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
-from langflow.services.getters import get_settings_manager
+from langflow.services.getters import get_settings_service
 
 from langflow.template.frontend_node.agents import AgentFrontendNode
 from loguru import logger
@@ -54,7 +54,7 @@ class AgentCreator(LangChainTypeCreator):
     # Now this is a generator
     def to_list(self) -> List[str]:
         names = []
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         for _, agent in self.type_to_loader_dict.items():
             agent_name = (
                 agent.function_name()
@@ -62,8 +62,8 @@ class AgentCreator(LangChainTypeCreator):
                 else agent.__name__
             )
             if (
-                agent_name in settings_manager.settings.AGENTS
-                or settings_manager.settings.DEV
+                agent_name in settings_service.settings.AGENTS
+                or settings_service.settings.DEV
             ):
                 names.append(agent_name)
         return names

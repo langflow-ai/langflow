@@ -1,22 +1,9 @@
-from typing import Any, Dict, Tuple
-from langflow.services.cache.utils import memoize_dict
+from typing import Dict, Tuple
 from langflow.graph import Graph
 from loguru import logger
 
 
-@memoize_dict(maxsize=10)
-def build_langchain_object_with_caching(data_graph):
-    """
-    Build langchain object from data_graph.
-    """
-
-    logger.debug("Building langchain object")
-    graph = Graph.from_payload(data_graph)
-    return graph.build()
-
-
-@memoize_dict(maxsize=10)
-def build_sorted_vertices_with_caching(data_graph) -> Tuple[Any, Dict]:
+def build_sorted_vertices(data_graph) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """
@@ -29,7 +16,7 @@ def build_sorted_vertices_with_caching(data_graph) -> Tuple[Any, Dict]:
         vertex.build()
         if vertex.artifacts:
             artifacts.update(vertex.artifacts)
-    return graph.build(), artifacts
+    return graph, artifacts
 
 
 def build_langchain_object(data_graph):

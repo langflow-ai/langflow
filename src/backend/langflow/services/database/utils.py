@@ -6,21 +6,21 @@ from alembic.util.exc import CommandError
 from sqlmodel import Session
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseManager
+    from langflow.services.database.manager import DatabaseService
 
 
 def initialize_database():
     logger.debug("Initializing database")
     from langflow.services import service_manager, ServiceType
 
-    database_manager = service_manager.get(ServiceType.DATABASE_MANAGER)
+    database_service = service_manager.get(ServiceType.DATABASE_SERVICE)
     try:
-        database_manager.check_schema_health()
+        database_service.check_schema_health()
     except Exception as exc:
         logger.error(f"Error checking schema health: {exc}")
         raise RuntimeError("Error checking schema health") from exc
     try:
-        database_manager.run_migrations()
+        database_service.run_migrations()
     except CommandError as exc:
         if "Can't locate revision identified by" not in str(exc):
             raise exc
@@ -30,23 +30,23 @@ def initialize_database():
         logger.warning(
             "Wrong revision in DB, deleting alembic_version table and running migrations again"
         )
-        with session_getter(database_manager) as session:
+        with session_getter(database_service) as session:
             session.execute("DROP TABLE alembic_version")
-        database_manager.run_migrations()
+        database_service.run_migrations()
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
             logger.error(f"Error running migrations: {exc}")
             raise RuntimeError("Error running migrations") from exc
-    database_manager.create_db_and_tables()
+    database_service.create_db_and_tables()
     logger.debug("Database initialized")
 
 
 @contextmanager
-def session_getter(db_manager: "DatabaseManager"):
+def session_getter(db_service: "DatabaseService"):
     try:
-        session = Session(db_manager.engine)
+        session = Session(db_service.engine)
         yield session
     except Exception as e:
         print("Session rollback because of exception:", e)

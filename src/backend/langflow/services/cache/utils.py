@@ -6,10 +6,13 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from appdirs import user_cache_dir
 from fastapi import UploadFile
 from langflow.services.database.models.base import orjson_dumps
+
+if TYPE_CHECKING:
+    pass
 
 CACHE: Dict[str, Any] = {}
 
