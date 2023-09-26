@@ -83,7 +83,7 @@ const ApiModal = forwardRef(
       filterNodes();
 
       if (Object.keys(tweaksCode).length > 0) {
-        setActiveTab("0");
+        // setActiveTab("0");
         setTabs(tabsArray(codesArray, 1));
       } else {
         setTabs(tabsArray(codesArray, 1));
@@ -135,6 +135,10 @@ const ApiModal = forwardRef(
 
       if (template.type === "dict") {
         changes = convertArrayToObj(changes);
+      }
+
+      if (template.type === "NestedDict") {
+        changes = JSON.stringify(changes);
       }
 
       const existingTweak = tweak.current.find((element) =>
