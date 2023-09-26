@@ -83,7 +83,7 @@ const ApiModal = forwardRef(
       filterNodes();
 
       if (Object.keys(tweaksCode).length > 0) {
-        // setActiveTab("0");
+        setActiveTab("0");
         setTabs(tabsArray(codesArray, 1));
       } else {
         setTabs(tabsArray(codesArray, 1));
