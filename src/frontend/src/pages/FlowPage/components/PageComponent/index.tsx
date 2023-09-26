@@ -168,7 +168,7 @@ export default function Page({
         let updatedSeconds = prevSeconds + 1;
 
         if (updatedSeconds % 30 === 0) {
-          saveFlow(flow);
+          saveFlow(flow, true);
           updatedSeconds = 0;
         }
 
