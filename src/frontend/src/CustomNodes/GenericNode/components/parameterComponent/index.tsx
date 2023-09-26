@@ -268,9 +268,9 @@ export default function ParameterComponent({
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
+          type === "int" ||
           type === "dict" ||
-          type === "NestedDict" ||
-          type === "int") &&
+          type === "NestedDict") &&
         !optionalHandle ? (
           <></>
         ) : (

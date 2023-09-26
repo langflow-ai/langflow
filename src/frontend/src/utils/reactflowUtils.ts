@@ -220,8 +220,7 @@ export function validateNode(
         )
     ) {
       errors.push(
-        `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
+        `${type} is missing ${template.display_name || toNormalCase(template[t].name)
         }.`
       );
     } else if (
@@ -234,14 +233,12 @@ export function validateNode(
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
+          `${type} (${template.display_name || template[t].name
           }) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
+          `${type} (${template.display_name || template[t].name
           }) field must not be empty.`
         );
     }
@@ -324,6 +321,21 @@ export function convertObjToArray(singleObject) {
   }
   return arrConverted;
 }
+
+export function convertArrayToObj(arrayOfObjects) {
+  if (!Array.isArray(arrayOfObjects)) return arrayOfObjects;
+
+  let objConverted = {};
+  for (const obj of arrayOfObjects) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        objConverted[key] = obj[key];
+      }
+    }
+  }
+  return objConverted;
+}
+
 
 export function hasDuplicateKeys(array) {
   const keys = {};
