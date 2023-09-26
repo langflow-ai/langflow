@@ -2,9 +2,8 @@ import sys
 import time
 import httpx
 from langflow.services.database.utils import session_getter
-from langflow.services.utils import initialize_services
-from langflow.services.getters import get_db_manager, get_settings_manager
-from langflow.services.utils import initialize_settings_manager
+from langflow.services.manager import initialize_services, initialize_settings_service
+from langflow.services.getters import get_db_service, get_settings_service
 
 from multiprocess import Process, cpu_count  # type: ignore
 import platform
@@ -64,20 +63,20 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-    initialize_settings_manager()
-    settings_manager = get_settings_manager()
+    initialize_settings_service()
+    settings_service = get_settings_service()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings_manager.settings.update_from_yaml(config, dev=dev)
+        settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings_manager.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_service.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings_manager.settings.update_settings(CACHE=cache)
+        settings_service.settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings_manager.settings.update_settings(COMPONENTS_PATH=components_path)
+        settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 def serve_on_jcloud():
@@ -353,8 +352,8 @@ def superuser(
     ),
 ):
     initialize_services()
-    db_manager = get_db_manager()
-    with session_getter(db_manager) as session:
+    db_service = get_db_service()
+    with session_getter(db_service) as session:
         from langflow.services.auth.utils import create_super_user
 
         if create_super_user(db=session, username=username, password=password):
@@ -375,10 +374,10 @@ def superuser(
 @app.command()
 def migration(test: bool = typer.Option(False, help="Run migrations in test mode.")):
     initialize_services()
-    db_manager = get_db_manager()
+    db_service = get_db_service()
     if not test:
-        db_manager.run_migrations()
-    results = db_manager.run_migrations_test()
+        db_service.run_migrations()
+    results = db_service.run_migrations_test()
     display_results(results)
 
 

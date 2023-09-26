@@ -236,7 +236,7 @@
                 "placeholder": "",
                 "show": true,
                 "multiline": false,
-                "value": "abc",
+                "value": null,
                 "password": true,
                 "name": "openai_api_key",
                 "display_name": "OpenAI API Key",

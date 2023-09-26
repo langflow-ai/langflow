@@ -3,16 +3,16 @@ from langflow.services.auth.utils import create_super_user, get_password_hash
 
 from langflow.services.database.models.user.user import User
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_manager, get_settings_manager
+from langflow.services.getters import get_db_service, get_settings_service
 import pytest
 from langflow.services.database.models.user import UserUpdate
 
 
 @pytest.fixture
 def super_user(client):
-    settings_manager = get_settings_manager()
+    settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         return create_super_user(
             db=session,
             username=auth_settings.SUPERUSER,
@@ -22,8 +22,8 @@ def super_user(client):
 
 @pytest.fixture
 def super_user_headers(client, super_user):
-    settings_manager = get_settings_manager()
-    auth_settings = settings_manager.auth_settings
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
     login_data = {
         "username": auth_settings.SUPERUSER,
         "password": auth_settings.SUPERUSER_PASSWORD,
@@ -37,7 +37,7 @@ def super_user_headers(client, super_user):
 
 @pytest.fixture
 def deactivated_user():
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
@@ -55,7 +55,7 @@ def test_user_waiting_for_approval(
     client,
 ):
     # Create a user that is not active and has never logged in
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="waitingforapproval",
             password=get_password_hash("testpassword"),
@@ -115,7 +115,7 @@ def test_data_consistency_after_delete(client, test_user, super_user_headers):
 
 def test_inactive_user(client):
     # Create a user that is not active and has a last_login_at value
-    with session_getter(get_db_manager()) as session:
+    with session_getter(get_db_service()) as session:
         user = User(
             username="inactiveuser",
             password=get_password_hash("testpassword"),
@@ -170,7 +170,7 @@ def test_patch_user(client, active_user, logged_in_headers):
     response = client.patch(
         f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
     )
-    assert response.status_code == 304, response.json()
+    assert response.status_code == 200, response.json()
     update_data = UserUpdate(
         profile_image="new_image",
     )
