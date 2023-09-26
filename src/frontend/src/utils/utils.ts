@@ -324,8 +324,14 @@ TWEAKS = ${tweak && tweak.length > 0
       : JSON.stringify(tweaks, null, 2)
     }
 
+<<<<<<< HEAD
 def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${!isAuth ? `, apiKey: str=""` : ""
     }) -> dict:
+=======
+def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
+    !isAuth ? `, api_key: Optional[str] = None` : ""
+  }) -> dict:
+>>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
     """
     Run a flow with a given message and optional tweaks.
 
@@ -337,18 +343,25 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${!isAuth 
     api_url = f"{BASE_API_URL}/{flow_id}"
 
     payload = {"inputs": inputs}
-
+    headers = None
     if tweaks:
         payload["tweaks"] = tweaks
-    ${!isAuth ? 'headers = {"api-key": apiKey}' : ""}
-    response = requests.post(api_url, json=payload,headers=headers)
+    if api_key:
+        headers = {"x-api-key": api_key}
+    response = requests.post(api_url, json=payload, headers=headers)
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
 inputs = ${inputs}
 ${!isAuth ? `api_key = "<your api key>"` : ""}
+<<<<<<< HEAD
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${!isAuth ? `, apiKey=api_key` : ""
     }))`;
+=======
+print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
+    !isAuth ? `, api_key=api_key` : ""
+  }))`;
+>>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
 }
 
 /**
@@ -367,11 +380,22 @@ export function getCurlCode(
   const inputs = buildInputs(tabsState!, flow.id);
 
   return `curl -X POST \\
+<<<<<<< HEAD
   ${window.location.protocol}//${window.location.host
     }/api/v1/process/${flowId} \\
   -H 'Content-Type: application/json'\\
   ${!isAuth ? `-H 'api-key: <your api key>'\\` : ""}
   -d '{"inputs": ${inputs}, "tweaks": ${tweak && tweak.length > 0
+=======
+  ${window.location.protocol}//${
+    window.location.host
+  }/api/v1/process/${flowId} \\
+  -H 'Content-Type: application/json'\\${
+    !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
+  }
+  -d '{"inputs": ${inputs}, "tweaks": ${
+    tweak && tweak.length > 0
+>>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
     }}'`;
@@ -433,8 +457,13 @@ chat_input_field: Input key that you want the chat to send the user message with
       ? `
   api_key="..."`
       : ""
+<<<<<<< HEAD
     }
   
+=======
+  }
+
+>>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
 ></langflow-chat>`;
 }
 
