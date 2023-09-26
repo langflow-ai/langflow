@@ -22,8 +22,6 @@ export default function DictAreaModal({
   const [dictObj, setDictObj] = useState(value);
 
   useEffect(() => {
-    console.log(value);
-
     if (value) setDictObj(value);
   }, [dictObj]);
 
