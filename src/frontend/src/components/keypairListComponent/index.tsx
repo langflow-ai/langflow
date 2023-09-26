@@ -50,6 +50,7 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-3">
               <Textarea
+                rows={1}
                 value={key.trim()}
                 className={classNames(
                   editNode ? "input-edit-node" : "",
@@ -66,6 +67,7 @@ export default function KeypairListComponent({
               />
 
               <Textarea
+                rows={1}
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
                 placeholder="Type a value..."

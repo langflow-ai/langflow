@@ -30,6 +30,7 @@ import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
 import {
   convertObjToArray,
+  convertValuesToNumbers,
   hasDuplicateKeys,
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
@@ -80,24 +81,7 @@ const EditNodeModal = forwardRef(
       onClose!(modalOpen);
     }, [modalOpen]);
 
-    const [obj, setObj] = useState({
-      arr: ["test", 123456, false, null],
-      boolean: false,
-      longString:
-        "long string long string long string long string long string long string",
-      number: 123456,
-      try: {
-        k1: 123,
-        k2: "123",
-        k3: false,
-      },
-      string: "string",
-    });
-
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-    const [dictArr, setDictArr] = useState([
-      { yourKey: "yourValue" },
-    ] as Object[]);
 
     return (
       <BaseModal
@@ -163,7 +147,11 @@ const EditNodeModal = forwardRef(
                               myData.node.template[templateParam].type ===
                                 "file" ||
                               myData.node.template[templateParam].type ===
-                                "int")
+                                "int" ||
+                              myData.node.template[templateParam].type ===
+                                "dict" ||
+                              myData.node.template[templateParam].type ===
+                                "NestedDict")
                         )
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
@@ -195,52 +183,6 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                     />
-                                  ) : myData.node?.template[templateParam]
-                                      .type === "NestedDict" ? (
-                                    <div className="mt-2 w-full">
-                                      <DictComponent
-                                        disabled={disabled}
-                                        editNode={true}
-                                        value={obj}
-                                        onChange={(newValue) => {
-                                          setObj(newValue);
-                                        }}
-                                      />
-                                    </div>
-                                  ) : myData.node?.template[templateParam]
-                                      .type === "dict" ? (
-                                    <div className="mt-2 w-full">
-                                      <KeypairListComponent
-                                        disabled={disabled}
-                                        editNode={false}
-                                        value={
-                                          myData.node.template[templateParam]
-                                            .value?.length === 0 ||
-                                          !myData.node.template[templateParam]
-                                            .value
-                                            ? dictArr
-                                            : convertObjToArray(
-                                                myData.node.template[
-                                                  templateParam
-                                                ].value
-                                              )
-                                        }
-                                        duplicateKey={errorDuplicateKey}
-                                        onChange={(newValue) => {
-                                          setErrorDuplicateKey(
-                                            hasDuplicateKeys(newValue)
-                                          );
-                                          if (hasDuplicateKeys(newValue)) {
-                                            setDictArr(newValue);
-                                          } else {
-                                            setDictArr(newValue);
-                                            myData.node!.template[
-                                              templateParam
-                                            ].value = newValue;
-                                          }
-                                        }}
-                                      />
-                                    </div>
                                   ) : myData.node.template[templateParam]
                                       .multiline ? (
                                     <TextAreaComponent
@@ -271,6 +213,60 @@ const EditNodeModal = forwardRef(
                                       }}
                                     />
                                   )}
+                                </div>
+                              ) : myData.node?.template[templateParam].type ===
+                                "NestedDict" ? (
+                                <div className="mt-2 w-full">
+                                  <DictComponent
+                                    disabled={disabled}
+                                    editNode={true}
+                                    value={
+                                      myData.node!.template[templateParam]
+                                        .value ?? {
+                                        yourkey: "value",
+                                      }
+                                    }
+                                    onChange={(newValue) => {
+                                      myData.node!.template[
+                                        templateParam
+                                      ].value = newValue;
+                                      handleOnNewValue(newValue, templateParam);
+                                    }}
+                                  />
+                                </div>
+                              ) : myData.node?.template[templateParam].type ===
+                                "dict" ? (
+                                <div className="mt-2 w-full">
+                                  <KeypairListComponent
+                                    disabled={disabled}
+                                    editNode={true}
+                                    value={
+                                      myData.node!.template[templateParam].value
+                                        ?.length === 0 ||
+                                      !myData.node!.template[templateParam]
+                                        .value
+                                        ? [{ "": "" }]
+                                        : convertObjToArray(
+                                            myData.node!.template[templateParam]
+                                              .value
+                                          )
+                                    }
+                                    duplicateKey={errorDuplicateKey}
+                                    onChange={(newValue) => {
+                                      const valueToNumbers =
+                                        convertValuesToNumbers(newValue);
+                                      myData.node!.template[
+                                        templateParam
+                                      ].value = valueToNumbers;
+                                      setErrorDuplicateKey(
+                                        hasDuplicateKeys(valueToNumbers)
+                                      );
+                                      handleOnNewValue(
+                                        valueToNumbers,
+                                        templateParam
+                                      );
+                                    }}
+                                  />
                                 </div>
                               ) : myData.node?.template[templateParam].type ===
                                 "bool" ? (
