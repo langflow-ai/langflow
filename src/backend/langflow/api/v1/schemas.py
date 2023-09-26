@@ -47,11 +47,18 @@ class UpdateTemplateRequest(BaseModel):
     template: dict
 
 
+class TaskResponse(BaseModel):
+    """Task response schema."""
+
+    id: Optional[str] = Field(None)
+    href: Optional[str] = Field(None)
+
+
 class ProcessResponse(BaseModel):
     """Process response schema."""
 
     result: Any
-    id: Optional[str] = None
+    task: Optional[TaskResponse] = None
     session_id: Optional[str] = None
     backend: Optional[str] = None
 
