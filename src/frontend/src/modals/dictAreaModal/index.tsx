@@ -22,8 +22,10 @@ export default function DictAreaModal({
   const [dictObj, setDictObj] = useState(value);
 
   useEffect(() => {
+    console.log(value);
+
     if (value) setDictObj(value);
-  }, [value]);
+  }, [dictObj]);
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
@@ -44,6 +46,9 @@ export default function DictAreaModal({
             editable
             enableClipboard
             onEdit={(edit) => {
+              setDictObj(edit["src"]);
+            }}
+            onChange={(edit) => {
               setDictObj(edit["src"]);
             }}
             src={dictObj}

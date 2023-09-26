@@ -19,7 +19,7 @@ export default function DictComponent({
 
   useEffect(() => {
     if (value) onChange(value);
-  }, [value]);
+  }, [onChange]);
 
   return (
     <div
