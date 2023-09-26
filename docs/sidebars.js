@@ -16,6 +16,8 @@ module.exports = {
       label: "Guidelines",
       collapsed: false,
       items: [
+        "guidelines/login",
+        // "guidelines/api",
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",

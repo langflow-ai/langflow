@@ -1,10 +1,12 @@
 import abc
 
 
-class BaseCache(abc.ABC):
+class BaseCacheService(abc.ABC):
     """
     Abstract base class for a cache.
     """
+
+    name = "cache_service"
 
     @abc.abstractmethod
     def get(self, key):
@@ -22,6 +24,16 @@ class BaseCache(abc.ABC):
     def set(self, key, value):
         """
         Add an item to the cache.
+
+        Args:
+            key: The key of the item.
+            value: The value to cache.
+        """
+
+    @abc.abstractmethod
+    def upsert(self, key, value):
+        """
+        Add an item to the cache if it doesn't exist, or update it if it does.
 
         Args:
             key: The key of the item.
