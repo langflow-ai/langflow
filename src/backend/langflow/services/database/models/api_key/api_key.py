@@ -22,8 +22,11 @@ class ApiKey(ApiKeyBase, table=True):
 
     api_key: str = Field(index=True, unique=True)
     # User relationship
+    # Delete API keys when user is deleted
     user_id: UUID = Field(index=True, foreign_key="user.id")
-    user: "User" = Relationship(back_populates="api_keys")
+    user: "User" = Relationship(
+        back_populates="api_keys",
+    )
 
 
 class ApiKeyCreate(ApiKeyBase):

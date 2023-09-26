@@ -63,9 +63,15 @@ def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
 
 def update_total_uses(session, api_key: ApiKey):
     """Update the total uses and last used at."""
-    api_key.total_uses += 1
-    api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-    session.add(api_key)
-    session.commit()
-    session.refresh(api_key)
-    return api_key
+    # This is running in a separate thread to avoid slowing down the request
+    # but session is not thread safe so we need to create a new session
+
+    with Session(session.get_bind()) as new_session:
+        new_api_key = new_session.get(ApiKey, api_key.id)
+        if new_api_key is None:
+            raise ValueError("API Key not found")
+        new_api_key.total_uses += 1
+        new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+        new_session.add(new_api_key)
+        new_session.commit()
+    return new_api_key

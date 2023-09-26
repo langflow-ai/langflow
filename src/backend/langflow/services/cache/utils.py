@@ -6,10 +6,13 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from appdirs import user_cache_dir
 from fastapi import UploadFile
 from langflow.services.database.models.base import orjson_dumps
+
+if TYPE_CHECKING:
+    pass
 
 CACHE: Dict[str, Any] = {}
 
@@ -166,7 +169,11 @@ def save_uploaded_file(file: UploadFile, folder_name):
     """
     cache_path = Path(CACHE_DIR)
     folder_path = cache_path / folder_name
-    file_extension = Path(file.filename).suffix
+    filename = file.filename
+    if isinstance(filename, str) or isinstance(filename, Path):
+        file_extension = Path(filename).suffix
+    else:
+        file_extension = ""
     file_object = file.file
 
     # Create the folder if it doesn't exist
