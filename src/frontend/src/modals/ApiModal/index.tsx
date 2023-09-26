@@ -19,7 +19,7 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
-import { buildTweaks } from "../../utils/reactflowUtils";
+import { buildTweaks, convertArrayToObj } from "../../utils/reactflowUtils";
 import {
   getCurlCode,
   getPythonApiCode,
@@ -105,7 +105,9 @@ const ApiModal = forwardRef(
                 node.data.node.template[templateField].type === "code" ||
                 node.data.node.template[templateField].type === "prompt" ||
                 node.data.node.template[templateField].type === "file" ||
-                node.data.node.template[templateField].type === "int")
+                node.data.node.template[templateField].type === "int" ||
+                node.data.node.template[templateField].type === "dict" ||
+                node.data.node.template[templateField].type === "NestedDict")
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);
@@ -118,7 +120,7 @@ const ApiModal = forwardRef(
     }
     function buildTweakObject(
       tw: string,
-      changes: string | string[] | boolean | number,
+      changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType
     ) {
       if (typeof changes === "string" && template.type === "float") {
@@ -129,6 +131,10 @@ const ApiModal = forwardRef(
       }
       if (template.list === true && Array.isArray(changes)) {
         changes = changes?.filter((x) => x !== "");
+      }
+
+      if (template.type === "dict") {
+        changes = convertArrayToObj(changes);
       }
 
       const existingTweak = tweak.current.find((element) =>

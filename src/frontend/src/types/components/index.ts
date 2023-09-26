@@ -134,18 +134,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {
@@ -549,7 +549,7 @@ export type codeTabsPropsType = {
     ) => string;
     buildTweakObject?: (
       tw: string,
-      changes: string | string[] | boolean | number,
+      changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType
     ) => string | void;
   };
