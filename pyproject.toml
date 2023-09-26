@@ -84,6 +84,7 @@ pillow = "^10.0.0"
 metal-sdk = "^2.0.2"
 markupsafe = "^2.1.3"
 extract-msg = "^0.45.0"
+jq = "^1.6.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
