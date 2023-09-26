@@ -160,6 +160,29 @@ export default function Page({
     setExtraNavigation({ title: "Components" });
   }, [setExtraComponent, setExtraNavigation]);
 
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSeconds((prevSeconds) => {
+        console.log(prevSeconds);
+
+        let updatedSeconds = prevSeconds + 1;
+
+        if (updatedSeconds % 30 === 0) {
+          saveFlow(flow);
+          updatedSeconds = 0;
+        }
+
+        return updatedSeconds;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
       onEdgesChange(change);
