@@ -70,7 +70,7 @@ interface BaseModalProps {
     | "medium-h-full";
 
   disable?: boolean;
-  onChangeOpenModal?: (open: boolean) => void;
+  onChangeOpenModal?: (open?: boolean) => void;
 }
 function BaseModal({
   open,
