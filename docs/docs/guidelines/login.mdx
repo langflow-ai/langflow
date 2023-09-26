@@ -20,6 +20,12 @@ The following environment variables are crucial in configuring the login setting
 - _`LANGFLOW_SECRET_KEY`_: A key used for encrypting the superuser's password.
 - _`LANGFLOW_NEW_USER_IS_ACTIVE`_: Determines whether new users are automatically activated. Default is `False`.
 
+All of these variables can be passed to the CLI command _`langflow run`_ through the _`--env-file`_ option. For example:
+
+```bash
+langflow run --env-file .env
+```
+
 <Admonition type="info">
   It is critical not to expose these environment variables in your code
   repository. Always set them securely in your deployment environment, for
