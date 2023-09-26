@@ -303,9 +303,9 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         logger.debug("Updated attributes")
         field_config = build_field_config(custom_component)
         logger.debug("Built field config")
-        add_extra_fields(
-            frontend_node, field_config, custom_component.get_function_entrypoint_args
-        )
+        entrypoint_args = custom_component.get_function_entrypoint_args
+
+        add_extra_fields(frontend_node, field_config, entrypoint_args)
         logger.debug("Added extra fields")
         frontend_node = add_code_field(
             frontend_node, custom_component.code, field_config.get("code", {})
@@ -317,6 +317,8 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         logger.debug("Added base classes")
         return frontend_node
     except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
         raise HTTPException(
             status_code=400,
             detail={
