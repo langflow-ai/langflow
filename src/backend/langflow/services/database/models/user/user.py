@@ -21,7 +21,10 @@ class User(SQLModelSerializable, table=True):
     create_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login_at: Optional[datetime] = Field()
-    api_keys: list["ApiKey"] = Relationship(back_populates="user")
+    api_keys: list["ApiKey"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
     flows: list["Flow"] = Relationship(back_populates="user")
 
 
@@ -42,6 +45,7 @@ class UserRead(SQLModel):
 
 
 class UserUpdate(SQLModel):
+    username: Optional[str] = Field()
     profile_image: Optional[str] = Field()
     password: Optional[str] = Field()
     is_active: Optional[bool] = Field()

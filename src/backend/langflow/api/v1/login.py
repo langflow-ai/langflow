@@ -12,7 +12,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
 )
 
-from langflow.services.getters import get_settings_manager
+from langflow.services.getters import get_settings_service
 
 router = APIRouter(tags=["Login"])
 
@@ -23,7 +23,17 @@ async def login_to_get_access_token(
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
 ):
-    if user := authenticate_user(form_data.username, form_data.password, db):
+    try:
+        user = authenticate_user(form_data.username, form_data.password, db)
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    if user:
         return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
     else:
         raise HTTPException(
@@ -35,9 +45,9 @@ async def login_to_get_access_token(
 
 @router.get("/auto_login")
 async def auto_login(
-    db: Session = Depends(get_session), settings_manager=Depends(get_settings_manager)
+    db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
 ):
-    if settings_manager.auth_settings.AUTO_LOGIN:
+    if settings_service.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
     raise HTTPException(

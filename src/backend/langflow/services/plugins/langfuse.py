@@ -1,4 +1,4 @@
-from langflow.services.getters import get_settings_manager
+from langflow.services.getters import get_settings_service
 from langflow.utils.logger import logger
 
 ### Temporary implementation
@@ -20,7 +20,7 @@ class LangfuseInstance:
         logger.debug("Creating Langfuse instance")
         from langfuse import Langfuse  # type: ignore
 
-        settings_manager = get_settings_manager()
+        settings_manager = get_settings_service()
 
         if (
             settings_manager.settings.LANGFUSE_PUBLIC_KEY

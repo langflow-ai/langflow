@@ -61,7 +61,7 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	poetry install
+	poetry install --extras deploy
 
 backend:
 	make install_backend
