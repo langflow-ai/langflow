@@ -40,5 +40,5 @@ This will set up the following containers:
 To run the tests for the Async API, you can run the following command:
 
 ```bash
-docker compose -f docker-compose.test.yml up --exit-code-from tests tests result_backend broker celeryworker db --build
+docker compose -f docker-compose.with_tests.yml up --exit-code-from tests tests result_backend broker celeryworker db --build
 ```
