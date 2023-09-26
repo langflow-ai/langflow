@@ -832,9 +832,15 @@ export default function CodeTabsComponent({
                                                     value={
                                                       node.data.node!.template[
                                                         templateField
-                                                      ].value ?? {
-                                                        yourkey: "value",
-                                                      }
+                                                      ].value.toString() ===
+                                                      "{}"
+                                                        ? {
+                                                            yourkey: "value",
+                                                          }
+                                                        : node.data.node!
+                                                            .template[
+                                                            templateField
+                                                          ].value
                                                     }
                                                     onChange={(target) => {
                                                       setData((old) => {

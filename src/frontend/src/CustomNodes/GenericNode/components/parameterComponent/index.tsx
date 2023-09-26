@@ -424,9 +424,11 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name].value ?? {
-                  yourkey: "value",
-                }
+                data.node!.template[name].value.toString() === "{}"
+                  ? {
+                      yourkey: "value",
+                    }
+                  : data.node!.template[name].value
               }
               onChange={(newValue) => {
                 data.node!.template[name].value = newValue;
