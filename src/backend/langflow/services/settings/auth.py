@@ -70,33 +70,30 @@ class AuthSettings(BaseSettings):
 
     @validator("SECRET_KEY", pre=True)
     def get_secret_key(cls, value, values):
-        config_dir: Path = values.get("CONFIG_DIR")
+        config_dir = values.get("CONFIG_DIR")
 
         if not config_dir:
-            logger.warn("No CONFIG_DIR provided; not saving secret key.")
+            logger.debug("No CONFIG_DIR provided, not saving secret key")
             return value or secrets.token_urlsafe(32)
 
-        secret_key_path = config_dir / "secret_key"
+        secret_key_path = Path(config_dir) / "secret_key"
 
-        try:
-            if value:
-                logger.info("Secret key provided.")
-                write_secret_to_file(secret_key_path, value)
-            else:
-                logger.info("No secret key provided, generating a random one.")
-                if secret_key_path.exists():
-                    value = read_secret_from_file(secret_key_path)
-                    logger.info("Loaded secret key.")
-                    if not value:
-                        value = secrets.token_urlsafe(32)
-                        write_secret_to_file(secret_key_path, value)
-                        logger.info("Saved secret key.")
-                else:
+        if value:
+            logger.debug("Secret key provided")
+            write_secret_to_file(secret_key_path, value)
+        else:
+            logger.debug("No secret key provided, generating a random one")
+
+            if secret_key_path.exists():
+                value = read_secret_from_file(secret_key_path)
+                logger.debug("Loaded secret key")
+                if not value:
                     value = secrets.token_urlsafe(32)
                     write_secret_to_file(secret_key_path, value)
-                    logger.info("Saved secret key.")
-        except IOError:
-            logger.error("Failed to read or write secret key.")
-            raise IOError("Failed to read or write secret key.")
+                    logger.debug("Saved secret key")
+            else:
+                value = secrets.token_urlsafe(32)
+                write_secret_to_file(secret_key_path, value)
+                logger.debug("Saved secret key")
 
         return value
