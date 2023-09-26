@@ -52,7 +52,7 @@ const TabsContextInitialValue: TabsContextType = {
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
-  saveFlow: async (flow: FlowType) => {},
+  saveFlow: async (flow: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
@@ -588,13 +588,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function saveFlow(newFlow: FlowType) {
+  async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
-        setSuccessData({ title: "Changes saved successfully" });
+        if (!silent) {
+          setSuccessData({ title: "Changes saved successfully" });
+        }
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
