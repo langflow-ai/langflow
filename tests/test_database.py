@@ -1,6 +1,6 @@
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_manager
+from langflow.services.getters import get_db_service
 import orjson
 import pytest
 
@@ -180,7 +180,13 @@ def test_upload_file(
     assert response_data[1]["data"] == data
 
 
-def test_download_file(client: TestClient, json_flow, active_user, logged_in_headers):
+def test_download_file(
+    client: TestClient,
+    session: Session,
+    json_flow,
+    active_user,
+    logged_in_headers,
+):
     flow = orjson.loads(json_flow)
     data = flow["data"]
     # Create test data
@@ -190,7 +196,7 @@ def test_download_file(client: TestClient, json_flow, active_user, logged_in_hea
             FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
-    db_manager = get_db_manager()
+    db_manager = get_db_service()
     with session_getter(db_manager) as session:
         for flow in flow_list.flows:
             flow.user_id = active_user.id
