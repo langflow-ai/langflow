@@ -327,7 +327,7 @@ TWEAKS = ${
   }
 
 def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
-    !isAuth ? `, apiKey: str=""` : ""
+    !isAuth ? `, api_key: Optional[str] = None` : ""
   }) -> dict:
     """
     Run a flow with a given message and optional tweaks.
@@ -340,18 +340,19 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     api_url = f"{BASE_API_URL}/{flow_id}"
 
     payload = {"inputs": inputs}
-
+    headers = None
     if tweaks:
         payload["tweaks"] = tweaks
-    ${!isAuth ? 'headers = {"api-key": apiKey}' : ""}
-    response = requests.post(api_url, json=payload,headers=headers)
+    if api_key:
+        headers = {"x-api-key": api_key}
+    response = requests.post(api_url, json=payload, headers=headers)
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
 inputs = ${inputs}
 ${!isAuth ? `api_key = "<your api key>"` : ""}
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
-    !isAuth ? `, apiKey=api_key` : ""
+    !isAuth ? `, api_key=api_key` : ""
   }))`;
 }
 
@@ -374,8 +375,9 @@ export function getCurlCode(
   ${window.location.protocol}//${
     window.location.host
   }/api/v1/process/${flowId} \\
-  -H 'Content-Type: application/json'\\
-  ${!isAuth ? `-H 'api-key: <your api key>'\\` : ""}
+  -H 'Content-Type: application/json'\\${
+    !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
+  }
   -d '{"inputs": ${inputs}, "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
@@ -443,7 +445,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   api_key="..."`
       : ""
   }
-  
+
 ></langflow-chat>`;
 }
 
