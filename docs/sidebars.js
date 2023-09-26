@@ -89,7 +89,7 @@ module.exports = {
       type: "category",
       label: "Deployment",
       collapsed: false,
-      items: ["deployment/gcp-deployment", "deployment/jina-deployment"],
+      items: ["deployment/gcp-deployment"],
     },
     {
       type: "category",
