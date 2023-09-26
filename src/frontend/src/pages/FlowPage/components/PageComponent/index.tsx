@@ -165,8 +165,6 @@ export default function Page({
   useEffect(() => {
     const interval = setInterval(() => {
       setSeconds((prevSeconds) => {
-        console.log(prevSeconds);
-
         let updatedSeconds = prevSeconds + 1;
 
         if (updatedSeconds % 30 === 0) {
