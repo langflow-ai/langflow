@@ -58,4 +58,4 @@ class UrlLoaderComponent(CustomComponent):
         if loader_instance is None:
             raise ValueError(f"No loader found for: {web_path}")
 
-        return loader_instance
+        return loader_instance.load()
