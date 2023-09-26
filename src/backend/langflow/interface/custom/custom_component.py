@@ -95,7 +95,17 @@ class CustomComponent(Component, extra=Extra.allow):
 
         build_method = build_methods[0]
 
-        return build_method["args"]
+        args = build_method["args"]
+        for arg in args:
+            if arg.get("type") == "prompt":
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Type hint Error",
+                        "traceback": "Prompt type is not supported in the build method. Try using PromptTemplate instead.",
+                    },
+                )
+        return args
 
     @property
     def get_function_entrypoint_return_type(self) -> List[str]:
