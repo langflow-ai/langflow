@@ -16,6 +16,8 @@ module.exports = {
       label: "Guidelines",
       collapsed: false,
       items: [
+        "guidelines/login",
+        "guidelines/api",
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",
@@ -52,7 +54,6 @@ module.exports = {
       label: "Step-by-Step Guides",
       collapsed: false,
       items: [
-        "guides/login",
         "guides/loading_document",
         "guides/chatprompttemplate_guide",
         "guides/langfuse_integration",
