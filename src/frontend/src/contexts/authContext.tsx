@@ -71,7 +71,7 @@ export function AuthProvider({ children }): React.ReactElement {
           setLoading(false);
         }
       });
-  }, []);
+  }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_token");

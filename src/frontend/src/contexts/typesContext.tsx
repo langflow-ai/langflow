@@ -1,3 +1,4 @@
+import _ from "lodash";
 import {
   createContext,
   ReactNode,
@@ -11,7 +12,7 @@ import { APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
-import { checkLocalStorageKey } from "../utils/utils";
+import { checkLocalStorageKey, IncrementObjectKey } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 
@@ -44,7 +45,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
   const { setLoading } = useContext(alertContext);
-  const { getAuthentication } = useContext(AuthContext);
+  const { getAuthentication, autoLogin, userData } = useContext(AuthContext);
   const [getFilterEdge, setFilterEdge] = useState([]);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     if (getAuthentication() === true) {
       getTypes();
     }
-  }, [getAuthentication()]);
+  }, [getAuthentication(), autoLogin, userData]);
 
   async function getTypes(): Promise<void> {
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
@@ -62,11 +63,23 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       // Make sure to only update the state if the component is still mounted.
       if (isMounted && result?.status === 200) {
         setLoading(false);
-        setData(result.data);
+        let { data } = _.cloneDeep(result);
+        const savedComponents = autoLogin
+          ? localStorage.getItem("auto")
+          : localStorage.getItem(userData?.id!);
+        if (savedComponents !== null) {
+          const { components }: localStorageUserType = JSON.parse(
+            savedComponents!
+          );
+          Object.keys(components).forEach((key) => {
+            data["custom_components"][key] = components[key].node!;
+          });
+        }
+        setData(data);
         setTemplates(
-          Object.keys(result.data).reduce((acc, curr) => {
-            Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
-              acc[c] = result.data[curr][c];
+          Object.keys(data).reduce((acc, curr) => {
+            Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+              acc[c] = data[curr][c];
             });
             return acc;
           }, {})
@@ -74,13 +87,13 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         // Set the types by reducing over the keys of the result data and updating the accumulator.
         setTypes(
           // Reverse the keys so the tool world does not overlap
-          Object.keys(result.data)
+          Object.keys(data)
             .reverse()
             .reduce((acc, curr) => {
-              Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
+              Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
                 acc[c] = curr;
                 // Add the base classes to the accumulator as well.
-                result.data[curr][c].base_classes?.forEach((b) => {
+                data[curr][c].base_classes?.forEach((b) => {
                   acc[b] = curr;
                 });
               });
@@ -90,6 +103,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("An error has occurred while fetching types.");
+      console.log(error);
       await getHealth().catch((e) => {
         setFetchError(true);
       });
@@ -108,15 +122,25 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   }
 
   function saveComponent(component: NodeDataType, id: string) {
+    let savedComponentsJSON: localStorageUserType = { components: {} };
     if (checkLocalStorageKey(id)) {
       let savedComponents = localStorage.getItem(id)!;
-      let savedComponentsJSON: localStorageUserType =
-        JSON.parse(savedComponents);
-      let components = savedComponentsJSON.components;
-      components[component.type];
-      savedComponentsJSON.components = components;
-      localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
+      savedComponentsJSON = JSON.parse(savedComponents);
     }
+    let components = savedComponentsJSON.components;
+    let key = component.type;
+    if (components[key] !== undefined) {
+      const { newKey, increment } = IncrementObjectKey(components, key);
+      key = newKey;
+    }
+    components[key] = component;
+    savedComponentsJSON.components = components;
+    localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
+    setData((prev) => {
+      let newData = { ...prev };
+      newData["custom_components"][key] = component.node;
+      return newData;
+    });
   }
 
   return (

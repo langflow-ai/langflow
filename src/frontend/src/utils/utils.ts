@@ -529,3 +529,16 @@ export function tabsArray(codes: string[], method: number) {
 export function checkLocalStorageKey(key: string): boolean {
   return localStorage.getItem(key) !== null;
 }
+
+export function IncrementObjectKey(
+  object: object,
+  key: string
+): { newKey: string; increment: number } {
+  let count = 1;
+  let newKey = key;
+  while (object[newKey]) {
+    newKey = key + " " + `(${count})`;
+    count++;
+  }
+  return { newKey, increment: count };
+}
