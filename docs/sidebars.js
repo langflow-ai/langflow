@@ -17,7 +17,7 @@ module.exports = {
       collapsed: false,
       items: [
         "guidelines/login",
-        // "guidelines/api",
+        "guidelines/api",
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",
