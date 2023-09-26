@@ -186,13 +186,13 @@ export function groupByFamily(
 
   return left
     ? arrOfPossibleOutputs.map((output) => ({
-      family: output.category,
-      type: output.full ? "" : output.nodes.join(", "),
-    }))
+        family: output.category,
+        type: output.full ? "" : output.nodes.join(", "),
+      }))
     : arrOfPossibleInputs.map((input) => ({
-      family: input.category,
-      type: input.full ? "" : input.nodes.join(", "),
-    }));
+        family: input.category,
+        type: input.full ? "" : input.nodes.join(", "),
+      }));
 }
 
 export function buildInputs(tabsState: TabsState, id: string): string {
@@ -262,7 +262,7 @@ export function buildTweakObject(tweak: tweakType) {
       for (let kp in el[key]) {
         try {
           el[key][kp] = JSON.parse(el[key][kp]);
-        } catch { }
+        } catch {}
       }
     });
   });
@@ -314,24 +314,21 @@ export function getPythonApiCode(
   return `import requests
 from typing import Optional
 
-BASE_API_URL = "${window.location.protocol}//${window.location.host
-    }/api/v1/process"
+BASE_API_URL = "${window.location.protocol}//${
+    window.location.host
+  }/api/v1/process"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${tweak && tweak.length > 0
+TWEAKS = ${
+    tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-    }
+  }
 
-<<<<<<< HEAD
-def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${!isAuth ? `, apiKey: str=""` : ""
-    }) -> dict:
-=======
 def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     !isAuth ? `, api_key: Optional[str] = None` : ""
   }) -> dict:
->>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
     """
     Run a flow with a given message and optional tweaks.
 
@@ -354,14 +351,9 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
 # Setup any tweaks you want to apply to the flow
 inputs = ${inputs}
 ${!isAuth ? `api_key = "<your api key>"` : ""}
-<<<<<<< HEAD
-print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${!isAuth ? `, apiKey=api_key` : ""
-    }))`;
-=======
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
     !isAuth ? `, api_key=api_key` : ""
   }))`;
->>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
 }
 
 /**
@@ -380,13 +372,6 @@ export function getCurlCode(
   const inputs = buildInputs(tabsState!, flow.id);
 
   return `curl -X POST \\
-<<<<<<< HEAD
-  ${window.location.protocol}//${window.location.host
-    }/api/v1/process/${flowId} \\
-  -H 'Content-Type: application/json'\\
-  ${!isAuth ? `-H 'api-key: <your api key>'\\` : ""}
-  -d '{"inputs": ${inputs}, "tweaks": ${tweak && tweak.length > 0
-=======
   ${window.location.protocol}//${
     window.location.host
   }/api/v1/process/${flowId} \\
@@ -395,10 +380,9 @@ export function getCurlCode(
   }
   -d '{"inputs": ${inputs}, "tweaks": ${
     tweak && tweak.length > 0
->>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-    }}'`;
+  }}'`;
 }
 
 /**
@@ -415,10 +399,11 @@ export function getPythonCode(
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs(tabsState!, flow.id);
   return `from langflow import load_flow_from_json
-TWEAKS = ${tweak && tweak.length > 0
+TWEAKS = ${
+    tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-    }
+  }
 flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
 # Now you can use it like any chain
 inputs = ${inputs}
@@ -448,22 +433,19 @@ chat_input_field: Input key that you want the chat to send the user message with
 <langflow-chat
   window_title="${flowName}"
   flow_id="${flowId}"
-  ${tabsState![flow.id] && tabsState![flow.id].formKeysData
+  ${
+    tabsState![flow.id] && tabsState![flow.id].formKeysData
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `
       : ""
-    }host_url="http://localhost:7860"${!isAuth
+  }host_url="http://localhost:7860"${
+    !isAuth
       ? `
   api_key="..."`
       : ""
-<<<<<<< HEAD
-    }
-  
-=======
   }
 
->>>>>>> 1773f3fda830988438e7f3e3aa40959f1df692f5
 ></langflow-chat>`;
 }
 
