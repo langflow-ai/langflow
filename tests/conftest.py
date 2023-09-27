@@ -165,12 +165,6 @@ def json_flow_with_prompt_and_history():
         return f.read()
 
 
-<<<<<<< HEAD
-@pytest.fixture(name="client", scope="function", autouse=True)
-def client_fixture(session: Session):
-    def get_session_override():
-        return session
-=======
 @pytest.fixture
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
@@ -184,7 +178,6 @@ def client_fixture(session: Session, monkeypatch):
     db_path = Path(db_dir) / "test.db"
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
->>>>>>> origin/dev
 
     from langflow.main import create_app
 

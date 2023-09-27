@@ -5,7 +5,8 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, root_validator, validator
+from pydantic import root_validator, validator
+from pydantic_settings import BaseSettings
 from langflow.utils.logger import logger
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")

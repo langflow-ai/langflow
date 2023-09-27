@@ -90,7 +90,7 @@ pydantic-settings = "^2.0.3"
 zep-python = { version = "^1.1.0a0", allow-prereleases = true }
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 loguru = "^0.7.1"
-langfuse = "^1.0.13"
+# langfuse = "^1.0.13"
 pillow = "^10.0.0"
 metal-sdk = "^2.0.2"
 markupsafe = "^2.1.3"
