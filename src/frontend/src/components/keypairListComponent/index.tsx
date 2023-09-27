@@ -34,10 +34,6 @@ export default function KeypairListComponent({
     onChange(newInputList);
   };
 
-  useEffect(() => {
-    if (value) onChange(value);
-  }, [value]);
-
   return (
     <div
       className={classNames(
