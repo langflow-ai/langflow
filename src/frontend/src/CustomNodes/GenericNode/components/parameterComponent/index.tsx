@@ -88,8 +88,6 @@ export default function ParameterComponent({
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
-    console.log(newValue);
-
     let newData = cloneDeep(data);
     newData.node!.template[name].value = newValue;
     setData(newData);
