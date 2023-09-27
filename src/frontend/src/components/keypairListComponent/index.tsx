@@ -4,7 +4,7 @@ import { KeyPairListComponentType } from "../../types/components";
 import _ from "lodash";
 import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
-import { Textarea } from "../ui/textarea";
+import { Input } from "../ui/input";
 
 export default function KeypairListComponent({
   value,
@@ -49,8 +49,8 @@ export default function KeypairListComponent({
         return Object.keys(obj).map((key, idx) => {
           return (
             <div key={idx} className="flex w-full gap-3">
-              <Textarea
-                rows={1}
+              <Input
+                type="text"
                 value={key.trim()}
                 className={classNames(
                   editNode ? "input-edit-node" : "",
@@ -66,8 +66,8 @@ export default function KeypairListComponent({
                 }}
               />
 
-              <Textarea
-                rows={1}
+              <Input
+                type="text"
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
                 placeholder="Type a value..."
