@@ -13,6 +13,7 @@ from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, St
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
 from sqlmodel import Session
@@ -157,7 +158,7 @@ async def stream_build(
             graph = Graph.from_payload(graph_data)
 
             number_of_nodes = len(graph.nodes)
-            cache_service[flow_id]["status"] = BuildStatus.IN_PROGRESS
+            update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
@@ -184,7 +185,7 @@ async def stream_build(
                     logger.exception(exc)
                     params = str(exc)
                     valid = False
-                    cache_service[flow_id]["status"] = BuildStatus.FAILURE
+                    update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
                 response = {
                     "valid": valid,
@@ -211,11 +212,12 @@ async def stream_build(
             chat_service.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
             chat_service.chat_history.empty_history(flow_id)
-            cache_service[flow_id]["status"] = BuildStatus.SUCCESS
+            update_build_status(cache_service, flow_id, BuildStatus.SUCCESS)
         except Exception as exc:
             logger.exception(exc)
             logger.error("Error while building the flow: %s", exc)
-            cache_service[flow_id]["status"] = BuildStatus.FAILURE
+
+            update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
             yield str(StreamData(event="message", data=final_response))

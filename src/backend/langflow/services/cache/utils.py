@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 from appdirs import user_cache_dir
 from fastapi import UploadFile
+from langflow.api.v1.schemas import BuildStatus
 from langflow.services.database.models.base import orjson_dumps
 
 if TYPE_CHECKING:
@@ -202,3 +203,9 @@ def save_uploaded_file(file: UploadFile, folder_name):
             new_file.write(chunk)
 
     return file_path
+
+
+def update_build_status(cache_service, flow_id: str, status: BuildStatus):
+    cached_flow = cache_service[flow_id]
+    cached_flow["status"] = status
+    cache_service[flow_id] = cached_flow
