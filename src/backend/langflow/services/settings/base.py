@@ -7,14 +7,9 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-<<<<<<< HEAD
-from pydantic_settings import SettingsConfigDict, BaseSettings
 from pydantic import field_validator, validator
-from langflow.utils.logger import logger
-=======
-from pydantic import BaseSettings, root_validator, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from loguru import logger
->>>>>>> origin/dev
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")

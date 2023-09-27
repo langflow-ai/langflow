@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-from typing import Any, Callable, ClassVar, Dict, List, Optional
-=======
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, ClassVar, List, Optional, Union, Dict
 from uuid import UUID
->>>>>>> origin/dev
 from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
@@ -25,16 +21,9 @@ class CustomComponent(Component, extra=Extra.allow):
     code_class_base_inheritance: ClassVar[Dict] = "CustomComponent"
     function_entrypoint_name: ClassVar[Dict] = "build"
     function: Optional[Callable] = None
-<<<<<<< HEAD
-    return_type_valid_list: ClassVar[Dict] = list(
-        CUSTOM_COMPONENT_SUPPORTED_TYPES.keys()
-    )
-    repr_value: Optional[str] = ""
-=======
-    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+    return_type_valid_list: List[str] = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
->>>>>>> origin/dev
 
     def __init__(self, **data):
         super().__init__(**data)
