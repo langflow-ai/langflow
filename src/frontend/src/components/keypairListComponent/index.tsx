@@ -42,7 +42,7 @@ export default function KeypairListComponent({
     <div
       className={classNames(
         value?.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3"
+        "flex flex-col gap-3 h-full"
       )}
     >
       {value?.map((obj, index) => {
