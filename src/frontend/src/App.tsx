@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -9,10 +9,16 @@ import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
 import CrashErrorComponent from "./components/CrashErrorComponent";
+import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
+import {
+  FETCH_ERROR_DESCRIPION,
+  FETCH_ERROR_MESSAGE,
+} from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { TabsContext } from "./contexts/tabsContext";
+import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
 export default function App() {
@@ -36,8 +42,12 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    setErrorData,
     loading,
+    setLoading,
   } = useContext(alertContext);
+  const navigate = useNavigate();
+  const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -137,7 +147,14 @@ export default function App() {
       >
         {loading ? (
           <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
+            {fetchError ? (
+              <FetchErrorComponent
+                description={FETCH_ERROR_DESCRIPION}
+                message={FETCH_ERROR_MESSAGE}
+              ></FetchErrorComponent>
+            ) : (
+              <LoadingComponent remSize={50} />
+            )}
           </div>
         ) : (
           <>

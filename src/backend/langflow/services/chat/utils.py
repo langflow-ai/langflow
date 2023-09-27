@@ -2,13 +2,14 @@ from fastapi import WebSocket
 from langflow.api.v1.schemas import ChatMessage
 from langflow.processing.base import get_result_and_steps
 from langflow.interface.utils import try_setting_streaming_options
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 async def process_graph(
     langchain_object,
     chat_inputs: ChatMessage,
     websocket: WebSocket,
+    session_id: str,
 ):
     langchain_object = try_setting_streaming_options(langchain_object, websocket)
     logger.debug("Loaded langchain object")
@@ -27,7 +28,10 @@ async def process_graph(
 
         logger.debug("Generating result and thought")
         result, intermediate_steps = await get_result_and_steps(
-            langchain_object, chat_inputs.message, websocket=websocket
+            langchain_object,
+            chat_inputs.message,
+            websocket=websocket,
+            session_id=session_id,
         )
         logger.debug("Generated result and intermediate_steps")
         return result, intermediate_steps

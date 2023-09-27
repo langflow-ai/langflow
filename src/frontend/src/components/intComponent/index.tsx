@@ -44,7 +44,7 @@ export default function IntComponent({
         step="1"
         min={min}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
-          if (event.target.value < min.toString()) {
+          if (Number(event.target.value) < min) {
             event.target.value = min.toString();
           }
         }}

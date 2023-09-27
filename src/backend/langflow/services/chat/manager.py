@@ -1,20 +1,19 @@
 from collections import defaultdict
+import uuid
 from fastapi import WebSocket, status
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
-from langflow.services.base import Service
-from langflow.services import service_manager
-from langflow.services.cache.manager import Subject
-from langflow.services.chat.utils import process_graph
 from langflow.interface.utils import pil_to_base64
-from langflow.services.schema import ServiceType
-from langflow.utils.logger import logger
+from langflow.services.base import Service
+from langflow.services.chat.cache import Subject
+from langflow.services.chat.utils import process_graph
+from loguru import logger
 
-
+from .cache import cache_service
 import asyncio
-import json
 from typing import Any, Dict, List
 
-from langflow.services.cache.flow import InMemoryCache
+from langflow.services import service_manager, ServiceType
+import orjson
 
 
 class ChatHistory(Subject):
@@ -44,19 +43,20 @@ class ChatHistory(Subject):
         self.history[client_id] = []
 
 
-class ChatManager(Service):
-    name = "chat_manager"
+class ChatService(Service):
+    name = "chat_service"
 
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
+        self.connection_ids: Dict[str, str] = {}
         self.chat_history = ChatHistory()
-        self.cache_manager = service_manager.get(ServiceType.CACHE_MANAGER)
-        self.cache_manager.attach(self.update)
-        self.in_memory_cache = InMemoryCache()
+        self.chat_cache = cache_service
+        self.chat_cache.attach(self.update)
+        self.cache_service = service_manager.get(ServiceType.CACHE_SERVICE)
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""
-        client_id = self.cache_manager.current_client_id
+        client_id = self.chat_cache.current_client_id
         if client_id in self.active_connections:
             chat_response = self.chat_history.get_history(
                 client_id, filter_messages=False
@@ -77,8 +77,8 @@ class ChatManager(Service):
                 asyncio.run_coroutine_threadsafe(coroutine, loop)
 
     def update(self):
-        if self.cache_manager.current_client_id in self.active_connections:
-            self.last_cached_object_dict = self.cache_manager.get_last()
+        if self.chat_cache.current_client_id in self.active_connections:
+            self.last_cached_object_dict = self.chat_cache.get_last()
             # Add a new ChatResponse with the data
             chat_response = FileResponse(
                 message=None,
@@ -88,15 +88,18 @@ class ChatManager(Service):
             )
 
             self.chat_history.add_message(
-                self.cache_manager.current_client_id, chat_response
+                self.chat_cache.current_client_id, chat_response
             )
 
     async def connect(self, client_id: str, websocket: WebSocket):
-        await websocket.accept()
         self.active_connections[client_id] = websocket
+        # This is to avoid having multiple clients with the same id
+        #! Temporary solution
+        self.connection_ids[client_id] = f"{client_id}-{uuid.uuid4()}"
 
     def disconnect(self, client_id: str):
         self.active_connections.pop(client_id, None)
+        self.connection_ids.pop(client_id, None)
 
     async def send_message(self, client_id: str, message: str):
         websocket = self.active_connections[client_id]
@@ -138,7 +141,9 @@ class ChatManager(Service):
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
                 websocket=self.active_connections[client_id],
+                session_id=self.connection_ids[client_id],
             )
+            self.set_cache(client_id, langchain_object)
         except Exception as e:
             # Log stack trace
             logger.exception(e)
@@ -174,9 +179,15 @@ class ChatManager(Service):
         """
         Set the cache for a client.
         """
+        # client_id is the flow id but that already exists in the cache
+        # so we need to change it to something else
 
-        self.in_memory_cache.set(client_id, langchain_object)
-        return client_id in self.in_memory_cache
+        result_dict = {
+            "result": langchain_object,
+            "type": type(langchain_object),
+        }
+        self.cache_service.upsert(client_id, result_dict)
+        return client_id in self.cache_service
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)
@@ -190,17 +201,23 @@ class ChatManager(Service):
             while True:
                 json_payload = await websocket.receive_json()
                 try:
-                    payload = json.loads(json_payload)
-                except TypeError:
+                    payload = orjson.loads(json_payload)
+                except Exception:
                     payload = json_payload
                 if "clear_history" in payload:
                     self.chat_history.history[client_id] = []
                     continue
 
-                with self.cache_manager.set_client_id(client_id):
-                    langchain_object = self.in_memory_cache.get(client_id)
-                    await self.process_message(client_id, payload, langchain_object)
+                with self.chat_cache.set_client_id(client_id):
+                    if langchain_object := self.cache_service.get(client_id).get(
+                        "result"
+                    ):
+                        await self.process_message(client_id, payload, langchain_object)
 
+                    else:
+                        raise RuntimeError(
+                            f"Could not find a LangChain object for client_id {client_id}"
+                        )
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.error(f"Error handling websocket: {exc}")

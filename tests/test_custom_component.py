@@ -473,15 +473,16 @@ def test_build_config_no_code():
 
 
 @pytest.fixture
-def component():
+def component(client, active_user):
     return CustomComponent(
+        user_id=active_user.id,
         field_config={
             "fields": {
                 "llm": {"type": "str"},
                 "url": {"type": "str"},
                 "year": {"type": "int"},
             }
-        }
+        },
     )
 
 
@@ -517,13 +518,13 @@ def db(app):
     app.db.drop_all()
 
 
-def test_list_flows_return_type(component, session_getter):
-    flows = component.list_flows(get_session=session_getter)
+def test_list_flows_return_type(component):
+    flows = component.list_flows()
     assert isinstance(flows, list)
 
 
-def test_list_flows_flow_objects(component, session_getter):
-    flows = component.list_flows(get_session=session_getter)
+def test_list_flows_flow_objects(component):
+    flows = component.list_flows()
     assert all(isinstance(flow, Flow) for flow in flows)
 
 

@@ -1,9 +1,18 @@
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
+from langflow.services.database.models.api_key.api_key import ApiKeyRead
 from langflow.services.database.models.flow import FlowCreate, FlowRead
+<<<<<<< HEAD
 from pydantic import BaseModel, Field, field_validator
 import json
+=======
+from langflow.services.database.models.user import UserRead
+from langflow.services.database.models.base import orjson_dumps
+
+from pydantic import BaseModel, Field, validator
+>>>>>>> origin/dev
 
 
 class BuildStatus(Enum):
@@ -43,11 +52,30 @@ class UpdateTemplateRequest(BaseModel):
     template: dict
 
 
+class TaskResponse(BaseModel):
+    """Task response schema."""
+
+    id: Optional[str] = Field(None)
+    href: Optional[str] = Field(None)
+
+
 class ProcessResponse(BaseModel):
     """Process response schema."""
 
-    result: dict
+    result: Any
+    task: Optional[TaskResponse] = None
     session_id: Optional[str] = None
+    backend: Optional[str] = None
+
+
+# TaskStatusResponse(
+#         status=task.status, result=task.result if task.ready() else None
+#     )
+class TaskStatusResponse(BaseModel):
+    """Task status response schema."""
+
+    status: str
+    result: Optional[Any] = None
 
 
 class ChatMessage(BaseModel):
@@ -118,7 +146,9 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
+        return (
+            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        )
 
 
 class CustomComponentCode(BaseModel):
@@ -136,3 +166,32 @@ class ComponentListCreate(BaseModel):
 
 class ComponentListRead(BaseModel):
     flows: List[FlowRead]
+
+
+class UsersResponse(BaseModel):
+    total_count: int
+    users: List[UserRead]
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    api_key: str
+    name: str
+    created_at: str
+    last_used_at: str
+
+
+class ApiKeysResponse(BaseModel):
+    total_count: int
+    user_id: UUID
+    api_keys: List[ApiKeyRead]
+
+
+class CreateApiKeyRequest(BaseModel):
+    name: str
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str

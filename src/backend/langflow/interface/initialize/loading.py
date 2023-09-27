@@ -1,6 +1,7 @@
 import json
-from typing import Any, Callable, Dict, Sequence, Type
-
+import orjson
+from typing import Any, Callable, Dict, Sequence, Type, TYPE_CHECKING
+from langchain.schema import Document
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
@@ -33,13 +34,29 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
-from langflow.utils.logger import logger
+from loguru import logger
+
+if TYPE_CHECKING:
+    from langflow import CustomComponent
 
 
-def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
+def build_vertex_in_params(params: Dict) -> Dict:
+    from langflow.graph.vertex.base import Vertex
+
+    # If any of the values in params is a Vertex, we will build it
+    return {
+        key: value.build() if isinstance(value, Vertex) else value
+        for key, value in params.items()
+    }
+
+
+def instantiate_class(
+    node_type: str, base_type: str, params: Dict, user_id=None
+) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
+
     if node_type in CUSTOM_NODES:
         if custom_node := CUSTOM_NODES.get(node_type):
             if hasattr(custom_node, "initialize"):
@@ -47,7 +64,9 @@ def instantiate_class(node_type: str, base_type: str, params: Dict) -> Any:
             return custom_node(**params)
     logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
-    return instantiate_based_on_type(class_object, base_type, node_type, params)
+    return instantiate_based_on_type(
+        class_object, base_type, node_type, params, user_id=user_id
+    )
 
 
 def convert_params_to_sets(params):
@@ -66,7 +85,7 @@ def convert_kwargs(params):
     for key in kwargs_keys:
         if isinstance(params[key], str):
             try:
-                params[key] = json.loads(params[key])
+                params[key] = orjson.loads(params[key])
             except json.JSONDecodeError:
                 # if the string is not a valid json string, we will
                 # remove the key from the params
@@ -74,7 +93,7 @@ def convert_kwargs(params):
     return params
 
 
-def instantiate_based_on_type(class_object, base_type, node_type, params):
+def instantiate_based_on_type(class_object, base_type, node_type, params, user_id):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -108,19 +127,19 @@ def instantiate_based_on_type(class_object, base_type, node_type, params):
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return instantiate_custom_component(node_type, class_object, params)
+        return instantiate_custom_component(node_type, class_object, params, user_id)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def instantiate_custom_component(node_type, class_object, params):
+def instantiate_custom_component(node_type, class_object, params, user_id):
     # we need to make a copy of the params because we will be
     # modifying it
     params_copy = params.copy()
-    class_object = get_function_custom(params_copy.pop("code"))
-    custom_component = class_object()
+    class_object: "CustomComponent" = get_function_custom(params_copy.pop("code"))
+    custom_component = class_object(user_id=user_id)
     built_object = custom_component.build(**params_copy)
     return built_object, {"repr": custom_component.custom_repr()}
 
@@ -281,6 +300,13 @@ def instantiate_embedding(node_type, class_object, params: Dict):
 
 def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
+    # clean up docs or texts to have only documents
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+    if "documents" in params:
+        params["documents"] = [
+            doc for doc in params["documents"] if isinstance(doc, Document)
+        ]
     if initializer := vecstore_initializer.get(class_object.__name__):
         vecstore = initializer(class_object, params)
     else:
@@ -310,7 +336,7 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
     metadata = params.pop("metadata", None)
     if metadata and isinstance(metadata, str):
         try:
-            metadata = json.loads(metadata)
+            metadata = orjson.loads(metadata)
         except json.JSONDecodeError as exc:
             raise ValueError(
                 "The metadata you provided is not a valid JSON string."

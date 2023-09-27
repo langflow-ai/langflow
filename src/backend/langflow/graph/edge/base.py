@@ -1,4 +1,4 @@
-from langflow.utils.logger import logger
+from loguru import logger
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,6 +16,17 @@ class Edge:
         self.target_param = self.target_handle.split("|")[1]
 
         self.validate_edge()
+
+    def __setstate__(self, state):
+        self.source = state["source"]
+        self.target = state["target"]
+        self.target_param = state["target_param"]
+        self.source_handle = state["source_handle"]
+        self.target_handle = state["target_handle"]
+
+    def reset(self) -> None:
+        self.source._build_params()
+        self.target._build_params()
 
     def validate_edge(self) -> None:
         # Validate that the outputs of the source node are valid inputs
@@ -40,7 +51,6 @@ class Edge:
         if no_matched_type:
             logger.debug(self.source_types)
             logger.debug(self.target_reqs)
-        if no_matched_type:
             raise ValueError(
                 f"Edge between {self.source.vertex_type} and {self.target.vertex_type} "
                 f"has no matched type"

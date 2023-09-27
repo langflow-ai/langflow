@@ -37,7 +37,10 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(reactFlowInstance!);
+      const errors = validateNodes(
+        reactFlowInstance!.getNodes(),
+        reactFlowInstance!.getEdges()
+      );
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",
@@ -58,6 +61,11 @@ export default function BuildTrigger({
           list: [
             "Check components and retry. Hover over component status icon 🔴 to inspect.",
           ],
+        });
+      }
+      if (errors.length === 0 && allNodesValid) {
+        setSuccessData({
+          title: "Flow is ready to run",
         });
       }
     } catch (error) {
