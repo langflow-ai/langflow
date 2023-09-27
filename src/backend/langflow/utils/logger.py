@@ -1,3 +1,4 @@
+from math import log
 from typing import Optional
 from loguru import logger
 from pathlib import Path
@@ -25,12 +26,15 @@ def patching(record):
 
 
 def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
-    if os.getenv("LANGFLOW_LOG_LEVEL") in VALID_LOG_LEVELS and not log_level:
+    if os.getenv("LANGFLOW_LOG_LEVEL") in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
-    elif not log_level:
+    if log_level is None:
         log_level = "INFO"
     # Human-readable
-    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>"
+        "{level: <8}</level> - {module} - <level>{message}</level>"
+    )
 
     # log_format = log_format_dev if log_level.upper() == "DEBUG" else log_format_prod
     logger.remove()  # Remove default handlers
