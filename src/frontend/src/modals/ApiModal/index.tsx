@@ -133,7 +133,7 @@ const ApiModal = forwardRef(
         changes = changes?.filter((x) => x !== "");
       }
 
-      if (template.type === "dict") {
+      if (template.type === "dict" && Array.isArray(changes)) {
         changes = convertArrayToObj(changes);
       }
 

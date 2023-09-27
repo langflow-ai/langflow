@@ -842,25 +842,7 @@ export default function CodeTabsComponent({
                                                             templateField
                                                           ].value
                                                     }
-                                                    onChange={(target) => {
-                                                      setData((old) => {
-                                                        let newInputList =
-                                                          cloneDeep(old);
-                                                        newInputList![
-                                                          i
-                                                        ].data.node.template[
-                                                          templateField
-                                                        ].value = target;
-                                                        return newInputList;
-                                                      });
-                                                      tweaks.buildTweakObject!(
-                                                        node["data"]["id"],
-                                                        target,
-                                                        node.data.node.template[
-                                                          templateField
-                                                        ]
-                                                      );
-                                                    }}
+                                                    onChange={(target) => {}}
                                                   />
                                                 </div>
                                               </ShadTooltip>
