@@ -19,7 +19,7 @@ class NameTest(FastHttpUser):
         while True:
             with self.rest(
                 "GET",
-                f"/task/{task_id}/status",
+                f"/task/{task_id}",
                 name="task_status",
                 headers=self.headers,
             ) as response:
