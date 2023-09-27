@@ -94,9 +94,7 @@ class DatabaseService(Service):
         return True
 
     def run_migrations(self):
-        logger.info(
-            f"Running DB migrations in {self.script_location} on {self.database_url}"
-        )
+        logger.info(f"Running DB migrations in {self.script_location}")
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", str(self.script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
