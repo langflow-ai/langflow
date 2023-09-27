@@ -76,9 +76,11 @@ export default function ExtraSidebar(): JSX.Element {
   }, []);
 
   function handleBlur() {
-    setFilterData(data);
-    setFilterEdge([]);
-    setSearch("");
+    if (!search && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
   }
 
   useEffect(() => {
