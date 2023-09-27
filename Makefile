@@ -20,7 +20,7 @@ coverage:
 
 tests:
 	@make install_backend
-	poetry run pytest tests -n auto
+	poetry run pytest tests
 
 format:
 	poetry run black .

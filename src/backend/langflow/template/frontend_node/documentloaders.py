@@ -171,7 +171,7 @@ class DocumentLoaderFrontNode(FrontendNode):
         self.template.add_field(
             TemplateField(
                 field_type="dict",
-                required=True,
+                required=False,
                 show=True,
                 name="metadata",
                 value={},

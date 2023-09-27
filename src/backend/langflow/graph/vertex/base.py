@@ -185,9 +185,10 @@ class Vertex:
                 # Load the type in value.get('suffixes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
-                file_path = value.get("file_path")
-
-                params[key] = file_path
+                if file_path := value.get("file_path"):
+                    params[key] = file_path
+                else:
+                    raise ValueError(f"File path not found for {self.vertex_type}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
                 if value.get("type") == "code":
                     try:

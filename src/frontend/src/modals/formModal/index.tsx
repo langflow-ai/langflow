@@ -356,7 +356,10 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage(): void {
-    let nodeValidationErrors = validateNodes(reactFlowInstance!);
+    let nodeValidationErrors = validateNodes(
+      reactFlowInstance!.getNodes(),
+      reactFlowInstance!.getEdges()
+    );
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;

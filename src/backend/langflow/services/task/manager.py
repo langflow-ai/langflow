@@ -1,4 +1,5 @@
 from typing import Any, Callable, Coroutine, Union
+from langflow.utils.logger import configure
 from loguru import logger
 from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
@@ -7,18 +8,19 @@ from langflow.services.task.utils import get_celery_worker_status
 
 
 def check_celery_availability():
-    from langflow.worker import celery_app
-
     try:
+        from langflow.worker import celery_app
+
         status = get_celery_worker_status(celery_app)
         logger.debug(f"Celery status: {status}")
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
+    except Exception as exc:
+        logger.debug(f"Celery not available: {exc}")
         status = {"availability": None}
     return status
 
 
 try:
+    configure()
     status = check_celery_availability()
 
     USE_CELERY = status.get("availability") is not None
