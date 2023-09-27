@@ -25,10 +25,10 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, task_id, max_attempts=20, sleep_time=1):
+def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
     for _ in range(max_attempts):
         task_status_response = client.get(
-            f"api/v1/task/{task_id}/status",
+            href,
             headers=headers,
         )
         if (
@@ -544,11 +544,15 @@ def test_async_task_processing(distributed_client, added_flow, created_api_key):
     assert response.status_code == 200, response.json()
 
     # Extract the task ID from the response
-    task_id = response.json().get("id")
+    task = response.json().get("task")
+    task_id = task.get("id")
+    task_href = task.get("href")
     assert task_id is not None
+    assert task_href is not None
+    assert task_href == f"api/v1/task/{task_id}"
 
     # Polling the task status using the helper function
-    task_status_json = poll_task_status(distributed_client, headers, task_id)
+    task_status_json = poll_task_status(distributed_client, headers, task_href)
     assert task_status_json is not None, "Task did not complete in time"
 
     # Validate that the task completed successfully and the result is as expected
@@ -576,11 +580,15 @@ def test_async_task_processing_vector_store(
     assert "FAILURE" not in response.json()["result"]
 
     # Extract the task ID from the response
-    task_id = response.json().get("id")
+    task = response.json().get("task")
+    task_id = task.get("id")
+    task_href = task.get("href")
     assert task_id is not None
+    assert task_href is not None
+    assert task_href == f"api/v1/task/{task_id}"
 
     # Polling the task status using the helper function
-    task_status_json = poll_task_status(client, headers, task_id, max_attempts=40)
+    task_status_json = poll_task_status(client, headers, task_href)
     assert task_status_json is not None, "Task did not complete in time"
 
     # Validate that the task completed successfully and the result is as expected

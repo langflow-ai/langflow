@@ -189,10 +189,7 @@ export function buildTweaks(flow: FlowType) {
   }, {});
 }
 
-export function validateNode(
-  node: NodeType,
-  reactFlowInstance: ReactFlowInstance
-): Array<string> {
+export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
       "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
@@ -211,13 +208,11 @@ export function validateNode(
       (template[t].value === undefined ||
         template[t].value === null ||
         template[t].value === "") &&
-      !reactFlowInstance
-        .getEdges()
-        .some(
-          (edge) =>
-            edge.targetHandle?.split("|")[1] === t &&
-            edge.targetHandle.split("|")[2] === node.id
-        )
+      !edges.some(
+        (edge) =>
+          edge.targetHandle?.split("|")[1] === t &&
+          edge.targetHandle.split("|")[2] === node.id
+      )
     ) {
       errors.push(
         `${type} is missing ${
@@ -249,15 +244,13 @@ export function validateNode(
   }, [] as string[]);
 }
 
-export function validateNodes(reactFlowInstance: ReactFlowInstance) {
-  if (reactFlowInstance.getNodes().length === 0) {
+export function validateNodes(nodes: Node[], edges: Edge[]) {
+  if (nodes.length === 0) {
     return [
       "No nodes found in the flow. Please add at least one node to the flow.",
     ];
   }
-  return reactFlowInstance
-    .getNodes()
-    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+  return nodes.flatMap((n: NodeType) => validateNode(n, edges));
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
@@ -311,15 +304,20 @@ export function getConnectedNodes(
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
-export function convertObjToArray(singleObject) {
+export function convertObjToArray(singleObject: object | string) {
+  if (typeof singleObject === "string") {
+    singleObject = JSON.parse(singleObject);
+  }
   if (Array.isArray(singleObject)) return singleObject;
 
-  let arrConverted: any = [];
-  for (const key in singleObject) {
-    if (singleObject.hasOwnProperty(key)) {
-      const newObj = {};
-      newObj[key] = singleObject[key];
-      arrConverted.push(newObj);
+  let arrConverted: any[] = [];
+  if (typeof singleObject === "object") {
+    for (const key in singleObject) {
+      if (Object.prototype.hasOwnProperty.call(singleObject, key)) {
+        const newObj = {};
+        newObj[key] = singleObject[key];
+        arrConverted.push(newObj);
+      }
     }
   }
   return arrConverted;

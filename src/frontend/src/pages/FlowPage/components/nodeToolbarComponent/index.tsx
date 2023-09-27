@@ -62,7 +62,7 @@ export default function NodeToolbarComponent({
       setShowNode((prev) => !prev);
       updateNodeInternals(data.id);
     }
-    if(event.includes("disabled")){
+    if (event.includes("disabled")) {
       return;
     }
   };
@@ -156,8 +156,20 @@ export default function NodeToolbarComponent({
                 </SelectTrigger>
               </ShadTooltip>
               <SelectContent>
-                <SelectItem value={getRandomKeyByssmm() + (nodeLength==0?"disabled":"advanced")}>
-                  <div className={"flex "+(nodeLength==0?"text-muted-foreground":"text-primary")}>
+                <SelectItem
+                  value={
+                    getRandomKeyByssmm() +
+                    (nodeLength == 0 ? "disabled" : "advanced")
+                  }
+                >
+                  <div
+                    className={
+                      "flex " +
+                      (nodeLength == 0
+                        ? "text-muted-foreground"
+                        : "text-primary")
+                    }
+                  >
                     <IconComponent
                       name="Settings2"
                       className="relative top-0.5 mr-2 h-4 w-4"
@@ -182,7 +194,7 @@ export default function NodeToolbarComponent({
             <ShadTooltip content="Edit" side="top">
               <div>
                 <button
-                disabled={nodeLength === 0}
+                  disabled={nodeLength === 0}
                   onClick={() => setShowModalAdvanced(true)}
                   className={classNames(
                     "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1  ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +

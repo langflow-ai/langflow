@@ -27,13 +27,29 @@ curl -X POST \
   -d '{"inputs": {"text": ""}, "tweaks": {}, "sync": false}'
 ```
 
+Response:
+
+```json
+{
+  "result": {
+    "output": "..."
+  },
+  "task": {
+    "id": "...",
+    "href": "api/v1/task/<task_id>"
+  },
+  "session_id": "...",
+  "backend": "..." // celery or anyio
+}
+```
+
 ## Checking Task Status
 
-You can check the status of an asynchronous task by making a GET request to the `/task/{task_id}/status` endpoint.
+You can check the status of an asynchronous task by making a GET request to the `/task/{task_id}` endpoint.
 
 ```bash
 curl -X GET \
-  http://localhost:3000/api/v1/task/<task_id>/status \
+  http://localhost:3000/api/v1/task/<task_id> \
   -H 'x-api-key: <your_api_key>'
 ```
 
