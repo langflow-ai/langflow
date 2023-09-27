@@ -7,6 +7,9 @@ import orjson
 import appdirs
 
 
+VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
 def serialize(record):
     subset = {
         "timestamp": record["time"].timestamp(),
@@ -21,9 +24,11 @@ def patching(record):
     record["extra"]["serialized"] = serialize(record)
 
 
-def configure(log_level: str = "INFO", log_file: Optional[Path] = None):
-    if os.getenv("LANGFLOW_LOG_LEVEL"):
+def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
+    if os.getenv("LANGFLOW_LOG_LEVEL") in VALID_LOG_LEVELS and not log_level:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
+    elif not log_level:
+        log_level = "INFO"
     # Human-readable
     log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 
