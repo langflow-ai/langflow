@@ -311,15 +311,20 @@ export function getConnectedNodes(
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
-export function convertObjToArray(singleObject) {
+export function convertObjToArray(singleObject: object | string) {
+  if (typeof singleObject === "string") {
+    singleObject = JSON.parse(singleObject);
+  }
   if (Array.isArray(singleObject)) return singleObject;
 
-  let arrConverted: any = [];
-  for (const key in singleObject) {
-    if (singleObject.hasOwnProperty(key)) {
-      const newObj = {};
-      newObj[key] = singleObject[key];
-      arrConverted.push(newObj);
+  let arrConverted: any[] = [];
+  if (typeof singleObject === "object") {
+    for (const key in singleObject) {
+      if (Object.prototype.hasOwnProperty.call(singleObject, key)) {
+        const newObj = {};
+        newObj[key] = singleObject[key];
+        arrConverted.push(newObj);
+      }
     }
   }
   return arrConverted;
