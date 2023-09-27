@@ -107,7 +107,6 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
-
   return (
     <>
       <NodeToolbar>
