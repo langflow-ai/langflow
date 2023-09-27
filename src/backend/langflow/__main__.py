@@ -23,7 +23,7 @@ from rich.table import Table
 
 console = Console()
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 def get_number_of_workers(workers=None):
@@ -141,7 +141,7 @@ def run(
     ),
 ):
     """
-    Run the Langflow server.
+    Run the Langflow.
     """
     # override env variables with .env file
     if env_file:
@@ -299,7 +299,14 @@ def superuser(
     password: str = typer.Option(
         ..., prompt=True, hide_input=True, help="Password for the superuser."
     ),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
 ):
+    """
+    Create a superuser.
+    """
+    configure(log_level=log_level)
     initialize_services()
     db_service = get_db_service()
     with session_getter(db_service) as session:
@@ -321,7 +328,10 @@ def superuser(
 
 
 @app.command()
-def migration(test: bool = typer.Option(False, help="Run migrations in test mode.")):
+def migration(test: bool = typer.Option(True, help="Run migrations in test mode.")):
+    """
+    Run or test migrations.
+    """
     initialize_services()
     db_service = get_db_service()
     if not test:

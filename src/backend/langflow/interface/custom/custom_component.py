@@ -102,7 +102,10 @@ class CustomComponent(Component, extra=Extra.allow):
                     status_code=400,
                     detail={
                         "error": "Type hint Error",
-                        "traceback": "Prompt type is not supported in the build method. Try using PromptTemplate instead.",
+                        "traceback": (
+                            "Prompt type is not supported in the build method."
+                            " Try using PromptTemplate instead."
+                        ),
                     },
                 )
         return args
