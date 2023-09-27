@@ -753,7 +753,7 @@ export default function CodeTabsComponent({
                                                   )
                                                 )}
                                               >
-                                                <div className="mx-auto">
+                                                <div className="mx-auto max-h-48 overflow-auto custom-scroll">
                                                   <KeypairListComponent
                                                     disabled={false}
                                                     editNode={true}

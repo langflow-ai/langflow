@@ -325,7 +325,7 @@ export default function Page({
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
-          uploadFlow(true, event.dataTransfer.files.item(0)!);
+          uploadFlow(false, event.dataTransfer.files.item(0)!);
         } else {
           setErrorData({
             title: "Invalid file type",
