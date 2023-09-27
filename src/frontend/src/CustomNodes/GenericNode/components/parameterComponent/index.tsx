@@ -388,7 +388,6 @@ export default function ParameterComponent({
               suffixes={data.node?.template[name].suffixes}
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
-                save();
               }}
             ></InputFileComponent>
           </div>
