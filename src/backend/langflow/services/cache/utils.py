@@ -207,5 +207,7 @@ def save_uploaded_file(file: UploadFile, folder_name):
 
 def update_build_status(cache_service, flow_id: str, status: BuildStatus):
     cached_flow = cache_service[flow_id]
+    if cached_flow is None:
+        raise ValueError(f"Flow {flow_id} not found in cache")
     cached_flow["status"] = status
     cache_service[flow_id] = cached_flow
