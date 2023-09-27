@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { KeyPairListComponentType } from "../../types/components";
 
 import _ from "lodash";
@@ -19,8 +19,17 @@ export default function KeypairListComponent({
     }
   }, [disabled]);
 
+  const ref = useRef(value.length === 0 ? [{ "": "" }] : value);
+
+  useEffect(() => {
+    if (JSON.stringify(value) !== JSON.stringify(ref.current)) {
+      ref.current = value;
+      onChange(value);
+    }
+  }, [value]);
+
   const handleChangeKey = (event, idx) => {
-    const newInputList = _.cloneDeep(value);
+    const newInputList = _.cloneDeep(ref.current);
     const oldKey = Object.keys(newInputList[idx])[0];
     const updatedObj = { [event.target.value]: newInputList[idx][oldKey] };
     newInputList[idx] = updatedObj;
@@ -28,7 +37,7 @@ export default function KeypairListComponent({
   };
 
   const handleChangeValue = (newValue, idx) => {
-    const newInputList = _.cloneDeep(value);
+    const newInputList = _.cloneDeep(ref.current);
     const key = Object.keys(newInputList[idx])[0];
     newInputList[idx][key] = newValue;
     onChange(newInputList);
@@ -37,11 +46,11 @@ export default function KeypairListComponent({
   return (
     <div
       className={classNames(
-        value?.length > 1 && editNode ? "my-1" : "",
+        ref.current?.length > 1 && editNode ? "my-1" : "",
         "flex h-full flex-col gap-3"
       )}
     >
-      {value?.map((obj, index) => {
+      {ref.current?.map((obj, index) => {
         return Object.keys(obj).map((key, idx) => {
           return (
             <div key={idx} className="flex w-full gap-3">
@@ -72,10 +81,10 @@ export default function KeypairListComponent({
                 }
               />
 
-              {index === value.length - 1 ? (
+              {index === ref.current.length - 1 ? (
                 <button
                   onClick={() => {
-                    let newInputList = _.cloneDeep(value);
+                    let newInputList = _.cloneDeep(ref.current);
                     newInputList.push({ "": "" });
                     onChange(newInputList);
                   }}
@@ -88,7 +97,7 @@ export default function KeypairListComponent({
               ) : (
                 <button
                   onClick={() => {
-                    let newInputList = _.cloneDeep(value);
+                    let newInputList = _.cloneDeep(ref.current);
                     newInputList.splice(index, 1);
                     onChange(newInputList);
                   }}
