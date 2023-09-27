@@ -46,6 +46,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
+  showNode?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -54,7 +55,32 @@ export type InputListComponentType = {
   editNode?: boolean;
 };
 
+export type KeyPairListComponentType = {
+  value: any;
+  onChange: (value: Object[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+  duplicateKey?: boolean;
+};
+
+export type DictComponentType = {
+  value: any;
+  onChange: (value) => void;
+  disabled: boolean;
+  editNode?: boolean;
+};
+
 export type TextAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  editNode?: boolean;
+};
+
+export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
@@ -173,6 +199,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
+  onClick?: () => void;
 };
 
 export type InputProps = {
@@ -218,7 +245,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string;
+    value: string | boolean;
     name: string;
   };
 };
@@ -233,6 +260,7 @@ export type PaginatorComponentType = {
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
+  asChild?: boolean;
   modalContent: string;
   modalContentTitle: string;
   cancelText: string;
@@ -253,6 +281,7 @@ export type UserManagementType = {
   icon: string;
   data?: any;
   index?: number;
+  asChild?: boolean;
   onConfirm: (index, data) => void;
 };
 
@@ -261,6 +290,35 @@ export type loginInputStateType = {
   password: string;
 };
 
+export type patchUserInputStateType = {
+  password: string;
+  cnfPassword: string;
+  gradient: string;
+};
+
+export type UserInputType = {
+  username: string;
+  password: string;
+  is_active?: boolean;
+  is_superuser?: boolean;
+  id?: string;
+  create_at?: string;
+  updated_at?: string;
+};
+
+export type ApiKeyType = {
+  title: string;
+  cancelText: string;
+  confirmationText: string;
+  children: ReactElement;
+  icon: string;
+  data?: any;
+  onCloseModal: () => void;
+};
+
+export type ApiKeyInputType = {
+  apikeyname: string;
+};
 export type groupedObjType = {
   family: string;
   type: string;
@@ -366,6 +424,9 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
+  setShowNode: (boolean: any) => void;
+  numberOfHandles: boolean[] | [];
+  showNode: boolean;
 };
 
 export type parsedDataType = {
@@ -488,7 +549,7 @@ export type codeTabsPropsType = {
     ) => string;
     buildTweakObject?: (
       tw: string,
-      changes: string | string[] | boolean | number,
+      changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType
     ) => string | void;
   };
@@ -507,4 +568,23 @@ export type validationStatusType = {
   params: string;
   progress: number;
   valid: boolean;
+};
+
+export type ApiKey = {
+  id: string;
+  api_key: string;
+  name: string;
+  created_at: string;
+  last_used_at: string;
+  total_uses: number;
+};
+export type fetchErrorComponentType = {
+  message: string;
+  description: string;
+};
+
+export type dropdownButtonPropsType = {
+  firstButtonName: string;
+  onFirstBtnClick: () => void;
+  options: Array<{ name: string; onBtnClick: () => void }>;
 };

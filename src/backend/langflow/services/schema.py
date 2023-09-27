@@ -7,7 +7,10 @@ class ServiceType(str, Enum):
     registered with the service manager.
     """
 
-    CACHE_MANAGER = "cache_manager"
-    SETTINGS_MANAGER = "settings_manager"
-    DATABASE_MANAGER = "database_manager"
-    CHAT_MANAGER = "chat_manager"
+    AUTH_SERVICE = "auth_service"
+    CACHE_SERVICE = "cache_service"
+    SETTINGS_SERVICE = "settings_service"
+    DATABASE_SERVICE = "database_service"
+    CHAT_SERVICE = "chat_service"
+    SESSION_SERVICE = "session_service"
+    TASK_SERVICE = "task_service"

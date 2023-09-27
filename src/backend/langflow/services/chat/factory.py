@@ -1,11 +1,11 @@
-from langflow.services.chat.manager import ChatManager
+from langflow.services.chat.manager import ChatService
 from langflow.services.factory import ServiceFactory
 
 
-class ChatManagerFactory(ServiceFactory):
+class ChatServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(ChatManager)
+        super().__init__(ChatService)
 
-    def create(self, settings_service):
-        # Here you would have logic to create and configure a ChatManager
-        return ChatManager()
+    def create(self):
+        # Here you would have logic to create and configure a ChatService
+        return ChatService()

@@ -56,7 +56,7 @@ class VectorStoreFrontendNode(FrontendNode):
         # Add search_kwargs field
         extra_field = TemplateField(
             name="search_kwargs",
-            field_type="code",
+            field_type="NestedDict",
             required=False,
             placeholder="",
             show=True,

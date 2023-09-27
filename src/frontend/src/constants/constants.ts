@@ -115,6 +115,9 @@ export const EDIT_DIALOG_SUBTITLE =
 export const CODE_PROMPT_DIALOG_SUBTITLE =
   "Edit your Python code. This code snippet accepts module import and a single function definition. Make sure that your function returns a string.";
 
+export const CODE_DICT_DIALOG_SUBTITLE =
+  "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
+
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -500,6 +503,21 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 /**
+ * Header text for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_TITLE = "Admin Page";
+
+/**
+ * Header description for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_DESCRIPTION =
+  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
+
+/**
  * URLs excluded from error retries.
  * @constant
  *
@@ -508,6 +526,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "/api/v1/validate/code",
   "/api/v1/custom_component",
   "/api/v1/validate/prompt",
+  "http://localhost:7860/login",
 ];
 
 export const skipNodeUpdate = ["CustomComponent"];
@@ -518,10 +537,28 @@ export const CONTROL_INPUT_STATE = {
   username: "",
 };
 
+export const CONTROL_PATCH_USER_STATE = {
+  password: "",
+  cnfPassword: "",
+  gradient: "",
+};
+
 export const CONTROL_LOGIN_STATE = {
   username: "",
   password: "",
 };
+
+export const CONTROL_NEW_USER = {
+  username: "",
+  password: "",
+  is_active: false,
+  is_superuser: false,
+};
+
+export const CONTROL_NEW_API_KEY = {
+  apikeyname: "",
+};
+
 export const tabsCode = [];
 
 export function tabsArray(codes: string[], method: number) {
@@ -602,3 +639,24 @@ export function tabsArray(codes: string[], method: number) {
     },
   ];
 }
+export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
+export const FETCH_ERROR_DESCRIPION =
+  "Check if everything is working properly and try again.";
+
+export const BASE_URL_API = "/api/v1/";
+
+export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
+
+export const API_PAGE_PARAGRAPH_1 =
+  "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.";
+
+export const API_PAGE_PARAGRAPH_2 =
+  "Do not share your API key with others, or expose it in the browser or other client-side code.";
+
+export const API_PAGE_USER_KEYS =
+  "This user does not have any keys assigned at the moment.";
+
+export const LAST_USED_SPAN_1 = "The last time this key was used.";
+
+export const LAST_USED_SPAN_2 =
+  "Accurate to within the hour from the most recent usage.";

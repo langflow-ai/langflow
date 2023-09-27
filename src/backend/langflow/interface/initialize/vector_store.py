@@ -1,4 +1,3 @@
-import json
 from typing import Any, Callable, Dict, Type
 from langchain.vectorstores import (
     Pinecone,
@@ -9,8 +8,10 @@ from langchain.vectorstores import (
     SupabaseVectorStore,
     MongoDBAtlasVectorSearch,
 )
-
+from langchain.schema import Document
 import os
+
+import orjson
 
 
 def docs_in_params(params: dict) -> bool:
@@ -92,7 +93,7 @@ def initialize_weaviate(class_object: Type[Weaviate], params: dict):
         import weaviate  # type: ignore
 
         client_kwargs_json = params.get("client_kwargs", "{}")
-        client_kwargs = json.loads(client_kwargs_json)
+        client_kwargs = orjson.loads(client_kwargs_json)
         client_params = {
             "url": params.get("weaviate_url"),
         }
@@ -200,11 +201,16 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
         if "texts" in params:
             params["documents"] = params.pop("texts")
         for doc in params["documents"]:
+            if not isinstance(doc, Document):
+                # remove any non-Document objects from the list
+                params["documents"].remove(doc)
+                continue
             if doc.metadata is None:
                 doc.metadata = {}
             for key, value in doc.metadata.items():
                 if value is None:
                     doc.metadata[key] = ""
+
         chromadb = class_object.from_documents(**params)
     if persist:
         chromadb.persist()

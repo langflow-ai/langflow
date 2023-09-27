@@ -153,10 +153,13 @@ class DictCodeFileFormatter(FieldFormatter):
         key = field.name
         value = field.to_dict()
         _type = value["type"]
-        if "dict" in _type.lower():
-            if key == "dict_":
-                field.field_type = "file"
-                field.suffixes = [".json", ".yaml", ".yml"]
-                field.file_types = ["json", "yaml", "yml"]
-            else:
-                field.field_type = "code"
+        if "dict" in _type.lower() and key == "dict_":
+            field.field_type = "file"
+            field.suffixes = [".json", ".yaml", ".yml"]
+            field.file_types = ["json", "yaml", "yml"]
+        elif (
+            _type.startswith("Dict")
+            or _type.startswith("Mapping")
+            or _type.startswith("dict")
+        ):
+            field.field_type = "dict"

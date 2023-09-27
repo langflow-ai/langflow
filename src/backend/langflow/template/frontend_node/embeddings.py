@@ -89,7 +89,7 @@ class EmbeddingFrontendNode(FrontendNode):
         if field.name == "headers":
             field.show = False
         if field.name == "model_kwargs":
-            field.field_type = "code"
+            field.field_type = "dict"
             field.advanced = True
             field.show = True
         elif field.name in [
