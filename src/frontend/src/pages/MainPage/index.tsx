@@ -41,13 +41,13 @@ export default function HomePage(): JSX.Element {
 
   const dragOver = (e) => {
     e.preventDefault();
-    if(e.dataTransfer.types.some((types) => types === "Files")){
+    if (e.dataTransfer.types.some((types) => types === "Files")) {
       setIsDragging(true);
     }
   };
 
   const dragEnter = (e) => {
-    if(e.dataTransfer.types.some((types) => types === "Files")){
+    if (e.dataTransfer.types.some((types) => types === "Files")) {
       setIsDragging(true);
     }
     e.preventDefault();
