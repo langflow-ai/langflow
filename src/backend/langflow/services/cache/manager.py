@@ -74,13 +74,17 @@ class InMemoryCache(BaseCacheService, Service):
             ):
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                unpickled = pickle.loads(item["value"])
-                return unpickled
+                # Check if the value is pickled
+                if isinstance(item["value"], bytes):
+                    value = pickle.loads(item["value"])
+                else:
+                    value = item["value"]
+                return value
             else:
                 self.delete(key)
         return None
 
-    def set(self, key, value):
+    def set(self, key, value, pickle=False):
         """
         Add an item to the cache.
 
@@ -98,8 +102,10 @@ class InMemoryCache(BaseCacheService, Service):
                 # Remove least recently used item
                 self._cache.popitem(last=False)
             # pickle locally to mimic Redis
-            pickled = pickle.dumps(value)
-            self._cache[key] = {"value": pickled, "time": time.time()}
+            if pickle:
+                value = pickle.dumps(value)
+
+            self._cache[key] = {"value": value, "time": time.time()}
 
     def upsert(self, key, value):
         """
