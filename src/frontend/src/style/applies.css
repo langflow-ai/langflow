@@ -87,7 +87,7 @@
     @apply flex flex-col gap-2 p-2;
   }
   .side-bar-components-div-arrangement {
-    @apply w-full overflow-auto scrollbar-hide pb-10;
+    @apply w-full overflow-auto pb-10 scrollbar-hide;
   }
   .search-icon {
     @apply absolute inset-y-0 right-0 flex items-center py-1.5 pr-5;
@@ -127,7 +127,7 @@
   }
 
   .skeleton-card {
-    @apply bg-background h-48 p-4 border rounded-lg flex flex-col gap-6;
+    @apply flex h-48 flex-col gap-6 rounded-lg border bg-background p-4;
   }
 
   .skeleton-card-wrapper {
@@ -205,7 +205,7 @@
   }
 
   .loading-page-panel {
-    @apply h-full w-full flex justify-center items-center bg-muted;
+    @apply flex h-full w-full items-center justify-center bg-muted;
   }
 
   .main-page-panel {
@@ -350,7 +350,7 @@
     @apply alert-icon text-status-green;
   }
   .success-alert-message {
-    @apply word-break-break-word alert-font-size text-success-foreground;
+    @apply alert-font-size text-success-foreground word-break-break-word;
   }
 
   .card-component-title-display {
@@ -360,7 +360,7 @@
     @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
   }
   .card-component-title-size {
-    @apply w-full flex-1 word-break-break-word truncate-doubleline;
+    @apply w-full flex-1 truncate-doubleline word-break-break-word;
   }
   .card-component-delete-button {
     @apply flex self-start;
@@ -520,7 +520,7 @@
     @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
   }
   .header-waitlist-link-box {
-    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-2 shadow-sm text-sm  font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap;
+    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm  font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
   .header-waitlist-link-box:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
@@ -853,7 +853,7 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] lg:w-full;
+    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center max-lg:w-full sm:w-[75vw] lg:w-full;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2;
@@ -882,11 +882,11 @@
     @apply bg-white text-primary;
   }
   .code-highlight {
-    @apply block max-h-[64vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[64vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
 
   .code-nohighlight {
-    @apply block max-h-[70vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[70vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
     @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
@@ -1050,15 +1050,15 @@
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
   }
 
-  .field-invalid{
-    @apply font-medium text-[0.8rem] text-destructive absolute
+  .field-invalid {
+    @apply absolute text-[0.8rem] font-medium text-destructive;
   }
 
-  .label-invalid{
-    @apply text-destructive
+  .label-invalid {
+    @apply text-destructive;
   }
 
-  .input-invalid{
-    @apply border-destructive focus:ring-destructive  focus:border-destructive
+  .input-invalid {
+    @apply border-destructive focus:border-destructive  focus:ring-destructive;
   }
 }
