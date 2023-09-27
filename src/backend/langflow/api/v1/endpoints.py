@@ -20,6 +20,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 from langflow.api.v1.schemas import (
     ProcessResponse,
+    TaskResponse,
     TaskStatusResponse,
     UploadFileResponse,
     CustomComponentCode,
@@ -145,9 +146,15 @@ async def process_flow(
                 session_id,
             )
             task_result = task.status
+
+        if task_id:
+            task_response = TaskResponse(id=task_id, href=f"api/v1/task/{task_id}")
+        else:
+            task_response = None
+
         return ProcessResponse(
             result=task_result,
-            id=task_id,
+            task=task_response,
             session_id=session_id,
             backend=str(type(task_service.backend)),
         )
@@ -173,7 +180,7 @@ async def process_flow(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/task/{task_id}/status", response_model=TaskStatusResponse)
+@router.get("/task/{task_id}", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str):
     task_service = get_task_service()
     task = task_service.get_task(task_id)
