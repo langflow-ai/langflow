@@ -21,5 +21,4 @@ class UtilitiesFrontendNode(FrontendNode):
             field.field_type = "str"
 
         if isinstance(field.value, dict):
-            field.field_type = "code"
             field.value = orjson_dumps(field.value)

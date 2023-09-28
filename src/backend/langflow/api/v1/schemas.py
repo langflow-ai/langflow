@@ -47,11 +47,30 @@ class UpdateTemplateRequest(BaseModel):
     template: dict
 
 
+class TaskResponse(BaseModel):
+    """Task response schema."""
+
+    id: Optional[str] = Field(None)
+    href: Optional[str] = Field(None)
+
+
 class ProcessResponse(BaseModel):
     """Process response schema."""
 
-    result: dict
+    result: Any
+    task: Optional[TaskResponse] = None
     session_id: Optional[str] = None
+    backend: Optional[str] = None
+
+
+# TaskStatusResponse(
+#         status=task.status, result=task.result if task.ready() else None
+#     )
+class TaskStatusResponse(BaseModel):
+    """Task status response schema."""
+
+    status: str
+    result: Optional[Any] = None
 
 
 class ChatMessage(BaseModel):

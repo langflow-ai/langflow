@@ -23,7 +23,7 @@ function ApiInterceptor() {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          const refreshToken = cookies.get("refresh_token");
+          const refreshToken = cookies.get("refresh_tkn_lflw");
           if (refreshToken && refreshToken !== "auto") {
             authenticationErrorCount = authenticationErrorCount + 1;
             if (authenticationErrorCount > 3) {
@@ -33,11 +33,16 @@ function ApiInterceptor() {
             }
 
             const res = await renewAccessToken(refreshToken);
-            login(res.data.access_token, res.data.refresh_token);
+            if (res?.data?.access_token && res?.data?.refresh_token) {
+              login(res?.data?.access_token, res?.data?.refresh_token);
+            }
+
             try {
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
-                error.config.headers["Authorization"] = `Bearer ${accessToken}`;
+                error.config.headers["Authorization"] = `Bearer ${cookies.get(
+                  "access_tkn_lflw"
+                )}`;
                 const response = await axios.request(error.config);
                 return response;
               }

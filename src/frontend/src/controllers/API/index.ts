@@ -1,4 +1,4 @@
-import { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
@@ -6,6 +6,8 @@ import {
   APIObjectType,
   LoginType,
   Users,
+  changeUser,
+  resetPasswordType,
   sendAllProps,
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
@@ -144,8 +146,8 @@ export async function updateFlowInDatabase(
       description: updatedFlow.description,
     });
 
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -164,7 +166,7 @@ export async function readFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/`);
     if (response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -177,7 +179,7 @@ export async function downloadFlowsFromDatabase() {
   try {
     const response = await api.get(`${BASE_URL_API}flows/download/`);
     if (response?.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -190,8 +192,8 @@ export async function uploadFlowsToDatabase(flows: FormData) {
   try {
     const response = await api.post(`${BASE_URL_API}flows/upload/`, flows);
 
-    if (response.status !== 201) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -312,7 +314,7 @@ export async function getHealth() {
  */
 export async function getBuildStatus(
   flowId: string
-): Promise<BuildStatusTypeAPI> {
+): Promise<AxiosResponse<BuildStatusTypeAPI>> {
   return await api.get(`${BASE_URL_API}build/${flowId}/status`);
 }
 
@@ -393,16 +395,18 @@ export async function autoLogin() {
 
 export async function renewAccessToken(token: string) {
   try {
-    return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    if (token) {
+      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
+    }
   } catch (error) {
     console.log("Error:", error);
     throw error;
   }
 }
 
-export async function getLoggedUser(): Promise<Users> {
+export async function getLoggedUser(): Promise<Users | null> {
   try {
-    const res = await api.get(`${BASE_URL_API}user`);
+    const res = await api.get(`${BASE_URL_API}users/whoami`);
 
     if (res.status === 200) {
       return res.data;
@@ -411,14 +415,16 @@ export async function getLoggedUser(): Promise<Users> {
     console.log("Error:", error);
     throw error;
   }
+  return null;
 }
 
-export async function addUser(user: UserInputType): Promise<Users> {
+export async function addUser(user: UserInputType): Promise<Array<Users>> {
   try {
-    const res = await api.post(`${BASE_URL_API}user`, user);
-    if (res.status === 200) {
-      return res.data;
+    const res = await api.post(`${BASE_URL_API}users/`, user);
+    if (res.status !== 201) {
+      throw new Error(res.data.detail);
     }
+    return res.data;
   } catch (error) {
     console.log("Error:", error);
     throw error;
@@ -428,10 +434,10 @@ export async function addUser(user: UserInputType): Promise<Users> {
 export async function getUsersPage(
   skip: number,
   limit: number
-): Promise<[Users]> {
+): Promise<Array<Users>> {
   try {
     const res = await api.get(
-      `${BASE_URL_API}users?skip=${skip}&limit=${limit}`
+      `${BASE_URL_API}users/?skip=${skip}&limit=${limit}`
     );
     if (res.status === 200) {
       return res.data;
@@ -440,11 +446,12 @@ export async function getUsersPage(
     console.log("Error:", error);
     throw error;
   }
+  return [];
 }
 
 export async function deleteUser(user_id: string) {
   try {
-    const res = await api.delete(`${BASE_URL_API}user/${user_id}`);
+    const res = await api.delete(`${BASE_URL_API}users/${user_id}`);
     if (res.status === 200) {
       return res.data;
     }
@@ -454,9 +461,24 @@ export async function deleteUser(user_id: string) {
   }
 }
 
-export async function updateUser(user_id: string, user: Users) {
+export async function updateUser(user_id: string, user: changeUser) {
   try {
-    const res = await api.patch(`${BASE_URL_API}user/${user_id}`, user);
+    const res = await api.patch(`${BASE_URL_API}users/${user_id}`, user);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function resetPassword(user_id: string, user: resetPasswordType) {
+  try {
+    const res = await api.patch(
+      `${BASE_URL_API}users/${user_id}/reset-password`,
+      user
+    );
     if (res.status === 200) {
       return res.data;
     }
@@ -468,7 +490,7 @@ export async function updateUser(user_id: string, user: Users) {
 
 export async function getApiKey() {
   try {
-    const res = await api.get(`${BASE_URL_API}api_key`);
+    const res = await api.get(`${BASE_URL_API}api_key/`);
     if (res.status === 200) {
       return res.data;
     }
@@ -480,7 +502,7 @@ export async function getApiKey() {
 
 export async function createApiKey(name: string) {
   try {
-    const res = await api.post(`${BASE_URL_API}api_key`, { name });
+    const res = await api.post(`${BASE_URL_API}api_key/`, { name });
     if (res.status === 200) {
       return res.data;
     }

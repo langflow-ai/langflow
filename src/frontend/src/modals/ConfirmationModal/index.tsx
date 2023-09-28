@@ -6,6 +6,7 @@ import BaseModal from "../baseModal";
 
 export default function ConfirmationModal({
   title,
+  asChild,
   titleHeader,
   modalContent,
   modalContentTitle,
@@ -22,7 +23,7 @@ export default function ConfirmationModal({
   const [open, setOpen] = useState(false);
   return (
     <BaseModal size="x-small" open={open} setOpen={setOpen}>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
         <Icon

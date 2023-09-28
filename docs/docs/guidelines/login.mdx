@@ -1,0 +1,128 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Sign up and Sign in
+
+## Introduction
+
+The login functionality in Langflow serves to authenticate users and protect sensitive routes in the application. Starting from version 0.5, Langflow introduces an enhanced login mechanism that is governed by a few environment variables. This allows new secure features.
+
+## Environment Variables
+
+The following environment variables are crucial in configuring the login settings:
+
+- _`LANGFLOW_AUTO_LOGIN`_: Determines whether Langflow should automatically log users in. Default is `True`.
+- _`LANGFLOW_SUPERUSER`_: The username of the superuser.
+- _`LANGFLOW_SUPERUSER_PASSWORD`_: The password for the superuser.
+- _`LANGFLOW_SECRET_KEY`_: A key used for encrypting the superuser's password.
+- _`LANGFLOW_NEW_USER_IS_ACTIVE`_: Determines whether new users are automatically activated. Default is `False`.
+
+All of these variables can be passed to the CLI command _`langflow run`_ through the _`--env-file`_ option. For example:
+
+```bash
+langflow run --env-file .env
+```
+
+<Admonition type="info">
+  It is critical not to expose these environment variables in your code
+  repository. Always set them securely in your deployment environment, for
+  example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated
+  secure environment configuration systems like AWS Secrets Manager.
+</Admonition>
+
+### _`LANGFLOW_AUTO_LOGIN`_
+
+By default, this variable is set to `True`. When enabled (`True`), Langflow operates as it did in versions prior to 0.5—automatic login without requiring explicit user authentication.
+
+To disable automatic login and enforce user authentication:
+
+```bash
+export LANGFLOW_AUTO_LOGIN=False
+```
+
+### _`LANGFLOW_SUPERUSER`_ and _`LANGFLOW_SUPERUSER_PASSWORD`_
+
+These environment variables are only relevant when `LANGFLOW_AUTO_LOGIN` is set to `False`. They specify the username and password for the superuser, which is essential for administrative tasks.
+
+To create a superuser manually:
+
+```bash
+export LANGFLOW_SUPERUSER=admin
+export LANGFLOW_SUPERUSER_PASSWORD=securepassword
+```
+
+You can also use the CLI command `langflow superuser` to set up a superuser interactively.
+
+### _`LANGFLOW_SECRET_KEY`_
+
+This environment variable holds a secret key used for encrypting the superuser's password. Make sure to set this to a secure, randomly generated string.
+
+```bash
+export LANGFLOW_SECRET_KEY=randomly_generated_secure_key
+```
+
+### _`LANGFLOW_NEW_USER_IS_ACTIVE`_
+
+By default, this variable is set to `False`. When enabled (`True`), new users are automatically activated and can log in without requiring explicit activation by the superuser.
+
+## Command-Line Interface
+
+Langflow provides a command-line utility for managing superusers:
+
+```bash
+langflow superuser
+```
+
+This command prompts you to enter the username and password for the superuser, unless they are already set using environment variables.
+
+## Sign-up
+
+With _`LANGFLOW_AUTO_LOGIN`_ set to _`False`_, Langflow requires users to sign up before they can log in. The sign-up page is the default landing page when a user visits Langflow for the first time.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/sign-up.png"),
+  }}
+  style={{ width: "50%", maxWidth: "600px", margin: "0 auto" }}
+/>
+
+## Profile settings
+
+Users can change their profile settings by clicking on the profile icon in the top right corner of the application. This opens a dropdown menu with the following options:
+
+- **Admin Page**: Opens the admin page, which is only accessible to the superuser.
+- **Profile Settings**: Opens the profile settings page.
+- **Sign Out**: Logs the user out.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/my-account.png"),
+  }}
+  style={{ width: "50%", maxWidth: "600px", margin: "0 auto" }}
+/>
+
+By clicking on **Profile Settings**, the user is taken to the profile settings page, where they can change their password and their profile picture.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/profile-settings.png"),
+  }}
+  style={{ maxWidth: "600px", margin: "0 auto" }}
+/>
+
+By clicking on **Admin Page**, the superuser is taken to the admin page, where they can manage users and groups.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/admin-page.png"),
+  }}
+  style={{ maxWidth: "600px", margin: "0 auto" }}
+
+/>

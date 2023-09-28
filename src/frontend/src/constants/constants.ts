@@ -115,6 +115,9 @@ export const EDIT_DIALOG_SUBTITLE =
 export const CODE_PROMPT_DIALOG_SUBTITLE =
   "Edit your Python code. This code snippet accepts module import and a single function definition. Make sure that your function returns a string.";
 
+export const CODE_DICT_DIALOG_SUBTITLE =
+  "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
+
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -500,6 +503,21 @@ export const NOUNS: string[] = [
 export const USER_PROJECTS_HEADER = "My Collection";
 
 /**
+ * Header text for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_TITLE = "Admin Page";
+
+/**
+ * Header description for admin page
+ * @constant
+ *
+ */
+export const ADMIN_HEADER_DESCRIPTION =
+  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
+
+/**
  * URLs excluded from error retries.
  * @constant
  *
@@ -511,12 +529,24 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "http://localhost:7860/login",
 ];
 
-export const skipNodeUpdate = ["CustomComponent"];
+export const skipNodeUpdate = [
+  "CustomComponent",
+  "PromptTemplate",
+  "ChatMessagePromptTemplate",
+  "SystemMessagePromptTemplate",
+  "HumanMessagePromptTemplate",
+];
 
 export const CONTROL_INPUT_STATE = {
   password: "",
   cnfPassword: "",
   username: "",
+};
+
+export const CONTROL_PATCH_USER_STATE = {
+  password: "",
+  cnfPassword: "",
+  gradient: "",
 };
 
 export const CONTROL_LOGIN_STATE = {

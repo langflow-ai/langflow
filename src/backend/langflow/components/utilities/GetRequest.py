@@ -19,7 +19,6 @@ class GetRequest(CustomComponent):
         },
         "headers": {
             "display_name": "Headers",
-            "field_type": "code",
             "info": "The headers to send with the request.",
         },
         "code": {"show": False},

@@ -10,15 +10,15 @@ import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, updateFlow, downloadFlow } = useContext(TabsContext);
+    const { flows, tabId, downloadFlow } = useContext(TabsContext);
     const [checked, setChecked] = useState(false);
     const flow = flows.find((f) => f.id === tabId);
     useEffect(() => {
-      setName(flow.name);
-      setDescription(flow.description);
-    }, [flow.name, flow.description]);
-    const [name, setName] = useState(flow.name);
-    const [description, setDescription] = useState(flow.description);
+      setName(flow!.name);
+      setDescription(flow!.description);
+    }, [flow!.name, flow!.description]);
+    const [name, setName] = useState(flow!.name);
+    const [description, setDescription] = useState(flow!.description);
     const [open, setOpen] = useState(false);
 
     return (
@@ -40,7 +40,6 @@ const ExportModal = forwardRef(
             tabId={tabId}
             setName={setName}
             setDescription={setDescription}
-            updateFlow={updateFlow}
           />
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox
