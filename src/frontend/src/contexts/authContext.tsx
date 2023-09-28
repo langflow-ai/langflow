@@ -68,6 +68,7 @@ export function AuthProvider({ children }): React.ReactElement {
             })
             .catch((error) => {
               console.log("auth context");
+              setLoading(false);
             });
         } else {
           setLoading(false);
