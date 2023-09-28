@@ -1,15 +1,16 @@
 import asyncio
+from uuid import UUID
 
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
 from langflow.api.v1.schemas import ChatResponse
 
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional
 from fastapi import WebSocket
 
 
-from langchain.schema import AgentAction, LLMResult, AgentFinish
+from langchain.schema import AgentAction, AgentFinish
 from loguru import logger
 
 
@@ -23,32 +24,6 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.websocket.send_json(resp.dict())
-
-    async def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
-    ) -> Any:
-        """Run when LLM starts running."""
-
-    async def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
-        """Run when LLM ends running."""
-
-    async def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
-        """Run when LLM errors."""
-
-    async def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
-    ) -> Any:
-        """Run when chain starts running."""
-
-    async def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
-        """Run when chain ends running."""
-
-    async def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
-        """Run when chain errors."""
 
     async def on_tool_start(
         self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -95,8 +70,14 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
             logger.error(f"Error sending response: {exc}")
 
     async def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> None:
         """Run when tool errors."""
 
     async def on_text(self, text: str, **kwargs: Any) -> Any:
