@@ -61,7 +61,7 @@ export type KeyPairListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   duplicateKey?: boolean;
-  advanced?: boolean;
+  advanced?: boolean | null;
 };
 
 export type DictComponentType = {
@@ -135,18 +135,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {
