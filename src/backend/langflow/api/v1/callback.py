@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import WebSocket
 
 
+from langflow.utils.util import remove_ansi_escape_codes
 from langchain.schema import AgentAction, AgentFinish
 from loguru import logger
 
@@ -85,6 +86,16 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         # This runs when first sending the prompt
         # to the LLM, adding it will send the final prompt
         # to the frontend
+        if "Prompt after formatting" in text:
+            text = text.replace("Prompt after formatting:\n", "")
+            text = remove_ansi_escape_codes(text)
+            resp = ChatResponse(
+                message="",
+                type="stream",
+                intermediate_steps="",
+                prompt=text,
+            )
+            await self.websocket.send_json(resp.dict())
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"
