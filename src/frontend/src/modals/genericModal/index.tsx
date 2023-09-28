@@ -97,19 +97,6 @@ export default function GenericModal({
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
 
-  const TextAreaContentView = (): JSX.Element => {
-    return (
-      <SanitizedHTMLWrapper
-        className={getClassByNumberLength()}
-        content={coloredContent}
-        onClick={() => {
-          setIsEdit(true);
-        }}
-        suppressWarning={true}
-      />
-    );
-  };
-
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
@@ -224,7 +211,14 @@ export default function GenericModal({
                 }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
-              <TextAreaContentView />
+              <SanitizedHTMLWrapper
+                className={getClassByNumberLength()}
+                content={coloredContent}
+                onClick={() => {
+                  setIsEdit(true);
+                }}
+                suppressWarning={true}
+              />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 //@ts-ignore
