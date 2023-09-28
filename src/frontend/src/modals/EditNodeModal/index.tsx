@@ -256,8 +256,21 @@ const EditNodeModal = forwardRef(
                                 </div>
                               ) : myData.current.node?.template[templateParam]
                                   .type === "dict" ? (
-                                <div className="mt-2 max-h-48 w-full overflow-auto custom-scroll">
+                                <div
+                                  className={classNames(
+                                    "max-h-48 w-full overflow-auto custom-scroll",
+                                    myData.current.node!.template[templateParam]
+                                      .value?.length > 1
+                                      ? "my-3"
+                                      : ""
+                                  )}
+                                >
                                   <KeypairListComponent
+                                    advanced={
+                                      myData.current.node?.template[
+                                        templateParam
+                                      ].advanced
+                                    }
                                     disabled={disabled}
                                     editNode={true}
                                     value={

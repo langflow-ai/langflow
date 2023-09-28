@@ -12,6 +12,7 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   duplicateKey,
+  advanced = false,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
@@ -24,7 +25,7 @@ export default function KeypairListComponent({
   useEffect(() => {
     if (JSON.stringify(value) !== JSON.stringify(ref.current)) {
       ref.current = value;
-      onChange(value, ref);
+      onChange(value);
     }
   }, [value]);
 
@@ -46,14 +47,14 @@ export default function KeypairListComponent({
   return (
     <div
       className={classNames(
-        ref.current?.length > 1 && editNode ? "my-1" : "",
+        ref.current?.length > 1 && editNode ? "mx-2 my-1" : "",
         "flex h-full flex-col gap-3"
       )}
     >
       {ref.current?.map((obj, index) => {
         return Object.keys(obj).map((key, idx) => {
           return (
-            <div key={idx} className="flex w-full gap-3">
+            <div key={idx} className="flex w-full gap-2">
               <Input
                 type="text"
                 value={key.trim()}

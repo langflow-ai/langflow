@@ -682,7 +682,7 @@ export default function CodeTabsComponent({
                                             ) : node.data.node.template[
                                                 templateField
                                               ].type === "dict" ? (
-                                              <div className="mx-auto max-h-48 overflow-auto custom-scroll">
+                                              <div className="mx-auto overflow-auto custom-scroll">
                                                 <KeypairListComponent
                                                   disabled={false}
                                                   editNode={true}
