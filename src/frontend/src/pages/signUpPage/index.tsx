@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { FormEvent, useContext, useState } from "react";
+import { FormEvent, useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -20,6 +20,8 @@ export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
+  const [isDisabled, setDisableBtn] = useState<boolean>(true);
+
   const { password, cnfPassword, username } = inputState;
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const navigate = useNavigate();
@@ -30,11 +32,18 @@ export default function SignUp(): JSX.Element {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
 
+  useEffect(() => {
+    if (password !== cnfPassword) return setDisableBtn(true);
+    if (password === "" || cnfPassword === "") return setDisableBtn(true);
+    if (username === "") return setDisableBtn(true);
+    setDisableBtn(false);
+  }, [password, cnfPassword, username, handleInput]);
+
   function handleSignup(): void {
     const { username, password } = inputState;
     const newUser: UserInputType = {
-      username,
-      password,
+      username: username.trim(),
+      password: password.trim(),
     };
     addUser(newUser)
       .then((user) => {
@@ -84,6 +93,7 @@ export default function SignUp(): JSX.Element {
 
               <Form.Control asChild>
                 <Input
+                  type="username"
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
@@ -157,6 +167,8 @@ export default function SignUp(): JSX.Element {
           <div className="w-full">
             <Form.Submit asChild>
               <Button
+                disabled={isDisabled}
+                type="submit"
                 className="mr-3 mt-6 w-full"
                 onClick={() => {
                   handleSignup();

@@ -64,8 +64,14 @@ export default function Page({
     setTabsState,
     tabId,
   } = useContext(TabsContext);
-  const { types, reactFlowInstance, setReactFlowInstance, templates } =
-    useContext(typesContext);
+  const {
+    types,
+    reactFlowInstance,
+    setReactFlowInstance,
+    templates,
+    setFilterEdge,
+    deleteNode,
+  } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
@@ -105,6 +111,15 @@ export default function Page({
           lastSelection
         ) {
           event.preventDefault();
+        }
+      }
+      if (!isWrappedWithClass(event, "nodelete")) {
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          deleteNode(lastSelection.nodes.map((node) => node.id));
         }
       }
     };
@@ -154,6 +169,27 @@ export default function Page({
     setExtraComponent(<ExtraSidebar />);
     setExtraNavigation({ title: "Components" });
   }, [setExtraComponent, setExtraNavigation]);
+
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSeconds((prevSeconds) => {
+        let updatedSeconds = prevSeconds + 1;
+
+        if (updatedSeconds % 30 === 0) {
+          saveFlow(flow, true);
+          updatedSeconds = 0;
+        }
+
+        return updatedSeconds;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
 
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
@@ -298,7 +334,14 @@ export default function Page({
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
-        uploadFlow(false, event.dataTransfer.files.item(0)!);
+        if (event.dataTransfer.files.item(0)!.type === "application/json") {
+          uploadFlow(false, event.dataTransfer.files.item(0)!);
+        } else {
+          setErrorData({
+            title: "Invalid file type",
+            list: ["Please upload a JSON file"],
+          });
+        }
       }
     },
     // Specify dependencies for useCallback
@@ -375,6 +418,10 @@ export default function Page({
     []
   );
 
+  const onPaneClick = useCallback((flow) => {
+    setFilterEdge([]);
+  }, []);
+
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}
@@ -413,15 +460,17 @@ export default function Page({
                   connectionLineComponent={ConnectionLineComponent}
                   onDragOver={onDragOver}
                   onDrop={onDrop}
-                  onNodesDelete={onDelete}
                   onSelectionChange={onSelectionChange}
+                  onNodesDelete={onDelete}
+                  deleteKeyCode={[]}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
                   zoomOnScroll={!view}
                   zoomOnPinch={!view}
                   panOnDrag={!view}
-                  proOptions={{hideAttribution: true}}
+                  proOptions={{ hideAttribution: true }}
+                  onPaneClick={onPaneClick}
                 >
                   <Background className="" />
                   {!view && (

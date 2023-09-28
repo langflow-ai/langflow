@@ -7,14 +7,27 @@ from langflow.interface.utils import extract_input_variables_from_prompt
 
 
 class AgentVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="agents")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="agents", params=params)
 
         self.tools: List[Union[ToolkitVertex, ToolVertex]] = []
         self.chains: List[ChainVertex] = []
 
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["tools"] = self.tools
+        state["chains"] = self.chains
+        return state
+
+    def __setstate__(self, state):
+        self.tools = state["tools"]
+        self.chains = state["chains"]
+        super().__setstate__(state)
+
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
+            if not hasattr(edge, "source"):
+                continue
             source_node = edge.source
             if isinstance(source_node, (ToolVertex, ToolkitVertex)):
                 self.tools.append(source_node)
@@ -38,16 +51,16 @@ class AgentVertex(Vertex):
 
 
 class ToolVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="tools")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="tools", params=params)
 
 
 class LLMVertex(Vertex):
     built_node_type = None
     class_built_object = None
 
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="llms")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="llms", params=params)
 
     def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
@@ -64,13 +77,13 @@ class LLMVertex(Vertex):
 
 
 class ToolkitVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="toolkits")
+    def __init__(self, data: Dict, params=None):
+        super().__init__(data, base_type="toolkits", params=params)
 
 
 class FileToolVertex(ToolVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data)
+    def __init__(self, data: Dict, params=None):
+        super().__init__(data, params=params)
 
 
 class WrapperVertex(Vertex):
@@ -86,17 +99,19 @@ class WrapperVertex(Vertex):
 
 
 class DocumentLoaderVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="documentloaders")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="documentloaders", params=params)
 
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
 
         if self._built_object:
-            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
-                self._built_object
-            )
+            avg_length = sum(
+                len(doc.page_content)
+                for doc in self._built_object
+                if hasattr(doc, "page_content")
+            ) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
@@ -104,13 +119,50 @@ class DocumentLoaderVertex(Vertex):
 
 
 class EmbeddingVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="embeddings")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="embeddings", params=params)
 
 
 class VectorStoreVertex(Vertex):
-    def __init__(self, data: Dict):
+    def __init__(self, data: Dict, params=None):
         super().__init__(data, base_type="vectorstores")
+
+        self.params = params or {}
+
+    # VectorStores may contain databse connections
+    # so we need to define the __reduce__ method and the __setstate__ method
+    # to avoid pickling errors
+    def clean_edges_for_pickling(self):
+        # for each edge that has self as source
+        # we need to clear the _built_object of the target
+        # so that we don't try to pickle a database connection
+        for edge in self.edges:
+            if edge.source == self:
+                edge.target._built_object = None
+                edge.target._built = False
+                edge.target.params[edge.target_param] = self
+
+    def remove_docs_and_texts_from_params(self):
+        # remove documents and texts from params
+        # so that we don't try to pickle a database connection
+        self.params.pop("documents", None)
+        self.params.pop("texts", None)
+
+    def __getstate__(self):
+        # We want to save the params attribute
+        # and if "documents" or "texts" are in the params
+        # we want to remove them because they have already
+        # been processed.
+        params = self.params.copy()
+        params.pop("documents", None)
+        params.pop("texts", None)
+        self.clean_edges_for_pickling()
+
+        return super().__getstate__()
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.remove_docs_and_texts_from_params()
 
 
 class MemoryVertex(Vertex):
@@ -124,8 +176,8 @@ class RetrieverVertex(Vertex):
 
 
 class TextSplitterVertex(Vertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="textsplitters")
+    def __init__(self, data: Dict, params: Optional[Dict] = None):
+        super().__init__(data, base_type="textsplitters", params=params)
 
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
@@ -211,7 +263,7 @@ class PromptVertex(Vertex):
                 self.params["input_variables"] = list(
                     set(self.params["input_variables"])
                 )
-            else:
+            elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
             self._build(user_id=user_id)
@@ -258,8 +310,13 @@ class OutputParserVertex(Vertex):
 
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict):
-        super().__init__(data, base_type="custom_components")
+        super().__init__(data, base_type="custom_components", is_task=True)
 
     def _built_object_repr(self):
+        if self.task_id and self.is_task:
+            if task := self.get_task():
+                return str(task.info)
+            else:
+                return f"Task {self.task_id} is not running"
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()

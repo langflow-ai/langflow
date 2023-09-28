@@ -1,12 +1,13 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 from langflow.services.base import Service
+from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_service
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlmodel import SQLModel, Session, create_engine
-from langflow.utils.logger import logger
+from loguru import logger
 from alembic.config import Config
 from alembic import command
 from langflow.services.database import models  # noqa
@@ -15,8 +16,8 @@ if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
 
 
-class DatabaseManager(Service):
-    name = "database_manager"
+class DatabaseService(Service):
+    name = "database_service"
 
     def __init__(self, database_url: str):
         self.database_url = database_url
@@ -29,10 +30,10 @@ class DatabaseManager(Service):
 
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         if (
-            settings_manager.settings.DATABASE_URL
-            and settings_manager.settings.DATABASE_URL.startswith("sqlite")
+            settings_service.settings.DATABASE_URL
+            and settings_service.settings.DATABASE_URL.startswith("sqlite")
         ):
             connect_args = {"check_same_thread": False}
         else:
@@ -88,14 +89,12 @@ class DatabaseManager(Service):
 
         for table in legacy_tables:
             if table in inspector.get_table_names():
-                logger.warn(f"Legacy table exists: {table}")
+                logger.warning(f"Legacy table exists: {table}")
 
         return True
 
     def run_migrations(self):
-        logger.info(
-            f"Running DB migrations in {self.script_location} on {self.database_url}"
-        )
+        logger.info(f"Running DB migrations in {self.script_location}")
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", str(self.script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
@@ -106,12 +105,10 @@ class DatabaseManager(Service):
         # We will check that all models are in the database
         # and that the database is up to date with all columns
         sql_models = [models.Flow, models.User, models.ApiKey]
-        results = []
-        for sql_model in sql_models:
-            results.append(
-                TableResults(sql_model.__tablename__, self.check_table(sql_model))
-            )
-        return results
+        return [
+            TableResults(sql_model.__tablename__, self.check_table(sql_model))
+            for sql_model in sql_models
+        ]
 
     def check_table(self, model):
         results = []
@@ -159,3 +156,23 @@ class DatabaseManager(Service):
                 )
 
         logger.debug("Database and tables created successfully")
+
+    def teardown(self):
+        logger.debug("Tearing down database")
+        try:
+            settings_service = get_settings_service()
+            # remove the default superuser if auto_login is enabled
+            # using the SUPERUSER to get the user
+            if settings_service.auth_settings.AUTO_LOGIN:
+                logger.debug("Removing default superuser")
+                username = settings_service.auth_settings.SUPERUSER
+                with Session(self.engine) as session:
+                    user = get_user_by_username(session, username)
+                    session.delete(user)
+                    session.commit()
+                    logger.debug("Default superuser removed")
+
+        except Exception as exc:
+            logger.error(f"Error tearing down database: {exc}")
+
+        self.engine.dispose()

@@ -2,12 +2,13 @@ import re
 import inspect
 import importlib
 from functools import wraps
-from typing import Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union
 
 from docstring_parser import parse
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
+from langchain.schema import Document
 
 
 def remove_ansi_escape_codes(text):
@@ -279,8 +280,6 @@ def format_dict(
         value["password"] = is_password_field(key)
         value["multiline"] = is_multiline_field(key)
 
-        replace_dict_type_with_code(value)
-
         if key == "dict_":
             set_dict_file_attributes(value)
 
@@ -410,14 +409,6 @@ def is_multiline_field(key: str) -> bool:
     }
 
 
-def replace_dict_type_with_code(value: Dict[str, Any]) -> None:
-    """
-    Replaces the type value with 'code' if the type is a dict.
-    """
-    if "dict" in value["type"].lower():
-        value["type"] = "code"
-
-
 def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     """
     Sets the file attributes for the 'dict_' key.
@@ -460,3 +451,12 @@ def add_options_to_field(
         value["options"] = options_map[class_name]
         value["list"] = True
         value["value"] = options_map[class_name][0]
+
+
+def build_loader_repr_from_documents(documents: List[Document]) -> str:
+    if documents:
+        avg_length = sum(len(doc.page_content) for doc in documents) / len(documents)
+        return f"""{len(documents)} documents
+        \nAvg. Document Length (characters): {int(avg_length)}
+        Documents: {documents[:3]}..."""
+    return "0 documents"

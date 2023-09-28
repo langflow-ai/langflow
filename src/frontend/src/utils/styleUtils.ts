@@ -1,10 +1,13 @@
 import {
+  ArrowUpToLine,
   Bell,
+  BookMarked,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -42,10 +45,13 @@ import {
   Link,
   Lock,
   LucideSend,
+  Maximize2,
   Menu,
   MessageCircle,
   MessageSquare,
   MessagesSquare,
+  Minimize2,
+  Minus,
   MoonIcon,
   MoreHorizontal,
   Paperclip,
@@ -57,13 +63,16 @@ import {
   Scissors,
   Search,
   Settings2,
+  Shield,
   Sparkles,
+  Square,
   SunIcon,
   TerminalSquare,
   Trash2,
   Undo,
   Unplug,
   Upload,
+  User,
   UserCog2,
   UserMinus2,
   UserPlus2,
@@ -85,7 +94,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
-import GradientSparkles from "../icons/GradientSparkles";
+import { GradientSparkles } from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -185,6 +194,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,
@@ -219,6 +229,7 @@ export const nodeIconsLucide: iconsType = {
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
   agents: Rocket,
+  User,
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
@@ -259,6 +270,7 @@ export const nodeIconsLucide: iconsType = {
   Bell,
   ChevronLeft,
   ChevronDown,
+  Shield,
   Plus,
   Redo,
   Settings2,
@@ -300,4 +312,10 @@ export const nodeIconsLucide: iconsType = {
   UserCog2,
   Key,
   Unplug,
+  BookMarked,
+  ChevronUp,
+  Minus,
+  Square,
+  Minimize2,
+  Maximize2,
 };

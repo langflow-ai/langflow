@@ -1,10 +1,11 @@
 import ast
 import contextlib
 from typing import Any, List
-from langflow.api.utils import merge_nested_dicts_with_renaming
+from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
@@ -29,7 +30,7 @@ from langflow.template.frontend_node.custom_components import (
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import get_base_classes
 
 import re
@@ -84,6 +85,8 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 
 
 def process_type(field_type: str):
+    if field_type.startswith("list") or field_type.startswith("List"):
+        return extract_inner_type(field_type)
     return "prompt" if field_type == "Prompt" else field_type
 
 
@@ -100,6 +103,7 @@ def add_new_custom_field(
     # if it is, update the value
     display_name = field_config.pop("display_name", field_name)
     field_type = field_config.pop("field_type", field_type)
+    field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
@@ -110,7 +114,9 @@ def add_new_custom_field(
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
-    field_config["is_list"] = is_list or field_config.get("is_list", False)
+    field_config["is_list"] = (
+        is_list or field_config.get("is_list", False) or field_contains_list
+    )
 
     if "name" in field_config:
         warnings.warn(
@@ -172,7 +178,7 @@ def extract_type_from_optional(field_type):
     Returns:
     str: The extracted type, or an empty string if no type was found.
     """
-    match = re.search(r"\[(.*?)\]", field_type)
+    match = re.search(r"\[(.*?)\]$", field_type)
     return match[1] if match else None
 
 
@@ -284,31 +290,44 @@ def add_base_classes(frontend_node, return_types: List[str]):
 
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
-    logger.debug("Building custom component template")
-    frontend_node = build_frontend_node(custom_component)
+    try:
+        logger.debug("Building custom component template")
+        frontend_node = build_frontend_node(custom_component)
 
-    if frontend_node is None:
-        return None
-    logger.debug("Built base frontend node")
-    template_config = custom_component.build_template_config
+        if frontend_node is None:
+            return None
+        logger.debug("Built base frontend node")
+        template_config = custom_component.build_template_config
 
-    update_attributes(frontend_node, template_config)
-    logger.debug("Updated attributes")
-    field_config = build_field_config(custom_component)
-    logger.debug("Built field config")
-    add_extra_fields(
-        frontend_node, field_config, custom_component.get_function_entrypoint_args
-    )
-    logger.debug("Added extra fields")
-    frontend_node = add_code_field(
-        frontend_node, custom_component.code, field_config.get("code", {})
-    )
-    logger.debug("Added code field")
-    add_base_classes(
-        frontend_node, custom_component.get_function_entrypoint_return_type
-    )
-    logger.debug("Added base classes")
-    return frontend_node
+        update_attributes(frontend_node, template_config)
+        logger.debug("Updated attributes")
+        field_config = build_field_config(custom_component)
+        logger.debug("Built field config")
+        entrypoint_args = custom_component.get_function_entrypoint_args
+
+        add_extra_fields(frontend_node, field_config, entrypoint_args)
+        logger.debug("Added extra fields")
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
+        logger.debug("Added code field")
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        logger.debug("Added base classes")
+        return frontend_node
+    except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
 
 
 def load_files_from_path(path: str):
@@ -416,6 +435,24 @@ def build_invalid_menu(invalid_components):
     return invalid_menu
 
 
+def merge_nested_dicts_with_renaming(dict1, dict2):
+    for key, value in dict2.items():
+        if (
+            key in dict1
+            and isinstance(value, dict)
+            and isinstance(dict1.get(key), dict)
+        ):
+            for sub_key, sub_value in value.items():
+                if sub_key in dict1[key]:
+                    new_key = get_new_key(dict1[key], sub_key)
+                    dict1[key][new_key] = sub_value
+                else:
+                    dict1[key][sub_key] = sub_value
+        else:
+            dict1[key] = value
+    return dict1
+
+
 def build_langchain_custom_component_list_from_path(path: str):
     """Build a list of custom components for the langchain from a given path"""
     file_list = load_files_from_path(path)
@@ -429,3 +466,51 @@ def build_langchain_custom_component_list_from_path(path: str):
     invalid_menu = build_invalid_menu(invalid_components)
 
     return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
+
+
+def get_all_types_dict(settings_service):
+    native_components = build_langchain_types_dict()
+    # custom_components is a list of dicts
+    # need to merge all the keys into one dict
+    custom_components_from_file: dict[str, Any] = {}
+    if settings_service.settings.COMPONENTS_PATH:
+        logger.info(
+            f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
+        )
+
+        custom_component_dicts = []
+        processed_paths = []
+        for path in settings_service.settings.COMPONENTS_PATH:
+            if str(path) in processed_paths:
+                continue
+            custom_component_dict = build_langchain_custom_component_list_from_path(
+                str(path)
+            )
+            custom_component_dicts.append(custom_component_dict)
+            processed_paths.append(str(path))
+
+        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
+        for custom_component_dict in custom_component_dicts:
+            # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
+            custom_components_from_file = merge_nested_dicts_with_renaming(
+                custom_components_from_file, custom_component_dict
+            )
+
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
+
+
+def merge_nested_dicts(dict1, dict2):
+    for key, value in dict2.items():
+        if isinstance(value, dict) and isinstance(dict1.get(key), dict):
+            dict1[key] = merge_nested_dicts(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1

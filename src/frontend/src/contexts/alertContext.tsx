@@ -25,7 +25,7 @@ const initialValue: alertContextType = {
   notificationList: [],
   pushNotificationList: () => {},
   clearNotificationList: () => {},
-  removeFromNotificationList: () => {}
+  removeFromNotificationList: () => {},
 };
 
 export const alertContext = createContext<alertContextType>(initialValue);

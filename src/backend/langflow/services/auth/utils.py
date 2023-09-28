@@ -12,12 +12,12 @@ from langflow.services.database.models.user.crud import (
     get_user_by_username,
     update_user_last_login_at,
 )
-from langflow.services.utils import get_session, get_settings_manager
+from langflow.services.getters import get_session, get_settings_service
 from sqlmodel import Session
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")
 
-API_KEY_NAME = "api-key"
+API_KEY_NAME = "x-api-key"
 
 api_key_query = APIKeyQuery(
     name=API_KEY_NAME, scheme_name="API key query", auto_error=False
@@ -33,14 +33,17 @@ async def api_key_security(
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
 ) -> Optional[User]:
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
     result: Optional[Union[ApiKey, User]] = None
-    if settings_manager.auth_settings.AUTO_LOGIN:
+    if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
-        settings_manager.auth_settings.FIRST_SUPERUSER
-        result = get_user_by_username(
-            db, settings_manager.auth_settings.FIRST_SUPERUSER
-        )
+        if not settings_service.auth_settings.SUPERUSER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+
+        result = get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
     elif not query_param and not header_param:
         raise HTTPException(
@@ -69,7 +72,7 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_login)],
     db: Session = Depends(get_session),
 ) -> User:
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,14 +83,22 @@ async def get_current_user(
     if isinstance(token, Coroutine):
         token = await token
 
+    if settings_service.auth_settings.SECRET_KEY is None:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(
             token,
-            settings_manager.auth_settings.SECRET_KEY,
-            algorithms=[settings_manager.auth_settings.ALGORITHM],
+            settings_service.auth_settings.SECRET_KEY,
+            algorithms=[settings_service.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
+        if expires := payload.get("exp", None):
+            expires_datetime = datetime.fromtimestamp(expires, timezone.utc)
+            # TypeError: can't compare offset-naive and offset-aware datetimes
+            if datetime.now(timezone.utc) > expires_datetime:
+                raise credentials_exception
 
         if user_id is None or token_type:
             raise credentials_exception
@@ -119,19 +130,19 @@ def get_current_active_superuser(
 
 
 def verify_password(plain_password, hashed_password):
-    settings_manager = get_settings_manager()
-    return settings_manager.auth_settings.pwd_context.verify(
+    settings_service = get_settings_service()
+    return settings_service.auth_settings.pwd_context.verify(
         plain_password, hashed_password
     )
 
 
 def get_password_hash(password):
-    settings_manager = get_settings_manager()
-    return settings_manager.auth_settings.pwd_context.hash(password)
+    settings_service = get_settings_service()
+    return settings_service.auth_settings.pwd_context.hash(password)
 
 
 def create_token(data: dict, expires_delta: timedelta):
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
 
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
@@ -139,28 +150,22 @@ def create_token(data: dict, expires_delta: timedelta):
 
     return jwt.encode(
         to_encode,
-        settings_manager.auth_settings.SECRET_KEY,
-        algorithm=settings_manager.auth_settings.ALGORITHM,
+        settings_service.auth_settings.SECRET_KEY,
+        algorithm=settings_service.auth_settings.ALGORITHM,
     )
 
 
 def create_super_user(
+    username: str,
+    password: str,
     db: Session = Depends(get_session),
-    username: Optional[str] = None,
-    password: Optional[str] = None,
 ) -> User:
-    settings_manager = get_settings_manager()
-
-    super_user = get_user_by_username(
-        db, username or settings_manager.auth_settings.FIRST_SUPERUSER
-    )
+    super_user = get_user_by_username(db, username)
 
     if not super_user:
         super_user = User(
-            username=username or settings_manager.auth_settings.FIRST_SUPERUSER,
-            password=get_password_hash(
-                password or settings_manager.auth_settings.FIRST_SUPERUSER_PASSWORD
-            ),
+            username=username,
+            password=get_password_hash(password),
             is_superuser=True,
             is_active=True,
             last_login_at=None,
@@ -174,7 +179,15 @@ def create_super_user(
 
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
-    super_user = create_super_user(db)
+    settings_service = get_settings_service()
+    username = settings_service.auth_settings.SUPERUSER
+    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing first superuser credentials",
+        )
+    super_user = create_super_user(db=db, username=username, password=password)
 
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
@@ -212,10 +225,10 @@ def get_user_id_from_token(token: str) -> UUID:
 def create_user_tokens(
     user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
 ) -> dict:
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
 
     access_token_expires = timedelta(
-        minutes=settings_manager.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token = create_token(
         data={"sub": str(user_id)},
@@ -223,7 +236,7 @@ def create_user_tokens(
     )
 
     refresh_token_expires = timedelta(
-        minutes=settings_manager.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES
+        minutes=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
@@ -242,13 +255,13 @@ def create_user_tokens(
 
 
 def create_refresh_token(refresh_token: str, db: Session = Depends(get_session)):
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
 
     try:
         payload = jwt.decode(
             refresh_token,
-            settings_manager.auth_settings.SECRET_KEY,
-            algorithms=[settings_manager.auth_settings.ALGORITHM],
+            settings_service.auth_settings.SECRET_KEY,
+            algorithms=[settings_service.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore

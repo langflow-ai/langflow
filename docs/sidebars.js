@@ -16,6 +16,9 @@ module.exports = {
       label: "Guidelines",
       collapsed: false,
       items: [
+        "guidelines/login",
+        "guidelines/api",
+        "guidelines/async-api",
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",
@@ -51,7 +54,12 @@ module.exports = {
       type: "category",
       label: "Step-by-Step Guides",
       collapsed: false,
-      items: ["guides/loading_document", "guides/chatprompttemplate_guide"],
+      items: [
+        "guides/async-tasks",
+        "guides/loading_document",
+        "guides/chatprompttemplate_guide",
+        "guides/langfuse_integration",
+      ],
     },
     // {
     //   type: 'category',
@@ -83,7 +91,7 @@ module.exports = {
       type: "category",
       label: "Deployment",
       collapsed: false,
-      items: ["deployment/gcp-deployment", "deployment/jina-deployment"],
+      items: ["deployment/gcp-deployment"],
     },
     {
       type: "category",

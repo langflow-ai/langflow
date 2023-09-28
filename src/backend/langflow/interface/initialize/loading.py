@@ -1,7 +1,7 @@
 import json
 import orjson
 from typing import Any, Callable, Dict, Sequence, Type, TYPE_CHECKING
-
+from langchain.schema import Document
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
@@ -34,10 +34,20 @@ from langflow.utils import validate
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from langchain.document_loaders.base import BaseLoader
-from langflow.utils.logger import logger
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
+
+
+def build_vertex_in_params(params: Dict) -> Dict:
+    from langflow.graph.vertex.base import Vertex
+
+    # If any of the values in params is a Vertex, we will build it
+    return {
+        key: value.build() if isinstance(value, Vertex) else value
+        for key, value in params.items()
+    }
 
 
 def instantiate_class(
@@ -46,6 +56,7 @@ def instantiate_class(
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
+
     if node_type in CUSTOM_NODES:
         if custom_node := CUSTOM_NODES.get(node_type):
             if hasattr(custom_node, "initialize"):
@@ -289,6 +300,13 @@ def instantiate_embedding(node_type, class_object, params: Dict):
 
 def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
+    # clean up docs or texts to have only documents
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+    if "documents" in params:
+        params["documents"] = [
+            doc for doc in params["documents"] if isinstance(doc, Document)
+        ]
     if initializer := vecstore_initializer.get(class_object.__name__):
         vecstore = initializer(class_object, params)
     else:

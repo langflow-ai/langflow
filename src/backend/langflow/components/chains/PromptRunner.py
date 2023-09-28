@@ -16,17 +16,14 @@ class PromptRunner(CustomComponent):
             "info": "Make sure the prompt has all variables filled.",
         },
         "code": {"show": False},
-        "inputs": {"field_type": "code"},
     }
 
     def build(
-        self,
-        llm: BaseLLM,
-        prompt: PromptTemplate,
+        self, llm: BaseLLM, prompt: PromptTemplate, inputs: dict = {}
     ) -> Document:
         chain = prompt | llm
         # The input is an empty dict because the prompt is already filled
-        result = chain.invoke({})
+        result = chain.invoke(input=inputs)
         if hasattr(result, "content"):
             result = result.content
         self.repr_value = result

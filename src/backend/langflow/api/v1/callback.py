@@ -10,8 +10,9 @@ from fastapi import WebSocket
 
 
 from langchain.schema import AgentAction, LLMResult, AgentFinish
-from langflow.utils.logger import logger
+
 from langflow.utils.util import remove_ansi_escape_codes
+from loguru import logger
 
 
 # https://github.com/hwchase17/chat-langchain/blob/master/callback.py

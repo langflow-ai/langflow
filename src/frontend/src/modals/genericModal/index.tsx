@@ -17,11 +17,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import {
-  classNames,
-  getRandomKeyByssmm,
-  varHighlightHTML,
-} from "../../utils/utils";
+import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -37,6 +33,7 @@ export default function GenericModal({
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
+  const [modalOpen, setModalOpen] = useState(false);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -89,26 +86,13 @@ export default function GenericModal({
 
   useEffect(() => {
     setInputValue(value);
-  }, [value]);
+  }, [value, modalOpen]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
-
-  const TextAreaContentView = (): JSX.Element => {
-    return (
-      <SanitizedHTMLWrapper
-        className={getClassByNumberLength()}
-        content={coloredContent}
-        onClick={() => {
-          setIsEdit(true);
-        }}
-        suppressWarning={true}
-      />
-    );
-  };
 
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
@@ -122,6 +106,7 @@ export default function GenericModal({
 
   function validatePrompt(closeModal: boolean): void {
     //nodeClass is always null on tweaks
+
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
@@ -131,14 +116,30 @@ export default function GenericModal({
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setModalOpen(false);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
+            setModalOpen(closeModal);
+            setValue(inputValue);
+            apiReturn.data.frontend_node["template"]["template"]["value"] =
+              inputValue;
           } else {
             setIsEdit(false);
             setSuccessData({
               title: "Prompt is ready",
             });
-            if(JSON.stringify(apiReturn.data?.frontend_node)!==JSON.stringify({})) setNodeClass!(apiReturn.data?.frontend_node);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
+            apiReturn.data.frontend_node["template"]["template"]["value"] =
+              inputValue;
           }
         } else {
           setIsEdit(true);
@@ -148,18 +149,21 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
-          list: [error?.response?.data?.detail],
+          list: [error.toString()],
         });
       });
   }
 
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
-    <BaseModal open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal
+      onChangeOpenModal={(open) => {}}
+      open={modalOpen}
+      setOpen={setModalOpen}
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={(() => {
@@ -209,7 +213,14 @@ export default function GenericModal({
                 }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
-              <TextAreaContentView />
+              <SanitizedHTMLWrapper
+                className={getClassByNumberLength()}
+                content={coloredContent}
+                onClick={() => {
+                  setIsEdit(true);
+                }}
+                suppressWarning={true}
+              />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 //@ts-ignore
@@ -248,7 +259,7 @@ export default function GenericModal({
 
                       {wordsHighlight.map((word, index) => (
                         <ShadTooltip
-                          key={getRandomKeyByssmm() + index}
+                          key={index}
                           content={word.replace(/[{}]/g, "")}
                           asChild={false}
                         >
@@ -286,9 +297,7 @@ export default function GenericModal({
                     setModalOpen(false);
                     break;
                   case TypeModal.PROMPT:
-                    !inputValue || inputValue === ""
-                      ? setModalOpen(false)
-                      : validatePrompt(false);
+                    validatePrompt(false);
                     break;
 
                   default:

@@ -36,9 +36,9 @@ import { typesContext } from "./typesContext";
 const uid = new ShortUniqueId({ length: 5 });
 
 const TabsContextInitialValue: TabsContextType = {
-  save: () => {},
   tabId: "",
   setTabId: (index: string) => {},
+  isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
   addFlow: async (flowData?: any) => "",
@@ -47,11 +47,11 @@ const TabsContextInitialValue: TabsContextType = {
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
-  uploadFlow: () => {},
+  uploadFlow: async () => "",
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
-  saveFlow: async (flow: FlowType) => {},
+  saveFlow: async (flow: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
@@ -72,9 +72,11 @@ export const TabsContext = createContext<TabsContextType>(
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
-  const { getAuthentication } = useContext(AuthContext);
+  const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -86,41 +88,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [tabsState, setTabsState] = useState<TabsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hardReset();
+    }
+  }, [isAuthenticated]);
+
   const newNodeId = useRef(uid());
   function incrementNodeId() {
     newNodeId.current = uid();
     return newNodeId.current;
   }
 
-  function save() {
-    // added clone deep to avoid mutating the original object
-    let Saveflows = _.cloneDeep(flows);
-    if (Saveflows.length !== 0) {
-      Saveflows.forEach((flow) => {
-        if (flow.data && flow.data?.nodes)
-          flow.data?.nodes.forEach((node) => {
-            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
-            Object.keys(node.data.node.template).forEach((key) => {
-              if (node.data.node.template[key].type === "file") {
-                node.data.node.template[key].content = null;
-                node.data.node.template[key].value = "";
-              }
-            });
-          });
-      });
-      window.localStorage.setItem(
-        "tabsData",
-        JSON.stringify({ tabId, flows: Saveflows, id })
-      );
-    }
-  }
-
   function refreshFlows() {
+    setIsLoading(true);
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
         try {
           processDBData(DbData);
           updateStateWithDbData(DbData);
+          setIsLoading(false);
         } catch (e) {}
       }
     });
@@ -227,8 +214,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function hardReset() {
     newNodeId.current = uid();
     setTabId("");
-
     setFlows([]);
+    setIsLoading(true);
     setId(uid());
   }
 
@@ -286,39 +273,40 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  function uploadFlow(newProject?: boolean, file?: File) {
+  async function uploadFlow(
+    newProject?: boolean,
+    file?: File
+  ): Promise<String | undefined> {
+    let id;
     if (file) {
-      file.text().then((text) => {
-        // parse the text into a JSON object
-        let flow: FlowType = JSON.parse(text);
+      let text = await file.text();
+      // parse the text into a JSON object
+      let flow: FlowType = JSON.parse(text);
 
-        addFlow(flow, newProject);
-      });
+      id = await addFlow(flow, newProject);
     } else {
       // create a file input
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json";
       // add a change event listener to the file input
-      input.onchange = (e: Event) => {
-        // check if the file type is application/json
-        if (
-          (e.target as HTMLInputElement).files![0].type === "application/json"
-        ) {
-          // get the file from the file input
-          const currentfile = (e.target as HTMLInputElement).files![0];
-          // read the file as text
-          currentfile.text().then((text) => {
-            // parse the text into a JSON object
+      id = await new Promise((resolve) => {
+        input.onchange = async (e: Event) => {
+          if (
+            (e.target as HTMLInputElement).files![0].type === "application/json"
+          ) {
+            const currentfile = (e.target as HTMLInputElement).files![0];
+            let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-
-            addFlow(flow, newProject);
-          });
-        }
-      };
-      // trigger the file input click event to open the file dialog
-      input.click();
+            const flowId = await addFlow(flow, newProject);
+            resolve(flowId);
+          }
+        };
+        // trigger the file input click event to open the file dialog
+        input.click();
+      });
     }
+    return id;
   }
 
   function uploadFlows() {
@@ -576,13 +564,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function saveFlow(newFlow: FlowType) {
+  async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
-        setSuccessData({ title: "Changes saved successfully" });
+        if (!silent) {
+          setSuccessData({ title: "Changes saved successfully" });
+        }
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
@@ -626,7 +616,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabId,
         setTabId,
         flows,
-        save,
         incrementNodeId,
         removeFlow,
         addFlow,
@@ -641,6 +630,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         paste,
         getTweak,
         setTweak,
+        isLoading,
       }}
     >
       {children}

@@ -3,7 +3,7 @@ from tempfile import tempdir
 from langflow.__main__ import app
 import pytest
 
-from langflow.services import utils
+from langflow.services import getters
 
 
 @pytest.fixture(scope="module")
@@ -26,8 +26,8 @@ def test_components_path(runner, client, default_settings):
         ["run", "--components-path", str(temp_dir), *default_settings],
     )
     assert result.exit_code == 0, result.stdout
-    settings_manager = utils.get_settings_manager()
-    assert str(temp_dir) in settings_manager.settings.COMPONENTS_PATH
+    settings_service = getters.get_settings_service()
+    assert str(temp_dir) in settings_service.settings.COMPONENTS_PATH
 
 
 def test_superuser(runner, client, session):
