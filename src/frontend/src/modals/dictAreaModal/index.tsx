@@ -46,7 +46,7 @@ export default function DictAreaModal({
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="nopan nodrag noundo nocopy flex h-full w-full flex-col transition-all ">
+          <div className="nopan nodelete nodrag noundo nocopy flex h-full w-full flex-col transition-all ">
             <JsonView
               theme="vscode"
               dark={true}
