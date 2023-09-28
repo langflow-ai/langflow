@@ -59,7 +59,7 @@ export default function LoginPage(): JSX.Element {
             setUserData(user);
           })
           .catch((error) => {
-            console.log("login page");
+            console.log("login page", error);
           });
       }, 500);
     }

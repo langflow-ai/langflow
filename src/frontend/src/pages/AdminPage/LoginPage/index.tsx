@@ -55,7 +55,7 @@ export default function LoginAdminPage() {
             setUserData(user);
           })
           .catch((error) => {
-            console.log("login admin page");
+            console.log("login admin page", error);
           });
       }, 1000);
     }
