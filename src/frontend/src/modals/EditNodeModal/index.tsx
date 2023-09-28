@@ -95,6 +95,7 @@ const EditNodeModal = forwardRef(
 
     return (
       <BaseModal
+        key={data.id}
         size="large-h-full"
         open={modalOpen}
         setOpen={setModalOpen}

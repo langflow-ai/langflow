@@ -297,18 +297,8 @@ export default function FormModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        if (flow.id === "") {
-          connectWS();
-        } else {
-          setErrorData({
-            title: "There was an error on web connection, please: ",
-            list: [
-              "Refresh the page",
-              "Use a new flow tab",
-              "Check if the backend is up",
-            ],
-          });
-        }
+        console.log(ev);
+        connectWS();
       };
       ws.current = newWs;
     } catch (error) {
@@ -430,7 +420,6 @@ export default function FormModal({
       setChatValue("");
     }
   }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger hidden></DialogTrigger>
