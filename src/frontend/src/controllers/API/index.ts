@@ -1,4 +1,4 @@
-import { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
@@ -146,8 +146,8 @@ export async function updateFlowInDatabase(
       description: updatedFlow.description,
     });
 
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
