@@ -76,6 +76,7 @@ const EditNodeModal = forwardRef(
     function changeAdvanced(n) {
       myData.current.node!.template[n].advanced =
         !myData.current.node!.template[n].advanced;
+      setAdv(!adv);
     }
 
     const handleOnNewValue = (newValue: any, name) => {
@@ -88,6 +89,7 @@ const EditNodeModal = forwardRef(
     }, [modalOpen]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
+    const [adv, setAdv] = useState<boolean | null>(null);
 
     return (
       <BaseModal
@@ -266,11 +268,7 @@ const EditNodeModal = forwardRef(
                                   )}
                                 >
                                   <KeypairListComponent
-                                    advanced={
-                                      myData.current.node?.template[
-                                        templateParam
-                                      ].advanced
-                                    }
+                                    advanced={adv}
                                     disabled={disabled}
                                     editNode={true}
                                     value={
