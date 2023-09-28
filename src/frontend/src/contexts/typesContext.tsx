@@ -92,14 +92,22 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function deleteNode(idx: string) {
+  function deleteNode(idx: string | Array<string>) {
     reactFlowInstance!.setNodes(
-      reactFlowInstance!.getNodes().filter((node: Node) => node.id !== idx)
+      reactFlowInstance!
+        .getNodes()
+        .filter((node: Node) =>
+          typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
+        )
     );
     reactFlowInstance!.setEdges(
       reactFlowInstance!
         .getEdges()
-        .filter((edge) => edge.source !== idx && edge.target !== idx)
+        .filter((edge) =>
+          typeof idx === "string"
+            ? edge.source !== idx && edge.target !== idx
+            : !idx.includes(edge.source) && !idx.includes(edge.target)
+        )
     );
   }
   return (
