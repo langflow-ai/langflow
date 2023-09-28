@@ -529,7 +529,7 @@ export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
   "http://localhost:7860/login",
 ];
 
-export const skipNodeUpdate = ["CustomComponent"];
+export const skipNodeUpdate = ["CustomComponent", "PromptTemplate"];
 
 export const CONTROL_INPUT_STATE = {
   password: "",

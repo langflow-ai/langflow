@@ -114,13 +114,11 @@ export default function Page({
         }
       }
       if (!isWrappedWithClass(event, "nodelete")) {
-        console.log(event);
         if (
           (event.key === "Delete" || event.key === "Backspace") &&
           lastSelection
         ) {
           event.preventDefault();
-          console.log(lastSelection);
           deleteNode(lastSelection.nodes.map((node) => node.id));
         }
       }
