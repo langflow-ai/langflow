@@ -331,6 +331,15 @@ export default function FormModal({
   }, [open]);
 
   useEffect(() => {
+    return () => {
+      if (ws.current) {
+        console.log("closing ws");
+        ws.current.close();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       ws.current &&
       (ws.current.readyState === ws.current.CLOSED ||
