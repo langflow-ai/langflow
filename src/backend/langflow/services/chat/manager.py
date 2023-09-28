@@ -1,6 +1,7 @@
 from collections import defaultdict
 import uuid
 from fastapi import WebSocket, status
+from starlette.websockets import WebSocketState
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
 from langflow.services.base import Service
@@ -218,23 +219,29 @@ class ChatService(Service):
 
                     else:
                         raise RuntimeError(
-                            f"Could not find a LangChain object for client_id {client_id}"
+                            f"Could not find a build result for client_id {client_id}"
                         )
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.exception(f"Error handling websocket: {exc}")
-            await self.close_connection(
-                client_id=client_id,
-                code=status.WS_1011_INTERNAL_ERROR,
-                reason=str(exc)[:120],
-            )
-        finally:
-            try:
+            if websocket.client_state == WebSocketState.CONNECTED:
                 await self.close_connection(
                     client_id=client_id,
-                    code=status.WS_1000_NORMAL_CLOSURE,
-                    reason="Client disconnected",
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason=str(exc)[:120],
                 )
+            elif websocket.client_state == WebSocketState.DISCONNECTED:
+                self.disconnect(client_id)
+
+        finally:
+            try:
+                # first check if the connection is still open
+                if websocket.client_state == WebSocketState.CONNECTED:
+                    await self.close_connection(
+                        client_id=client_id,
+                        code=status.WS_1000_NORMAL_CLOSURE,
+                        reason="Client disconnected",
+                    )
             except Exception as exc:
                 logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)
