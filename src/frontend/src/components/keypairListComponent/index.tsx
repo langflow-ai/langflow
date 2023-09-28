@@ -24,7 +24,7 @@ export default function KeypairListComponent({
   useEffect(() => {
     if (JSON.stringify(value) !== JSON.stringify(ref.current)) {
       ref.current = value;
-      onChange(value);
+      onChange(value, ref);
     }
   }, [value]);
 
