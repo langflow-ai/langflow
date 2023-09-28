@@ -152,7 +152,7 @@ export default function FormModal({
         newChat[newChat.length - 1].files = files;
       }
       if (prompt) {
-        newChat[newChat.length - 1].template = prompt;
+        newChat[newChat.length - 2].template = prompt;
       }
       return newChat;
     });
@@ -205,7 +205,6 @@ export default function FormModal({
   }
 
   function handleWsMessage(data: any) {
-    console.log(data);
     if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
