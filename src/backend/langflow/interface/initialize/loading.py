@@ -111,7 +111,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params, user_i
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
-        return instantiate_documentloader(class_object, params)
+        return instantiate_documentloader(node_type, class_object, params)
     elif base_type == "textsplitters":
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
@@ -321,7 +321,9 @@ def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     return vecstore
 
 
-def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
+def instantiate_documentloader(
+    node_type: str, class_object: Type[BaseLoader], params: Dict
+):
     if "file_filter" in params:
         # file_filter will be a string but we need a function
         # that will be used to filter the files using file_filter
@@ -341,6 +343,11 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
             raise ValueError(
                 "The metadata you provided is not a valid JSON string."
             ) from exc
+
+    if node_type == "WebBaseLoader":
+        if web_path := params.pop("web_path", None):
+            params["web_paths"] = [web_path]
+
     docs = class_object(**params).load()
     # Now if metadata is an empty dict, we will not add it to the documents
     if metadata:
