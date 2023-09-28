@@ -33,6 +33,7 @@ export default function GenericModal({
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
+  const [modalOpen, setModalOpen] = useState(false);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -85,7 +86,7 @@ export default function GenericModal({
 
   useEffect(() => {
     setInputValue(value);
-  }, [value]);
+  }, [value, modalOpen]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
@@ -109,11 +110,6 @@ export default function GenericModal({
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         if (apiReturn.data) {
-          setValue(inputValue);
-          apiReturn.data.frontend_node["template"]["template"]["value"] =
-            inputValue;
-          setNodeClass!(apiReturn?.data?.frontend_node);
-
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
@@ -121,6 +117,15 @@ export default function GenericModal({
               title: "Your template does not have any variables.",
             });
             setModalOpen(false);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
+            setModalOpen(closeModal);
+            setValue(inputValue);
+            apiReturn.data.frontend_node["template"]["template"]["value"] =
+              inputValue;
           } else {
             setIsEdit(false);
             setSuccessData({
@@ -133,6 +138,8 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
+            apiReturn.data.frontend_node["template"]["template"]["value"] =
+              inputValue;
           }
         } else {
           setIsEdit(true);
@@ -142,15 +149,14 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
-          list: [error?.response?.data?.detail],
+          list: [error.toString()],
         });
       });
   }
-
-  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <BaseModal
