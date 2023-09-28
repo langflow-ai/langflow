@@ -58,7 +58,9 @@ export default function LoginPage(): JSX.Element {
             setIsAdmin(isSuperUser);
             setUserData(user);
           })
-          .catch((error) => {});
+          .catch((error) => {
+            console.log("login page");
+          });
       }, 500);
     }
   }
