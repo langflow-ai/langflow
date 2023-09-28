@@ -272,6 +272,7 @@ export default function FormModal({
     }
     if (data.type === "stream" && isStream) {
       if (data.prompt) {
+        updateLastMessage({ prompt: data.prompt });
       } else {
         updateLastMessage({ str: data.message });
       }
