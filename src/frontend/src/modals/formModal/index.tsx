@@ -156,6 +156,13 @@ export default function FormModal({
 
   function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
+      //check if the user has been logged out, if so close the chat when the user is redirected to the login page
+      if (window.location.href.includes("login")) {
+        setOpen(false);
+        ws.current?.close();
+        return;
+      }
+
       getBuildStatus(flow.id)
         .then((response) => {
           if (response.data.built) {
