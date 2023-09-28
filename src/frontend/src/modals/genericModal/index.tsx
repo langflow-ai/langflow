@@ -17,11 +17,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import {
-  classNames,
-  getRandomKeyByssmm,
-  varHighlightHTML,
-} from "../../utils/utils";
+import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -96,19 +92,6 @@ export default function GenericModal({
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
-
-  const TextAreaContentView = (): JSX.Element => {
-    return (
-      <SanitizedHTMLWrapper
-        className={getClassByNumberLength()}
-        content={coloredContent}
-        onClick={() => {
-          setIsEdit(true);
-        }}
-        suppressWarning={true}
-      />
-    );
-  };
 
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
@@ -224,7 +207,14 @@ export default function GenericModal({
                 }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
-              <TextAreaContentView />
+              <SanitizedHTMLWrapper
+                className={getClassByNumberLength()}
+                content={coloredContent}
+                onClick={() => {
+                  setIsEdit(true);
+                }}
+                suppressWarning={true}
+              />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 //@ts-ignore
@@ -263,7 +253,7 @@ export default function GenericModal({
 
                       {wordsHighlight.map((word, index) => (
                         <ShadTooltip
-                          key={getRandomKeyByssmm() + index}
+                          key={index}
                           content={word.replace(/[{}]/g, "")}
                           asChild={false}
                         >

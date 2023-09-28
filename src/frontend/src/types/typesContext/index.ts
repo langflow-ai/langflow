@@ -9,7 +9,7 @@ const data: { [char: string]: string } = {};
 export type typesContextType = {
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (newState: ReactFlowInstance) => void;
-  deleteNode: (idx: string) => void;
+  deleteNode: (idx: string | Array<string>) => void;
   types: typeof types;
   setTypes: (newState: {}) => void;
   templates: typeof template;
