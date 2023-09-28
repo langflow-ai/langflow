@@ -26,55 +26,46 @@ export default function DictAreaModal({
     if (value) ref.current = value;
   }, [ref]);
 
-  //This code prevents delete Node and close modal when user press backspace key
-  const handleKeyDown = (event) => {
-    if (event.code === "Backspace") {
-      event.stopPropagation();
-    }
-  };
-
   return (
-    <div onKeyDown={handleKeyDown} className="h-full w-full">
-      <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
-        <BaseModal.Trigger>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={CODE_DICT_DIALOG_SUBTITLE}>
-          <span className="pr-2">Edit Dictionary</span>
-          <IconComponent
-            name="BookMarked"
-            className="h-6 w-6 pl-1 text-primary "
-            aria-hidden="true"
+    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Header description={CODE_DICT_DIALOG_SUBTITLE}>
+        <span className="pr-2">Edit Dictionary</span>
+        <IconComponent
+          name="BookMarked"
+          className="h-6 w-6 pl-1 text-primary "
+          aria-hidden="true"
+        />
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <div className="flex h-full w-full flex-col transition-all ">
+          <JsonView
+            theme="vscode"
+            dark={true}
+            editable
+            enableClipboard
+            onEdit={(edit) => {
+              ref.current = edit["src"];
+            }}
+            onChange={(edit) => {
+              ref.current = edit["src"];
+            }}
+            src={ref.current}
           />
-        </BaseModal.Header>
-        <BaseModal.Content>
-          <div className="nopan nodelete nodrag noundo nocopy flex h-full w-full flex-col transition-all ">
-            <JsonView
-              theme="vscode"
-              dark={true}
-              editable
-              enableClipboard
-              onEdit={(edit) => {
-                ref.current = edit["src"];
+          <div className="flex h-fit w-full justify-end">
+            <Button
+              className="mt-3"
+              type="submit"
+              onClick={() => {
+                onChange(ref.current);
+                setOpen(false);
               }}
-              onChange={(edit) => {
-                ref.current = edit["src"];
-              }}
-              src={ref.current}
-            />
-            <div className="flex h-fit w-full justify-end">
-              <Button
-                className="mt-3"
-                type="submit"
-                onClick={() => {
-                  onChange(ref.current);
-                  setOpen(false);
-                }}
-              >
-                Save
-              </Button>
-            </div>
+            >
+              Save
+            </Button>
           </div>
-        </BaseModal.Content>
-      </BaseModal>
-    </div>
+        </div>
+      </BaseModal.Content>
+    </BaseModal>
   );
 }
