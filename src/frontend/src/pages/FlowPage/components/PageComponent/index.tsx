@@ -70,6 +70,7 @@ export default function Page({
     setReactFlowInstance,
     templates,
     setFilterEdge,
+    deleteNode,
   } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -110,6 +111,18 @@ export default function Page({
           lastSelection
         ) {
           event.preventDefault();
+        }
+      }
+      if (!isWrappedWithClass(event, "nodelete")) {
+        console.log(event);
+        if (
+          (event.key === "Delete" || event.key === "Backspace") &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          lastSelection.nodes.forEach((k) => {
+            deleteNode(k.id);
+          });
         }
       }
     };
@@ -450,8 +463,9 @@ export default function Page({
                   connectionLineComponent={ConnectionLineComponent}
                   onDragOver={onDragOver}
                   onDrop={onDrop}
-                  onNodesDelete={onDelete}
                   onSelectionChange={onSelectionChange}
+                  onNodesDelete={onDelete}
+                  deleteKeyCode={[]}
                   className="theme-attribution"
                   minZoom={0.01}
                   maxZoom={8}
