@@ -124,12 +124,13 @@ export default function FormModal({
   function updateLastMessage({
     str,
     thought,
+    prompt,
     end = false,
     files,
   }: {
     str?: string;
     thought?: string;
-    // end param default is false
+    prompt?: string;
     end?: boolean;
     files?: Array<any>;
   }) {
@@ -148,6 +149,9 @@ export default function FormModal({
       }
       if (files) {
         newChat[newChat.length - 1].files = files;
+      }
+      if (prompt) {
+        newChat[newChat.length - 1].template = prompt;
       }
       return newChat;
     });
@@ -244,7 +248,10 @@ export default function FormModal({
       isStream = false;
     }
     if (data.type === "stream" && isStream) {
-      updateLastMessage({ str: data.message });
+      if (data.prompt) {
+      } else {
+        updateLastMessage({ str: data.message });
+      }
     }
   }
 
