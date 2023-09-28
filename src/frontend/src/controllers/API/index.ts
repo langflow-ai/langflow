@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from "axios";
+import { AxiosResponse } from "axios";
 import { ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
