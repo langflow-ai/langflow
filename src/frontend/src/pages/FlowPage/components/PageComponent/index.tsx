@@ -120,9 +120,8 @@ export default function Page({
           lastSelection
         ) {
           event.preventDefault();
-          lastSelection.nodes.forEach((k) => {
-            deleteNode(k.id);
-          });
+          console.log(lastSelection);
+          deleteNode(lastSelection.nodes.map((node) => node.id));
         }
       }
     };

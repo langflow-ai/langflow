@@ -136,7 +136,7 @@ export default function ParameterComponent({
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
-          <>
+          <div key={index}>
             {index === 0 && (
               <span>
                 {left
@@ -183,7 +183,7 @@ export default function ParameterComponent({
                 </span>
               </span>
             </span>
-          </>
+          </div>
         );
       });
     } else {
