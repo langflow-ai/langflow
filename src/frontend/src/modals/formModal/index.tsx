@@ -61,6 +61,7 @@ export default function FormModal({
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const template = useRef(tabsState[flow.id].formKeysData.template);
   const { reactFlowInstance } = useContext(typesContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
@@ -208,7 +209,17 @@ export default function FormModal({
     if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
+        console.log(data);
         let newChatHistory: ChatMessageType[] = [];
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].type === "prompt" && data[i].prompt) {
+            if (data[i - 1] && !data[i - 1].is_bot) {
+              data[i - 1].prompt = data[i].prompt;
+              template.current = data[i].prompt;
+            }
+          }
+        }
+        data = data.filter((item: any) => item.type !== "prompt");
         data.forEach(
           (chatItem: {
             intermediate_steps?: string;
@@ -225,7 +236,7 @@ export default function FormModal({
                   ? {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: tabsState[flow.id].formKeysData.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                       chatKey: chatItem.chatKey,
@@ -233,7 +244,7 @@ export default function FormModal({
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: tabsState[flow.id].formKeysData.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       chatKey: chatItem.chatKey,
                     }
@@ -264,6 +275,9 @@ export default function FormModal({
           end: true,
           files: data.files,
         });
+      }
+      if (data.type === "prompt" && data.prompt) {
+        template.current = data.prompt;
       }
 
       setLockChat(false);
@@ -378,12 +392,7 @@ export default function FormModal({
       let inputs = tabsState[id.current].formKeysData.input_keys;
       setChatValue("");
       const message = inputs;
-      addChatHistory(
-        message!,
-        true,
-        chatKey!,
-        tabsState[flow.id].formKeysData.template
-      );
+      addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
         ...reactFlowInstance?.toObject()!,
         inputs: inputs!,
@@ -408,6 +417,7 @@ export default function FormModal({
   }
   function clearChat(): void {
     setChatHistory([]);
+    template.current = tabsState[id.current].formKeysData.template;
     ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
