@@ -7,6 +7,11 @@ export type APITemplateType = {
   variable: TemplateVariableType;
   [key: string]: TemplateVariableType;
 };
+
+export type CustomFieldsType = {
+  [key: string]: Array<string>;
+};
+
 export type APIClassType = {
   base_classes: Array<string>;
   description: string;
@@ -14,10 +19,17 @@ export type APIClassType = {
   display_name: string;
   input_types?: Array<string>;
   output_types?: Array<string>;
+  custom_fields?: CustomFieldsType;
   beta?: boolean;
   documentation: string;
   error?: string;
-  [key: string]: Array<string> | string | APITemplateType | boolean | undefined;
+  [key: string]:
+    | Array<string>
+    | string
+    | APITemplateType
+    | CustomFieldsType
+    | boolean
+    | undefined;
 };
 
 export type TemplateVariableType = {
