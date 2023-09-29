@@ -36,7 +36,7 @@ def pil_to_base64(image: Image) -> str:
     return img_str.decode("utf-8")
 
 
-def try_setting_streaming_options(langchain_object, websocket):
+def try_setting_streaming_options(langchain_object):
     # If the LLM type is OpenAI or ChatOpenAI,
     # set streaming to True
     # First we need to find the LLM
