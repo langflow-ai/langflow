@@ -391,6 +391,7 @@ export default function FormModal({
         chatHistory,
         name: flow.name,
         description: flow.description,
+        chatKey: chatKey!,
       });
       //@ts-ignore
       setTabsState((old: TabsState) => {
