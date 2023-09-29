@@ -8,6 +8,7 @@ from langflow.api.v1.schemas import ChatResponse
 
 from typing import Any, Dict, List, Optional
 from fastapi import WebSocket
+from langflow.services.getters import get_chat_service
 
 
 from langflow.utils.util import remove_ansi_escape_codes
@@ -19,8 +20,10 @@ from loguru import logger
 class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
-    def __init__(self, websocket: WebSocket):
-        self.websocket = websocket
+    def __init__(self, client_id: str):
+        self.chat_service = get_chat_service()
+        self.client_id = client_id
+        self.websocket = self.chat_service.active_connections[self.client_id]
 
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
@@ -96,6 +99,7 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
                 prompt=text,
             )
             await self.websocket.send_json(resp.dict())
+            self.chat_service.chat_history.add_message(self.client_id, resp)
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"

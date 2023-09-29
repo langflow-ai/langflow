@@ -142,7 +142,7 @@ class ChatService(Service):
             result, intermediate_steps = await process_graph(
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
-                websocket=self.active_connections[client_id],
+                client_id=client_id,
                 session_id=self.connection_ids[client_id],
             )
             self.set_cache(client_id, langchain_object)
