@@ -13,7 +13,17 @@ def initialize_database():
     logger.debug("Initializing database")
     from langflow.services import service_manager, ServiceType
 
-    database_service = service_manager.get(ServiceType.DATABASE_SERVICE)
+    database_service: "DatabaseService" = service_manager.get(
+        ServiceType.DATABASE_SERVICE
+    )
+    try:
+        database_service.create_db_and_tables()
+    except Exception as exc:
+        # if the exception involves tables already existing
+        # we can ignore it
+        if "already exists" not in str(exc):
+            logger.error(f"Error creating DB and tables: {exc}")
+            raise RuntimeError("Error creating DB and tables") from exc
     try:
         database_service.check_schema_health()
     except Exception as exc:
@@ -39,7 +49,6 @@ def initialize_database():
         if "already exists" not in str(exc):
             logger.error(f"Error running migrations: {exc}")
             raise RuntimeError("Error running migrations") from exc
-    database_service.create_db_and_tables()
     logger.debug("Database initialized")
 
 
