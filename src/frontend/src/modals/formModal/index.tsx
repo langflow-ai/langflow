@@ -214,7 +214,7 @@ export default function FormModal({
             intermediate_steps?: string;
             is_bot: boolean;
             message: string;
-            template: string;
+            prompt?: string;
             type: string;
             chatKey: string;
             files?: Array<any>;
@@ -225,7 +225,7 @@ export default function FormModal({
                   ? {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: tabsState[flow.id].formKeysData.template,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                       chatKey: chatItem.chatKey,
@@ -233,7 +233,7 @@ export default function FormModal({
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: tabsState[flow.id].formKeysData.template,
                       thought: chatItem.intermediate_steps,
                       chatKey: chatItem.chatKey,
                     }
