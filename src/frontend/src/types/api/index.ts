@@ -38,7 +38,7 @@ export type sendAllProps = {
   description: string;
   viewport: Viewport;
   inputs: { text?: string };
-
+  chatKey: string;
   chatHistory: { message: string | object; isSend: boolean }[];
 };
 export type errorsTypeAPI = {
