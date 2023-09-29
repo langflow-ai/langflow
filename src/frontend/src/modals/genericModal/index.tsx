@@ -109,6 +109,13 @@ export default function GenericModal({
 
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
+        // if field_name is an empty string, then we need to set it
+        // to the first key of the custom_fields object
+        if (field_name === "") {
+          field_name = Object.keys(
+            apiReturn.data?.frontend_node?.custom_fields ?? {}
+          )[0];
+        }
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
@@ -124,7 +131,7 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
-            apiReturn.data.frontend_node["template"]["template"]["value"] =
+            apiReturn.data.frontend_node["template"][field_name]["value"] =
               inputValue;
           } else {
             setIsEdit(false);
@@ -138,7 +145,7 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
-            apiReturn.data.frontend_node["template"]["template"]["value"] =
+            apiReturn.data.frontend_node["template"][field_name]["value"] =
               inputValue;
           }
         } else {
