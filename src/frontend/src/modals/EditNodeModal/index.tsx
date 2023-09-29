@@ -81,6 +81,7 @@ const EditNodeModal = forwardRef(
 
     const handleOnNewValue = (newValue: any, name) => {
       myData.current.node!.template[name].value = newValue;
+      setDataValue(newValue);
     };
 
     useEffect(() => {
@@ -90,6 +91,7 @@ const EditNodeModal = forwardRef(
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
     const [adv, setAdv] = useState<boolean | null>(null);
+    const [dataValue, setDataValue] = useState(data);
 
     return (
       <BaseModal
@@ -268,6 +270,7 @@ const EditNodeModal = forwardRef(
                                   )}
                                 >
                                   <KeypairListComponent
+                                    dataValue={dataValue}
                                     advanced={adv}
                                     disabled={disabled}
                                     editNode={true}

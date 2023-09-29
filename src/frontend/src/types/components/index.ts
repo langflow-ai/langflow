@@ -62,6 +62,7 @@ export type KeyPairListComponentType = {
   editNode?: boolean;
   duplicateKey?: boolean;
   advanced?: boolean | null;
+  dataValue?: any;
 };
 
 export type DictComponentType = {
