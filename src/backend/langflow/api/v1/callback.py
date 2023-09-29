@@ -3,7 +3,7 @@ from uuid import UUID
 
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
-from langflow.api.v1.schemas import ChatResponse
+from langflow.api.v1.schemas import ChatResponse, PromptResponse
 
 
 from typing import Any, Dict, List, Optional
@@ -92,10 +92,7 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         if "Prompt after formatting" in text:
             text = text.replace("Prompt after formatting:\n", "")
             text = remove_ansi_escape_codes(text)
-            resp = ChatResponse(
-                message="",
-                type="stream",
-                intermediate_steps="",
+            resp = PromptResponse(
                 prompt=text,
             )
             await self.websocket.send_json(resp.dict())
