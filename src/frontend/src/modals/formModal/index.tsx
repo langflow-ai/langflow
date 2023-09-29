@@ -220,6 +220,7 @@ export default function FormModal({
             files?: Array<any>;
           }) => {
             if (chatItem.message) {
+              let key = Object.keys(chatItem.message)[0];
               newChatHistory.push(
                 chatItem.files
                   ? {
@@ -228,14 +229,14 @@ export default function FormModal({
                       template: chatItem.template,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
-                      chatKey: chatItem.chatKey,
+                      chatKey: key,
                     }
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
                       template: chatItem.template,
                       thought: chatItem.intermediate_steps,
-                      chatKey: chatItem.chatKey,
+                      chatKey: key,
                     }
               );
             }
