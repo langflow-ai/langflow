@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  tests_e2e:
+    name: Run end-to-end tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [14, 16]
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run tests
+        run: npx playwright test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: test-results.xml
