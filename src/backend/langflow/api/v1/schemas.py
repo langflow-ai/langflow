@@ -86,7 +86,7 @@ class ChatResponse(ChatMessage):
     """Chat response schema."""
 
     intermediate_steps: str
-    prompt: Optional[str] = ""
+
     type: str
     is_bot: bool = True
     files: list = []
@@ -96,6 +96,14 @@ class ChatResponse(ChatMessage):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
             raise ValueError("type must be start, stream, end, error, info, or file")
         return v
+
+
+class PromptResponse(ChatMessage):
+    """Prompt response schema."""
+
+    prompt: str
+    type: str = "prompt"
+    is_bot: bool = True
 
 
 class FileResponse(ChatMessage):
