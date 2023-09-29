@@ -112,9 +112,12 @@ export default function GenericModal({
         // if field_name is an empty string, then we need to set it
         // to the first key of the custom_fields object
         if (field_name === "") {
-          field_name = Object.keys(
-            apiReturn.data?.frontend_node?.custom_fields ?? {}
-          )[0];
+          console.log(apiReturn.data?.frontend_node?.custom_fields);
+          field_name = Array.isArray(
+            apiReturn.data?.frontend_node?.custom_fields?.[""]
+          )
+            ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
+            : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
         }
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
@@ -131,8 +134,10 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
-            apiReturn.data.frontend_node["template"][field_name]["value"] =
-              inputValue;
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
+            }
           } else {
             setIsEdit(false);
             setSuccessData({
@@ -145,8 +150,10 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
-            apiReturn.data.frontend_node["template"][field_name]["value"] =
-              inputValue;
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
+            }
           }
         } else {
           setIsEdit(true);
