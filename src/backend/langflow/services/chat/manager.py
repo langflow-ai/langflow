@@ -126,7 +126,8 @@ class ChatService(Service):
     ):
         # Process the graph data and chat message
         chat_inputs = payload.pop("inputs", {})
-        chat_inputs = ChatMessage(message=chat_inputs)
+        chatkey = payload.pop("chatKey", None)
+        chat_inputs = ChatMessage(message=chat_inputs, chatKey=chatkey)
         self.chat_history.add_message(client_id, chat_inputs)
 
         # graph_data = payload

@@ -78,6 +78,7 @@ class ChatMessage(BaseModel):
 
     is_bot: bool = False
     message: Union[str, None, dict] = None
+    chatKey: Optional[str] = None
     type: str = "human"
 
 
