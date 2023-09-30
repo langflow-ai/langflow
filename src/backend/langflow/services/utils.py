@@ -1,4 +1,4 @@
-from langflow.services.auth.utils import create_super_user
+from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
 from langflow.services.schema import ServiceType
@@ -43,10 +43,22 @@ def setup_superuser(settings_service, session):
         # create superuser
         create_super_user(db=session, username=username, password=password)
     except Exception as exc:
-        logger.exception(exc)
-        raise RuntimeError(
-            "Could not create superuser. Please create a superuser manually."
-        ) from exc
+        if "UNIQUE constraint failed: user.username" in str(exc):
+            # check if the password is valid, if it is, we will
+            # continue normally
+            # if not, we will raise an error
+            user = session.query(User).filter(User.username == username).first()
+            if (
+                user
+                and user.is_superuser is True
+                and verify_password(password, user.password)
+            ):
+                return  # superuser already exists
+            else:
+                logger.exception(exc)
+                raise RuntimeError(
+                    "Could not create superuser. Please create a superuser manually."
+                ) from exc
     # reset superuser credentials
     settings_service.auth_settings.reset_credentials()
     logger.debug("Superuser created successfully.")
