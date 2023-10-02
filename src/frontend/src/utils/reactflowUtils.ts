@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _, { get } from "lodash";
 import {
   Connection,
   Edge,
@@ -659,15 +659,16 @@ export function generateNodeTemplate(Flow: FlowType) {
   return template;
 }
 
-export function generateNodeFromFlow(flow: FlowType): NodeType {
+export function generateNodeFromFlow(flow: FlowType,getNodeId:(type:string)=>string): NodeType {
   const { nodes } = flow.data!;
   const outputNode = _.cloneDeep(findLastNode(flow.data!));
   // console.log(flow)
   const position = getMiddlePoint(nodes);
   let data = _.cloneDeep(flow);
+  const id = getNodeId(outputNode?.data.type!)
   const newGroupNode: NodeType = {
     data: {
-      id: "GroupNode" + data.id,
+      id, 
       type: outputNode?.data.type!,
       node: {
         output_types: outputNode!.data.node!.output_types,
@@ -679,7 +680,7 @@ export function generateNodeFromFlow(flow: FlowType): NodeType {
         flow: data,
       },
     },
-    id: "GroupNode" + data.id,
+    id,
     position,
     type: "genericNode",
   };
