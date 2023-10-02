@@ -43,7 +43,7 @@ resource "aws_instance" "manager" {
                 # Clone the repo and start the stack
                 git clone https://github.com/logspace-ai/langflow.git
                 cd /langflow
-                git checkout celery
+                git checkout terraform
                 cd /langflow/deploy
 
                 sudo cp .env.example .env
