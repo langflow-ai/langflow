@@ -1,5 +1,11 @@
-import { DragEventHandler } from "react";
+import { DragEventHandler, useRef, useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "../../../../../components/ui/select-custom";
 
 export default function SidebarDraggableComponent({
   display_name,
@@ -14,6 +20,10 @@ export default function SidebarDraggableComponent({
   color: string;
   onDragStart: DragEventHandler<HTMLDivElement>;
 }) {
+  const isOpen = useRef(false);
+  const [editMode, setEditMode] = useState(false);
+  const inside = useRef(false);
+
   return (
     <div key={itemName} data-tooltip-id={itemName}>
       <div
@@ -34,7 +44,75 @@ export default function SidebarDraggableComponent({
       >
         <div className="side-bar-components-div-form">
           <span className="side-bar-components-text">{display_name}</span>
-          <IconComponent name="Menu" className="side-bar-components-icon " />
+          <div
+            onMouseLeave={() => {
+              if (!isOpen.current) {
+                inside.current = false;
+                setEditMode(false);
+              }
+            }}
+            onMouseOver={() => {
+              inside.current = true;
+              setTimeout(() => {
+                if (inside.current) setEditMode(true);
+              }, 800);
+            }}
+          >
+            {editMode ? (
+              <Select
+                onOpenChange={(open) => {
+                  if (!open) {
+                    isOpen.current = false;
+                    inside.current = false;
+                    setEditMode(false);
+                  } else {
+                    isOpen.current = true;
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <IconComponent
+                    name="MoreHorizontal"
+                    className="side-bar-components-icon "
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={"share"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Settings2"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Edit{" "}
+                    </div>{" "}
+                  </SelectItem>
+                  <SelectItem value={"download"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Settings2"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Edit{" "}
+                    </div>{" "}
+                  </SelectItem>
+                  <SelectItem value={"delete"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Settings2"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Edit{" "}
+                    </div>{" "}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <IconComponent
+                name="Menu"
+                className="side-bar-components-icon "
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
