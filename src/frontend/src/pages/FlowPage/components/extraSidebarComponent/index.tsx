@@ -17,6 +17,7 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames, removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
+import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
@@ -242,45 +243,23 @@ export default function ExtraSidebar(): JSX.Element {
                         side="right"
                         key={index}
                       >
-                        <div key={SBItemName} data-tooltip-id={SBItemName}>
-                          <div
-                            draggable={!data[SBSectionName][SBItemName].error}
-                            className={
-                              "side-bar-components-border bg-background" +
-                              (data[SBSectionName][SBItemName].error
-                                ? " cursor-not-allowed select-none"
-                                : "")
-                            }
-                            style={{
-                              borderLeftColor:
-                                nodeColors[SBSectionName] ?? nodeColors.unknown,
-                            }}
-                            onDragStart={(event) =>
-                              onDragStart(event, {
-                                //split type to remove type in nodes saved with same name removing it's
-                                type: removeCountFromString(SBItemName),
-                                node: data[SBSectionName][SBItemName],
-                              })
-                            }
-                            onDragEnd={() => {
-                              document.body.removeChild(
-                                document.getElementsByClassName(
-                                  "cursor-grabbing"
-                                )[0]
-                              );
-                            }}
-                          >
-                            <div className="side-bar-components-div-form">
-                              <span className="side-bar-components-text">
-                                {data[SBSectionName][SBItemName].display_name}
-                              </span>
-                              <IconComponent
-                                name="Menu"
-                                className="side-bar-components-icon "
-                              />
-                            </div>
-                          </div>
-                        </div>
+                        <SidebarDraggableComponent
+                          key={SBItemName}
+                          onDragStart={(event) =>
+                            onDragStart(event, {
+                              //split type to remove type in nodes saved with same name removing it's
+                              type: removeCountFromString(SBItemName),
+                              node: data[SBSectionName][SBItemName],
+                            })
+                          }
+                          color={nodeColors[SBSectionName]}
+                          itemName={SBItemName}
+                          //convert error to boolean
+                          error={!!data[SBSectionName][SBItemName].error}
+                          display_name={
+                            data[SBSectionName][SBItemName].display_name
+                          }
+                        />
                       </ShadTooltip>
                     ))}
                 </div>
