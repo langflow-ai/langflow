@@ -255,4 +255,4 @@ volumes:
 networks:
   traefik-public:
     # Allow setting it to false for testing
-    external: false # ${TRAEFIK_PUBLIC_NETWORK_IS_EXTERNAL-true}
+    external: true
