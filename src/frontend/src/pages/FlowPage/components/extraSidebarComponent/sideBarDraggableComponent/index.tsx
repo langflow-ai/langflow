@@ -80,28 +80,28 @@ export default function SidebarDraggableComponent({
                   <SelectItem value={"share"}>
                     <div className="flex">
                       <IconComponent
-                        name="Settings2"
+                        name="Share2"
                         className="relative top-0.5 mr-2 h-4 w-4"
                       />{" "}
-                      Edit{" "}
+                      Share{" "}
                     </div>{" "}
                   </SelectItem>
                   <SelectItem value={"download"}>
                     <div className="flex">
                       <IconComponent
-                        name="Settings2"
+                        name="Download"
                         className="relative top-0.5 mr-2 h-4 w-4"
                       />{" "}
-                      Edit{" "}
+                      Download{" "}
                     </div>{" "}
                   </SelectItem>
                   <SelectItem value={"delete"}>
                     <div className="flex">
                       <IconComponent
-                        name="Settings2"
+                        name="Trash2"
                         className="relative top-0.5 mr-2 h-4 w-4"
                       />{" "}
-                      Edit{" "}
+                      Delete{" "}
                     </div>{" "}
                   </SelectItem>
                 </SelectContent>
