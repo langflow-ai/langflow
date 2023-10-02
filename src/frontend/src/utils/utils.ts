@@ -535,10 +535,21 @@ export function IncrementObjectKey(
   key: string
 ): { newKey: string; increment: number } {
   let count = 1;
-  let newKey = key;
+  const type = removeCountFromString(key);
+  let newKey = type + " " + `(${count})`;
   while (object[newKey]) {
-    newKey = key + " " + `(${count})`;
     count++;
+    newKey = type + " " + `(${count})`;
   }
   return { newKey, increment: count };
+}
+
+export function removeCountFromString(input: string): string {
+  // Define a regex pattern to match the count in parentheses
+  const pattern = /\s*\(\d+\)\s*$/;
+
+  // Use the `replace` method to remove the matched pattern
+  const result = input.replace(pattern, "");
+
+  return result.trim(); // Trim any leading/trailing spaces
 }
