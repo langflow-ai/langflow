@@ -64,6 +64,7 @@ import {
   Scissors,
   Search,
   Settings2,
+  Share2,
   Shield,
   Sparkles,
   Square,
@@ -320,4 +321,5 @@ export const nodeIconsLucide: iconsType = {
   Minimize2,
   Maximize2,
   SaveAll,
+  Share2,
 };
