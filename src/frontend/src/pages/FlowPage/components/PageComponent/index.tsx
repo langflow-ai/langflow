@@ -456,7 +456,7 @@ export default function Page({
                           reactFlowInstance!,
                           getRandomName()
                         );
-                        const newGroupNode = generateNodeFromFlow(newFlow);
+                        const newGroupNode = generateNodeFromFlow(newFlow,getNodeId);
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
                             (oldNodes) =>

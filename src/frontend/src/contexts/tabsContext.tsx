@@ -391,7 +391,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * Add a new flow to the list of flows.
    * @param flow Optional flow to add.
    */
-
   function paste(
     selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -448,15 +447,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       );
       let sourceHandle = scapedJSONStringfy({
         ...sourceHandleObject,
-        id: edge.source,
+        id: source,
       });
+      sourceHandleObject.id = source;
+      edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
       );
       let targetHandle = scapedJSONStringfy({
         ...targetHandleObject,
-        id: edge.target,
+        id: target,
       });
+      targetHandleObject.id = target;
+      edge.data.targetHandle = targetHandleObject;
       let id =
         "reactflow__edge-" +
         source +
