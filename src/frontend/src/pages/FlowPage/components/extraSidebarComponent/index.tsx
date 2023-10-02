@@ -15,7 +15,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, removeCountFromString } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar(): JSX.Element {
@@ -242,7 +242,7 @@ export default function ExtraSidebar(): JSX.Element {
                         side="right"
                         key={index}
                       >
-                        <div key={index} data-tooltip-id={SBItemName}>
+                        <div key={SBItemName} data-tooltip-id={SBItemName}>
                           <div
                             draggable={!data[SBSectionName][SBItemName].error}
                             className={
@@ -257,7 +257,8 @@ export default function ExtraSidebar(): JSX.Element {
                             }}
                             onDragStart={(event) =>
                               onDragStart(event, {
-                                type: SBItemName,
+                                //split type to remove type in nodes saved with same name removing it's
+                                type: removeCountFromString(SBItemName),
                                 node: data[SBSectionName][SBItemName],
                               })
                             }

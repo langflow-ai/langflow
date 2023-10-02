@@ -12,7 +12,11 @@ import { APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
-import { checkLocalStorageKey, IncrementObjectKey } from "../utils/utils";
+import {
+  checkLocalStorageKey,
+  IncrementObjectKey,
+  removeCountFromString,
+} from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 
@@ -129,20 +133,27 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
     let components = savedComponentsJSON.components;
     let key = component.type;
-    if (components[key] !== undefined) {
-      const { newKey, increment } = IncrementObjectKey(components, key);
+    if (data["custom_components"][key] !== undefined) {
+      const { newKey, increment } = IncrementObjectKey(
+        data["custom_components"],
+        key
+      );
       key = newKey;
+      console.log(component.node?.display_name);
+      component.node!.display_name =
+        removeCountFromString(component.node?.display_name!) +
+        ` (${increment})`;
     }
     components[key] = component;
     savedComponentsJSON.components = components;
     localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
       let newData = { ...prev };
-      newData["custom_components"][key] = component.node;
+      //clone to prevent reference erro
+      newData["custom_components"][key] = _.cloneDeep(component.node);
       return newData;
     });
   }
-
   return (
     <typesContext.Provider
       value={{
