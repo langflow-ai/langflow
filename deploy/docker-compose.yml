@@ -8,9 +8,6 @@ services:
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
       - default
-    ports:
-      - "80:80"
-      - "8090:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
@@ -70,9 +67,6 @@ services:
         # Middleware to redirect www, and redirect HTTP to HTTPS
         # to disable www redirection remove the section: ${STACK_NAME?Variable not set}-www-redirect,
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
-        # New labels
-        - traefik.http.routers.${STACK_NAME?Variable not set}-traefik-public-http.rule=Host(`${DOMAIN?Variable not set}`)
-        - traefik.http.services.${STACK_NAME?Variable not set}-traefik-public.loadbalancer.server.port=80
 
   backend: &backend
     image: "ogabrielluiz/langflow:latest"
@@ -261,4 +255,4 @@ volumes:
 networks:
   traefik-public:
     # Allow setting it to false for testing
-    external: true
+    external: false

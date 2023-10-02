@@ -51,9 +51,9 @@ resource "aws_instance" "manager" {
                 # Add the label to random worker node to ensure that the data volume is created on the same node                
                 docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
 
-                docker network create --driver=overlay traefik-public
+                # docker network create --driver=overlay traefik-public
 
-                env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-compose.yml langflow_stack
+                env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-compose.yml -c docker-compose.override.yml langflow_stack
 
                 EOT
 
