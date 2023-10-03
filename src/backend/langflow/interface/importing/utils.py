@@ -3,7 +3,7 @@
 import importlib
 from typing import Any, Type
 
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.agents import Agent
 from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
