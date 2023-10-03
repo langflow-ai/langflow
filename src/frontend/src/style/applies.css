@@ -853,7 +853,7 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
+    @apply flex h-full flex-col max-w-full overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2;
