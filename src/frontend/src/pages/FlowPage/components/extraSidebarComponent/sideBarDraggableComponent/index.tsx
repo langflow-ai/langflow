@@ -1,4 +1,4 @@
-import { DragEventHandler, useRef } from "react";
+import { DragEventHandler, useContext, useRef } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
 import {
   Select,
@@ -6,6 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../../components/ui/select-custom";
+import { typesContext } from "../../../../../contexts/typesContext";
 
 export default function SidebarDraggableComponent({
   display_name,
@@ -21,9 +22,23 @@ export default function SidebarDraggableComponent({
   onDragStart: DragEventHandler<HTMLDivElement>;
 }) {
   const open = useRef(false);
+  const { deleteComponent } = useContext(typesContext);
+
+  function handleSelectChange(value: string) {
+    switch (value) {
+      case "share":
+        break;
+      case "download":
+        break;
+      case "delete":
+        deleteComponent(itemName);
+        break;
+    }
+  }
 
   return (
     <Select
+      onValueChange={handleSelectChange}
       onOpenChange={(change) => (open.current = change)}
       open={open.current}
     >

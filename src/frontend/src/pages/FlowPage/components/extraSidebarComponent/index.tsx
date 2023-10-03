@@ -239,7 +239,9 @@ export default function ExtraSidebar(): JSX.Element {
                     .sort()
                     .map((SBItemName: string, index) => (
                       <ShadTooltip
-                        content={data[SBSectionName][SBItemName].display_name}
+                        content={
+                          dataFilter[SBSectionName][SBItemName].display_name
+                        }
                         side="right"
                         key={index}
                       >
@@ -249,15 +251,15 @@ export default function ExtraSidebar(): JSX.Element {
                             onDragStart(event, {
                               //split type to remove type in nodes saved with same name removing it's
                               type: removeCountFromString(SBItemName),
-                              node: data[SBSectionName][SBItemName],
+                              node: dataFilter[SBSectionName][SBItemName],
                             })
                           }
                           color={nodeColors[SBSectionName]}
                           itemName={SBItemName}
                           //convert error to boolean
-                          error={!!data[SBSectionName][SBItemName].error}
+                          error={!!dataFilter[SBSectionName][SBItemName].error}
                           display_name={
-                            data[SBSectionName][SBItemName].display_name
+                            dataFilter[SBSectionName][SBItemName].display_name
                           }
                         />
                       </ShadTooltip>
