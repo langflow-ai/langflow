@@ -58,6 +58,9 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         return create_super_user(username, password, db=session)
     except Exception as exc:
         if "UNIQUE constraint failed: user.username" in str(exc):
+            # This is to deal with workers running this
+            # at startup and trying to create the superuser
+            # at the same time.
             logger.debug("Superuser already exists.")
             return None
 
