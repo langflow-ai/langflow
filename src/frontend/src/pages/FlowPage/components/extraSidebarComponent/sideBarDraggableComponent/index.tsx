@@ -6,7 +6,14 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../../components/ui/select-custom";
+import { TabsContext } from "../../../../../contexts/tabsContext";
 import { typesContext } from "../../../../../contexts/typesContext";
+import { APIClassType } from "../../../../../types/api";
+import {
+  createFlowComponent,
+  downloadNode,
+} from "../../../../../utils/reactflowUtils";
+import { removeCountFromString } from "../../../../../utils/utils";
 
 export default function SidebarDraggableComponent({
   display_name,
@@ -14,7 +21,9 @@ export default function SidebarDraggableComponent({
   error,
   color,
   onDragStart,
+  apiClass,
 }: {
+  apiClass: APIClassType;
   display_name: string;
   itemName: string;
   error: boolean;
@@ -23,12 +32,17 @@ export default function SidebarDraggableComponent({
 }) {
   const open = useRef(false);
   const { deleteComponent } = useContext(typesContext);
+  const { getNodeId } = useContext(TabsContext);
 
   function handleSelectChange(value: string) {
     switch (value) {
       case "share":
         break;
       case "download":
+        const type = removeCountFromString(itemName);
+        downloadNode(
+          createFlowComponent({ id: getNodeId(type), type, node: apiClass })
+        );
         break;
       case "delete":
         deleteComponent(itemName);
