@@ -71,6 +71,7 @@ export default function Page({
     templates,
     setFilterEdge,
     deleteNode,
+    deleteEdge,
   } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -120,6 +121,7 @@ export default function Page({
         ) {
           event.preventDefault();
           deleteNode(lastSelection.nodes.map((node) => node.id));
+          deleteEdge(lastSelection.edges.map((edge) => edge.id));
         }
       }
     };
