@@ -15,7 +15,11 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, removeCountFromString } from "../../../../utils/utils";
+import {
+  classNames,
+  removeCountFromString,
+  sensitiveSort,
+} from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
@@ -236,7 +240,7 @@ export default function ExtraSidebar(): JSX.Element {
               >
                 <div className="side-bar-components-gap">
                   {Object.keys(dataFilter[SBSectionName])
-                    .sort()
+                    .sort(sensitiveSort)
                     .map((SBItemName: string, index) => (
                       <ShadTooltip
                         content={
