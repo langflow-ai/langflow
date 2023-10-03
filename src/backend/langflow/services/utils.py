@@ -136,30 +136,40 @@ def initialize_services():
     from langflow.services.task import factory as task_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
 
-    service_manager.register_factory(settings_factory.SettingsServiceFactory())
-    service_manager.register_factory(
-        auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
-    service_manager.register_factory(
-        database_factory.DatabaseServiceFactory(),
-        dependencies=[ServiceType.SETTINGS_SERVICE],
-    )
-    service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
-    service_manager.register_factory(chat_factory.ChatServiceFactory())
+    factory_and_dependencies = [
+        (settings_factory.SettingsServiceFactory(), []),
+        (
+            auth_factory.AuthServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (
+            database_factory.DatabaseServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (
+            cache_factory.CacheServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (chat_factory.ChatServiceFactory(), []),
+        (task_factory.TaskServiceFactory(), []),
+        (
+            session_service_factory.SessionServiceFactory(),
+            [ServiceType.CACHE_SERVICE],
+        ),
+    ]
+    for factory, dependencies in factory_and_dependencies:
+        try:
+            service_manager.register_factory(factory, dependencies=dependencies)
+        except Exception as exc:
+            logger.exception(exc)
+            raise RuntimeError(
+                "Could not initialize services. Please check your settings."
+            ) from exc
 
-    service_manager.register_factory(task_factory.TaskServiceFactory())
-
-    service_manager.register_factory(
-        session_service_factory.SessionServiceFactory(),
-        dependencies=[ServiceType.CACHE_SERVICE],
-    )
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
-    # Test database connection
-    service_manager.get(ServiceType.DATABASE_SERVICE)
     # Setup the superuser
     initialize_database()
-    session = next(get_session())
-    setup_superuser(service_manager.get(ServiceType.SETTINGS_SERVICE), session)
+    setup_superuser(
+        service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session())
+    )
