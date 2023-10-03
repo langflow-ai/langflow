@@ -154,6 +154,14 @@ class DatabaseService(Service):
         return results
 
     def create_db_and_tables(self):
+        from sqlalchemy import inspect
+
+        inspector = inspect(self.engine)
+        current_tables = ["flow", "user", "apikey"]
+        table_names = inspector.get_table_names()
+        if table_names and all(table in table_names for table in current_tables):
+            logger.debug("Database and tables already exist")
+            return
         logger.debug("Creating database and tables")
         try:
             SQLModel.metadata.create_all(self.engine)
@@ -163,10 +171,6 @@ class DatabaseService(Service):
 
         # Now check if the table "flow" exists, if not, something went wrong
         # and we need to create the tables again.
-        from sqlalchemy import inspect
-
-        inspector = inspect(self.engine)
-        current_tables = ["flow", "user", "apikey"]
         table_names = inspector.get_table_names()
         for table in current_tables:
             if table not in table_names:
