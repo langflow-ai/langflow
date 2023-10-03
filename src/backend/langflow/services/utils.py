@@ -10,58 +10,75 @@ from .getters import get_session, get_settings_service
 from loguru import logger
 
 
+def get_or_create_super_user(session, username, password, is_default):
+    from langflow.services.database.models.user.user import User
+
+    user = session.query(User).filter(User.username == username).first()
+
+    if user and user.is_superuser and verify_password(password, user.password):
+        return None  # Superuser already exists
+
+    if user and is_default:
+        if user.is_superuser:
+            if verify_password(password, user.password):
+                return None
+            else:
+                # Superuser exists but password is incorrect
+                # which means that the user has changed the
+                # base superuser credentials.
+                # This means that the user has already created
+                # a superuser and changed the password in the UI
+                # so we don't need to do anything.
+                logger.debug(
+                    "Superuser exists but password is incorrect. "
+                    "This means that the user has changed the "
+                    "base superuser credentials."
+                )
+                return None
+        else:
+            logger.debug(
+                "User with superuser credentials exists but is not a superuser."
+            )
+            return None
+
+    if user:
+        if verify_password(password, user.password):
+            raise ValueError(
+                "User with superuser credentials exists but is not a superuser."
+            )
+        else:
+            raise ValueError("Incorrect superuser credentials")
+
+    if is_default:
+        logger.debug("Creating default superuser.")
+    else:
+        logger.debug("Creating superuser.")
+
+    return create_super_user(session, username, password)
+
+
 def setup_superuser(settings_service, session):
-    """
-    Setup the superuser.
-    """
-    # We will use the SUPERUSER and SUPERUSER_PASSWORD
-    # vars on settings_manager.auth_settings to create the superuser
-    # if it does not exist.
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
 
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if username == DEFAULT_SUPERUSER and password == DEFAULT_SUPERUSER_PASSWORD:
-        logger.debug("Default superuser credentials detected.")
-        logger.debug("Creating default superuser.")
-    else:
-        logger.debug("Creating superuser.")
+
+    is_default = (username == DEFAULT_SUPERUSER) and (
+        password == DEFAULT_SUPERUSER_PASSWORD
+    )
 
     try:
-        from langflow.services.database.models.user.user import User
-
-        user = session.query(User).filter(User.username == username).first()
-        if user and user.is_superuser is True:
-            return
+        user = get_or_create_super_user(session, username, password, is_default)
+        if user is not None:
+            logger.debug("Superuser created successfully.")
     except Exception as exc:
         logger.exception(exc)
         raise RuntimeError(
             "Could not create superuser. Please create a superuser manually."
         ) from exc
-    try:
-        # create superuser
-        create_super_user(db=session, username=username, password=password)
-    except Exception as exc:
-        if "UNIQUE constraint failed: user.username" in str(exc):
-            # check if the password is valid, if it is, we will
-            # continue normally
-            # if not, we will raise an error
-            user = session.query(User).filter(User.username == username).first()
-            if (
-                user
-                and user.is_superuser is True
-                and verify_password(password, user.password)
-            ):
-                return  # superuser already exists
-            else:
-                logger.exception(exc)
-                raise RuntimeError(
-                    "Could not create superuser. Please create a superuser manually."
-                ) from exc
-    # reset superuser credentials
-    settings_service.auth_settings.reset_credentials()
-    logger.debug("Superuser created successfully.")
+    finally:
+        settings_service.auth_settings.reset_credentials()
 
 
 def teardown_superuser(settings_service, session):
