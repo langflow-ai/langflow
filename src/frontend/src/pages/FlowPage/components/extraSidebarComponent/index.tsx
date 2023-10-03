@@ -250,6 +250,7 @@ export default function ExtraSidebar(): JSX.Element {
                         key={index}
                       >
                         <SidebarDraggableComponent
+                          apiClass={dataFilter[SBSectionName][SBItemName]}
                           key={SBItemName}
                           onDragStart={(event) =>
                             onDragStart(event, {
