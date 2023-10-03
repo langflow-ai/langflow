@@ -140,7 +140,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         key
       );
       key = newKey;
-      console.log(component.node?.display_name);
       component.node!.display_name =
         removeCountFromString(component.node?.display_name!) +
         ` (${increment})`;
