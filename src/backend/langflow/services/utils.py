@@ -6,11 +6,12 @@ from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
 )
+from sqlmodel import Session
 from .getters import get_session, get_settings_service
 from loguru import logger
 
 
-def get_or_create_super_user(session, username, password, is_default):
+def get_or_create_super_user(session: Session, username, password, is_default):
     from langflow.services.database.models.user.user import User
 
     user = session.query(User).filter(User.username == username).first()
@@ -54,10 +55,10 @@ def get_or_create_super_user(session, username, password, is_default):
     else:
         logger.debug("Creating superuser.")
 
-    return create_super_user(session, username, password)
+    return create_super_user(username, password, db=session)
 
 
-def setup_superuser(settings_service, session):
+def setup_superuser(settings_service, session: Session):
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
 
@@ -69,7 +70,9 @@ def setup_superuser(settings_service, session):
     )
 
     try:
-        user = get_or_create_super_user(session, username, password, is_default)
+        user = get_or_create_super_user(
+            session=session, username=username, password=password, is_default=is_default
+        )
         if user is not None:
             logger.debug("Superuser created successfully.")
     except Exception as exc:
