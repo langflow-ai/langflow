@@ -23,6 +23,7 @@ export type ToggleComponentType = {
   setEnabled: (state: boolean) => void;
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
+  id?: string;
 };
 export type DropDownComponentType = {
   value: string;
@@ -136,18 +137,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {

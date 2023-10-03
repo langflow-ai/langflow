@@ -138,7 +138,7 @@ export default function NodeToolbarComponent({
             <Select onValueChange={handleSelectChange} value={selectedValue}>
               <ShadTooltip content="More" side="top">
                 <SelectTrigger>
-                  <div>
+                  <div id="advancedIcon">
                     <div
                       className={classNames(
                         "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
@@ -163,6 +163,7 @@ export default function NodeToolbarComponent({
                   }
                 >
                   <div
+                    id="editAdvancedBtn"
                     className={
                       "flex " +
                       (nodeLength == 0
@@ -179,7 +180,7 @@ export default function NodeToolbarComponent({
                 </SelectItem>
                 {isMinimal && (
                   <SelectItem value={getRandomKeyByssmm() + "show"}>
-                    <div className="flex">
+                    <div className="flex" id="editAdvanced">
                       <IconComponent
                         name={showNode ? "Minimize2" : "Maximize2"}
                         className="relative top-0.5 mr-2 h-4 w-4"
@@ -192,7 +193,7 @@ export default function NodeToolbarComponent({
             </Select>
           ) : (
             <ShadTooltip content="Edit" side="top">
-              <div>
+              <div id="editAdvancedIcon">
                 <button
                   disabled={nodeLength === 0}
                   onClick={() => setShowModalAdvanced(true)}

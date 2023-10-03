@@ -467,6 +467,11 @@ const EditNodeModal = forwardRef(
                             <TableCell className="p-0 text-right">
                               <div className="items-center text-center">
                                 <ToggleShadComponent
+                                  id={
+                                    "show" +
+                                    myData.current.node?.template[templateParam]
+                                      .name
+                                  }
                                   enabled={
                                     !myData.current.node?.template[
                                       templateParam
@@ -492,6 +497,7 @@ const EditNodeModal = forwardRef(
 
         <BaseModal.Footer>
           <Button
+            id={"saveChangesBtn"}
             className="mt-3"
             onClick={() => {
               const newData = cloneDeep(myData.current);
