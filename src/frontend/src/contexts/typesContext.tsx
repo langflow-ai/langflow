@@ -37,6 +37,7 @@ const initialValue: typesContextType = {
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
   saveComponent: (component: NodeDataType, key: string) => {},
+  deleteComponent: (key: string) => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -154,9 +155,29 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       return newData;
     });
   }
+
+  function deleteComponent(key: string) {
+    let savedComponentsJSON: localStorageUserType = { components: {} };
+    if (checkLocalStorageKey(userData?.id!)) {
+      let savedComponents = localStorage.getItem(userData?.id!)!;
+      savedComponentsJSON = JSON.parse(savedComponents);
+    }
+    let components = savedComponentsJSON.components;
+    delete components[key];
+    savedComponentsJSON.components = components;
+    localStorage.setItem(userData?.id!, JSON.stringify(savedComponentsJSON));
+    setData((prev) => {
+      let newData = _.cloneDeep(prev);
+      //clone to prevent reference erro
+      delete newData["custom_components"][key];
+      return newData;
+    });
+  }
+
   return (
     <typesContext.Provider
       value={{
+        deleteComponent,
         saveComponent,
         types,
         setTypes,
