@@ -20,6 +20,7 @@ export type typesContextType = {
   setFetchError: (newState: boolean) => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  deleteEdge: (idx: string | Array<string>) => void;
 };
 
 export type alertContextType = {

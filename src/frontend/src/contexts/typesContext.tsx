@@ -5,7 +5,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Node, ReactFlowInstance } from "reactflow";
+import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
@@ -28,6 +28,7 @@ const initialValue: typesContextType = {
   fetchError: false,
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
+  deleteEdge: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -110,9 +111,20 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         )
     );
   }
+  function deleteEdge(idx: string | Array<string>) {
+    reactFlowInstance!.setEdges(
+      reactFlowInstance!
+        .getEdges()
+        .filter((edge: Edge) =>
+          typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
+        )
+    );
+  }
+
   return (
     <typesContext.Provider
       value={{
+        deleteEdge,
         types,
         setTypes,
         reactFlowInstance,
