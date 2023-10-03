@@ -12,9 +12,10 @@ from langflow.services.utils import (
 
 @patch("langflow.services.getters.get_settings_service")
 @patch("langflow.services.utils.create_super_user")
+@patch("langflow.services.utils.verify_password")
 @patch("langflow.services.getters.get_session")
 def test_setup_superuser(
-    mock_get_session, mock_create_super_user, mock_get_settings_service
+    mock_get_session, mock_create_super_user, mock_get_settings_service, mock_verify
 ):
     # Test when AUTO_LOGIN is True
     calls = []
