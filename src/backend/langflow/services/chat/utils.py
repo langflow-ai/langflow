@@ -1,4 +1,3 @@
-from fastapi import WebSocket
 from langflow.api.v1.schemas import ChatMessage
 from langflow.processing.base import get_result_and_steps
 from langflow.interface.utils import try_setting_streaming_options

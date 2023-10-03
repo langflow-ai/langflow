@@ -7,7 +7,6 @@ from langflow.api.v1.schemas import ChatResponse, PromptResponse
 
 
 from typing import Any, Dict, List, Optional
-from fastapi import WebSocket
 from langflow.services.getters import get_chat_service
 
 
