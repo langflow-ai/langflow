@@ -7,7 +7,7 @@ from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from sqlmodel import Session
-from .getters import get_session, get_settings_service
+from .getters import get_db_service, get_session, get_settings_service
 from loguru import logger
 
 
@@ -54,8 +54,15 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
-
-    return create_super_user(username, password, db=session)
+    try:
+        return create_super_user(username, password, db=session)
+    except Exception as exc:
+        if "UNIQUE constraint failed: user.username" in str(exc):
+            # This is to deal with workers running this
+            # at startup and trying to create the superuser
+            # at the same time.
+            logger.debug("Superuser already exists.")
+            return None
 
 
 def setup_superuser(settings_service, session: Session):
@@ -193,3 +200,8 @@ def initialize_services():
     setup_superuser(
         service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session())
     )
+    try:
+        get_db_service().migrate_flows_if_auto_login()
+    except Exception as exc:
+        logger.error(f"Error migrating flows: {exc}")
+        raise RuntimeError("Error migrating flows") from exc
