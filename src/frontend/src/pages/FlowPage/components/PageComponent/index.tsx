@@ -434,7 +434,7 @@ export default function Page({
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div className="h-full w-full">
+              <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
