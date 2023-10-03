@@ -58,6 +58,27 @@ class DatabaseService(Service):
         with Session(self.engine) as session:
             yield session
 
+    def migrate_flows_if_auto_login(self):
+        # if auto_login is enabled, we need to migrate the flows
+        # to the default superuser if they don't have a user id
+        # associated with them
+        settings_service = get_settings_service()
+        if settings_service.auth_settings.AUTO_LOGIN:
+            with Session(self.engine) as session:
+                flows = (
+                    session.query(models.Flow)
+                    .filter(models.Flow.user_id == None)  # noqa
+                    .all()
+                )
+                if flows:
+                    logger.debug("Migrating flows to default superuser")
+                    username = settings_service.auth_settings.SUPERUSER
+                    user = get_user_by_username(session, username)
+                    for flow in flows:
+                        flow.user_id = user.id
+                    session.commit()
+                    logger.debug("Flows migrated successfully")
+
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
