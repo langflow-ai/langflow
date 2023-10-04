@@ -5,6 +5,8 @@ from langflow.worker import celery_app
 
 
 class CeleryBackend(TaskBackend):
+    name = "celery"
+
     def __init__(self):
         self.celery_app = celery_app
 
