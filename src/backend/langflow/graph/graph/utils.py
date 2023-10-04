@@ -9,12 +9,22 @@ def find_last_node(data):
     return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
 
 
+def add_parent_node_id(nodes, parent_node_id):
+    """
+    This function receives a list of nodes and adds a parent_node_id to each node.
+    """
+    for node in nodes:
+        node["parent_node_id"] = parent_node_id
+
+
 def ungroup_node(group_node_data, base_flow):
     template, flow = (
         group_node_data["node"]["template"],
         group_node_data["node"]["flow"],
     )
+    parent_node_id = group_node_data["id"]
     g_nodes = flow["data"]["nodes"]
+    add_parent_node_id(g_nodes, parent_node_id)
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node

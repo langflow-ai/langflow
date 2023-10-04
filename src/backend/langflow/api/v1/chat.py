@@ -164,6 +164,7 @@ async def stream_build(
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     vertex.build(user_id)
+
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
@@ -181,14 +182,18 @@ async def stream_build(
                     valid = False
                     flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
 
-                response = {
-                    "valid": valid,
-                    "params": params,
-                    "id": vertex.id,
-                    "progress": round(i / number_of_nodes, 2),
-                }
+                vertex_id = (
+                    vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
+                )
+                if vertex_id in graph.top_level_nodes:
+                    response = {
+                        "valid": valid,
+                        "params": params,
+                        "id": vertex_id,
+                        "progress": round(i / number_of_nodes, 2),
+                    }
 
-                yield str(StreamData(event="message", data=response))
+                    yield str(StreamData(event="message", data=response))
 
             langchain_object = graph.build()
             # Now we  need to check the input_keys to send them to the client
