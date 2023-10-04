@@ -239,8 +239,7 @@ def try_running_celery_task(vertex):
         task = build_vertex.delay(vertex)
         vertex.task_id = task.id
     except Exception as exc:
-        logger.exception(exc)
-        logger.error("Error running task in celery, running locally")
+        logger.debug(f"Error running task in celery: {exc}")
         vertex.task_id = None
         vertex.build()
     return vertex
