@@ -124,7 +124,9 @@ class StreamingLLMCallbackHandler(BaseCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
     def __init__(self, client_id: str):
+        self.chat_service = get_chat_service()
         self.client_id = client_id
+        self.websocket = self.chat_service.active_connections[self.client_id]
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
