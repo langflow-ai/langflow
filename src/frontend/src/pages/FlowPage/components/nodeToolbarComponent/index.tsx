@@ -73,6 +73,9 @@ export default function NodeToolbarComponent({
         //TODO add logic to save node on backend and update toolbar
         downloadNode(createFlowComponent(data));
         break;
+      case "Share":
+        //TODO add logic to save node on backend and update toolbar
+        break;
       case "SaveAll":
         if (isAuthenticated) {
           saveComponent(data, autoLogin ? "auto" : userData?.id!);
@@ -185,6 +188,15 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
                   Save{" "}
+                </div>{" "}
+              </SelectItem>
+              <SelectItem value={"Share"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Share2"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  Share{" "}
                 </div>{" "}
               </SelectItem>
               <SelectItem value={"Download"}>
