@@ -25,8 +25,9 @@ class Graph:
     ) -> None:
         self._nodes = nodes
         self._edges = edges
-        self._graph_data = {"nodes": nodes, "edges": edges}
-        self._graph_data = process_flow(self._graph_data)
+        self.raw_graph_data = {"nodes": nodes, "edges": edges}
+        self.top_level_nodes = [node.get("id") for node in nodes]
+        self._graph_data = process_flow(self.raw_graph_data)
         self._nodes = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self._build_graph()
@@ -210,7 +211,9 @@ class Graph:
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
             VertexClass = self._get_vertex_class(node_type, node_lc_type)
-            nodes.append(VertexClass(node))
+            vertex = VertexClass(node)
+            vertex.set_top_level(self.top_level_nodes)
+            nodes.append(vertex)
 
         return nodes
 

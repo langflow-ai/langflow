@@ -26,6 +26,11 @@ class Vertex:
         self._built_object = UnbuiltObject()
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
+        self.parent_is_top_level = False
+
+    def set_top_level(self, top_level_nodes: List[str]) -> None:
+        self.parent_is_top_level = self.parent_node_id in top_level_nodes
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
