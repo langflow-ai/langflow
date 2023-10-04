@@ -171,6 +171,7 @@ class DatabaseService(Service):
 
         # Now check if the table "flow" exists, if not, something went wrong
         # and we need to create the tables again.
+        inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
         for table in current_tables:
             if table not in table_names:
