@@ -153,6 +153,9 @@ def teardown_services():
     """
     try:
         teardown_superuser(get_settings_service(), next(get_session()))
+    except Exception as exc:
+        logger.exception(exc)
+    try:
         service_manager.teardown()
     except Exception as exc:
         logger.exception(exc)
