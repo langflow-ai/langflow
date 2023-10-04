@@ -152,7 +152,7 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
         "type": _type,
         "id": proxy_id,
     }
-    if node["data"]["node"]["flow"]:
+    if node["data"]["node"].get("flow"):
         new_target_handle["proxy"] = {
             "field": node["data"]["node"]["template"][field]["proxy"]["field"],
             "id": node["data"]["node"]["template"][field]["proxy"]["id"],
@@ -203,6 +203,6 @@ def get_updated_edges(base_flow, g_nodes, group_node_id):
         if new_edge["source"] == group_node_id:
             new_edge = update_source_handle(new_edge, g_nodes)
 
-        if new_edge["target"] == group_node_id or new_edge["source"] == group_node_id:
+        if edge["target"] == group_node_id or edge["source"] == group_node_id:
             updated_edges.append(new_edge)
     return updated_edges

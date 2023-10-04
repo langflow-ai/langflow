@@ -45,7 +45,6 @@ class Graph:
         """
         if "data" in payload:
             payload = payload["data"]
-            payload = process_flow(payload)
         try:
             nodes = payload["nodes"]
             edges = payload["edges"]
