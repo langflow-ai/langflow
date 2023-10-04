@@ -423,7 +423,8 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name].value.toString() === "{}"
+                !data.node!.template[name].value ||
+                data.node!.template[name].value?.toString() === "{}"
                   ? {
                       yourkey: "value",
                     }
