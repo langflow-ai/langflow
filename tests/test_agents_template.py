@@ -241,7 +241,7 @@ def test_initialize_agent(client: TestClient, logged_in_headers):
         "info": "",
     }
     assert template["tools"] == {
-        "required": False,
+        "required": True,
         "dynamic": False,
         "placeholder": "",
         "show": True,
