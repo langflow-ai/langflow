@@ -90,7 +90,10 @@ class ServiceManager:
             if service is None:
                 continue
             logger.debug(f"Teardown service {service.name}")
-            service.teardown()
+            try:
+                service.teardown()
+            except Exception as exc:
+                logger.exception(exc)
         self.services = {}
         self.factories = {}
         self.dependencies = {}
@@ -150,9 +153,3 @@ def initialize_session_service():
         dependencies=[ServiceType.CACHE_SERVICE],
     )
 
-
-def teardown_services():
-    """
-    Teardown all the services.
-    """
-    service_manager.teardown()
