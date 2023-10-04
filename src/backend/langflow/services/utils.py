@@ -47,7 +47,7 @@ def get_or_create_super_user(session: Session, username, password, is_default):
 
     user = session.query(User).filter(User.username == username).first()
 
-    if user and user.is_superuser and verify_password(password, user.password):
+    if user and user.is_superuser:
         return None  # Superuser already exists
 
     if user and is_default:
