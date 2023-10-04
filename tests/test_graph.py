@@ -332,7 +332,7 @@ def test_find_last_node(grouped_chat_json_flow):
     grouped_chat_data = json.loads(grouped_chat_json_flow).get("data")
     last_node = find_last_node(grouped_chat_data)
     assert last_node is not None  # Replace with the actual expected value
-    assert last_node["id"] == "GroupNodeauZJl"  # Replace with the actual expected value
+    assert last_node["id"] == "LLMChain-pimAb"  # Replace with the actual expected value
 
 
 def test_ungroup_node(grouped_chat_json_flow):
@@ -348,11 +348,12 @@ def test_ungroup_node(grouped_chat_json_flow):
     assert base_flow["nodes"][2]["data"]["node"].get("flow") is None
     # assert the edges are updated
     assert len(base_flow["edges"]) > len(grouped_chat_data["edges"])
-    assert base_flow["edges"][0]["target"] == "LLMChain-ZFPg0"
-    assert base_flow["edges"][1]["source"] == "PromptTemplate-qlJQb"
-    assert base_flow["edges"][1]["target"] == "GroupNodeauZJl"
-    assert base_flow["edges"][2]["source"] == "ChatOpenAI-N0ogT"
-    assert base_flow["edges"][2]["target"] == "GroupNodeauZJl"
+    assert base_flow["edges"][0]["source"] == "ConversationBufferMemory-kUMif"
+    assert base_flow["edges"][0]["target"] == "LLMChain-2P369"
+    assert base_flow["edges"][1]["source"] == "PromptTemplate-Wjk4g"
+    assert base_flow["edges"][1]["target"] == "LLMChain-2P369"
+    assert base_flow["edges"][2]["source"] == "ChatOpenAI-rUJ1b"
+    assert base_flow["edges"][2]["target"] == "LLMChain-2P369"
 
 
 def test_process_flow(grouped_chat_json_flow):
