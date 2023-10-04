@@ -76,7 +76,7 @@ python -m langflow
 or
 
 ```shell
-langflow # or langflow --help
+langflow run # or langflow --help
 ```
 
 ### HuggingFace Spaces
@@ -92,7 +92,7 @@ Langflow provides a command-line interface (CLI) for easy management and configu
 You can run the Langflow using the following command:
 
 ```shell
-langflow [OPTIONS]
+langflow run [OPTIONS]
 ```
 
 Each option is detailed below:
@@ -130,7 +130,6 @@ Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) 
 Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
-
 
 ## Deploy on Railway
 
