@@ -4,6 +4,8 @@ from gunicorn.app.base import BaseApplication  # type: ignore
 class LangflowApplication(BaseApplication):
     def __init__(self, app, options=None):
         self.options = options or {}
+
+        self.options["worker_class"] = "uvicorn.workers.UvicornWorker"
         self.application = app
         super().__init__()
 
