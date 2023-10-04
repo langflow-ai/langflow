@@ -22,7 +22,7 @@ def create_api_key(
     session: Session, api_key_create: ApiKeyCreate, user_id: UUID
 ) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
-    generated_api_key = f"lf-{secrets.token_urlsafe(32)}"
+    generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
     api_key = ApiKey(
         api_key=generated_api_key,
