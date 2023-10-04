@@ -11,35 +11,36 @@ from .getters import get_db_service, get_session, get_settings_service
 from loguru import logger
 
 
-from langflow.services.database import factory as database_factory
-from langflow.services.cache import factory as cache_factory
-from langflow.services.chat import factory as chat_factory
-from langflow.services.settings import factory as settings_factory
-from langflow.services.auth import factory as auth_factory
-from langflow.services.task import factory as task_factory
-from langflow.services.session import factory as session_service_factory  # type: ignore
+def get_factories_and_deps():
+    from langflow.services.database import factory as database_factory
+    from langflow.services.cache import factory as cache_factory
+    from langflow.services.chat import factory as chat_factory
+    from langflow.services.settings import factory as settings_factory
+    from langflow.services.auth import factory as auth_factory
+    from langflow.services.task import factory as task_factory
+    from langflow.services.session import factory as session_service_factory  # type: ignore
 
-FACTORIES_AND_DEPS = [
-    (settings_factory.SettingsServiceFactory(), []),
-    (
-        auth_factory.AuthServiceFactory(),
-        [ServiceType.SETTINGS_SERVICE],
-    ),
-    (
-        database_factory.DatabaseServiceFactory(),
-        [ServiceType.SETTINGS_SERVICE],
-    ),
-    (
-        cache_factory.CacheServiceFactory(),
-        [ServiceType.SETTINGS_SERVICE],
-    ),
-    (chat_factory.ChatServiceFactory(), []),
-    (task_factory.TaskServiceFactory(), []),
-    (
-        session_service_factory.SessionServiceFactory(),
-        [ServiceType.CACHE_SERVICE],
-    ),
-]
+    return [
+        (settings_factory.SettingsServiceFactory(), []),
+        (
+            auth_factory.AuthServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (
+            database_factory.DatabaseServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (
+            cache_factory.CacheServiceFactory(),
+            [ServiceType.SETTINGS_SERVICE],
+        ),
+        (chat_factory.ChatServiceFactory(), []),
+        (task_factory.TaskServiceFactory(), []),
+        (
+            session_service_factory.SessionServiceFactory(),
+            [ServiceType.CACHE_SERVICE],
+        ),
+    ]
 
 
 def get_or_create_super_user(session: Session, username, password, is_default):
@@ -193,7 +194,7 @@ def initialize_services():
     """
     Initialize all the services needed.
     """
-    for factory, dependencies in FACTORIES_AND_DEPS:
+    for factory, dependencies in get_factories_and_deps():
         try:
             service_manager.register_factory(factory, dependencies=dependencies)
         except Exception as exc:
