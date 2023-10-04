@@ -15,7 +15,7 @@ class User(SQLModelSerializable, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
-    profile_image: Optional[str] = Field(default=None)
+    profile_image: Optional[str] = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
     create_at: datetime = Field(default_factory=datetime.utcnow)

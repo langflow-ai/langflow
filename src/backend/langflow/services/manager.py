@@ -99,51 +99,6 @@ class ServiceManager:
 service_manager = ServiceManager()
 
 
-def initialize_services():
-    """
-    Initialize all the services needed.
-    """
-    from langflow.services.database import factory as database_factory
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.chat import factory as chat_factory
-    from langflow.services.settings import factory as settings_factory
-    from langflow.services.session import factory as session_service_factory
-    from langflow.services.auth import factory as auth_factory
-    from langflow.services.task import factory as task_factory
-
-    service_manager.register_factory(settings_factory.SettingsServiceFactory())
-    service_manager.register_factory(
-        database_factory.DatabaseServiceFactory(),
-        dependencies=[ServiceType.SETTINGS_SERVICE],
-    )
-    service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
-
-    service_manager.register_factory(
-        auth_factory.AuthServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
-
-    service_manager.register_factory(chat_factory.ChatServiceFactory())
-    service_manager.register_factory(
-        session_service_factory.SessionServiceFactory(),
-        dependencies=[ServiceType.CACHE_SERVICE],
-    )
-    service_manager.register_factory(
-        task_factory.TaskServiceFactory(),
-    )
-
-    # Test cache connection
-    service_manager.get(ServiceType.CACHE_SERVICE)
-    # Test database connection
-    service_manager.get(ServiceType.DATABASE_SERVICE)
-
-    # Test cache connection
-    service_manager.get(ServiceType.CACHE_SERVICE)
-    # Test database connection
-    service_manager.get(ServiceType.DATABASE_SERVICE)
-
-
 def reinitialize_services():
     """
     Reinitialize all the services needed.

@@ -2,6 +2,7 @@
 
 from langflow.services.database.models.base import SQLModelSerializable
 from pydantic import validator
+
 from sqlmodel import Field, JSON, Column, Relationship
 from uuid import UUID, uuid4
 from typing import Dict, Optional, TYPE_CHECKING
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
     description: Optional[str] = Field(index=True)
-    data: Optional[Dict] = Field(default=None)
+    data: Optional[Dict] = Field(default=None, nullable=True)
 
     @validator("data")
     def validate_json(v):
