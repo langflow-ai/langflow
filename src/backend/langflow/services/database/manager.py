@@ -6,6 +6,7 @@ from langflow.services.database.utils import Result, TableResults
 from langflow.services.getters import get_settings_service
 from sqlalchemy import inspect
 import sqlalchemy as sa
+from sqlalchemy.exc import OperationalError
 from sqlmodel import SQLModel, Session, create_engine
 from loguru import logger
 from alembic.config import Config
@@ -157,20 +158,27 @@ class DatabaseService(Service):
         from sqlalchemy import inspect
 
         inspector = inspect(self.engine)
-        current_tables = ["flow", "user", "apikey"]
         table_names = inspector.get_table_names()
+        current_tables = ["flow", "user", "apikey"]
+
         if table_names and all(table in table_names for table in current_tables):
             logger.debug("Database and tables already exist")
             return
-        logger.debug("Creating database and tables")
-        try:
-            SQLModel.metadata.create_all(self.engine)
-        except Exception as exc:
-            logger.error(f"Error creating database and tables: {exc}")
-            raise RuntimeError("Error creating database and tables") from exc
 
-        # Now check if the table "flow" exists, if not, something went wrong
-        # and we need to create the tables again.
+        logger.debug("Creating database and tables")
+
+        for table in SQLModel.metadata.sorted_tables:
+            try:
+                table.create(self.engine, checkfirst=True)
+            except OperationalError as oe:
+                logger.warning(
+                    f"Table {table} already exists, skipping. Exception: {oe}"
+                )
+            except Exception as exc:
+                logger.error(f"Error creating table {table}: {exc}")
+                raise RuntimeError(f"Error creating table {table}") from exc
+
+        # Now check if the required tables exist, if not, something went wrong.
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
         for table in current_tables:
