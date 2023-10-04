@@ -152,4 +152,3 @@ def initialize_session_service():
         session_service_factory.SessionServiceFactory(),
         dependencies=[ServiceType.CACHE_SERVICE],
     )
-
