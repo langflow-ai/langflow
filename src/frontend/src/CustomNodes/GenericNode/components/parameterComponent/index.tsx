@@ -227,7 +227,7 @@ export default function ParameterComponent({
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
-              id={scapedJSONStringfy(id)}
+              id={proxy?scapedJSONStringfy({...id,proxy}):scapedJSONStringfy(id)}
               isValidConnection={(connection) =>
                 isValidConnection(connection, reactFlowInstance!)
               }

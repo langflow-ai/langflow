@@ -662,7 +662,6 @@ export function generateNodeTemplate(Flow: FlowType) {
 export function generateNodeFromFlow(flow: FlowType,getNodeId:(type:string)=>string): NodeType {
   const { nodes } = flow.data!;
   const outputNode = _.cloneDeep(findLastNode(flow.data!));
-  // console.log(flow)
   const position = getMiddlePoint(nodes);
   let data = _.cloneDeep(flow);
   const id = getNodeId(outputNode?.data.type!)
@@ -750,15 +749,13 @@ export function ungroupNode(
             fieldName: field,
             type,
             id: proxyId,
+            inputTypes: inputTypes
           };
           if (node.data.node?.flow) {
             newTargetHandle.proxy = {
               field: node.data.node.template[field].proxy?.field!,
               id: node.data.node.template[field].proxy?.id!,
             };
-          }
-          if (inputTypes) {
-            newTargetHandle.inputTypes = inputTypes;
           }
           newEdge.data.targetHandle = newTargetHandle;
           newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
@@ -775,7 +772,7 @@ export function ungroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    if (newEdge.target === groupNode.id || newEdge.source === groupNode.id) {
+    if (edge.target === groupNode.id || edge.source === groupNode.id) {
       updatedEdges.push(newEdge);
     }
   });
@@ -819,9 +816,8 @@ export function expandGroupNode(
   groupNode: NodeDataType,
   ReactFlowInstance: ReactFlowInstance
 ) {
-  const { template } = _.cloneDeep(groupNode.node!);
-  const { flow } = groupNode.node!;
-  const gNodes: NodeType[] = _.cloneDeep(flow!.data!.nodes);
+  const { template,flow } = _.cloneDeep(groupNode.node!);
+  const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
@@ -841,15 +837,13 @@ export function expandGroupNode(
             fieldName: field,
             type,
             id: proxyId,
+            inputTypes: inputTypes
           };
           if (node.data.node?.flow) {
             newTargetHandle.proxy = {
               field: node.data.node.template[field].proxy?.field!,
               id: node.data.node.template[field].proxy?.id!,
             };
-          }
-          if (inputTypes) {
-            newTargetHandle.inputTypes = inputTypes;
           }
           newEdge.data.targetHandle = newTargetHandle;
           newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
@@ -866,7 +860,7 @@ export function expandGroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    if (newEdge.target === groupNode.id || newEdge.source === groupNode.id) {
+    if (edge.target === groupNode.id || edge.source === groupNode.id) {
       updatedEdges.push(newEdge);
     }
   });
@@ -875,6 +869,7 @@ export function expandGroupNode(
     let { field, id } = template[key].proxy!;
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
+      let proxy: { id: string; field: string } | undefined;
       let display_name: string;
       let show = gNodes[nodeIndex].data.node!.template[field].show;
       let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
@@ -884,11 +879,20 @@ export function expandGroupNode(
       } else {
         display_name = gNodes[nodeIndex].data.node!.template[field].name;
       }
+      if(gNodes[nodeIndex].data.node!.template[field].proxy){
+        proxy = gNodes[nodeIndex].data.node!.template[field].proxy;
+      }
       gNodes[nodeIndex].data.node!.template[field] = template[key];
       gNodes[nodeIndex].data.node!.template[field].show = show;
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
       gNodes[nodeIndex].selected = false;
+      if(proxy){
+        gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
+      }
+      else{
+        delete gNodes[nodeIndex].data.node!.template[field].proxy
+      }
     }
   });
 

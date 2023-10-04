@@ -71,9 +71,7 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = data.node?.flow
-      ? getGroupStatus(data.node.flow, sseData)
-      : sseData[data.id];
+    const relevantData = sseData[data.id];
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
@@ -258,7 +256,7 @@ export default function GenericNode({
                         type: data.node!.template[templateField].type,
                         id: data.id,
                         fieldName: templateField,
-                        Proxy: data.node!.template[templateField].Proxy,
+                        proxy: data.node!.template[templateField].proxy,
                       })}
                       data={data}
                       setData={setData}
