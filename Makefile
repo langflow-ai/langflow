@@ -19,6 +19,7 @@ coverage:
 		--cov-report term-missing:skip-covered
 
 tests:
+	@make install_backend
 	poetry run pytest tests
 
 format:
@@ -27,23 +28,40 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-# skip .venv folder
-	poetry run mypy --exclude .venv ./src/backend/langflow
+	poetry run mypy src/backend/langflow
 	poetry run black . --check
 	poetry run ruff . --fix
 
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendc:
+	cd src/frontend && rm -rf node_modules package-lock.json && npm install
+
 run_frontend:
 	cd src/frontend && npm start
+
+run_cli:
+	poetry run langflow run --path src/frontend/build
+
+run_cli_debug:
+	poetry run langflow run --path src/frontend/build --log-level debug
+
+setup_devcontainer:
+	make init
+	make build_frontend
+	poetry run langflow --path src/frontend/build
 
 frontend:
 	make install_frontend
 	make run_frontend
 
+frontendc:
+	make install_frontendc
+	make run_frontend
+
 install_backend:
-	poetry install
+	poetry install --extras deploy
 
 backend:
 	make install_backend
@@ -52,7 +70,7 @@ backend:
 build_and_run:
 	echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz && poetry run langflow
+	make build && poetry run pip install dist/*.tar.gz && poetry run langflow run
 
 build_and_install:
 	echo 'Removing dist folder'
@@ -68,17 +86,6 @@ build:
 	make build_frontend
 	poetry build --format sdist
 	rm -rf src/backend/langflow/frontend
-
-lcserve_push:
-	make build_frontend
-	@version=$$(poetry version --short); \
-	lc-serve push --app langflow.lcserve:app --app-dir . \
-		--image-name langflow --image-tag $${version} --verbose --public
-
-lcserve_deploy:
-	@:$(if $(uses),,$(error `uses` is not set. Please run `make uses=... lcserve_deploy`))
-	lc-serve deploy jcloud --app langflow.lcserve:app --app-dir . \
-		--uses $(uses) --config src/backend/langflow/jcloud.yml --verbose
 
 dev:
 	make install_frontend

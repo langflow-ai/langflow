@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain.schema import Document
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 import requests
 from typing import Optional
 
@@ -15,7 +15,6 @@ class PostRequest(CustomComponent):
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "headers": {
             "display_name": "Headers",
-            "field_type": "code",
             "info": "The headers to send with the request.",
         },
         "code": {"show": False},

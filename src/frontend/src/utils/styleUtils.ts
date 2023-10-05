@@ -1,10 +1,15 @@
 import {
+  ArrowUpToLine,
   Bell,
+  BookMarked,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronsUpDown,
   Circle,
   Clipboard,
@@ -17,6 +22,8 @@ import {
   Edit,
   Eraser,
   ExternalLink,
+  Eye,
+  EyeOff,
   File,
   FileDown,
   FileSearch,
@@ -31,19 +38,24 @@ import {
   HelpCircle,
   Home,
   Info,
+  Key,
   Laptop2,
   Layers,
   Lightbulb,
   Link,
   Lock,
   LucideSend,
+  Maximize2,
   Menu,
   MessageCircle,
   MessageSquare,
   MessagesSquare,
+  Minimize2,
+  Minus,
   MoonIcon,
   MoreHorizontal,
   Paperclip,
+  Pencil,
   Plus,
   Redo,
   Rocket,
@@ -51,13 +63,19 @@ import {
   Scissors,
   Search,
   Settings2,
+  Shield,
   Sparkles,
+  Square,
   SunIcon,
   TerminalSquare,
   Trash2,
   Undo,
   Unplug,
   Upload,
+  User,
+  UserCog2,
+  UserMinus2,
+  UserPlus2,
   Users2,
   Variable,
   Wand2,
@@ -66,6 +84,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { FaApple, FaGithub } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -75,7 +94,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
-import GradientSparkles from "../icons/GradientSparkles";
+import { GradientSparkles } from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -92,6 +111,7 @@ import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
+import { iconsType } from "../types/components";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -173,7 +193,8 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Other",
 };
 
-export const nodeIconsLucide = {
+export const nodeIconsLucide: iconsType = {
+  ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   Anthropic: AnthropicIcon,
@@ -206,7 +227,9 @@ export const nodeIconsLucide = {
   SupabaseVectorStore: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
+  VertexAIEmbeddings: VertexAIIcon,
   agents: Rocket,
+  User,
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
@@ -247,6 +270,7 @@ export const nodeIconsLucide = {
   Bell,
   ChevronLeft,
   ChevronDown,
+  Shield,
   Plus,
   Redo,
   Settings2,
@@ -276,5 +300,22 @@ export const nodeIconsLucide = {
   Upload,
   MessageSquare,
   MoreHorizontal,
+  UserMinus2,
+  UserPlus2,
+  Pencil,
+  ChevronsRight,
+  ChevronsLeft,
+  FaGithub,
+  FaApple,
+  EyeOff,
+  Eye,
+  UserCog2,
+  Key,
   Unplug,
+  BookMarked,
+  ChevronUp,
+  Minus,
+  Square,
+  Minimize2,
+  Maximize2,
 };

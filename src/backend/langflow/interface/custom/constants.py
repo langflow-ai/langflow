@@ -1,7 +1,7 @@
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
-from langchain.embeddings.base import Embeddings
+from langchain.schema.embeddings import Embeddings
 from langchain.llms.base import BaseLLM
 from langchain.schema import BaseRetriever, Document
 from langchain.text_splitter import TextSplitter
@@ -45,7 +45,7 @@ DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
 import requests

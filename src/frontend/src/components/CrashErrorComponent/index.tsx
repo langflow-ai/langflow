@@ -1,4 +1,9 @@
-export default function CrashErrorComponent({ error, resetErrorBoundary }) {
+import { crashComponentPropsType } from "../../types/components";
+
+export default function CrashErrorComponent({
+  error,
+  resetErrorBoundary,
+}: crashComponentPropsType): JSX.Element {
   return (
     <div className="fixed left-0 top-0 z-50 flex h-full w-full items-center justify-center bg-foreground bg-opacity-50">
       <div className="flex h-1/3 min-h-fit max-w-4xl flex-col justify-evenly rounded-lg bg-background p-8 text-start shadow-lg">

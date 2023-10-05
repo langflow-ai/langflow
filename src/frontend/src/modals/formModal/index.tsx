@@ -23,7 +23,10 @@ import {
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { getBuildStatus } from "../../controllers/API";
+import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
@@ -34,7 +37,7 @@ export default function FormModal({
   open: boolean;
   setOpen: (open: boolean) => void;
   flow: FlowType;
-}) {
+}): JSX.Element {
   const { tabsState, setTabsState } = useContext(TabsContext);
   const [chatValue, setChatValue] = useState(() => {
     try {
@@ -45,11 +48,11 @@ export default function FormModal({
       const inputKeys = formKeysData.input_keys;
       const handleKeys = formKeysData.handle_keys;
 
-      const keyToUse = Object.keys(inputKeys).find(
-        (k) => !handleKeys.some((j) => j === k) && inputKeys[k] === ""
+      const keyToUse = Object.keys(inputKeys!).find(
+        (key) => !handleKeys?.some((j) => j === key) && inputKeys![key] === ""
       );
 
-      return inputKeys[keyToUse];
+      return inputKeys![keyToUse!];
     } catch (error) {
       console.error(error);
       // return a sensible default or `undefined` if no default is possible
@@ -58,21 +61,24 @@ export default function FormModal({
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const template = useRef(tabsState[flow.id].formKeysData.template);
   const { reactFlowInstance } = useContext(typesContext);
+  const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
-  const messagesRef = useRef(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
   const id = useRef(flow.id);
   const tabsStateFlowId = tabsState[flow.id];
   const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
   const [chatKey, setChatKey] = useState(() => {
     if (tabsState[flow.id]?.formKeysData?.input_keys) {
-      return Object.keys(tabsState[flow.id].formKeysData.input_keys).find(
-        (k) =>
-          !tabsState[flow.id].formKeysData.handle_keys.some((j) => j === k) &&
-          tabsState[flow.id].formKeysData.input_keys[k] === ""
+      return Object.keys(tabsState[flow.id].formKeysData.input_keys!).find(
+        (key) =>
+          !tabsState[flow.id].formKeysData.handle_keys!.some(
+            (j) => j === key
+          ) && tabsState[flow.id].formKeysData.input_keys![key] === ""
       );
     }
     // TODO: return a sensible default
@@ -120,12 +126,13 @@ export default function FormModal({
   function updateLastMessage({
     str,
     thought,
+    prompt,
     end = false,
     files,
   }: {
     str?: string;
     thought?: string;
-    // end param default is false
+    prompt?: string;
     end?: boolean;
     files?: Array<any>;
   }) {
@@ -145,42 +152,80 @@ export default function FormModal({
       if (files) {
         newChat[newChat.length - 1].files = files;
       }
+      if (prompt) {
+        newChat[newChat.length - 2].template = prompt;
+      }
       return newChat;
     });
   }
 
-  function handleOnClose(event: CloseEvent) {
+  function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
+      //check if the user has been logged out, if so close the chat when the user is redirected to the login page
+      if (window.location.href.includes("login")) {
+        setOpen(false);
+        ws.current?.close();
+        return;
+      }
+
+      getBuildStatus(flow.id)
+        .then((response) => {
+          if (response.data.built) {
+            connectWS();
+          } else {
+            setErrorData({
+              title: "Please build the flow again before using the chat.",
+            });
+          }
+        })
+        .catch((error) => {
+          setErrorData({
+            title: error.data?.detail ? error.data.detail : error.message,
+          });
+        });
       setErrorData({ title: event.reason });
       setTimeout(() => {
-        connectWS();
         setLockChat(false);
       }, 1000);
     }
   }
-
-  function getWebSocketUrl(chatId, isDevelopment = false) {
-    const isSecureProtocol = window.location.protocol === "https:";
+  //TODO improve check of user authentication
+  function getWebSocketUrl(
+    chatId: string,
+    isDevelopment: boolean = false
+  ): string {
+    const isSecureProtocol =
+      window.location.protocol === "https:" || window.location.port === "443";
     const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
     const host = isDevelopment ? "localhost:7860" : window.location.host;
     const chatEndpoint = `/api/v1/chat/${chatId}`;
 
     return `${
       isDevelopment ? "ws" : webSocketProtocol
-    }://${host}${chatEndpoint}`;
+    }://${host}${chatEndpoint}?token=${encodeURIComponent(accessToken!)}`;
   }
 
   function handleWsMessage(data: any) {
-    if (Array.isArray(data)) {
+    if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
+        console.log(data);
         let newChatHistory: ChatMessageType[] = [];
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].type === "prompt" && data[i].prompt) {
+            if (data[i - 1] && !data[i - 1].is_bot) {
+              data[i - 1].prompt = data[i].prompt;
+              template.current = data[i].prompt;
+            }
+          }
+        }
+        data = data.filter((item: any) => item.type !== "prompt");
         data.forEach(
           (chatItem: {
             intermediate_steps?: string;
             is_bot: boolean;
             message: string;
-            template: string;
+            prompt?: string;
             type: string;
             chatKey: string;
             files?: Array<any>;
@@ -191,7 +236,7 @@ export default function FormModal({
                   ? {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                       chatKey: chatItem.chatKey,
@@ -199,7 +244,7 @@ export default function FormModal({
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       chatKey: chatItem.chatKey,
                     }
@@ -211,7 +256,7 @@ export default function FormModal({
       });
     }
     if (data.type === "start") {
-      addChatHistory("", false, chatKey);
+      addChatHistory("", false, chatKey!);
       isStream = true;
     }
     if (data.type === "end") {
@@ -231,16 +276,23 @@ export default function FormModal({
           files: data.files,
         });
       }
+      if (data.type === "prompt" && data.prompt) {
+        template.current = data.prompt;
+      }
 
       setLockChat(false);
       isStream = false;
     }
     if (data.type === "stream" && isStream) {
-      updateLastMessage({ str: data.message });
+      if (data.prompt) {
+        updateLastMessage({ prompt: data.prompt });
+      } else {
+        updateLastMessage({ str: data.message });
+      }
     }
   }
 
-  function connectWS() {
+  function connectWS(): void {
     try {
       const urlWs = getWebSocketUrl(
         id.current,
@@ -252,7 +304,6 @@ export default function FormModal({
       };
       newWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log("Received data:", data);
         handleWsMessage(data);
         //get chat history
       };
@@ -260,19 +311,8 @@ export default function FormModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        console.log(ev, "error");
-        if (flow.id === "") {
-          connectWS();
-        } else {
-          setErrorData({
-            title: "There was an error on web connection, please: ",
-            list: [
-              "Refresh the page",
-              "Use a new flow tab",
-              "Check if the backend is up",
-            ],
-          });
-        }
+        console.log(ev);
+        connectWS();
       };
       ws.current = newWs;
     } catch (error) {
@@ -286,13 +326,21 @@ export default function FormModal({
   useEffect(() => {
     connectWS();
     return () => {
-      console.log("unmount");
       console.log(ws);
       if (ws.current) {
         ws.current.close();
       }
     };
     // do not add connectWS on dependencies array
+  }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (ws.current) {
+        console.log("closing ws");
+        ws.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -307,15 +355,15 @@ export default function FormModal({
     // do not add connectWS on dependencies array
   }, [lockChat]);
 
-  async function sendAll(data: sendAllProps) {
+  async function sendAll(data: sendAllProps): Promise<void> {
     try {
       if (ws) {
-        ws.current.send(JSON.stringify(data));
+        ws.current?.send(JSON.stringify(data));
       }
     } catch (error) {
       setErrorData({
         title: "There was an error sending the message",
-        list: [error.message],
+        list: [(error as { message: string }).message],
       });
       setChatValue(data.inputs);
       connectWS();
@@ -326,7 +374,7 @@ export default function FormModal({
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open && ref.current) {
@@ -334,30 +382,30 @@ export default function FormModal({
     }
   }, [open]);
 
-  function sendMessage() {
-    let nodeValidationErrors = validateNodes(reactFlowInstance);
+  function sendMessage(): void {
+    let nodeValidationErrors = validateNodes(
+      reactFlowInstance!.getNodes(),
+      reactFlowInstance!.getEdges()
+    );
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;
       setChatValue("");
       const message = inputs;
-      addChatHistory(
-        message,
-        true,
-        chatKey,
-        tabsState[flow.id].formKeysData.template
-      );
+      addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
-        ...reactFlowInstance.toObject(),
-        inputs: inputs,
+        ...reactFlowInstance?.toObject()!,
+        inputs: inputs!,
         chatHistory,
         name: flow.name,
         description: flow.description,
+        chatKey: chatKey!,
       });
-      setTabsState((old) => {
+      //@ts-ignore
+      setTabsState((old: TabsState) => {
         if (!chatKey) return old;
         let newTabsState = _.cloneDeep(old);
-        newTabsState[id.current].formKeysData.input_keys[chatKey] = "";
+        newTabsState[id.current].formKeysData.input_keys![chatKey] = "";
         return newTabsState;
       });
     } else {
@@ -367,22 +415,22 @@ export default function FormModal({
       });
     }
   }
-  function clearChat() {
+  function clearChat(): void {
     setChatHistory([]);
-    ws.current.send(JSON.stringify({ clear_history: true }));
+    template.current = tabsState[id.current].formKeysData.template;
+    ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
 
   function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
       setChatKey(i);
-      setChatValue(tabsState[flow.id].formKeysData.input_keys[i]);
+      setChatValue(tabsState[flow.id].formKeysData.input_keys![i]);
     } else {
-      setChatKey(null);
+      setChatKey(null!);
       setChatValue("");
     }
   }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger hidden></DialogTrigger>
@@ -424,14 +472,14 @@ export default function FormModal({
 
               {tabsState[id.current]?.formKeysData?.input_keys
                 ? Object.keys(
-                    tabsState[id.current].formKeysData.input_keys
-                  ).map((i, k) => (
-                    <div className="file-component-accordion-div" key={k}>
+                    tabsState[id.current].formKeysData.input_keys!
+                  ).map((key, index) => (
+                    <div className="file-component-accordion-div" key={index}>
                       <AccordionComponent
                         trigger={
                           <div className="file-component-badge-div">
                             <Badge variant="gray" size="md">
-                              {i}
+                              {key}
                             </Badge>
 
                             <div
@@ -441,24 +489,26 @@ export default function FormModal({
                               }}
                             >
                               <ToggleShadComponent
-                                enabled={chatKey === i}
+                                enabled={chatKey === key}
                                 setEnabled={(value) =>
-                                  handleOnCheckedChange(value, i)
+                                  handleOnCheckedChange(value, key)
                                 }
                                 size="small"
                                 disabled={tabsState[
                                   id.current
-                                ].formKeysData.handle_keys.some((t) => t === i)}
+                                ].formKeysData.handle_keys!.some(
+                                  (t) => t === key
+                                )}
                               />
                             </div>
                           </div>
                         }
-                        key={k}
-                        keyValue={i}
+                        key={index}
+                        keyValue={key}
                       >
                         <div className="file-component-tab-column">
-                          {tabsState[id.current].formKeysData.handle_keys.some(
-                            (t) => t === i
+                          {tabsState[id.current].formKeysData.handle_keys!.some(
+                            (t) => t === key
                           ) && (
                             <div className="font-normal text-muted-foreground ">
                               Source: Component
@@ -467,18 +517,22 @@ export default function FormModal({
                           <Textarea
                             className="custom-scroll"
                             value={
-                              tabsState[id.current].formKeysData.input_keys[i]
+                              tabsState[id.current].formKeysData.input_keys![
+                                key
+                              ]
                             }
                             onChange={(e) => {
-                              setTabsState((old) => {
+                              //@ts-ignore
+                              setTabsState((old: TabsState) => {
                                 let newTabsState = _.cloneDeep(old);
                                 newTabsState[
                                   id.current
-                                ].formKeysData.input_keys[i] = e.target.value;
+                                ].formKeysData.input_keys![key] =
+                                  e.target.value;
                                 return newTabsState;
                               });
                             }}
-                            disabled={chatKey === i}
+                            disabled={chatKey === key}
                             placeholder="Enter text..."
                           ></Textarea>
                         </div>
@@ -486,35 +540,37 @@ export default function FormModal({
                     </div>
                   ))
                 : null}
-              {tabsState[id.current].formKeysData.memory_keys.map((i, k) => (
-                <div className="file-component-accordion-div" key={k}>
-                  <AccordionComponent
-                    trigger={
-                      <div className="file-component-badge-div">
-                        <Badge variant="gray" size="md">
-                          {i}
-                        </Badge>
-                        <div className="-mb-1">
-                          <ToggleShadComponent
-                            enabled={chatKey === i}
-                            setEnabled={() => {}}
-                            size="small"
-                            disabled={true}
-                          />
+              {tabsState[id.current].formKeysData.memory_keys!.map(
+                (key, index) => (
+                  <div className="file-component-accordion-div" key={index}>
+                    <AccordionComponent
+                      trigger={
+                        <div className="file-component-badge-div">
+                          <Badge variant="gray" size="md">
+                            {key}
+                          </Badge>
+                          <div className="-mb-1">
+                            <ToggleShadComponent
+                              enabled={chatKey === key}
+                              setEnabled={() => {}}
+                              size="small"
+                              disabled={true}
+                            />
+                          </div>
+                        </div>
+                      }
+                      key={index}
+                      keyValue={key}
+                    >
+                      <div className="file-component-tab-column">
+                        <div className="font-normal text-muted-foreground ">
+                          Source: Memory
                         </div>
                       </div>
-                    }
-                    key={k}
-                    keyValue={i}
-                  >
-                    <div className="file-component-tab-column">
-                      <div className="font-normal text-muted-foreground ">
-                        Source: Memory
-                      </div>
-                    </div>
-                  </AccordionComponent>
-                </div>
-              ))}
+                    </AccordionComponent>
+                  </div>
+                )
+              )}
             </div>
             <div className="eraser-column-arrangement">
               <div className="eraser-size">
@@ -534,14 +590,14 @@ export default function FormModal({
                 </div>
                 <div ref={messagesRef} className="chat-message-div">
                   {chatHistory.length > 0 ? (
-                    chatHistory.map((c, i) => (
+                    chatHistory.map((chat, index) => (
                       <ChatMessage
                         lockChat={lockChat}
-                        chat={c}
+                        chat={chat}
                         lastMessage={
-                          chatHistory.length - 1 === i ? true : false
+                          chatHistory.length - 1 === index ? true : false
                         }
-                        key={i}
+                        key={index}
                       />
                     ))
                   ) : (
@@ -578,10 +634,11 @@ export default function FormModal({
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
-                        setTabsState((old) => {
+                        //@ts-ignore
+                        setTabsState((old: TabsState) => {
                           let newTabsState = _.cloneDeep(old);
-                          newTabsState[id.current].formKeysData.input_keys[
-                            chatKey
+                          newTabsState[id.current].formKeysData.input_keys![
+                            chatKey!
                           ] = value;
                           return newTabsState;
                         });

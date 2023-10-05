@@ -5,7 +5,7 @@ from uuid import uuid4
 
 
 from fastapi import HTTPException
-from langflow.database.models.flow import Flow, FlowCreate
+from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.component import (
     Component,
@@ -21,7 +21,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
 import requests
@@ -473,15 +473,16 @@ def test_build_config_no_code():
 
 
 @pytest.fixture
-def component():
+def component(client, active_user):
     return CustomComponent(
+        user_id=active_user.id,
         field_config={
             "fields": {
                 "llm": {"type": "str"},
                 "url": {"type": "str"},
                 "year": {"type": "int"},
             }
-        }
+        },
     )
 
 
@@ -517,13 +518,13 @@ def db(app):
     app.db.drop_all()
 
 
-def test_list_flows_return_type(component, session_getter):
-    flows = component.list_flows(get_session=session_getter)
+def test_list_flows_return_type(component):
+    flows = component.list_flows()
     assert isinstance(flows, list)
 
 
-def test_list_flows_flow_objects(component, session_getter):
-    flows = component.list_flows(get_session=session_getter)
+def test_list_flows_flow_objects(component):
+    flows = component.list_flows()
     assert all(isinstance(flow, Flow) for flow in flows)
 
 

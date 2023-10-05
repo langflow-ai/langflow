@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
 
-# def test_chains_settings(client: TestClient):
-#     response = client.get("api/v1/all")
+# def test_chains_settings(client: TestClient, logged_in_headers):
+#     response = client.get("api/v1/all", headers=logged_in_headers)
 #     assert response.status_code == 200
 #     json_response = response.json()
 #     chains = json_response["chains"]
@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 
 
 # Test the ConversationChain object
-def test_conversation_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_conversation_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -102,8 +102,8 @@ def test_conversation_chain(client: TestClient):
     )
 
 
-def test_llm_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_llm_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -173,8 +173,8 @@ def test_llm_chain(client: TestClient):
     }
 
 
-def test_llm_checker_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_llm_checker_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -207,8 +207,8 @@ def test_llm_checker_chain(client: TestClient):
     assert chain["description"] == ""
 
 
-def test_llm_math_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_llm_math_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -299,8 +299,8 @@ def test_llm_math_chain(client: TestClient):
     )
 
 
-def test_series_character_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_series_character_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -367,8 +367,8 @@ def test_series_character_chain(client: TestClient):
     )
 
 
-def test_mid_journey_prompt_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_mid_journey_prompt_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]
@@ -408,8 +408,8 @@ def test_mid_journey_prompt_chain(client: TestClient):
     )
 
 
-def test_time_travel_guide_chain(client: TestClient):
-    response = client.get("api/v1/all")
+def test_time_travel_guide_chain(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     json_response = response.json()
     chains = json_response["chains"]

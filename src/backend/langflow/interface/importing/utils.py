@@ -3,7 +3,7 @@
 import importlib
 from typing import Any, Type
 
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.agents import Agent
 from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
@@ -144,6 +144,8 @@ def import_chain(chain: str) -> Type[Chain]:
 
     if chain in CUSTOM_CHAINS:
         return CUSTOM_CHAINS[chain]
+    if chain == "SQLDatabaseChain":
+        return import_class("langchain_experimental.sql.SQLDatabaseChain")
     return import_class(f"langchain.chains.{chain}")
 
 
