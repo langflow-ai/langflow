@@ -31,13 +31,11 @@ function ApiInterceptor() {
               logout();
               navigate("/login");
             }
-
-            const res = await renewAccessToken(refreshToken);
-            if (res?.data?.access_token && res?.data?.refresh_token) {
-              login(res?.data?.access_token, res?.data?.refresh_token);
-            }
-
             try {
+              const res = await renewAccessToken(refreshToken);
+              if (res?.data?.access_token && res?.data?.refresh_token) {
+                login(res?.data?.access_token, res?.data?.refresh_token);
+              }
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
                 error.config.headers["Authorization"] = `Bearer ${cookies.get(
@@ -48,6 +46,10 @@ function ApiInterceptor() {
               }
             } catch (error) {
               if (axios.isAxiosError(error) && error.response?.status === 401) {
+                logout();
+                navigate("/login");
+              } else {
+                console.error(error);
                 logout();
                 navigate("/login");
               }
