@@ -506,7 +506,6 @@ export function validateSelection(
     // first creates a set of all the nodes ids
     let nodesSet = new Set(selection.nodes.map((n) => n.id));
     // then filter the edges that are connected to the nodes in the set
-    console.log(nodesSet)
     let connectedEdges = selection.edges.filter(
       (e) => nodesSet.has(e.source) && nodesSet.has(e.target)
     );
