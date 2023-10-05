@@ -202,9 +202,9 @@ class ChatService(Service):
 
             while True:
                 json_payload = await websocket.receive_json()
-                try:
+                if isinstance(json_payload, str):
                     payload = orjson.loads(json_payload)
-                except Exception as exc:
+                elif isinstance(json_payload, dict):
                     payload = json_payload
                 if "clear_history" in payload and payload["clear_history"]:
                     self.chat_history.history[client_id] = []
