@@ -35,6 +35,9 @@ def pytest_configure():
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = (
         Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
     )
+    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
+    )
 
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
@@ -116,6 +119,12 @@ def grouped_chat_json_flow():
 @pytest.fixture
 def one_grouped_chat_json_flow():
     with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def vector_store_grouped_json_flow():
+    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH, "r") as f:
         return f.read()
 
 

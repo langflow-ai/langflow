@@ -401,6 +401,24 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     )
 
 
+def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
+    grouped_chat_data = json.loads(vector_store_grouped_json_flow).get("data")
+    nodes = grouped_chat_data["nodes"]
+    assert len(nodes) == 4
+    # There are two group nodes in this flow
+    # One of them is inside the other totalling 7 nodes
+    # 4 nodes grouped, one of these turns into 1 normal node and 1 group node
+    # This group node has 2 nodes inside it
+
+    processed_flow = process_flow(grouped_chat_data)
+    assert processed_flow is not None
+    processed_nodes = processed_flow["nodes"]
+    assert len(processed_nodes) == 7
+    assert isinstance(processed_flow, dict)
+    assert "nodes" in processed_flow
+    assert "edges" in processed_flow
+
+
 def test_update_template(sample_template, sample_nodes):
     # Making a deep copy to keep original sample_nodes unchanged
     nodes_copy = copy.deepcopy(sample_nodes)
