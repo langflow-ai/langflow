@@ -1,3 +1,4 @@
+from langflow.services.getters import get_settings_service
 from langflow.utils.logger import logger
 
 ### Temporary implementation
@@ -16,19 +17,27 @@ class LangfuseInstance:
 
     @classmethod
     def create(cls):
-        logger.debug("Checking Langfuse credentials")
-        from langflow.settings import settings
-        from langfuse import Langfuse  # type: ignore
+        try:
+            logger.debug("Creating Langfuse instance")
+            from langfuse import Langfuse  # type: ignore
 
-        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
-            logger.debug("Langfuse credentials found")
-            cls._instance = Langfuse(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY,
-                host=settings.LANGFUSE_HOST,
-            )
-        else:
-            logger.debug("No Langfuse credentials found")
+            settings_manager = get_settings_service()
+
+            if (
+                settings_manager.settings.LANGFUSE_PUBLIC_KEY
+                and settings_manager.settings.LANGFUSE_SECRET_KEY
+            ):
+                logger.debug("Langfuse credentials found")
+                cls._instance = Langfuse(
+                    public_key=settings_manager.settings.LANGFUSE_PUBLIC_KEY,
+                    secret_key=settings_manager.settings.LANGFUSE_SECRET_KEY,
+                    host=settings_manager.settings.LANGFUSE_HOST,
+                )
+            else:
+                logger.debug("No Langfuse credentials found")
+                cls._instance = None
+        except ImportError:
+            logger.debug("Langfuse not installed")
             cls._instance = None
 
     @classmethod

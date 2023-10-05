@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -15,13 +15,9 @@ import {
 import { TypeModal } from "../../constants/enums";
 import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
+import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import {
-  classNames,
-  getRandomKeyByssmm,
-  varHighlightHTML,
-} from "../../utils/utils";
+import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -34,39 +30,30 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
-}: {
-  field_name?: string;
-  setValue: (value: string) => void;
-  value: string;
-  buttonText: string;
-  modalTitle: string;
-  type: number;
-  children: ReactNode;
-  nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType) => void;
-}) {
+}: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
+  const [modalOpen, setModalOpen] = useState(false);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
-  const [wordsHighlight, setWordsHighlight] = useState([]);
+  const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
   const { setErrorData, setSuccessData, setNoticeData } =
     useContext(alertContext);
   const ref = useRef();
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
-  function checkVariables(valueToCheck) {
+  function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
-    const matches = [];
+    const matches: string[] = [];
     let match;
     while ((match = regex.exec(valueToCheck))) {
       matches.push(`{${match[1]}}`);
     }
 
-    let invalid_chars = [];
-    let fixed_variables = [];
+    let invalid_chars: string[] = [];
+    let fixed_variables: string[] = [];
     let input_variables = matches;
     for (let variable of input_variables) {
       let new_var = variable;
@@ -99,7 +86,7 @@ export default function GenericModal({
 
   useEffect(() => {
     setInputValue(value);
-  }, [value]);
+  }, [value, modalOpen]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
@@ -107,20 +94,7 @@ export default function GenericModal({
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
 
-  const TextAreaContentView = () => {
-    return (
-      <SanitizedHTMLWrapper
-        className={getClassByNumberLength()}
-        content={coloredContent}
-        onClick={() => {
-          setIsEdit(true);
-        }}
-        suppressWarning={true}
-      />
-    );
-  };
-
-  function getClassByNumberLength() {
+  function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
       sumOfCaracteres = sumOfCaracteres + element.replace(/[{}]/g, "").length;
@@ -135,19 +109,35 @@ export default function GenericModal({
 
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
+        // if field_name is an empty string, then we need to set it
+        // to the first key of the custom_fields object
+        if (field_name === "") {
+          console.log(apiReturn.data?.frontend_node?.custom_fields);
+          field_name = Array.isArray(
+            apiReturn.data?.frontend_node?.custom_fields?.[""]
+          )
+            ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
+            : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
+        }
         if (apiReturn.data) {
-          setValue(inputValue);
-          apiReturn.data.frontend_node["template"]["template"]["value"] =
-            inputValue;
-          setNodeClass!(apiReturn?.data?.frontend_node);
-
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
             });
+            setModalOpen(false);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
+            setValue(inputValue);
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
+            }
           } else {
             setIsEdit(false);
             setSuccessData({
@@ -156,8 +146,13 @@ export default function GenericModal({
             if (
               JSON.stringify(apiReturn.data?.frontend_node) !==
               JSON.stringify({})
-            ) {
-              setModalOpen(closeModal);
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
+            setModalOpen(closeModal);
+            setValue(inputValue);
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
             }
           }
         } else {
@@ -168,15 +163,14 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
-          list: [error?.response?.data?.detail],
+          list: [error.toString()],
         });
       });
   }
-
-  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <BaseModal
@@ -223,9 +217,9 @@ export default function GenericModal({
                   setIsEdit(false);
                 }}
                 autoFocus
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  checkVariables(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
+                  checkVariables(event.target.value);
                 }}
                 placeholder="Type message here."
                 onKeyDown={(e) => {
@@ -233,14 +227,22 @@ export default function GenericModal({
                 }}
               />
             ) : type === TypeModal.PROMPT && !isEdit ? (
-              <TextAreaContentView />
+              <SanitizedHTMLWrapper
+                className={getClassByNumberLength()}
+                content={coloredContent}
+                onClick={() => {
+                  setIsEdit(true);
+                }}
+                suppressWarning={true}
+              />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
+                //@ts-ignore
                 ref={ref}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
+                onChange={(event) => {
+                  setInputValue(event.target.value);
                 }}
                 placeholder="Type message here."
                 onKeyDown={(e) => {
@@ -271,7 +273,7 @@ export default function GenericModal({
 
                       {wordsHighlight.map((word, index) => (
                         <ShadTooltip
-                          key={getRandomKeyByssmm() + index}
+                          key={index}
                           content={word.replace(/[{}]/g, "")}
                           asChild={false}
                         >

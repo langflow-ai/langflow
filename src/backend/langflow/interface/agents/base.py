@@ -5,9 +5,10 @@ from langchain.agents import types
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
-from langflow.settings import settings
+from langflow.services.getters import get_settings_service
+
 from langflow.template.frontend_node.agents import AgentFrontendNode
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 
 
@@ -53,13 +54,17 @@ class AgentCreator(LangChainTypeCreator):
     # Now this is a generator
     def to_list(self) -> List[str]:
         names = []
+        settings_service = get_settings_service()
         for _, agent in self.type_to_loader_dict.items():
             agent_name = (
                 agent.function_name()
                 if hasattr(agent, "function_name")
                 else agent.__name__
             )
-            if agent_name in settings.AGENTS or settings.DEV:
+            if (
+                agent_name in settings_service.settings.AGENTS
+                or settings_service.settings.DEV
+            ):
                 names.append(agent_name)
         return names
 

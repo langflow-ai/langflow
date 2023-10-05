@@ -1,7 +1,7 @@
 import os
 import ast
 import zlib
-from langflow.utils.logger import logger
+from loguru import logger
 
 
 class CustomComponentPathValueError(ValueError):

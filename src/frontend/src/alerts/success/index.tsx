@@ -7,7 +7,7 @@ export default function SuccessAlert({
   title,
   id,
   removeAlert,
-}: SuccessAlertType) {
+}: SuccessAlertType): JSX.Element {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {

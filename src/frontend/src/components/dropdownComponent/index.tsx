@@ -11,7 +11,7 @@ export default function Dropdown({
   editNode = false,
   numberOfOptions = 0,
   apiModal = false,
-}: DropDownComponentType) {
+}: DropDownComponentType): JSX.Element {
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
   );

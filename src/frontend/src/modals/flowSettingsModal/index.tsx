@@ -3,34 +3,29 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
   open,
   setOpen,
-}: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}) {
-  const { setSuccessData } = useContext(alertContext);
+}: FlowSettingsPropsType): JSX.Element {
   const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
-    setName(flow.name);
-    setDescription(flow.description);
-  }, [flow.name, flow.description]);
-  const [name, setName] = useState(flow.name);
-  const [description, setDescription] = useState(flow.description);
+    setName(flow!.name);
+    setDescription(flow!.description);
+  }, [flow!.name, flow!.description]);
+  const [name, setName] = useState(flow!.name);
+  const [description, setDescription] = useState(flow!.description);
   const [invalidName, setInvalidName] = useState(false);
 
-  function handleClick() {
-    let savedFlow = flows.find((f) => f.id === tabId);
-    savedFlow.name = name;
-    savedFlow.description = description;
-    saveFlow(savedFlow);
-    setSuccessData({ title: "Changes saved successfully" });
+  function handleClick(): void {
+    let savedFlow = flows.find((flow) => flow.id === tabId);
+    savedFlow!.name = name;
+    savedFlow!.description = description;
+    saveFlow(savedFlow!);
     setOpen(false);
   }
   return (
@@ -49,7 +44,6 @@ export default function FlowSettingsModal({
           tabId={tabId}
           setName={setName}
           setDescription={setDescription}
-          updateFlow={updateFlow}
         />
       </BaseModal.Content>
 
