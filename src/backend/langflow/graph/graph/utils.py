@@ -80,8 +80,11 @@ def update_template(template, g_nodes):
     Returns:
         None
     """
-    for key in template.keys():
-        field, id_ = template[key]["proxy"]
+    for _, value in template.items():
+        if not value.get("proxy"):
+            continue
+        proxy_dict = value["proxy"]
+        field, id_ = proxy_dict["field"], proxy_dict["id"]
         node_index = next((i for i, n in enumerate(g_nodes) if n["id"] == id_), -1)
         if node_index != -1:
             display_name = None
@@ -98,7 +101,7 @@ def update_template(template, g_nodes):
                     "name"
                 ]
 
-            g_nodes[node_index]["data"]["node"]["template"][field] = template[key]
+            g_nodes[node_index]["data"]["node"]["template"][field] = value
             g_nodes[node_index]["data"]["node"]["template"][field]["show"] = show
             g_nodes[node_index]["data"]["node"]["template"][field][
                 "advanced"
