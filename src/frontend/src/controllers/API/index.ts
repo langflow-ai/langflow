@@ -399,7 +399,6 @@ export async function renewAccessToken(token: string) {
       return await api.post(`${BASE_URL_API}refresh?token=${token}`);
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
