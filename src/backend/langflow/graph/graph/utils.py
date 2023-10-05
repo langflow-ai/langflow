@@ -2,11 +2,10 @@ from collections import deque
 import copy
 
 
-def find_last_node(data):
+def find_last_node(nodes, edges):
     """
     This function receives a flow and returns the last node.
     """
-    nodes, edges = data["nodes"], data["edges"]
     return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
 
 
@@ -29,7 +28,9 @@ def ungroup_node(group_node_data, base_flow):
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
-    updated_edges = get_updated_edges(base_flow, g_nodes, group_node_data["id"])
+    updated_edges = get_updated_edges(
+        base_flow, g_nodes, g_edges, group_node_data["id"]
+    )
 
     # Update template values
     update_template(template, g_nodes)
@@ -183,7 +184,7 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node):
     new_edge["data"]["targetHandle"] = new_target_handle
 
 
-def update_source_handle(new_edge, flow_data):
+def update_source_handle(new_edge, g_nodes, g_edges):
     """
     Updates the source handle of a given edge to the last node in the flow data.
 
@@ -194,7 +195,7 @@ def update_source_handle(new_edge, flow_data):
     Returns:
         dict: The updated edge with the new source handle.
     """
-    last_node = copy.deepcopy(find_last_node(flow_data))
+    last_node = copy.deepcopy(find_last_node(g_nodes, g_edges))
     new_edge["source"] = last_node["id"]
     new_source_handle = new_edge["data"]["sourceHandle"]
     new_source_handle["id"] = last_node["id"]
@@ -202,7 +203,7 @@ def update_source_handle(new_edge, flow_data):
     return new_edge
 
 
-def get_updated_edges(base_flow, g_nodes, group_node_id):
+def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
     """
     Given a base flow, a list of graph nodes and a group node id, returns a list of updated edges.
     An updated edge is an edge that has its target or source handle updated based on the group node id.
@@ -222,7 +223,7 @@ def get_updated_edges(base_flow, g_nodes, group_node_id):
             new_edge = update_target_handle(new_edge, g_nodes, group_node_id)
 
         if new_edge["source"] == group_node_id:
-            new_edge = update_source_handle(new_edge, base_flow)
+            new_edge = update_source_handle(new_edge, g_nodes, g_edges)
 
         if edge["target"] == group_node_id or edge["source"] == group_node_id:
             updated_edges.append(new_edge)
