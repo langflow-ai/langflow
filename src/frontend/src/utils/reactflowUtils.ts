@@ -54,6 +54,9 @@ export function cleanEdges({
           id: targetNode.data.id,
           inputTypes: targetNode.data.node!.template[field]?.input_types,
         };
+        if(targetNode.data.node!.template[field]?.proxy){
+          id.proxy = targetNode.data.node!.template[field]?.proxy
+        }
         if (scapedJSONStringfy(id) !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
@@ -819,6 +822,7 @@ export function expandGroupNode(
   const { template,flow } = _.cloneDeep(groupNode.node!);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
+  console.log(gEdges)
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   ReactFlowInstance.getEdges().forEach((edge) => {
@@ -907,6 +911,7 @@ export function expandGroupNode(
     ...gEdges,
     ...updatedEdges,
   ];
+  console.log(edges)
   ReactFlowInstance.setNodes(nodes);
   ReactFlowInstance.setEdges(edges);
 }
