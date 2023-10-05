@@ -1,14 +1,16 @@
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Union
+from uuid import UUID
 from fastapi import HTTPException
 from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.services.getters import get_db_service
 from langflow.interface.custom.utils import extract_inner_type
 
 from langflow.utils import validate
 
-from langflow.database.base import session_getter
-from langflow.database.models.flow import Flow
+from langflow.services.database.utils import session_getter
+from langflow.services.database.models.flow import Flow
 from pydantic import Extra
 import yaml
 
@@ -21,6 +23,7 @@ class CustomComponent(Component, extra=Extra.allow):
     function: Optional[Callable] = None
     return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
+    user_id: Optional[Union[UUID, str]] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -92,7 +95,20 @@ class CustomComponent(Component, extra=Extra.allow):
 
         build_method = build_methods[0]
 
-        return build_method["args"]
+        args = build_method["args"]
+        for arg in args:
+            if arg.get("type") == "prompt":
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Type hint Error",
+                        "traceback": (
+                            "Prompt type is not supported in the build method."
+                            " Try using PromptTemplate instead."
+                        ),
+                    },
+                )
+        return args
 
     @property
     def get_function_entrypoint_return_type(self) -> List[str]:
@@ -173,22 +189,29 @@ class CustomComponent(Component, extra=Extra.allow):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices_with_caching
+        from langflow.processing.process import build_sorted_vertices
         from langflow.processing.process import process_tweaks
 
-        with session_getter() as session:
+        db_service = get_db_service()
+        with session_getter(db_service) as session:
             graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
         if not graph_data:
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices_with_caching(graph_data)
+        return build_sorted_vertices(graph_data)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
-        get_session = get_session or session_getter
-        with get_session() as session:
-            flows = session.query(Flow).all()
-        return flows
+        if not self.user_id:
+            raise ValueError("Session is invalid")
+        try:
+            get_session = get_session or session_getter
+            db_service = get_db_service()
+            with get_session(db_service) as session:
+                flows = session.query(Flow).filter(Flow.user_id == self.user_id).all()
+            return flows
+        except Exception as e:
+            raise ValueError("Session is invalid") from e
 
     def get_flow(
         self,
@@ -199,12 +222,16 @@ class CustomComponent(Component, extra=Extra.allow):
         get_session: Optional[Callable] = None,
     ) -> Flow:
         get_session = get_session or session_getter
-
-        with get_session() as session:
+        db_service = get_db_service()
+        with get_session(db_service) as session:
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = session.query(Flow).filter(Flow.name == flow_name).first()
+                flow = (
+                    session.query(Flow)
+                    .filter(Flow.name == flow_name)
+                    .filter(Flow.user_id == self.user_id)
+                ).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 

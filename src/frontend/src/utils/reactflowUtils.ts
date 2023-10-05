@@ -1,9 +1,18 @@
 import _ from "lodash";
-import { Connection, Edge, ReactFlowInstance } from "reactflow";
+import {
+  Connection,
+  Edge,
+  Node,
+  ReactFlowInstance,
+  ReactFlowJsonObject,
+} from "reactflow";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
 import { FlowType, NodeType } from "../types/flow";
-import { cleanEdgesType } from "../types/utils/reactflowUtils";
+import {
+  cleanEdgesType,
+  unselectAllNodesType,
+} from "../types/utils/reactflowUtils";
 import { toNormalCase } from "./utils";
 
 export function cleanEdges({
@@ -16,7 +25,7 @@ export function cleanEdges({
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((e) => e.id !== edge.id);
+      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
     }
     // check if the source and target handle still exists
     if (sourceNode && targetNode) {
@@ -25,8 +34,8 @@ export function cleanEdges({
       if (targetHandle) {
         const field = targetHandle.split("|")[1];
         const id =
-          (targetNode.data.node.template[field]?.input_types?.join(";") ??
-            targetNode.data.node.template[field]?.type) +
+          (targetNode.data.node?.template[field]?.input_types?.join(";") ??
+            targetNode.data.node?.template[field]?.type) +
           "|" +
           field +
           "|" +
@@ -39,15 +48,23 @@ export function cleanEdges({
         const id = [
           sourceNode.data.type,
           sourceNode.data.id,
-          ...sourceNode.data.node.base_classes,
+          ...sourceNode.data.node?.base_classes!,
         ].join("|");
         if (id !== sourceHandle) {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          newEdges = newEdges.filter((edg) => edg.id !== edge.id);
         }
       }
     }
   });
   updateEdge(newEdges);
+}
+
+export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
+  let newNodes = _.cloneDeep(data);
+  newNodes!.forEach((node: Node) => {
+    node.selected = false;
+  });
+  updateNodes(newNodes!);
 }
 
 export function isValidConnection(
@@ -56,21 +73,21 @@ export function isValidConnection(
 ) {
   if (
     targetHandle
-      .split("|")[0]
+      ?.split("|")[0]
       .split(";")
-      .some((n) => n === sourceHandle.split("|")[0]) ||
+      .some((target) => target === sourceHandle?.split("|")[0]) ||
     sourceHandle
-      .split("|")
+      ?.split("|")
       .slice(2)
-      .some((t) =>
+      .some((target) =>
         targetHandle
-          .split("|")[0]
+          ?.split("|")[0]
           .split(";")
-          .some((n) => n === t)
+          .some((n) => n === target)
       ) ||
-    targetHandle.split("|")[0] === "str"
+    targetHandle?.split("|")[0] === "str"
   ) {
-    let targetNode = reactFlowInstance?.getNode(target)?.data?.node;
+    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
     if (!targetNode) {
       if (
         !reactFlowInstance
@@ -80,11 +97,11 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandle.split("|")[1]].list &&
+      (!targetNode.template[targetHandle?.split("|")[1]!].list &&
         !reactFlowInstance
           .getEdges()
           .find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandle.split("|")[1]].list
+      targetNode.template[targetHandle?.split("|")[1]!].list
     ) {
       return true;
     }
@@ -94,7 +111,7 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = _.cloneDeep(flow);
-  cleanFLow.data.nodes.forEach((node) => {
+  cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
         node.data.node.template[key].value = "";
@@ -127,53 +144,53 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(newFlow, getNodeId) {
+export function updateIds(
+  newFlow: ReactFlowJsonObject,
+  getNodeId: (type: string) => string
+) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((n: NodeType) => {
+  newFlow.nodes.forEach((node: NodeType) => {
     // Generate a unique node ID
-    let newId = getNodeId(n.data.type);
-    idsMap[n.id] = newId;
-    n.id = newId;
-    n.data.id = newId;
+    let newId = getNodeId(node.data.type);
+    idsMap[node.id] = newId;
+    node.id = newId;
+    node.data.id = newId;
     // Add the new node to the list of nodes in state
   });
 
-  newFlow.edges.forEach((e) => {
-    e.source = idsMap[e.source];
-    e.target = idsMap[e.target];
-    let sourceHandleSplitted = e.sourceHandle.split("|");
-    e.sourceHandle =
+  newFlow.edges.forEach((edge) => {
+    edge.source = idsMap[edge.source];
+    edge.target = idsMap[edge.target];
+    let sourceHandleSplitted = edge.sourceHandle!.split("|");
+    edge.sourceHandle =
       sourceHandleSplitted[0] +
       "|" +
-      e.source +
+      edge.source +
       "|" +
       sourceHandleSplitted.slice(2).join("|");
-    let targetHandleSplitted = e.targetHandle.split("|");
-    e.targetHandle =
-      targetHandleSplitted.slice(0, -1).join("|") + "|" + e.target;
-    e.id =
+    let targetHandleSplitted = edge.targetHandle!.split("|");
+    edge.targetHandle =
+      targetHandleSplitted.slice(0, -1).join("|") + "|" + edge.target;
+    edge.id =
       "reactflow__edge-" +
-      e.source +
-      e.sourceHandle +
+      edge.source +
+      edge.sourceHandle +
       "-" +
-      e.target +
-      e.targetHandle;
+      edge.target +
+      edge.targetHandle;
   });
 }
 
-export function buildTweaks(flow) {
-  return flow.data.nodes.reduce((acc, node) => {
+export function buildTweaks(flow: FlowType) {
+  return flow.data!.nodes.reduce((acc, node) => {
     acc[node.data.id] = {};
     return acc;
   }, {});
 }
 
-export function validateNode(
-  n: NodeType,
-  reactFlowInstance: ReactFlowInstance
-): Array<string> {
-  if (!n.data?.node?.template || !Object.keys(n.data.node.template)) {
+export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
+  if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
       "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
     ];
@@ -182,43 +199,58 @@ export function validateNode(
   const {
     type,
     node: { template },
-  } = n.data;
+  } = node.data;
 
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (template[t].value === undefined ||
-            template[t].value === null ||
-            template[t].value === "") &&
-          !reactFlowInstance
-            .getEdges()
-            .some(
-              (e) =>
-                e.targetHandle.split("|")[1] === t &&
-                e.targetHandle.split("|")[2] === n.id
-            )
-          ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
+  return Object.keys(template).reduce((errors: Array<string>, t) => {
+    if (
+      template[t].required &&
+      template[t].show &&
+      (template[t].value === undefined ||
+        template[t].value === null ||
+        template[t].value === "") &&
+      !edges.some(
+        (edge) =>
+          edge.targetHandle?.split("|")[1] === t &&
+          edge.targetHandle.split("|")[2] === node.id
+      )
+    ) {
+      errors.push(
+        `${type} is missing ${
+          template.display_name || toNormalCase(template[t].name)
+        }.`
+      );
+    } else if (
+      template[t].type === "dict" &&
+      template[t].required &&
+      template[t].show &&
+      (template[t].value !== undefined ||
+        template[t].value !== null ||
+        template[t].value !== "")
+    ) {
+      if (hasDuplicateKeys(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) contains duplicate keys with the same values.`
+        );
+      if (hasEmptyKey(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) field must not be empty.`
+        );
+    }
+    return errors;
+  }, [] as string[]);
 }
 
-export function validateNodes(reactFlowInstance: ReactFlowInstance) {
-  if (reactFlowInstance.getNodes().length === 0) {
+export function validateNodes(nodes: Node[], edges: Edge[]) {
+  if (nodes.length === 0) {
     return [
       "No nodes found in the flow. Please add at least one node to the flow.",
     ];
   }
-  return reactFlowInstance
-    .getNodes()
-    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+  return nodes.flatMap((n: NodeType) => validateNode(n, edges));
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
@@ -235,7 +267,9 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 }
 
 export function handleKeyDown(
-  e: React.KeyboardEvent<HTMLInputElement>,
+  e:
+    | React.KeyboardEvent<HTMLInputElement>
+    | React.KeyboardEvent<HTMLTextAreaElement>,
   inputValue: string | string[] | null,
   block: string
 ) {
@@ -268,4 +302,78 @@ export function getConnectedNodes(
   const sourceId = edge.source;
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
+
+export function convertObjToArray(singleObject: object | string) {
+  if (typeof singleObject === "string") {
+    singleObject = JSON.parse(singleObject);
+  }
+  if (Array.isArray(singleObject)) return singleObject;
+
+  let arrConverted: any[] = [];
+  if (typeof singleObject === "object") {
+    for (const key in singleObject) {
+      if (Object.prototype.hasOwnProperty.call(singleObject, key)) {
+        const newObj = {};
+        newObj[key] = singleObject[key];
+        arrConverted.push(newObj);
+      }
+    }
+  }
+  return arrConverted;
+}
+
+export function convertArrayToObj(arrayOfObjects) {
+  if (!Array.isArray(arrayOfObjects)) return arrayOfObjects;
+
+  let objConverted = {};
+  for (const obj of arrayOfObjects) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        objConverted[key] = obj[key];
+      }
+    }
+  }
+  return objConverted;
+}
+
+export function hasDuplicateKeys(array) {
+  const keys = {};
+  for (const obj of array) {
+    for (const key in obj) {
+      if (keys[key]) {
+        return true;
+      }
+      keys[key] = true;
+    }
+  }
+  return false;
+}
+
+export function hasEmptyKey(objArray) {
+  for (const obj of objArray) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && key === "") {
+        return true; // Found an empty key
+      }
+    }
+  }
+  return false; // No empty keys found
+}
+
+export function convertValuesToNumbers(arr) {
+  return arr.map((obj) => {
+    const newObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        let value = obj[key];
+        if (/\s/g.test(value)) {
+          value = value.trim();
+        }
+        newObj[key] =
+          value === "" || isNaN(value) ? value.toString() : Number(value);
+      }
+    }
+    return newObj;
+  });
 }

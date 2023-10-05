@@ -4,8 +4,7 @@ from langflow.api.v1.callback import (
     StreamingLLMCallbackHandler,
 )
 from langflow.processing.process import fix_memory_inputs, format_actions
-
-from langflow.utils.logger import logger
+from loguru import logger
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 

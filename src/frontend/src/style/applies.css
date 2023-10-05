@@ -87,7 +87,7 @@
     @apply flex flex-col gap-2 p-2;
   }
   .side-bar-components-div-arrangement {
-    @apply w-full overflow-auto scrollbar-hide pb-10;
+    @apply w-full overflow-auto pb-10 scrollbar-hide;
   }
   .search-icon {
     @apply absolute inset-y-0 right-0 flex items-center py-1.5 pr-5;
@@ -124,6 +124,18 @@
   }
   .primary-input {
     @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+  }
+
+  .skeleton-card {
+    @apply flex h-48 flex-col gap-6 rounded-lg border bg-background p-4;
+  }
+
+  .skeleton-card-wrapper {
+    @apply flex items-center space-x-4;
+  }
+
+  .skeleton-card-text {
+    @apply flex flex-col gap-3;
   }
 
   /* The same as primary-input but no-truncate */
@@ -193,10 +205,14 @@
   }
 
   .loading-page-panel {
-    @apply h-full w-full flex justify-center items-center bg-muted;
+    @apply flex h-full w-full items-center justify-center bg-muted;
   }
 
   .main-page-panel {
+    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+  }
+
+  .admin-page-panel {
     @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
   }
 
@@ -214,6 +230,10 @@
 
   .main-page-description-text {
     @apply flex w-[60%] px-6 pb-14 text-muted-foreground;
+  }
+
+  .admin-page-description-text {
+    @apply flex w-[80%] px-6 pb-8 text-muted-foreground;
   }
 
   .main-page-flows-display {
@@ -244,10 +264,10 @@
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
-    @apply relative flex w-96 flex-col justify-center rounded-lg bg-background;
+    @apply relative flex flex-col justify-center bg-background;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center justify-between gap-8 rounded-t-lg border-b bg-muted p-4;
+    @apply flex w-full items-center gap-8  border-b bg-muted p-4;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
@@ -291,7 +311,7 @@
     @apply hover:text-accent-foreground hover:transition-all;
   }
   .generic-node-desc {
-    @apply h-full w-full py-5 text-foreground;
+    @apply h-full w-full  text-foreground;
   }
   .generic-node-desc-text {
     @apply w-full px-5 pb-3 text-sm text-muted-foreground;
@@ -330,7 +350,7 @@
     @apply alert-icon text-status-green;
   }
   .success-alert-message {
-    @apply word-break-break-word alert-font-size text-success-foreground;
+    @apply alert-font-size text-success-foreground word-break-break-word;
   }
 
   .card-component-title-display {
@@ -340,7 +360,7 @@
     @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
   }
   .card-component-title-size {
-    @apply w-full flex-1 word-break-break-word truncate-doubleline;
+    @apply w-full flex-1 truncate-doubleline word-break-break-word;
   }
   .card-component-delete-button {
     @apply flex self-start;
@@ -488,10 +508,10 @@
     @apply flex-max-width h-12 items-center justify-between border-border bg-muted;
   }
   .header-start-display {
-    @apply flex w-96 items-center justify-start gap-2;
+    @apply flex w-[30%] items-center justify-start gap-2;
   }
   .header-end-division {
-    @apply flex w-96 justify-end px-2;
+    @apply flex w-[30%] justify-end px-2;
   }
   .header-end-display {
     @apply ml-auto mr-2 flex items-center gap-5;
@@ -500,7 +520,7 @@
     @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-3 pr-0 shadow-sm;
   }
   .header-waitlist-link-box {
-    @apply inline-flex h-9 items-center justify-center rounded-md border border-input px-2 shadow-sm text-sm  font-medium text-muted-foreground ring-offset-background disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap;
+    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm  font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
   .header-waitlist-link-box:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
@@ -833,7 +853,7 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] lg:w-full;
+    @apply flex h-full flex-col max-w-full overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2;
@@ -862,11 +882,11 @@
     @apply bg-white text-primary;
   }
   .code-highlight {
-    @apply block max-h-[64vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[64vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
 
   .code-nohighlight {
-    @apply block max-h-[70vh] w-full overflow-y-hidden word-break-break-word border-0 px-3 py-2 text-sm outline-0;
+    @apply block max-h-[70vh] w-full overflow-y-hidden border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
     @apply form-input block w-full rounded-md border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-ring sm:text-sm;
@@ -1028,5 +1048,17 @@
 
   .chat-message-highlight {
     @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
+  }
+
+  .field-invalid {
+    @apply absolute text-[0.8rem] font-medium text-destructive;
+  }
+
+  .label-invalid {
+    @apply text-destructive;
+  }
+
+  .input-invalid {
+    @apply border-destructive focus:border-destructive  focus:ring-destructive;
   }
 }
