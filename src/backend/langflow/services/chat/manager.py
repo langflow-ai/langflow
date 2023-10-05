@@ -204,11 +204,9 @@ class ChatService(Service):
                 json_payload = await websocket.receive_json()
                 try:
                     payload = orjson.loads(json_payload)
-                # except TypeError or JSONDecodeError how?
                 except Exception as exc:
-                    logger.error(f"Error decoding JSON: {exc}")
                     payload = json_payload
-                if "clear_history" in payload:
+                if "clear_history" in payload and payload["clear_history"]:
                     self.chat_history.history[client_id] = []
                     continue
 
