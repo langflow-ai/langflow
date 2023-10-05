@@ -1,3 +1,4 @@
+from collections import deque
 import copy
 
 
@@ -50,20 +51,37 @@ def ungroup_node(group_node_data, base_flow):
     base_flow["nodes"] = nodes
     base_flow["edges"] = edges
 
+    return nodes
+
 
 def process_flow(flow_object):
     cloned_flow = copy.deepcopy(flow_object)
+    processed_nodes = set()  # To keep track of processed nodes
 
     def process_node(node):
+        node_id = node.get("id")
+
+        # If node already processed, skip
+        if node_id in processed_nodes:
+            return
+
         if (
             node.get("data")
             and node["data"].get("node")
             and node["data"]["node"].get("flow")
         ):
             process_flow(node["data"]["node"]["flow"]["data"])
-            ungroup_node(node["data"], cloned_flow)
+            new_nodes = ungroup_node(node["data"], cloned_flow)
+            # Add new nodes to the queue for future processing
+            nodes_to_process.extend(new_nodes)
 
-    for node in cloned_flow["nodes"]:
+        # Mark node as processed
+        processed_nodes.add(node_id)
+
+    nodes_to_process = deque(cloned_flow["nodes"])
+
+    while nodes_to_process:
+        node = nodes_to_process.popleft()
         process_node(node)
 
     return cloned_flow
@@ -204,7 +222,7 @@ def get_updated_edges(base_flow, g_nodes, group_node_id):
             new_edge = update_target_handle(new_edge, g_nodes, group_node_id)
 
         if new_edge["source"] == group_node_id:
-            new_edge = update_source_handle(new_edge, g_nodes)
+            new_edge = update_source_handle(new_edge, base_flow)
 
         if edge["target"] == group_node_id or edge["source"] == group_node_id:
             updated_edges.append(new_edge)
