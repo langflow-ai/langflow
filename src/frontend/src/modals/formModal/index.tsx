@@ -261,7 +261,11 @@ export default function FormModal({
     }
     if (data.type === "end") {
       if (data.message) {
-        updateLastMessage({ str: data.message, end: true });
+        updateLastMessage({
+          str: data.message,
+          end: true,
+          prompt: template.current,
+        });
       }
       if (data.intermediate_steps) {
         updateLastMessage({
@@ -276,19 +280,14 @@ export default function FormModal({
           files: data.files,
         });
       }
-      if (data.type === "prompt" && data.prompt) {
-        template.current = data.prompt;
-      }
-
       setLockChat(false);
       isStream = false;
     }
+    if (data.type == "prompt" && data.prompt) {
+      template.current = data.prompt;
+    }
     if (data.type === "stream" && isStream) {
-      if (data.prompt) {
-        updateLastMessage({ prompt: data.prompt });
-      } else {
-        updateLastMessage({ str: data.message });
-      }
+      updateLastMessage({ str: data.message });
     }
   }
 
