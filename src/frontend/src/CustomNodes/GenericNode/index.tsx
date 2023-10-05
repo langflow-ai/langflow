@@ -105,7 +105,7 @@ export default function GenericNode({
         <div className="generic-node-div-title">
           <div className="generic-node-title-arrangement">
             <IconComponent
-              name={name}
+              name={data.node?.flow?"Ungroup":name}
               className="generic-node-icon"
               iconColor={`${nodeColors[types[data.type]]}`}
             />

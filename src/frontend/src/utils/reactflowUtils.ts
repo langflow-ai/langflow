@@ -673,7 +673,7 @@ export function generateNodeFromFlow(flow: FlowType,getNodeId:(type:string)=>str
       type: outputNode?.data.type!,
       node: {
         output_types: outputNode!.data.node!.output_types,
-        display_name: "group Node",
+        display_name: "group Component",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
         description: "double click to edit description",
