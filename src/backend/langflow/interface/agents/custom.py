@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 
-from langchain import LLMChain
+from langchain.chains.llm import LLMChain
 from langchain.agents import (
     AgentExecutor,
     Tool,

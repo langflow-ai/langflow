@@ -6,7 +6,7 @@ export default function ToggleShadComponent({
   setEnabled,
   disabled,
   size,
-}: ToggleComponentType) {
+}: ToggleComponentType): JSX.Element {
   let scaleX, scaleY;
   switch (size) {
     case "small":
@@ -35,8 +35,8 @@ export default function ToggleShadComponent({
         disabled={disabled}
         className=""
         checked={enabled}
-        onCheckedChange={(x: boolean) => {
-          setEnabled(x);
+        onCheckedChange={(isEnabled: boolean) => {
+          setEnabled(isEnabled);
         }}
       ></Switch>
     </div>

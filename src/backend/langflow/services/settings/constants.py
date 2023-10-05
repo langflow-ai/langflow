@@ -1,0 +1,2 @@
+DEFAULT_SUPERUSER = "langflow"
+DEFAULT_SUPERUSER_PASSWORD = "langflow"
