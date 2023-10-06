@@ -595,9 +595,7 @@ export function mergeNodeTemplates({
                 ? nodeTemplate[key].display_name
                 : nodeTemplate[key].name
                 ? toTitleCase(nodeTemplate[key].name)
-                : toTitleCase(key)) +
-              " - " +
-              truncateDisplayName(node.data.node?.display_name!);
+                : toTitleCase(key))
           }
         }
       });
