@@ -1,3 +1,5 @@
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_service
 import pytest
 from langflow.services.database.models.user import User
 from langflow.services.auth.utils import get_password_hash
@@ -15,10 +17,11 @@ def test_user():
     )
 
 
-def test_login_successful(client, test_user, session):
+def test_login_successful(client, test_user):
     # Adding the test user to the database
-    session.add(test_user)
-    session.commit()
+    with session_getter(get_db_service()) as session:
+        session.add(test_user)
+        session.commit()
 
     response = client.post(
         "api/v1/login", data={"username": "testuser", "password": "testpassword"}

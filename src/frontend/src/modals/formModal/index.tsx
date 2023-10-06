@@ -27,7 +27,7 @@ import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getBuildStatus } from "../../controllers/API";
 import { TabsState } from "../../types/tabs";
-import { processFlow, validateNodes } from "../../utils/reactflowUtils";
+import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
   flow,
@@ -61,6 +61,7 @@ export default function FormModal({
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const template = useRef(tabsState[flow.id].formKeysData.template);
   const { reactFlowInstance } = useContext(typesContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
@@ -125,12 +126,13 @@ export default function FormModal({
   function updateLastMessage({
     str,
     thought,
+    prompt,
     end = false,
     files,
   }: {
     str?: string;
     thought?: string;
-    // end param default is false
+    prompt?: string;
     end?: boolean;
     files?: Array<any>;
   }) {
@@ -150,12 +152,22 @@ export default function FormModal({
       if (files) {
         newChat[newChat.length - 1].files = files;
       }
+      if (prompt) {
+        newChat[newChat.length - 2].template = prompt;
+      }
       return newChat;
     });
   }
 
   function handleOnClose(event: CloseEvent): void {
     if (isOpen.current) {
+      //check if the user has been logged out, if so close the chat when the user is redirected to the login page
+      if (window.location.href.includes("login")) {
+        setOpen(false);
+        ws.current?.close();
+        return;
+      }
+
       getBuildStatus(flow.id)
         .then((response) => {
           if (response.data.built) {
@@ -194,16 +206,26 @@ export default function FormModal({
   }
 
   function handleWsMessage(data: any) {
-    if (Array.isArray(data)) {
+    if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
+        console.log(data);
         let newChatHistory: ChatMessageType[] = [];
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].type === "prompt" && data[i].prompt) {
+            if (data[i - 1] && !data[i - 1].is_bot) {
+              data[i - 1].prompt = data[i].prompt;
+              template.current = data[i].prompt;
+            }
+          }
+        }
+        data = data.filter((item: any) => item.type !== "prompt");
         data.forEach(
           (chatItem: {
             intermediate_steps?: string;
             is_bot: boolean;
             message: string;
-            template: string;
+            prompt?: string;
             type: string;
             chatKey: string;
             files?: Array<any>;
@@ -214,7 +236,7 @@ export default function FormModal({
                   ? {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       files: chatItem.files,
                       chatKey: chatItem.chatKey,
@@ -222,7 +244,7 @@ export default function FormModal({
                   : {
                       isSend: !chatItem.is_bot,
                       message: chatItem.message,
-                      template: chatItem.template,
+                      template: chatItem.prompt,
                       thought: chatItem.intermediate_steps,
                       chatKey: chatItem.chatKey,
                     }
@@ -239,7 +261,11 @@ export default function FormModal({
     }
     if (data.type === "end") {
       if (data.message) {
-        updateLastMessage({ str: data.message, end: true });
+        updateLastMessage({
+          str: data.message,
+          end: true,
+          prompt: template.current,
+        });
       }
       if (data.intermediate_steps) {
         updateLastMessage({
@@ -254,9 +280,11 @@ export default function FormModal({
           files: data.files,
         });
       }
-
       setLockChat(false);
       isStream = false;
+    }
+    if (data.type == "prompt" && data.prompt) {
+      template.current = data.prompt;
     }
     if (data.type === "stream" && isStream) {
       updateLastMessage({ str: data.message });
@@ -282,18 +310,8 @@ export default function FormModal({
         handleOnClose(event);
       };
       newWs.onerror = (ev) => {
-        if (flow.id === "") {
-          connectWS();
-        } else {
-          setErrorData({
-            title: "There was an error on web connection, please: ",
-            list: [
-              "Refresh the page",
-              "Use a new flow tab",
-              "Check if the backend is up",
-            ],
-          });
-        }
+        console.log(ev);
+        connectWS();
       };
       ws.current = newWs;
     } catch (error) {
@@ -313,6 +331,15 @@ export default function FormModal({
       }
     };
     // do not add connectWS on dependencies array
+  }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (ws.current) {
+        console.log("closing ws");
+        ws.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -355,24 +382,23 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage(): void {
-    let nodeValidationErrors = validateNodes(reactFlowInstance!);
+    let nodeValidationErrors = validateNodes(
+      reactFlowInstance!.getNodes(),
+      reactFlowInstance!.getEdges()
+    );
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;
       setChatValue("");
       const message = inputs;
-      addChatHistory(
-        message!,
-        true,
-        chatKey!,
-        tabsState[flow.id].formKeysData.template
-      );
+      addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
         ...reactFlowInstance?.toObject()!,
         inputs: inputs!,
         chatHistory,
         name: flow.name,
         description: flow.description,
+        chatKey: chatKey!,
       });
       //@ts-ignore
       setTabsState((old: TabsState) => {
@@ -390,6 +416,7 @@ export default function FormModal({
   }
   function clearChat(): void {
     setChatHistory([]);
+    template.current = tabsState[id.current].formKeysData.template;
     ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
@@ -403,7 +430,6 @@ export default function FormModal({
       setChatValue("");
     }
   }
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger hidden></DialogTrigger>

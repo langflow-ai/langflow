@@ -1,4 +1,4 @@
-import _, { get } from "lodash";
+import _ from "lodash";
 import {
   Connection,
   Edge,
@@ -25,7 +25,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase, truncateDisplayName } from "./utils";
+import { toNormalCase, toTitleCase } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges({
@@ -54,8 +54,8 @@ export function cleanEdges({
           id: targetNode.data.id,
           inputTypes: targetNode.data.node!.template[field]?.input_types,
         };
-        if(targetNode.data.node!.template[field]?.proxy){
-          id.proxy = targetNode.data.node!.template[field]?.proxy
+        if (targetNode.data.node!.template[field]?.proxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
         if (scapedJSONStringfy(id) !== targetHandle) {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -213,10 +213,7 @@ export function buildTweaks(flow: FlowType) {
   }, {});
 }
 
-export function validateNode(
-  node: NodeType,
-  reactFlowInstance: ReactFlowInstance
-): Array<string> {
+export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
       "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
@@ -228,43 +225,58 @@ export function validateNode(
     node: { template },
   } = node.data;
 
-  return Object.keys(template).reduce(
-    (errors: Array<string>, t) =>
-      errors.concat(
-        template[t].required &&
-          template[t].show &&
-          (template[t].value === undefined ||
-            template[t].value === null ||
-            template[t].value === "") &&
-          !reactFlowInstance
-            .getEdges()
-            .some(
-              (edge) =>
-                (scapeJSONParse(edge.targetHandle!) as targetHandleType)
-                  .fieldName === t &&
-                (scapeJSONParse(edge.targetHandle!) as targetHandleType).id ===
-                  node.id
-            )
-          ? [
-              `${type} is missing ${
-                template.display_name || toNormalCase(template[t].name)
-              }.`,
-            ]
-          : []
-      ),
-    [] as string[]
-  );
+  return Object.keys(template).reduce((errors: Array<string>, t) => {
+    if (
+      template[t].required &&
+      template[t].show &&
+      (template[t].value === undefined ||
+        template[t].value === null ||
+        template[t].value === "") &&
+      !edges.some(
+        (edge) =>
+          (scapeJSONParse(edge.targetHandle!) as targetHandleType).fieldName ===
+            t &&
+          (scapeJSONParse(edge.targetHandle!) as targetHandleType).id ===
+            node.id
+      )
+    ) {
+      errors.push(
+        `${type} is missing ${
+          template.display_name || toNormalCase(template[t].name)
+        }.`
+      );
+    } else if (
+      template[t].type === "dict" &&
+      template[t].required &&
+      template[t].show &&
+      (template[t].value !== undefined ||
+        template[t].value !== null ||
+        template[t].value !== "")
+    ) {
+      if (hasDuplicateKeys(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) contains duplicate keys with the same values.`
+        );
+      if (hasEmptyKey(template[t].value))
+        errors.push(
+          `${type} (${
+            template.display_name || template[t].name
+          }) field must not be empty.`
+        );
+    }
+    return errors;
+  }, [] as string[]);
 }
 
-export function validateNodes(reactFlowInstance: ReactFlowInstance) {
-  if (reactFlowInstance.getNodes().length === 0) {
+export function validateNodes(nodes: Node[], edges: Edge[]) {
+  if (nodes.length === 0) {
     return [
       "No nodes found in the flow. Please add at least one node to the flow.",
     ];
   }
-  return reactFlowInstance
-    .getNodes()
-    .flatMap((n: NodeType) => validateNode(n, reactFlowInstance));
+  return nodes.flatMap((n: NodeType) => validateNode(n, edges));
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
@@ -324,7 +336,9 @@ export function updateEdgesHandleIds({
 }
 
 export function handleKeyDown(
-  e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  e:
+    | React.KeyboardEvent<HTMLInputElement>
+    | React.KeyboardEvent<HTMLTextAreaElement>,
   inputValue: string | string[] | null,
   block: string
 ) {
@@ -357,6 +371,80 @@ export function getConnectedNodes(
   const sourceId = edge.source;
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
+}
+
+export function convertObjToArray(singleObject: object | string) {
+  if (typeof singleObject === "string") {
+    singleObject = JSON.parse(singleObject);
+  }
+  if (Array.isArray(singleObject)) return singleObject;
+
+  let arrConverted: any[] = [];
+  if (typeof singleObject === "object") {
+    for (const key in singleObject) {
+      if (Object.prototype.hasOwnProperty.call(singleObject, key)) {
+        const newObj = {};
+        newObj[key] = singleObject[key];
+        arrConverted.push(newObj);
+      }
+    }
+  }
+  return arrConverted;
+}
+
+export function convertArrayToObj(arrayOfObjects) {
+  if (!Array.isArray(arrayOfObjects)) return arrayOfObjects;
+
+  let objConverted = {};
+  for (const obj of arrayOfObjects) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        objConverted[key] = obj[key];
+      }
+    }
+  }
+  return objConverted;
+}
+
+export function hasDuplicateKeys(array) {
+  const keys = {};
+  for (const obj of array) {
+    for (const key in obj) {
+      if (keys[key]) {
+        return true;
+      }
+      keys[key] = true;
+    }
+  }
+  return false;
+}
+
+export function hasEmptyKey(objArray) {
+  for (const obj of objArray) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && key === "") {
+        return true; // Found an empty key
+      }
+    }
+  }
+  return false; // No empty keys found
+}
+
+export function convertValuesToNumbers(arr) {
+  return arr.map((obj) => {
+    const newObj = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        let value = obj[key];
+        if (/\s/g.test(value)) {
+          value = value.trim();
+        }
+        newObj[key] =
+          value === "" || isNaN(value) ? value.toString() : Number(value);
+      }
+    }
+    return newObj;
+  });
 }
 
 export function scapedJSONStringfy(json: object): string {
@@ -502,15 +590,15 @@ export function validateSelection(
   if (selection.edges.length === 0) {
     selection.edges = edges;
   }
-    // get only edges that are connected to the nodes in the selection
-    // first creates a set of all the nodes ids
-    let nodesSet = new Set(selection.nodes.map((n) => n.id));
-    // then filter the edges that are connected to the nodes in the set
-    let connectedEdges = selection.edges.filter(
-      (e) => nodesSet.has(e.source) && nodesSet.has(e.target)
-    );
-    // add the edges to the selection
-    selection.edges = connectedEdges;
+  // get only edges that are connected to the nodes in the selection
+  // first creates a set of all the nodes ids
+  let nodesSet = new Set(selection.nodes.map((n) => n.id));
+  // then filter the edges that are connected to the nodes in the set
+  let connectedEdges = selection.edges.filter(
+    (e) => nodesSet.has(e.source) && nodesSet.has(e.target)
+  );
+  // add the edges to the selection
+  selection.edges = connectedEdges;
 
   let errorsArray: Array<string> = [];
   // check if there is more than one node
@@ -591,11 +679,11 @@ export function mergeNodeTemplates({
           } else {
             template[key + "_" + node.id].display_name =
               //data id already has the node name on it
-              (nodeTemplate[key].display_name
+              nodeTemplate[key].display_name
                 ? nodeTemplate[key].display_name
                 : nodeTemplate[key].name
                 ? toTitleCase(nodeTemplate[key].name)
-                : toTitleCase(key))
+                : toTitleCase(key);
           }
         }
       });
@@ -659,15 +747,18 @@ export function generateNodeTemplate(Flow: FlowType) {
   return template;
 }
 
-export function generateNodeFromFlow(flow: FlowType,getNodeId:(type:string)=>string): NodeType {
+export function generateNodeFromFlow(
+  flow: FlowType,
+  getNodeId: (type: string) => string
+): NodeType {
   const { nodes } = flow.data!;
   const outputNode = _.cloneDeep(findLastNode(flow.data!));
   const position = getMiddlePoint(nodes);
   let data = _.cloneDeep(flow);
-  const id = getNodeId(outputNode?.data.type!)
+  const id = getNodeId(outputNode?.data.type!);
   const newGroupNode: NodeType = {
     data: {
-      id, 
+      id,
       type: outputNode?.data.type!,
       node: {
         output_types: outputNode!.data.node!.output_types,
@@ -749,7 +840,7 @@ export function ungroupNode(
             fieldName: field,
             type,
             id: proxyId,
-            inputTypes: inputTypes
+            inputTypes: inputTypes,
           };
           if (node.data.node?.flow) {
             newTargetHandle.proxy = {
@@ -816,10 +907,10 @@ export function expandGroupNode(
   groupNode: NodeDataType,
   ReactFlowInstance: ReactFlowInstance
 ) {
-  const { template,flow } = _.cloneDeep(groupNode.node!);
+  const { template, flow } = _.cloneDeep(groupNode.node!);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
-  console.log(gEdges)
+  console.log(gEdges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   ReactFlowInstance.getEdges().forEach((edge) => {
@@ -838,7 +929,7 @@ export function expandGroupNode(
             fieldName: field,
             type,
             id: proxyId,
-            inputTypes: inputTypes
+            inputTypes: inputTypes,
           };
           if (node.data.node?.flow) {
             newTargetHandle.proxy = {
@@ -880,7 +971,7 @@ export function expandGroupNode(
       } else {
         display_name = gNodes[nodeIndex].data.node!.template[field].name;
       }
-      if(gNodes[nodeIndex].data.node!.template[field].proxy){
+      if (gNodes[nodeIndex].data.node!.template[field].proxy) {
         proxy = gNodes[nodeIndex].data.node!.template[field].proxy;
       }
       gNodes[nodeIndex].data.node!.template[field] = template[key];
@@ -888,11 +979,10 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
       gNodes[nodeIndex].selected = false;
-      if(proxy){
+      if (proxy) {
         gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
-      }
-      else{
-        delete gNodes[nodeIndex].data.node!.template[field].proxy
+      } else {
+        delete gNodes[nodeIndex].data.node!.template[field].proxy;
       }
     }
   });
@@ -908,7 +998,7 @@ export function expandGroupNode(
     ...gEdges,
     ...updatedEdges,
   ];
-  console.log(edges)
+  console.log(edges);
   ReactFlowInstance.setNodes(nodes);
   ReactFlowInstance.setEdges(edges);
 }
@@ -931,14 +1021,14 @@ export function getGroupStatus(
   let status = { valid: true, params: "Built sucessfully ✨" };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
-  ids.forEach((id)=>console.log(ssData[id]))
+  ids.forEach((id) => console.log(ssData[id]));
   ids.forEach((id) => {
     if (!ssData[id]) {
-      status = ssData[id]
-      return
+      status = ssData[id];
+      return;
     }
     if (!ssData[id].valid) {
-      status =  { valid: false, params: ssData[id].params };
+      status = { valid: false, params: ssData[id].params };
     }
   });
   return status;

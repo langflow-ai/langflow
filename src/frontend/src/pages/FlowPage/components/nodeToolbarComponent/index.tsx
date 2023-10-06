@@ -1,7 +1,13 @@
 import { useContext, useState } from "react";
-import { useReactFlow } from "reactflow";
+import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "../../../../components/ui/select-custom";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
@@ -9,13 +15,16 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
   position,
+  setShowNode,
+  numberOfHandles,
+  showNode,
 }: nodeToolbarPropsType): JSX.Element {
   const [nodeLength, setNodeLength] = useState(
     Object.keys(data.node!.template).filter(
@@ -32,10 +41,43 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "int")
     ).length
   );
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  function canMinimize() {
+    let countHandles: number = 0;
+    numberOfHandles.forEach((bool) => {
+      if (bool) countHandles += 1;
+    });
+    if (countHandles > 1) return false;
+    return true;
+  }
+  const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
+  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
+  const [selectedValue, setSelectedValue] = useState("");
+
+  const handleSelectChange = (event) => {
+    setSelectedValue(event);
+    if (event.includes("advanced")) {
+      return setShowModalAdvanced(true);
+    }
+    setShowModalAdvanced(false);
+    if (event.includes("show")) {
+      setShowNode((prev) => !prev);
+      updateNodeInternals(data.id);
+    }
+    if (event.includes("disabled")) {
+      return;
+    }
+    if (event.includes("ungroup")) {
+      updateFlowPosition(position, data.node?.flow!);
+      expandGroupNode(data, reactFlowInstance);
+    }
+  };
+
   return (
     <>
       <div className="w-26 h-10">
@@ -103,42 +145,104 @@ export default function NodeToolbarComponent({
             </a>
           </ShadTooltip>
 
-          <ShadTooltip content="Edit" side="top">
-            <div>
-              <EditNodeModal
-                data={data}
-                setData={setData}
-                nodeLength={nodeLength}
-              >
-                <div
+          {isMinimal || isGroup ? (
+            <Select onValueChange={handleSelectChange} value={selectedValue}>
+              <ShadTooltip content="More" side="top">
+                <SelectTrigger>
+                  <div>
+                    <div
+                      className={classNames(
+                        "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                          (nodeLength == 0
+                            ? " text-muted-foreground"
+                            : " text-foreground")
+                      )}
+                    >
+                      <IconComponent
+                        name="MoreHorizontal"
+                        className="relative left-2 h-4 w-4"
+                      />
+                    </div>
+                  </div>
+                </SelectTrigger>
+              </ShadTooltip>
+              <SelectContent>
+                <SelectItem
+                  value={
+                    getRandomKeyByssmm() +
+                    (nodeLength == 0 ? "disabled" : "advanced")
+                  }
+                >
+                  <div
+                    className={
+                      "flex " +
+                      (nodeLength == 0
+                        ? "text-muted-foreground"
+                        : "text-primary")
+                    }
+                  >
+                    <IconComponent
+                      name="Settings2"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Edit{" "}
+                  </div>{" "}
+                </SelectItem>
+                {isMinimal && (
+                  <SelectItem value={getRandomKeyByssmm() + "show"}>
+                    <div className="flex">
+                      <IconComponent
+                        name={showNode ? "Minimize2" : "Maximize2"}
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />
+                      {showNode ? "Minimize" : "Expand"}
+                    </div>
+                  </SelectItem>
+                )}
+                {isGroup && (
+                  <SelectItem value={getRandomKeyByssmm() + "ungroup"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Ungroup"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Ungroup{" "}
+                    </div>
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          ) : (
+            <ShadTooltip content="Edit" side="top">
+              <div>
+                <button
+                  disabled={nodeLength === 0}
+                  onClick={() => setShowModalAdvanced(true)}
                   className={classNames(
-                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
+                    "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1  ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
                       (nodeLength == 0
                         ? " text-muted-foreground"
-                        : " text-foreground") +
-                      (isGroup ? "" : " rounded-r-md")
+                        : " text-foreground")
                   )}
                 >
                   <IconComponent name="Settings2" className="h-4 w-4 " />
-                </div>
-              </EditNodeModal>
-            </div>
-          </ShadTooltip>
-          {isGroup && (
-            <ShadTooltip content="Ungroup" side="top">
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center rounded-r-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
-                )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  updateFlowPosition(position, data.node?.flow!);
-                  expandGroupNode(data, reactFlowInstance);
-                }}
-              >
-                <IconComponent name="Ungroup" className="h-4 w-4" />
-              </button>
+                </button>
+              </div>
             </ShadTooltip>
+          )}
+
+          {showModalAdvanced && (
+            <EditNodeModal
+              data={data}
+              setData={setData}
+              nodeLength={nodeLength}
+              open={showModalAdvanced}
+              onClose={(modal) => {
+                setShowModalAdvanced(modal);
+              }}
+            >
+              <></>
+            </EditNodeModal>
           )}
         </span>
       </div>

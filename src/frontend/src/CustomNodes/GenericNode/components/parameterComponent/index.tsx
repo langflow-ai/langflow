@@ -9,6 +9,7 @@ import React, {
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -16,15 +17,20 @@ import InputComponent from "../../../../components/inputComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
+import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
 import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
   isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
@@ -49,13 +55,14 @@ export default function ParameterComponent({
   optionalHandle = null,
   info = "",
   proxy,
+  showNode,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, save, flows } = useContext(TabsContext);
+  const { setTabsState, tabId, flows } = useContext(TabsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -71,7 +78,9 @@ export default function ParameterComponent({
     updateNodeInternals(data.id);
   }, [data.id, position, updateNodeInternals]);
 
-  const { reactFlowInstance } = useContext(typesContext);
+  const groupedEdge = useRef(null);
+
+  const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
   let disabled =
     reactFlowInstance
       ?.getEdges()
@@ -79,13 +88,18 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
-  const handleOnNewValue = (newValue: string | string[] | boolean): void => {
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean | Object[]
+  ): void => {
     let newData = cloneDeep(data);
     newData.node!.template[name].value = newValue;
     setData(newData);
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
+      if (!prev[tabId]) {
+        return prev;
+      }
       return {
         ...prev,
         [tabId]: {
@@ -97,6 +111,8 @@ export default function ParameterComponent({
     });
     renderTooltips();
   };
+
+  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
     // @ts-ignore
@@ -112,7 +128,8 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj = groupByFamily(myData, tooltipTitle!, left, flow!);
+    let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
+    groupedEdge.current = groupedObj;
 
     if (groupedObj && groupedObj.length > 0) {
       //@ts-ignore
@@ -121,45 +138,54 @@ export default function ParameterComponent({
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
-          <span
-            key={index}
-            className={classNames(
-              index > 0 ? "mt-2 flex items-center" : "flex items-center"
+          <div key={index}>
+            {index === 0 && (
+              <span>
+                {left
+                  ? "Avaliable input components:"
+                  : "Avaliable output components:"}
+              </span>
             )}
-          >
-            <div
-              className="h-5 w-5"
-              style={{
-                color: nodeColors[item.family],
-              }}
+            <span
+              key={index}
+              className={classNames(
+                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
+              )}
             >
-              <Icon
+              <div
                 className="h-5 w-5"
-                strokeWidth={1.5}
                 style={{
-                  color: nodeColors[item.family] ?? nodeColors.unknown,
+                  color: nodeColors[item.family],
                 }}
-              />
-            </div>
-            <span className="ps-2 text-xs text-foreground">
-              {nodeNames[item.family] ?? "Other"}
-              <span className="text-xs">
-                {" "}
-                {item.type === "" ? "" : " - "}
-                {item.type.split(", ").length > 2
-                  ? item.type.split(", ").map((el, index) => (
-                      <React.Fragment key={el + index}>
-                        <span>
-                          {index === item.type.split(", ").length - 1
-                            ? el
-                            : (el += `, `)}
-                        </span>
-                      </React.Fragment>
-                    ))
-                  : item.type}
+              >
+                <Icon
+                  className="h-5 w-5"
+                  strokeWidth={1.5}
+                  style={{
+                    color: nodeColors[item.family] ?? nodeColors.unknown,
+                  }}
+                />
+              </div>
+              <span className="ps-2 text-xs text-foreground">
+                {nodeNames[item.family] ?? "Other"}{" "}
+                <span className="text-xs">
+                  {" "}
+                  {item.type === "" ? "" : " - "}
+                  {item.type.split(", ").length > 2
+                    ? item.type.split(", ").map((el, index) => (
+                        <React.Fragment key={el + index}>
+                          <span>
+                            {index === item.type.split(", ").length - 1
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
+                    : item.type}
+                </span>
               </span>
             </span>
-          </span>
+          </div>
         );
       });
     } else {
@@ -172,7 +198,56 @@ export default function ParameterComponent({
     renderTooltips();
   }, [tooltipTitle, flow]);
 
-  return (
+  return !showNode ? (
+    left &&
+    (type === "str" ||
+      type === "bool" ||
+      type === "float" ||
+      type === "code" ||
+      type === "prompt" ||
+      type === "file" ||
+      type === "int" ||
+      type === "dict" ||
+      type === "NestedDict") &&
+    !optionalHandle ? (
+      <></>
+    ) : (
+      <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+        <div className="flex">
+          <ShadTooltip
+            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+            delayDuration={0}
+            content={refHtml.current}
+            side={left ? "left" : "right"}
+          >
+            <Handle
+              type={left ? "target" : "source"}
+              position={left ? Position.Left : Position.Right}
+              id={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
+              isValidConnection={(connection) =>
+                isValidConnection(connection, reactFlowInstance!)
+              }
+              className={classNames(
+                left ? "-ml-0.5 " : "-mr-0.5 ",
+                "h-3 w-3 rounded-full border-2 bg-background"
+              )}
+              style={{
+                borderColor: color,
+                top: position,
+              }}
+              onClick={() => {
+                setFilterEdge(groupedEdge.current);
+              }}
+            ></Handle>
+          </ShadTooltip>
+        </div>
+      </Button>
+    )
+  ) : (
     <div
       ref={ref}
       className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
@@ -214,33 +289,46 @@ export default function ParameterComponent({
           type === "code" ||
           type === "prompt" ||
           type === "file" ||
-          type === "int") &&
+          type === "int" ||
+          type === "dict" ||
+          type === "NestedDict") &&
         !optionalHandle ? (
           <></>
         ) : (
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
-            content={refHtml.current}
-            side={left ? "left" : "right"}
-          >
-            <Handle
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              id={proxy?scapedJSONStringfy({...id,proxy}):scapedJSONStringfy(id)}
-              isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance!)
-              }
-              className={classNames(
-                left ? "-ml-0.5 " : "-mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
-              )}
-              style={{
-                borderColor: color,
-                top: position,
-              }}
-            ></Handle>
-          </ShadTooltip>
+          <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+            <div className="flex">
+              <ShadTooltip
+                styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+                delayDuration={0}
+                content={refHtml.current}
+                side={left ? "left" : "right"}
+              >
+                <Handle
+                  type={left ? "target" : "source"}
+                  position={left ? Position.Left : Position.Right}
+                  id={
+                    proxy
+                      ? scapedJSONStringfy({ ...id, proxy })
+                      : scapedJSONStringfy(id)
+                  }
+                  isValidConnection={(connection) =>
+                    isValidConnection(connection, reactFlowInstance!)
+                  }
+                  className={classNames(
+                    left ? "-ml-0.5 " : "-mr-0.5 ",
+                    "h-3 w-3 rounded-full border-2 bg-background"
+                  )}
+                  style={{
+                    borderColor: color,
+                    top: position,
+                  }}
+                  onClick={() => {
+                    setFilterEdge(groupedEdge.current);
+                  }}
+                ></Handle>
+              </ShadTooltip>
+            </div>
+          </Button>
         )}
 
         {left === true &&
@@ -330,7 +418,6 @@ export default function ParameterComponent({
               suffixes={data.node?.template[name].suffixes}
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
-                save();
               }}
             ></InputFileComponent>
           </div>
@@ -353,11 +440,55 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
+                const clone = cloneDeep(data);
+                clone.node = nodeClass;
+                setData(clone);
               }}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
-              onChange={handleOnNewValue}
+              onChange={(e) => {
+                handleOnNewValue(e);
+              }}
+            />
+          </div>
+        ) : left === true && type === "NestedDict" ? (
+          <div className="mt-2 w-full">
+            <DictComponent
+              disabled={disabled}
+              editNode={false}
+              value={
+                !data.node!.template[name].value ||
+                data.node!.template[name].value?.toString() === "{}"
+                  ? {
+                      yourkey: "value",
+                    }
+                  : data.node!.template[name].value
+              }
+              onChange={(newValue) => {
+                data.node!.template[name].value = newValue;
+                handleOnNewValue(newValue);
+              }}
+            />
+          </div>
+        ) : left === true && type === "dict" ? (
+          <div className="mt-2 w-full">
+            <KeypairListComponent
+              disabled={disabled}
+              editNode={false}
+              value={
+                data.node!.template[name].value?.length === 0 ||
+                !data.node!.template[name].value
+                  ? [{ "": "" }]
+                  : convertObjToArray(data.node!.template[name].value)
+              }
+              duplicateKey={errorDuplicateKey}
+              onChange={(newValue) => {
+                const valueToNumbers = convertValuesToNumbers(newValue);
+                data.node!.template[name].value = valueToNumbers;
+                setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                handleOnNewValue(valueToNumbers);
+              }}
             />
           </div>
         ) : (

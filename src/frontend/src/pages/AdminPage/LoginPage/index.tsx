@@ -48,13 +48,15 @@ export default function LoginAdminPage() {
   }
 
   function getUser() {
-    if (getAuthentication) {
+    if (getAuthentication()) {
       setTimeout(() => {
         getLoggedUser()
           .then((user) => {
             setUserData(user);
           })
-          .catch((error) => {});
+          .catch((error) => {
+            console.log("login admin page", error);
+          });
       }, 1000);
     }
   }

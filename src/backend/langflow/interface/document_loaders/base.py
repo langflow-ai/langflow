@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_settings_service
 from langflow.template.frontend_node.documentloaders import DocumentLoaderFrontNode
 from langflow.interface.custom_lists import documentloaders_type_to_cls_dict
 
@@ -31,12 +31,12 @@ class DocumentLoaderCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         return [
             documentloader.__name__
             for documentloader in self.type_to_loader_dict.values()
-            if documentloader.__name__ in settings_manager.settings.DOCUMENTLOADERS
-            or settings_manager.settings.DEV
+            if documentloader.__name__ in settings_service.settings.DOCUMENTLOADERS
+            or settings_service.settings.DEV
         ]
 
 

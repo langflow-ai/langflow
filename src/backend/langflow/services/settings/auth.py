@@ -1,6 +1,10 @@
 from pathlib import Path
 from typing import Optional
 import secrets
+from langflow.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+)
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 from pydantic import BaseSettings, Field, validator
@@ -19,7 +23,7 @@ class AuthSettings(BaseSettings):
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12
 
     # API Key to execute /process endpoint
     API_KEY_SECRET_KEY: Optional[
@@ -30,9 +34,10 @@ class AuthSettings(BaseSettings):
 
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = False
-    FIRST_SUPERUSER: str = "langflow"
-    FIRST_SUPERUSER_PASSWORD: str = "langflow"
+    AUTO_LOGIN: bool = True
+    NEW_USER_IS_ACTIVE: bool = False
+    SUPERUSER: str = DEFAULT_SUPERUSER
+    SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -40,6 +45,28 @@ class AuthSettings(BaseSettings):
         validate_assignment = True
         extra = "ignore"
         env_prefix = "LANGFLOW_"
+
+    def reset_credentials(self):
+        self.SUPERUSER = DEFAULT_SUPERUSER
+        self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
+
+    # If autologin is true, then we need to set the credentials to
+    # the default values
+    # so we need to validate the superuser and superuser_password
+    # fields
+    @validator("SUPERUSER", "SUPERUSER_PASSWORD", pre=True)
+    def validate_superuser(cls, value, values):
+        if values.get("AUTO_LOGIN"):
+            if value != DEFAULT_SUPERUSER:
+                value = DEFAULT_SUPERUSER
+                logger.debug("Resetting superuser to default value")
+            if values.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
+                values["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
+                logger.debug("Resetting superuser password to default value")
+
+            return value
+
+        return value
 
     @validator("SECRET_KEY", pre=True)
     def get_secret_key(cls, value, values):

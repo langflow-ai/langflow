@@ -12,8 +12,8 @@ from langflow.services.database.models.flow import (
     FlowUpdate,
 )
 from langflow.services.database.models.user.user import User
-from langflow.services.utils import get_session
-from langflow.services.utils import get_settings_manager
+from langflow.services.getters import get_session
+from langflow.services.getters import get_settings_service
 import orjson
 from sqlmodel import Session
 from fastapi import APIRouter, Depends, HTTPException
@@ -83,7 +83,7 @@ def update_flow(
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: User = Depends(get_current_active_user),
-    settings_manager=Depends(get_settings_manager),
+    settings_service=Depends(get_settings_service),
 ):
     """Update a flow."""
 
@@ -91,7 +91,7 @@ def update_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.dict(exclude_unset=True)
-    if settings_manager.settings.REMOVE_API_KEYS:
+    if settings_service.settings.REMOVE_API_KEYS:
         flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():
         if value is not None:
