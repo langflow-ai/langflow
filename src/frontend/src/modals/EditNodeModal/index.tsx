@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
@@ -166,12 +167,27 @@ const EditNodeModal = forwardRef(
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
                             <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
-                              {myData.current.node?.template[templateParam]
-                                .display_name
-                                ? myData.current.node.template[templateParam]
+                              <ShadTooltip
+                                content={
+                                  myData.current.node?.template[templateParam]
+                                    .proxy
+                                    ? myData.current.node?.template[
+                                        templateParam
+                                      ].proxy?.field
+                                    : "null"
+                                }
+                              >
+                                <span>
+                                  {myData.current.node?.template[templateParam]
                                     .display_name
-                                : myData.current.node?.template[templateParam]
-                                    .name}
+                                    ? myData.current.node.template[
+                                        templateParam
+                                      ].display_name
+                                    : myData.current.node?.template[
+                                        templateParam
+                                      ].name}
+                                </span>
+                              </ShadTooltip>
                             </TableCell>
                             <TableCell className="w-[300px] p-0 text-center text-xs text-foreground ">
                               {myData.current.node?.template[templateParam]
@@ -418,9 +434,10 @@ const EditNodeModal = forwardRef(
                                 <div className="mx-auto">
                                   <PromptAreaComponent
                                     readonly={
-                                      myData.node?.flow &&
-                                      myData.node.template[templateParam]
-                                        .dynamic
+                                      myData.current.node?.flow &&
+                                      myData.current.node.template[
+                                        templateParam
+                                      ].dynamic
                                         ? true
                                         : false
                                     }
@@ -446,9 +463,10 @@ const EditNodeModal = forwardRef(
                                 <div className="mx-auto">
                                   <CodeAreaComponent
                                     readonly={
-                                      myData.node?.flow &&
-                                      myData.node.template[templateParam]
-                                        .dynamic
+                                      myData.current.node?.flow &&
+                                      myData.current.node.template[
+                                        templateParam
+                                      ].dynamic
                                         ? true
                                         : false
                                     }
