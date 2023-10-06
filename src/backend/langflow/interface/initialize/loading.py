@@ -1,7 +1,7 @@
 import json
 import orjson
 from typing import Any, Callable, Dict, Sequence, Type, TYPE_CHECKING
-
+from langchain.schema import Document
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
@@ -40,12 +40,23 @@ if TYPE_CHECKING:
     from langflow import CustomComponent
 
 
+def build_vertex_in_params(params: Dict) -> Dict:
+    from langflow.graph.vertex.base import Vertex
+
+    # If any of the values in params is a Vertex, we will build it
+    return {
+        key: value.build() if isinstance(value, Vertex) else value
+        for key, value in params.items()
+    }
+
+
 def instantiate_class(
     node_type: str, base_type: str, params: Dict, user_id=None
 ) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
+
     if node_type in CUSTOM_NODES:
         if custom_node := CUSTOM_NODES.get(node_type):
             if hasattr(custom_node, "initialize"):
@@ -100,7 +111,7 @@ def instantiate_based_on_type(class_object, base_type, node_type, params, user_i
     elif base_type == "vectorstores":
         return instantiate_vectorstore(class_object, params)
     elif base_type == "documentloaders":
-        return instantiate_documentloader(class_object, params)
+        return instantiate_documentloader(node_type, class_object, params)
     elif base_type == "textsplitters":
         return instantiate_textsplitter(class_object, params)
     elif base_type == "utilities":
@@ -289,6 +300,13 @@ def instantiate_embedding(node_type, class_object, params: Dict):
 
 def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
+    # clean up docs or texts to have only documents
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+    if "documents" in params:
+        params["documents"] = [
+            doc for doc in params["documents"] if isinstance(doc, Document)
+        ]
     if initializer := vecstore_initializer.get(class_object.__name__):
         vecstore = initializer(class_object, params)
     else:
@@ -303,7 +321,9 @@ def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     return vecstore
 
 
-def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
+def instantiate_documentloader(
+    node_type: str, class_object: Type[BaseLoader], params: Dict
+):
     if "file_filter" in params:
         # file_filter will be a string but we need a function
         # that will be used to filter the files using file_filter
@@ -323,6 +343,11 @@ def instantiate_documentloader(class_object: Type[BaseLoader], params: Dict):
             raise ValueError(
                 "The metadata you provided is not a valid JSON string."
             ) from exc
+
+    if node_type == "WebBaseLoader":
+        if web_path := params.pop("web_path", None):
+            params["web_paths"] = [web_path]
+
     docs = class_object(**params).load()
     # Now if metadata is an empty dict, we will not add it to the documents
     if metadata:

@@ -46,7 +46,6 @@ import { typesContext } from "./typesContext";
 const uid = new ShortUniqueId({ length: 5 });
 
 const TabsContextInitialValue: TabsContextType = {
-  save: () => {},
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
@@ -62,7 +61,7 @@ const TabsContextInitialValue: TabsContextType = {
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
-  saveFlow: async (flow: FlowType) => {},
+  saveFlow: async (flow: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
@@ -109,29 +108,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function incrementNodeId() {
     newNodeId.current = uid();
     return newNodeId.current;
-  }
-
-  function save() {
-    // added clone deep to avoid mutating the original object
-    let Saveflows = _.cloneDeep(flows);
-    if (Saveflows.length !== 0) {
-      Saveflows.forEach((flow) => {
-        if (flow.data && flow.data?.nodes)
-          flow.data?.nodes.forEach((node) => {
-            //looking for file fields to prevent saving the content and breaking the flow for exceeding the the data limite for local storage
-            Object.keys(node.data.node.template).forEach((key) => {
-              if (node.data.node.template[key].type === "file") {
-                node.data.node.template[key].content = null;
-                node.data.node.template[key].value = "";
-              }
-            });
-          });
-      });
-      window.localStorage.setItem(
-        "tabsData",
-        JSON.stringify({ tabId, flows: Saveflows, id })
-      );
-    }
   }
 
   function refreshFlows() {
@@ -255,7 +231,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function hardReset() {
     newNodeId.current = uid();
     setTabId("");
-
     setFlows([]);
     setIsLoading(true);
     setId(uid());
@@ -616,13 +591,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function saveFlow(newFlow: FlowType) {
+  async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
       if (updatedFlow) {
         // updates flow in state
-        setSuccessData({ title: "Changes saved successfully" });
+        if (!silent) {
+          setSuccessData({ title: "Changes saved successfully" });
+        }
         setFlows((prevState) => {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
@@ -666,7 +643,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         tabId,
         setTabId,
         flows,
-        save,
         incrementNodeId,
         removeFlow,
         addFlow,

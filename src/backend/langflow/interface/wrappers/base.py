@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from langchain import requests, sql_database
+from langchain.utilities import requests, sql_database
 
 from langflow.interface.base import LangChainTypeCreator
 from loguru import logger

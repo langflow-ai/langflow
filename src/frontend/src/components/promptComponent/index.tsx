@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { TypeModal } from "../../constants/enums";
 import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
-import { TextAreaComponentType } from "../../types/components";
+import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 
 export default function PromptAreaComponent({
@@ -15,7 +15,7 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
   readonly = false,
-}: TextAreaComponentType): JSX.Element {
+}: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange("");

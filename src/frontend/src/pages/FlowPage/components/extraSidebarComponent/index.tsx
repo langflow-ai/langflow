@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -18,7 +19,8 @@ import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates } = useContext(typesContext);
+  const { data, templates, getFilterEdge, setFilterEdge } =
+    useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -42,6 +44,10 @@ export default function ExtraSidebar(): JSX.Element {
 
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
+    if (e === "") {
+      setFilterData(data);
+      return;
+    }
     setFilterData((_) => {
       let ret = {};
       Object.keys(data).forEach((d: keyof APIObjectType, i) => {
@@ -68,6 +74,59 @@ export default function ExtraSidebar(): JSX.Element {
     if (errors.length > 0)
       setErrorData({ title: " Components with errors: ", list: errors });
   }, []);
+
+  function handleBlur() {
+    if (!search && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
+  }
+
+  useEffect(() => {
+    if (getFilterEdge.length === 0 && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
+  }, [getFilterEdge]);
+
+  useEffect(() => {
+    if (getFilterEdge?.length > 0) {
+      setFilterData((_) => {
+        let dataClone = cloneDeep(data);
+        let ret = {};
+        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
+          ret[d] = {};
+          if (getFilterEdge.some((x) => x.family === d)) {
+            ret[d] = dataClone[d];
+
+            const filtered = getFilterEdge
+              .filter((x) => x.family === d)
+              .pop()
+              .type.split(",");
+
+            for (let i = 0; i < filtered.length; i++) {
+              filtered[i] = filtered[i].trimStart();
+            }
+
+            if (filtered.some((x) => x !== "")) {
+              let keys = Object.keys(dataClone[d]).filter((nd) =>
+                filtered.includes(nd)
+              );
+              Object.keys(dataClone[d]).forEach((element) => {
+                if (!keys.includes(element)) {
+                  delete ret[d][element];
+                }
+              });
+            }
+          }
+        });
+        setSearch("search");
+        return ret;
+      });
+    }
+  }, [getFilterEdge]);
 
   return (
     <div className="side-bar-arrangement">
@@ -99,16 +158,20 @@ export default function ExtraSidebar(): JSX.Element {
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
-              <ApiModal flow={flow} disable={!isBuilt}>
-                <div className={classNames("extra-side-bar-buttons")}>
-                  <IconComponent
-                    name="Code2"
-                    className={
-                      "side-bar-button-size" +
-                      (isBuilt ? " " : " extra-side-bar-save-disable")
-                    }
-                  />
-                </div>
+              <ApiModal flow={flow}>
+                <button
+                  className={"w-full " + (!isBuilt ? "button-disable" : "")}
+                >
+                  <div className={classNames("extra-side-bar-buttons")}>
+                    <IconComponent
+                      name="Code2"
+                      className={
+                        "side-bar-button-size" +
+                        (isBuilt ? " " : " extra-side-bar-save-disable")
+                      }
+                    />
+                  </div>
+                </button>
               </ApiModal>
             )}
           </div>
@@ -137,11 +200,12 @@ export default function ExtraSidebar(): JSX.Element {
       <Separator />
       <div className="side-bar-search-div-placement">
         <Input
+          onFocusCapture={() => handleBlur()}
           type="text"
           name="search"
           id="search"
           placeholder="Search"
-          className="nopan nodrag noundo nocopy input-search"
+          className="nopan nodelete nodrag noundo nocopy input-search"
           onChange={(event) => {
             handleSearchInput(event.target.value);
             // Set search input state

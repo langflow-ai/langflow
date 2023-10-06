@@ -2,10 +2,11 @@ import copy
 import json
 import os
 from pathlib import Path
+import pickle
 from typing import Type, Union
 from langflow.graph.edge.base import Edge
 from langflow.graph.vertex.base import Vertex
-
+from langchain.agents import AgentExecutor
 import pytest
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
@@ -193,7 +194,7 @@ def test_build_edges(basic_graph):
         assert isinstance(edge.target, Vertex)
 
 
-def test_get_root_node(basic_graph, complex_graph):
+def test_get_root_node(client, basic_graph, complex_graph):
     """Test getting root node"""
     assert isinstance(basic_graph, Graph)
     root = get_root_node(basic_graph)
@@ -269,7 +270,7 @@ def test_llm_node_build(basic_graph):
     assert built_object is not None
 
 
-def test_toolkit_node_build(openapi_graph):
+def test_toolkit_node_build(client, openapi_graph):
     # Write a file to the disk
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
@@ -284,7 +285,7 @@ def test_toolkit_node_build(openapi_graph):
     assert not Path(file_path).exists()
 
 
-def test_file_tool_node_build(openapi_graph):
+def test_file_tool_node_build(client, openapi_graph):
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
         f.write("openapi: 3.0.0")
@@ -330,7 +331,8 @@ def test_get_result_and_thought(basic_graph):
 
 def test_find_last_node(grouped_chat_json_flow):
     grouped_chat_data = json.loads(grouped_chat_json_flow).get("data")
-    last_node = find_last_node(grouped_chat_data)
+    nodes, edges = grouped_chat_data["nodes"], grouped_chat_data["edges"]
+    last_node = find_last_node(nodes, edges)
     assert last_node is not None  # Replace with the actual expected value
     assert last_node["id"] == "LLMChain-pimAb"  # Replace with the actual expected value
 
@@ -447,11 +449,6 @@ def test_update_template(sample_template, sample_nodes):
     assert node3_updated == sample_nodes[2]
 
 
-def find_last_node(data):
-    nodes, edges = data["nodes"], data["edges"]
-    return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
-
-
 # Test `update_target_handle`
 def test_update_target_handle_proxy():
     new_edge = {
@@ -504,3 +501,29 @@ def test_update_source_handle():
     )
     assert updated_edge["source"] == "last_node"
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
+
+
+def test_pickle_graph(json_vector_store):
+    loaded_json = json.loads(json_vector_store)
+    graph = Graph.from_payload(loaded_json)
+    assert isinstance(graph, Graph)
+    first_result = graph.build()
+    assert isinstance(first_result, AgentExecutor)
+    pickled = pickle.dumps(graph)
+    assert pickled is not None
+    unpickled = pickle.loads(pickled)
+    assert unpickled is not None
+    result = unpickled.build()
+    assert isinstance(result, AgentExecutor)
+
+
+def test_pickle_each_vertex(json_vector_store):
+    loaded_json = json.loads(json_vector_store)
+    graph = Graph.from_payload(loaded_json)
+    assert isinstance(graph, Graph)
+    for vertex in graph.nodes:
+        vertex.build()
+        pickled = pickle.dumps(vertex)
+        assert pickled is not None
+        unpickled = pickle.loads(pickled)
+        assert unpickled is not None

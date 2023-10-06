@@ -15,6 +15,7 @@ from langflow.template.template.base import Template
 class PromptFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+        FrontendNode.format_field(field, name)
         # if field.field_type  == "StringPromptTemplate"
         # change it to str
         PROMPT_FIELDS = [

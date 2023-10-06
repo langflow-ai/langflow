@@ -68,6 +68,17 @@ class Edge:
                 f"has invalid handles"
             )
 
+    def __setstate__(self, state):
+        self.source = state["source"]
+        self.target = state["target"]
+        self.target_param = state["target_param"]
+        self.source_handle = state["source_handle"]
+        self.target_handle = state["target_handle"]
+
+    def reset(self) -> None:
+        self.source._build_params()
+        self.target._build_params()
+
     def validate_edge(self) -> None:
         # Validate that the outputs of the source node are valid inputs
         # for the target node

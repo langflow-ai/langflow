@@ -6,8 +6,8 @@ import os
 import yaml
 
 
-class SettingsManager(Service):
-    name = "settings_manager"
+class SettingsService(Service):
+    name = "settings_service"
 
     def __init__(self, settings: Settings, auth_settings: AuthSettings):
         super().__init__()
@@ -15,7 +15,7 @@ class SettingsManager(Service):
         self.auth_settings = auth_settings
 
     @classmethod
-    def load_settings_from_yaml(cls, file_path: str) -> "SettingsManager":
+    def load_settings_from_yaml(cls, file_path: str) -> "SettingsService":
         # Check if a string is a valid path or a file name
         if "/" not in file_path:
             # Get current path

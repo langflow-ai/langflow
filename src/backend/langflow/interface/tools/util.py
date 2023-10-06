@@ -1,13 +1,13 @@
 import ast
 import inspect
+import textwrap
 from typing import Dict, Union
 
 from langchain.agents.tools import Tool
-from loguru import logger
 
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
-    tree = ast.parse(inspect.getsource(func))
+    tree = ast.parse(textwrap.dedent(inspect.getsource(func)))
 
     # Iterate over the statements in the abstract syntax tree
     for node in ast.walk(tree):
@@ -58,13 +58,7 @@ def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
 
 
 def get_class_tool_params(cls, **kwargs) -> Union[Dict, None]:
-    try:
-        tree = ast.parse(inspect.getsource(cls))
-    except IndentationError:
-        logger.error(
-            f"Error parsing class {cls.__name__}. Make sure there are no tabs in the code."
-        )
-        return None
+    tree = ast.parse(textwrap.dedent(inspect.getsource(cls)))
 
     tool_params = {}
 

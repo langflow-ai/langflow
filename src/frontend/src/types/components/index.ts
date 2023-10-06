@@ -50,10 +50,28 @@ export type ParameterComponentType = {
   optionalHandle?: Array<String> | null;
   info?: string;
   proxy?: { field: string; id: string };
+  showNode?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+};
+
+export type KeyPairListComponentType = {
+  value: any;
+  onChange: (value: Object[]) => void;
+  disabled: boolean;
+  editNode?: boolean;
+  duplicateKey?: boolean;
+  advanced?: boolean | null;
+  dataValue?: any;
+};
+
+export type DictComponentType = {
+  value: any;
+  onChange: (value) => void;
   disabled: boolean;
   editNode?: boolean;
 };
@@ -67,6 +85,17 @@ export type TextAreaComponentType = {
   value: string;
   editNode?: boolean;
   readonly?: boolean;
+};
+
+export type PromptAreaComponentType = {
+  field_name?: string;
+  nodeClass?: APIClassType;
+  setNodeClass?: (value: APIClassType) => void;
+  disabled: boolean;
+  onChange: (value: string[] | string) => void;
+  value: string;
+  readonly?: boolean;
+  editNode?: boolean;
 };
 
 export type CodeAreaComponentType = {
@@ -179,6 +208,7 @@ export type IconComponentProps = {
   name: string;
   className?: string;
   iconColor?: string;
+  onClick?: () => void;
 };
 
 export type InputProps = {
@@ -239,6 +269,7 @@ export type PaginatorComponentType = {
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
+  asChild?: boolean;
   modalContent: string;
   modalContentTitle: string;
   cancelText: string;
@@ -259,12 +290,19 @@ export type UserManagementType = {
   icon: string;
   data?: any;
   index?: number;
+  asChild?: boolean;
   onConfirm: (index, data) => void;
 };
 
 export type loginInputStateType = {
   username: string;
   password: string;
+};
+
+export type patchUserInputStateType = {
+  password: string;
+  cnfPassword: string;
+  gradient: string;
 };
 
 export type UserInputType = {
@@ -396,6 +434,9 @@ export type nodeToolbarPropsType = {
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
   position: XYPosition;
+  setShowNode: (boolean: any) => void;
+  numberOfHandles: boolean[] | [];
+  showNode: boolean;
 };
 
 export type parsedDataType = {
@@ -520,7 +561,7 @@ export type codeTabsPropsType = {
     ) => string;
     buildTweakObject?: (
       tw: string,
-      changes: string | string[] | boolean | number,
+      changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType
     ) => string | void;
   };
