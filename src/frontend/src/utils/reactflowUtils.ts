@@ -640,7 +640,9 @@ function updateGroupNodeTemplate(template: APITemplateType) {
         type === "code" ||
         type === "prompt" ||
         type === "file" ||
-        type === "int") &&
+        type === "int" ||
+        type === "dict" ||
+        type === "NestedDict") &&
       !template[key].required &&
       !input_types
     ) {
