@@ -173,8 +173,8 @@ const EditNodeModal = forwardRef(
                                     .proxy
                                     ? myData.current.node?.template[
                                         templateParam
-                                      ].proxy?.field
-                                    : "null"
+                                      ].proxy?.id
+                                    : null
                                 }
                               >
                                 <span>
