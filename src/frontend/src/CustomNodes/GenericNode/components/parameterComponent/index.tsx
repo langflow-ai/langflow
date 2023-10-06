@@ -232,7 +232,7 @@ export default function ParameterComponent({
                 isValidConnection(connection, reactFlowInstance!)
               }
               className={classNames(
-                left ? "-ml-0.5 " : "-mr-0.5 ",
+                left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background"
               )}
               style={{
