@@ -20,13 +20,18 @@ class Graph:
 
     def __init__(
         self,
-        nodes: List[Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]],
+        nodes: List[Dict],
         edges: List[Dict[str, str]],
     ) -> None:
         self._nodes = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
-        self.top_level_nodes = [node.get("id") for node in nodes]
+
+        self.top_level_nodes = []
+        for node in self._nodes:
+            if node_id := node.get("id"):
+                self.top_level_nodes.append(node_id)
+
         self._graph_data = process_flow(self.raw_graph_data)
         self._nodes = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
