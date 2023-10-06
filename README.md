@@ -143,7 +143,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://docs.langchain.com/docs/category/components) to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 
