@@ -497,7 +497,7 @@ def test_update_source_handle():
         "edges": [{"source": "some_node"}],
     }
     updated_edge = update_source_handle(
-        new_edge, {"nodes": flow_data["nodes"], "edges": flow_data["edges"]}
+        new_edge, flow_data["nodes"], flow_data["edges"]
     )
     assert updated_edge["source"] == "last_node"
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"

@@ -72,8 +72,8 @@ class Edge:
         self.source = state["source"]
         self.target = state["target"]
         self.target_param = state["target_param"]
-        self.source_handle = state["source_handle"]
-        self.target_handle = state["target_handle"]
+        self.source_handle = state.get("source_handle")
+        self.target_handle = state.get("target_handle")
 
     def reset(self) -> None:
         self.source._build_params()
