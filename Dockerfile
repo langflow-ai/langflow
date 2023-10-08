@@ -12,4 +12,4 @@ WORKDIR $HOME/app
 COPY --chown=user . $HOME/app
 
 RUN pip install langflow>==0.0.86 -U --user
-CMD ["python", "-m", "langflow", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
