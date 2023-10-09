@@ -7,6 +7,11 @@ export type APITemplateType = {
   variable: TemplateVariableType;
   [key: string]: TemplateVariableType;
 };
+
+export type CustomFieldsType = {
+  [key: string]: Array<string>;
+};
+
 export type APIClassType = {
   base_classes: Array<string>;
   description: string;
@@ -14,10 +19,17 @@ export type APIClassType = {
   display_name: string;
   input_types?: Array<string>;
   output_types?: Array<string>;
+  custom_fields?: CustomFieldsType;
   beta?: boolean;
   documentation: string;
   error?: string;
-  [key: string]: Array<string> | string | APITemplateType | boolean | undefined;
+  [key: string]:
+    | Array<string>
+    | string
+    | APITemplateType
+    | CustomFieldsType
+    | boolean
+    | undefined;
 };
 
 export type TemplateVariableType = {
@@ -38,7 +50,7 @@ export type sendAllProps = {
   description: string;
   viewport: Viewport;
   inputs: { text?: string };
-
+  chatKey: string;
   chatHistory: { message: string | object; isSend: boolean }[];
 };
 export type errorsTypeAPI = {
@@ -78,11 +90,25 @@ export type LoginAuthType = {
   token_type?: string;
 };
 
+export type changeUser = {
+  username?: string;
+  is_active?: boolean;
+  is_superuser?: boolean;
+  password?: string;
+  profile_image?: string;
+};
+
+export type resetPasswordType = {
+  password?: string;
+  profile_image?: string;
+};
+
 export type Users = {
   id: string;
   username: string;
   is_active: boolean;
   is_superuser: boolean;
+  profile_image: string;
   create_at: Date;
   updated_at: Date;
 };

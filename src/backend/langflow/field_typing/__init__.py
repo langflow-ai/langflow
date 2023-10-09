@@ -1,3 +1,3 @@
-from .base import Text, Prompt
+from .base import NestedDict, Text, Prompt
 
-__all__ = ["Text", "Prompt"]
+__all__ = ["NestedDict", "Text", "Prompt"]

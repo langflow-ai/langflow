@@ -1,14 +1,16 @@
 from contextlib import contextmanager
 import json
+from contextlib import suppress
 from pathlib import Path
 from typing import AsyncGenerator, TYPE_CHECKING
-from langflow.api.v1.flows import get_session
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
 import orjson
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_service
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -16,8 +18,11 @@ from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+# we need to import tmpdir
+import tempfile
+
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseManager
+    from langflow.services.database.manager import DatabaseService
 
 
 def pytest_configure():
@@ -36,6 +41,9 @@ def pytest_configure():
     pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
     pytest.TWO_OUTPUTS = (
         Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
+    )
+    pytest.VECTOR_STORE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "Vector_store.json"
     )
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
@@ -61,15 +69,62 @@ async def async_client() -> AsyncGenerator:
         yield client
 
 
-# Create client fixture for FastAPI
-@pytest.fixture(scope="module", autouse=True)
-def client():
+@pytest.fixture(name="session")
+def session_fixture():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+
+
+class Config:
+    broker_url = "redis://localhost:6379/0"
+    result_backend = "redis://localhost:6379/0"
+
+
+@pytest.fixture(name="distributed_env")
+def setup_env(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "redis")
+    monkeypatch.setenv("LANGFLOW_REDIS_HOST", "result_backend")
+    monkeypatch.setenv("LANGFLOW_REDIS_PORT", "6379")
+    monkeypatch.setenv("LANGFLOW_REDIS_DB", "0")
+    monkeypatch.setenv("LANGFLOW_REDIS_EXPIRE", "3600")
+    monkeypatch.setenv("LANGFLOW_REDIS_PASSWORD", "")
+    monkeypatch.setenv("FLOWER_UNAUTHENTICATED_API", "True")
+    monkeypatch.setenv("BROKER_URL", "redis://result_backend:6379/0")
+    monkeypatch.setenv("RESULT_BACKEND", "redis://result_backend:6379/0")
+    monkeypatch.setenv("C_FORCE_ROOT", "true")
+
+
+@pytest.fixture(name="distributed_client")
+def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
+    # Here we load the .env from ../deploy/.env
+    from langflow.core import celery_app
+
+    db_dir = tempfile.mkdtemp()
+    db_path = Path(db_dir) / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+    # monkeypatch langflow.services.task.manager.USE_CELERY to True
+    # monkeypatch.setattr(manager, "USE_CELERY", True)
+    monkeypatch.setattr(
+        celery_app, "celery_app", celery_app.make_celery("langflow", Config)
+    )
+
+    # def get_session_override():
+    #     return session
+
     from langflow.main import create_app
 
     app = create_app()
 
+    # app.dependency_overrides[get_session] = get_session_override
     with TestClient(app) as client:
         yield client
+    app.dependency_overrides.clear()
+    monkeypatch.undo()
 
 
 def get_graph(_type="basic"):
@@ -117,55 +172,46 @@ def json_flow():
         return f.read()
 
 
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
+@pytest.fixture
+def json_flow_with_prompt_and_history():
+    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
+        return f.read()
 
 
-@pytest.fixture(name="client")
-def client_fixture(session: Session):
-    def get_session_override():
-        return session
+@pytest.fixture
+def json_vector_store():
+    with open(pytest.VECTOR_STORE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture(name="client", autouse=True)
+def client_fixture(session: Session, monkeypatch):
+    # Set the database url to a test database
+    db_dir = tempfile.mkdtemp()
+    db_path = Path(db_dir) / "test.db"
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
 
     from langflow.main import create_app
 
     app = create_app()
 
-    app.dependency_overrides[get_session] = get_session_override
+    # app.dependency_overrides[get_session] = get_session_override
     with TestClient(app) as client:
         yield client
-    app.dependency_overrides.clear()
-
-
-# @contextmanager
-# def session_getter():
-#     try:
-#         session = Session(engine)
-#         yield session
-#     except Exception as e:
-#         print("Session rollback because of exception:", e)
-#         session.rollback()
-#         raise
-#     finally:
-#         session.close()
+    # app.dependency_overrides.clear()
+    monkeypatch.undo()
+    # clear the temp db
+    with suppress(FileNotFoundError):
+        db_path.unlink()
 
 
 # create a fixture for session_getter above
 @pytest.fixture(name="session_getter")
 def session_getter_fixture(client):
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(engine)
-
     @contextmanager
-    def blank_session_getter(db_manager: "DatabaseManager"):
-        with Session(db_manager.engine) as session:
+    def blank_session_getter(db_service: "DatabaseService"):
+        with Session(db_service.engine) as session:
             yield session
 
     yield blank_session_getter
@@ -182,22 +228,31 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/user", json=user_data.dict())
+    response = client.post("/api/v1/users", json=user_data.dict())
+    assert response.status_code == 201
     return response.json()
 
 
 @pytest.fixture(scope="function")
-def active_user(client, session):
-    user = User(
-        username="activeuser",
-        password=get_password_hash(
-            "testpassword"
-        ),  # Assuming password needs to be hashed
-        is_active=True,
-        is_superuser=False,
-    )
-    session.add(user)
-    session.commit()
+def active_user(client):
+    db_manager = get_db_service()
+    with session_getter(db_manager) as session:
+        user = User(
+            username="activeuser",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        # check if user exists
+        if (
+            active_user := session.query(User)
+            .filter(User.username == user.username)
+            .first()
+        ):
+            return active_user
+        session.add(user)
+        session.commit()
+        session.refresh(user)
     return user
 
 
@@ -212,7 +267,7 @@ def logged_in_headers(client, active_user):
 
 
 @pytest.fixture
-def flow(client, json_flow: str, session, active_user):
+def flow(client, json_flow: str, active_user):
     from langflow.services.database.models.flow.flow import FlowCreate
 
     loaded_json = json.loads(json_flow)
@@ -220,8 +275,10 @@ def flow(client, json_flow: str, session, active_user):
         name="test_flow", data=loaded_json.get("data"), user_id=active_user.id
     )
     flow = Flow(**flow_data.dict())
-    session.add(flow)
-    session.commit()
+    with session_getter(get_db_service()) as session:
+        session.add(flow)
+        session.commit()
+        session.refresh(flow)
 
     return flow
 
@@ -279,4 +336,17 @@ def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
+
+
+@pytest.fixture
+def added_vector_store(client, json_vector_store, logged_in_headers):
+    vector_store = orjson.loads(json_vector_store)
+    data = vector_store["data"]
+    vector_store = FlowCreate(name="Vector Store", description="description", data=data)
+    response = client.post(
+        "api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers
+    )
+    assert response.status_code == 201
+    assert response.json()["name"] == vector_store.name
+    assert response.json()["data"] == vector_store.data
     return response.json()

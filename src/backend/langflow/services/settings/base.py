@@ -37,9 +37,20 @@ class Settings(BaseSettings):
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE: str = "InMemoryCache"
+    CACHE_TYPE: str = "memory"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
+    LANGCHAIN_CACHE: str = "InMemoryCache"
+
+    # Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_CACHE_EXPIRE: int = 3600
+
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_HOST: Optional[str] = None
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):

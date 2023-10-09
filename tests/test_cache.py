@@ -38,7 +38,7 @@ def langchain_objects_are_equal(obj1, obj2):
 
 
 # Test build_graph
-def test_build_graph(basic_data_graph):
+def test_build_graph(client, basic_data_graph):
     graph = Graph.from_payload(basic_data_graph)
     assert graph is not None
     assert len(graph.vertices) == len(basic_data_graph["nodes"])

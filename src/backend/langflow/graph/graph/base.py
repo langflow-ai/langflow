@@ -25,6 +25,12 @@ class Graph:
         self._edges = edges
         self._build_graph()
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        for edge in self.edges:
+            edge.reset()
+            edge.validate_edge()
+
     @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
         """
@@ -46,6 +52,11 @@ class Graph:
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Graph):
+            return False
+        return self.__repr__() == other.__repr__()
 
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
@@ -146,7 +157,7 @@ class Graph:
     def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.debug("Sorted vertices: %s", sorted_vertices)
+        logger.debug("There are %s vertices in the graph", len(sorted_vertices))
         yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:

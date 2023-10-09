@@ -1,4 +1,6 @@
 from langflow.services.database.models.base import orjson_dumps
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_service
 import orjson
 import pytest
 
@@ -179,7 +181,11 @@ def test_upload_file(
 
 
 def test_download_file(
-    client: TestClient, session: Session, json_flow, active_user, logged_in_headers
+    client: TestClient,
+    session: Session,
+    json_flow,
+    active_user,
+    logged_in_headers,
 ):
     flow = orjson.loads(json_flow)
     data = flow["data"]
@@ -190,18 +196,20 @@ def test_download_file(
             FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
-    for flow in flow_list.flows:
-        flow.user_id = active_user.id
-        db_flow = Flow.from_orm(flow)
-        session.add(db_flow)
-    session.commit()
+    db_manager = get_db_service()
+    with session_getter(db_manager) as session:
+        for flow in flow_list.flows:
+            flow.user_id = active_user.id
+            db_flow = Flow.from_orm(flow)
+            session.add(db_flow)
+        session.commit()
     # Make request to endpoint
     response = client.get("api/v1/flows/download/", headers=logged_in_headers)
     # Check response status code
-    assert response.status_code == 200
+    assert response.status_code == 200, response.json()
     # Check response data
     response_data = response.json()["flows"]
-    assert len(response_data) == 2
+    assert len(response_data) == 2, response_data
     assert response_data[0]["name"] == "Flow 1"
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data

@@ -25,16 +25,15 @@ from langflow.processing.process import process_tweaks_on_graph
 
 from langflow.services.auth.utils import get_current_active_user, get_current_user
 from langflow.services.database.models.flow.flow import Flow
+from langflow.services.cache.utils import update_build_status
 from loguru import logger
-from langflow.services.utils import get_chat_manager, get_session
-from cachetools import LRUCache
+from langflow.services.getters import get_chat_service, get_session, get_cache_service
 from sqlmodel import Session
-from langflow.services.chat.manager import ChatManager
+from langflow.services.chat.manager import ChatService
+from langflow.services.cache.manager import BaseCacheService
 
 
 router = APIRouter(tags=["Chat"])
-
-flow_data_store: LRUCache = LRUCache(maxsize=10)
 
 
 @router.websocket("/chat/{client_id}")
@@ -43,7 +42,7 @@ async def chat(
     websocket: WebSocket,
     token: str = Query(...),
     db: Session = Depends(get_session),
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
 ):
     """Websocket endpoint for chat."""
     try:
@@ -58,15 +57,15 @@ async def chat(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
             )
 
-        if client_id in chat_manager.in_memory_cache:
-            await chat_manager.handle_websocket(client_id, websocket)
+        if client_id in chat_service.cache_service:
+            await chat_service.handle_websocket(client_id, websocket)
         else:
             # We accept the connection but close it immediately
             # if the flow is not built yet
             message = "Please, build the flow before sending messages"
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
     except WebSocketException as exc:
-        logger.error(f"Websocket error: {exc}")
+        logger.error(f"Websocket exrror: {exc}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
     except Exception as exc:
         logger.error(f"Error in chat websocket: {exc}")
@@ -84,26 +83,26 @@ async def init_build(
     graph_data: dict,
     flow_id: str,
     current_user=Depends(get_current_active_user),
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
+    cache_service: "BaseCacheService" = Depends(get_cache_service),
 ):
     """Initialize the build by storing graph data and returning a unique session ID."""
-
     try:
         if flow_id is None:
             raise ValueError("No ID provided")
         # Check if already building
         if (
-            flow_id in flow_data_store
-            and flow_data_store[flow_id]["status"] == BuildStatus.IN_PROGRESS
+            flow_id in cache_service
+            and isinstance(cache_service[flow_id], dict)
+            and cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS
         ):
             return InitResponse(flowId=flow_id)
 
         # Delete from cache if already exists
-        if flow_id in chat_manager.in_memory_cache:
-            with chat_manager.in_memory_cache._lock:
-                chat_manager.in_memory_cache.delete(flow_id)
-                logger.debug(f"Deleted flow {flow_id} from cache")
-        flow_data_store[flow_id] = {
+        if flow_id in chat_service.cache_service:
+            chat_service.cache_service.delete(flow_id)
+            logger.debug(f"Deleted flow {flow_id} from cache")
+        cache_service[flow_id] = {
             "graph_data": graph_data,
             "status": BuildStatus.STARTED,
             "user_id": current_user.id,
@@ -116,12 +115,14 @@ async def init_build(
 
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
-async def build_status(flow_id: str):
-    """Check the flow_id is in the flow_data_store."""
+async def build_status(
+    flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)
+):
+    """Check the flow_id is in the cache_service."""
     try:
         built = (
-            flow_id in flow_data_store
-            and flow_data_store[flow_id]["status"] == BuildStatus.SUCCESS
+            flow_id in cache_service
+            and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
         )
 
         return BuiltResponse(
@@ -135,7 +136,9 @@ async def build_status(flow_id: str):
 
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(
-    flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
+    flow_id: str,
+    chat_service: "ChatService" = Depends(get_chat_service),
+    cache_service: "BaseCacheService" = Depends(get_cache_service),
 ):
     """Stream the build process based on stored flow data."""
 
@@ -143,18 +146,18 @@ async def stream_build(
         final_response = {"end_of_stream": True}
         artifacts = {}
         try:
-            if flow_id not in flow_data_store:
+            if flow_id not in cache_service:
                 error_message = "Invalid session ID"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            if flow_data_store[flow_id].get("status") == BuildStatus.IN_PROGRESS:
+            if cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS:
                 error_message = "Already building"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            graph_data = flow_data_store[flow_id].get("graph_data")
-            user_id = flow_data_store[flow_id]["user_id"]
+            graph_data = cache_service[flow_id].get("graph_data")
+            cache_service[flow_id]["user_id"]
 
             if not graph_data:
                 error_message = "No data provided"
@@ -166,8 +169,8 @@ async def stream_build(
             # Some error could happen when building the graph
             graph = Graph.from_payload(graph_data)
 
-            number_of_nodes = len(graph.vertices)
-            flow_data_store[flow_id]["status"] = BuildStatus.IN_PROGRESS
+            number_of_nodes = len(graph.nodes)
+            update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
@@ -175,7 +178,10 @@ async def stream_build(
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
-                    vertex.build(user_id)
+                    if vertex.is_task:
+                        vertex = try_running_celery_task(vertex)
+                    else:
+                        vertex.build()
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
@@ -191,7 +197,7 @@ async def stream_build(
                     logger.exception(exc)
                     params = str(exc)
                     valid = False
-                    flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
+                    update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
                 response = {
                     "valid": valid,
@@ -215,14 +221,15 @@ async def stream_build(
                     "handle_keys": [],
                 }
             yield str(StreamData(event="message", data=input_keys_response))
-            chat_manager.set_cache(flow_id, langchain_object)
+            chat_service.set_cache(flow_id, langchain_object)
             # We need to reset the chat history
-            chat_manager.chat_history.empty_history(flow_id)
-            flow_data_store[flow_id]["status"] = BuildStatus.SUCCESS
+            chat_service.chat_history.empty_history(flow_id)
+            update_build_status(cache_service, flow_id, BuildStatus.SUCCESS)
         except Exception as exc:
             logger.exception(exc)
             logger.error("Error while building the flow: %s", exc)
-            flow_data_store[flow_id]["status"] = BuildStatus.FAILURE
+
+            update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
             yield str(StreamData(event="error", data={"error": str(exc)}))
         finally:
             yield str(StreamData(event="message", data=final_response))
@@ -237,7 +244,7 @@ async def stream_build(
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def get_vertices(
     flow_id: str,
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
 ):
     """Check the flow_id is in the flow_data_store."""
@@ -246,7 +253,7 @@ async def get_vertices(
         if not flow:
             raise ValueError("Invalid flow ID")
         graph = Graph.from_payload(flow.data)
-        chat_manager.set_cache(flow_id, graph)
+        chat_service.set_cache(flow_id, graph)
         vertices = graph.topological_sort()
 
         return VerticesOrderResponse(ids=[vertex.id for vertex in vertices])
@@ -260,14 +267,14 @@ async def get_vertices(
 def build_vertex(
     flow_id: str,
     vertex_id: str,
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
     tweaks: dict = Body(None),
     inputs: dict = Body(None),
 ):
     """Build a vertex instead of the entire graph."""
     try:
-        graph = chat_manager.get_cache(flow_id)
+        graph = chat_service.get_cache(flow_id)
         if tweaks:
             graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
@@ -289,7 +296,7 @@ def build_vertex(
             valid = False
             result_dict = {}
             artifacts = {}
-        chat_manager.set_cache(flow_id, graph)
+        chat_service.set_cache(flow_id, graph)
 
         return VertexBuildResponse(
             valid=valid,
@@ -301,3 +308,19 @@ def build_vertex(
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+def try_running_celery_task(vertex):
+    # Try running the task in celery
+    # and set the task_id to the local vertex
+    # if it fails, run the task locally
+    try:
+        from langflow.worker import build_vertex
+
+        task = build_vertex.delay(vertex)
+        vertex.task_id = task.id
+    except Exception as exc:
+        logger.debug(f"Error running task in celery: {exc}")
+        vertex.task_id = None
+        vertex.build()
+    return vertex

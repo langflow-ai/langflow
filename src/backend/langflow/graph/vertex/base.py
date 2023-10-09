@@ -1,5 +1,7 @@
 import ast
+import pickle
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
+from langflow.graph.vertex.utils import is_basic_type
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
@@ -12,12 +14,19 @@ import types
 from typing import Any, Callable, Dict, List, Optional
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
 
 
 class Vertex:
-    def __init__(self, data: Dict, base_type: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        data: Dict,
+        base_type: Optional[str] = None,
+        is_task: bool = False,
+        params: Optional[Dict] = None,
+    ) -> None:
         self.id: str = data["id"]
         self._data = data
         self.edges: List["ContractEdge"] = []
@@ -29,6 +38,9 @@ class Vertex:
         self.artifacts: Dict[str, Any] = {}
         self.steps: List[Callable] = [self._build]
         self.steps_ran: List[Callable] = []
+        self.task_id: Optional[str] = None
+        self.is_task = is_task
+        self.params = params or {}
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -46,6 +58,56 @@ class Vertex:
 
     def set_artifacts(self) -> None:
         pass
+
+    def reset_params(self):
+        for edge in self.edges:
+            if edge.source != self:
+                target_param = edge.target_param
+                if target_param in ["document", "texts"]:
+                    # this means they got data and have already ingested it
+                    # so we continue after removing the param
+                    self.params.pop(target_param, None)
+                    continue
+
+                if target_param in self.params and not is_basic_type(
+                    self.params[target_param]
+                ):
+                    # edge.source.params = {}
+                    edge.source._build_params()
+                    edge.source._built_object = UnbuiltObject()
+                    edge.source._built = False
+
+                    self.params[target_param] = edge.source
+
+    def __getstate__(self):
+        state_dict = self.__dict__.copy()
+        try:
+            # try pickling the built object
+            # if it fails, then we need to delete it
+            # and build it again
+            pickle.dumps(state_dict["_built_object"])
+        except Exception:
+            self.reset_params()
+            del state_dict["_built_object"]
+            del state_dict["_built"]
+        return state_dict
+
+    def __setstate__(self, state):
+        self._data = state["_data"]
+        self.params = state["params"]
+        self.base_type = state["base_type"]
+        self.is_task = state["is_task"]
+        self.edges = state["edges"]
+        self.id = state["id"]
+        self._parse_data()
+        if "_built_object" in state:
+            self._built_object = state["_built_object"]
+            self._built = state["_built"]
+        else:
+            self._built_object = UnbuiltObject()
+            self._built = False
+        self.artifacts: Dict[str, Any] = {}
+        self.task_id: Optional[str] = None
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -88,6 +150,13 @@ class Vertex:
                     self.base_type = base_type
                     break
 
+    def get_task(self):
+        # using the task_id, get the task from celery
+        # and return it
+        from celery.result import AsyncResult  # type: ignore
+
+        return AsyncResult(self.task_id)
+
     def _build_params(self):
         # sourcery skip: merge-list-append, remove-redundant-if
         # Some params are required, some are optional
@@ -109,9 +178,11 @@ class Vertex:
             for key, value in self.data["node"]["template"].items()
             if isinstance(value, dict)
         }
-        params = {}
+        params = self.params.copy() if self.params else {}
 
         for edge in self.edges:
+            if not hasattr(edge, "target_param"):
+                continue
             param_key = edge.target_param
             if param_key in template_dict:
                 if template_dict[param_key]["list"]:
@@ -122,6 +193,8 @@ class Vertex:
                     params[param_key] = edge.source
 
         for key, value in template_dict.items():
+            if key in params:
+                continue
             # Skip _type and any value that has show == False and is not code
             # If we don't want to show code but we want to use it
             if key == "_type" or (not value.get("show") and key != "code"):
@@ -132,9 +205,10 @@ class Vertex:
                 # Load the type in value.get('suffixes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
-                file_path = value.get("file_path")
-
-                params[key] = file_path
+                if file_path := value.get("file_path"):
+                    params[key] = file_path
+                else:
+                    raise ValueError(f"File path not found for {self.vertex_type}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
                 if value.get("type") == "code":
                     try:
@@ -142,6 +216,19 @@ class Vertex:
                     except Exception as exc:
                         logger.debug(f"Error parsing code: {exc}")
                         params[key] = value.get("value")
+                elif value.get("type") in ["dict", "NestedDict"]:
+                    # When dict comes from the frontend it comes as a
+                    # list of dicts, so we need to convert it to a dict
+                    # before passing it to the build method
+                    _value = value.get("value")
+                    if isinstance(_value, list):
+                        params[key] = {
+                            k: v
+                            for item in value.get("value", [])
+                            for k, v in item.items()
+                        }
+                    elif isinstance(_value, dict):
+                        params[key] = _value
                 else:
                     params[key] = value.get("value")
 
@@ -151,6 +238,7 @@ class Vertex:
                 else:
                     params.pop(key, None)
         # Add _type to params
+        self._raw_params = params
         self.params = params
         # TODO: Hash params dict
 
@@ -159,7 +247,7 @@ class Vertex:
         Initiate the build process.
         """
         logger.debug(f"Building {self.vertex_type}")
-        self._build_each_node_in_params_dict()
+        self._build_each_node_in_params_dict(user_id)
         self._get_and_instantiate_class(user_id)
         self._validate_built_object()
 
@@ -177,7 +265,7 @@ class Vertex:
                     inputs[key] = ""
         self._built_result = self._built_object.run(inputs)
 
-    def _build_each_node_in_params_dict(self):
+    def _build_each_node_in_params_dict(self, user_id=None):
         """
         Iterates over each node in the params dictionary and builds it.
         """
@@ -186,9 +274,9 @@ class Vertex:
                 if value == self:
                     del self.params[key]
                     continue
-                self._build_node_and_update_params(key, value)
+                self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
-                self._build_list_of_nodes_and_update_params(key, value)
+                self._build_list_of_nodes_and_update_params(key, value, user_id)
 
     def _is_node(self, value):
         """
@@ -202,11 +290,31 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    def _build_node_and_update_params(self, key, node: "Vertex", user_id=None):
+    def get_result(self, user_id=None, timeout=None) -> Any:
+        # Check if the Vertex was built already
+        if self._built:
+            return self._built_object
+
+        if self.is_task and self.task_id is not None:
+            task = self.get_task()
+            result = task.get(timeout=timeout)
+            if result is not None:  # If result is ready
+                self._update_built_object_and_artifacts(result)
+                return self._built_object
+            else:
+                # Handle the case when the result is not ready (retry, throw exception, etc.)
+                pass
+
+        # If there's no task_id, build the vertex locally
+        self.build(user_id)
+        return self._built_object
+
+    def _build_node_and_update_params(self, key, node, user_id=None):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
-        result = node.build(user_id, requester=self)
+
+        result = node.get_result(user_id)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -220,8 +328,7 @@ class Vertex:
         """
         self.params[key] = []
         for node in nodes:
-            built = node.build(user_id)
-
+            built = node.get_result(user_id)
             if isinstance(built, list):
                 if key not in self.params:
                     self.params[key] = []
@@ -266,6 +373,7 @@ class Vertex:
             )
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
+            logger.exception(exc)
             raise ValueError(
                 f"Error building node {self.vertex_type}: {str(exc)}"
             ) from exc
@@ -338,7 +446,10 @@ class Vertex:
         return f"Vertex(id={self.id}, data={self.data})"
 
     def __eq__(self, __o: object) -> bool:
-        return self.id == __o.id if isinstance(__o, Vertex) else False
+        try:
+            return self.id == __o.id if isinstance(__o, Vertex) else False
+        except AttributeError:
+            return False
 
     def __hash__(self) -> int:
         return id(self)

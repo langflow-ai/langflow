@@ -6,9 +6,14 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from appdirs import user_cache_dir
+from fastapi import UploadFile
+from langflow.api.v1.schemas import BuildStatus
 from langflow.services.database.models.base import orjson_dumps
+
+if TYPE_CHECKING:
+    pass
 
 CACHE: Dict[str, Any] = {}
 
@@ -152,7 +157,7 @@ def save_binary_file(content: str, file_name: str, accepted_types: list[str]) ->
 
 
 @create_cache_folder
-def save_uploaded_file(file, folder_name):
+def save_uploaded_file(file: UploadFile, folder_name):
     """
     Save an uploaded file to the specified folder with a hash of its content as the file name.
 
@@ -165,6 +170,12 @@ def save_uploaded_file(file, folder_name):
     """
     cache_path = Path(CACHE_DIR)
     folder_path = cache_path / folder_name
+    filename = file.filename
+    if isinstance(filename, str) or isinstance(filename, Path):
+        file_extension = Path(filename).suffix
+    else:
+        file_extension = ""
+    file_object = file.file
 
     # Create the folder if it doesn't exist
     if not folder_path.exists():
@@ -173,22 +184,30 @@ def save_uploaded_file(file, folder_name):
     # Create a hash of the file content
     sha256_hash = hashlib.sha256()
     # Reset the file cursor to the beginning of the file
-    file.seek(0)
+    file_object.seek(0)
     # Iterate over the uploaded file in small chunks to conserve memory
-    while chunk := file.read(8192):  # Read 8KB at a time (adjust as needed)
+    while chunk := file_object.read(8192):  # Read 8KB at a time (adjust as needed)
         sha256_hash.update(chunk)
 
     # Use the hex digest of the hash as the file name
     hex_dig = sha256_hash.hexdigest()
-    file_name = hex_dig
+    file_name = f"{hex_dig}{file_extension}"
 
     # Reset the file cursor to the beginning of the file
-    file.seek(0)
+    file_object.seek(0)
 
     # Save the file with the hash as its name
     file_path = folder_path / file_name
     with open(file_path, "wb") as new_file:
-        while chunk := file.read(8192):
+        while chunk := file_object.read(8192):
             new_file.write(chunk)
 
     return file_path
+
+
+def update_build_status(cache_service, flow_id: str, status: BuildStatus):
+    cached_flow = cache_service[flow_id]
+    if cached_flow is None:
+        raise ValueError(f"Flow {flow_id} not found in cache")
+    cached_flow["status"] = status
+    cache_service[flow_id] = cached_flow

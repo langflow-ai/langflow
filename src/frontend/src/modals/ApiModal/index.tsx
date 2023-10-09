@@ -14,11 +14,12 @@ import {
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
+import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
-import { buildTweaks } from "../../utils/reactflowUtils";
+import { buildTweaks, convertArrayToObj } from "../../utils/reactflowUtils";
 import {
   getCurlCode,
   getPythonApiCode,
@@ -33,23 +34,27 @@ const ApiModal = forwardRef(
     {
       flow,
       children,
-      disable,
     }: {
       flow: FlowType;
       children: ReactNode;
-      disable: boolean;
     },
     ref
   ) => {
+    const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
     const { setTweak, getTweak, tabsState } = useContext(TabsContext);
-    const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
-    const curl_code = getCurlCode(flow, tweak.current, tabsState);
+    const pythonApiCode = getPythonApiCode(
+      flow,
+      autoLogin,
+      tweak.current,
+      tabsState
+    );
+    const curl_code = getCurlCode(flow, autoLogin, tweak.current, tabsState);
     const pythonCode = getPythonCode(flow, tweak.current, tabsState);
-    const widgetCode = getWidgetCode(flow, tabsState);
+    const widgetCode = getWidgetCode(flow, autoLogin, tabsState);
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
       curl_code,
@@ -100,7 +105,9 @@ const ApiModal = forwardRef(
                 node.data.node.template[templateField].type === "code" ||
                 node.data.node.template[templateField].type === "prompt" ||
                 node.data.node.template[templateField].type === "file" ||
-                node.data.node.template[templateField].type === "int")
+                node.data.node.template[templateField].type === "int" ||
+                node.data.node.template[templateField].type === "dict" ||
+                node.data.node.template[templateField].type === "NestedDict")
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);
@@ -113,7 +120,7 @@ const ApiModal = forwardRef(
     }
     function buildTweakObject(
       tw: string,
-      changes: string | string[] | boolean | number,
+      changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType
     ) {
       if (typeof changes === "string" && template.type === "float") {
@@ -124,6 +131,14 @@ const ApiModal = forwardRef(
       }
       if (template.list === true && Array.isArray(changes)) {
         changes = changes?.filter((x) => x !== "");
+      }
+
+      if (template.type === "dict" && Array.isArray(changes)) {
+        changes = convertArrayToObj(changes);
+      }
+
+      if (template.type === "NestedDict") {
+        changes = JSON.stringify(changes);
       }
 
       const existingTweak = tweak.current.find((element) =>
@@ -152,10 +167,15 @@ const ApiModal = forwardRef(
         tweak.current.push(newTweak);
       }
 
-      const pythonApiCode = getPythonApiCode(flow, tweak.current, tabsState);
-      const curl_code = getCurlCode(flow, tweak.current, tabsState);
+      const pythonApiCode = getPythonApiCode(
+        flow,
+        autoLogin,
+        tweak.current,
+        tabsState
+      );
+      const curl_code = getCurlCode(flow, autoLogin, tweak.current, tabsState);
       const pythonCode = getPythonCode(flow, tweak.current, tabsState);
-      const widgetCode = getWidgetCode(flow, tabsState);
+      const widgetCode = getWidgetCode(flow, autoLogin, tabsState);
 
       tabs![0].code = curl_code;
       tabs![1].code = pythonApiCode;
@@ -201,8 +221,8 @@ const ApiModal = forwardRef(
     }
 
     return (
-      <BaseModal open={open} setOpen={setOpen} disable={disable}>
-        <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal open={open} setOpen={setOpen}>
+        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
           <span className="pr-2">Code</span>
           <IconComponent
