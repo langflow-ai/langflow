@@ -216,6 +216,7 @@ const EditNodeModal = forwardRef(
                                     />
                                   ) : (
                                     <InputComponent
+                                      id={"input-" + index}
                                       editNode={true}
                                       disabled={disabled}
                                       password={
@@ -311,6 +312,7 @@ const EditNodeModal = forwardRef(
                                 <div className="ml-auto">
                                   {" "}
                                   <ToggleShadComponent
+                                    id={"toggle-edit-" + index}
                                     disabled={disabled}
                                     enabled={
                                       myData.current.node.template[
@@ -369,6 +371,7 @@ const EditNodeModal = forwardRef(
                                   .type === "int" ? (
                                 <div className="mx-auto">
                                   <IntComponent
+                                    id={"int-input-" + index}
                                     disabled={disabled}
                                     editNode={true}
                                     value={

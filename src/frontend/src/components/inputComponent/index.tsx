@@ -15,6 +15,7 @@ export default function InputComponent({
   editNode = false,
   placeholder = "Type something...",
   className,
+  id = "",
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
 
@@ -30,6 +31,7 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
+            id={"form-" + id}
             type={password && !pwdVisible ? "password" : "text"}
             value={value}
             disabled={disabled}
@@ -54,6 +56,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <Input
+          id={id}
           type="text"
           value={value}
           disabled={disabled}
