@@ -229,6 +229,9 @@ export default function ParameterComponent({
             borderColor: color,
             top: position,
           }}
+          onClick={() => {
+            setFilterEdge(groupedEdge.current);
+          }}
         ></Handle>
       </ShadTooltip>
     )
