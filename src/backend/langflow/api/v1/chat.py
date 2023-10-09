@@ -133,75 +133,6 @@ async def build_status(flow_id: str):
         return HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
-async def get_vertices(
-    flow_id: str,
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
-    session=Depends(get_session),
-):
-    """Check the flow_id is in the flow_data_store."""
-    try:
-        flow: Flow = session.get(Flow, flow_id)
-        if not flow:
-            raise ValueError("Invalid flow ID")
-        graph = Graph.from_payload(flow.data)
-        chat_manager.set_cache(flow_id, graph)
-        vertices = graph.topological_sort()
-
-        return VerticesOrderResponse(ids=[vertex.id for vertex in vertices])
-
-    except Exception as exc:
-        logger.error(f"Error checking build status: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@router.post("/build/{flow_id}/vertices/{vertex_id}")
-def build_vertex(
-    flow_id: str,
-    vertex_id: str,
-    chat_manager: "ChatManager" = Depends(get_chat_manager),
-    current_user=Depends(get_current_active_user),
-    tweaks: dict = Body(None),
-    inputs: dict = Body(None),
-):
-    """Build a vertex instead of the entire graph."""
-    try:
-        graph = chat_manager.get_cache(flow_id)
-        if tweaks:
-            graph = process_tweaks_on_graph(graph, tweaks)
-        if not isinstance(graph, Graph):
-            raise ValueError("Invalid graph")
-        if not (vertex := graph.get_vertex(vertex_id)):
-            raise ValueError("Invalid vertex")
-        try:
-            if isinstance(vertex, StatelessVertex) or not vertex._built:
-                vertex.build(user_id=current_user.id, force=True)
-            params = vertex._built_object_repr()
-            valid = True
-            result_dict = vertex.get_result_dict()
-            # We need to set the artifacts to pass information
-            # to the frontend
-            vertex.set_artifacts()
-            artifacts = vertex.artifacts
-        except Exception as exc:
-            params = str(exc)
-            valid = False
-            result_dict = {}
-            artifacts = {}
-        chat_manager.set_cache(flow_id, graph)
-
-        return VertexBuildResponse(
-            valid=valid,
-            params=params,
-            id=vertex.id,
-            results=result_dict,
-            artifacts=artifacts,
-        )
-    except Exception as exc:
-        logger.error(f"Error building vertex: {exc}")
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
 @router.get("/build/stream/{flow_id}", response_class=StreamingResponse)
 async def stream_build(
     flow_id: str, chat_manager: "ChatManager" = Depends(get_chat_manager)
@@ -300,4 +231,73 @@ async def stream_build(
         return StreamingResponse(event_stream(flow_id), media_type="text/event-stream")
     except Exception as exc:
         logger.error(f"Error streaming build: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def get_vertices(
+    flow_id: str,
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    session=Depends(get_session),
+):
+    """Check the flow_id is in the flow_data_store."""
+    try:
+        flow: Flow = session.get(Flow, flow_id)
+        if not flow:
+            raise ValueError("Invalid flow ID")
+        graph = Graph.from_payload(flow.data)
+        chat_manager.set_cache(flow_id, graph)
+        vertices = graph.topological_sort()
+
+        return VerticesOrderResponse(ids=[vertex.id for vertex in vertices])
+
+    except Exception as exc:
+        logger.error(f"Error checking build status: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/build/{flow_id}/vertices/{vertex_id}")
+def build_vertex(
+    flow_id: str,
+    vertex_id: str,
+    chat_manager: "ChatManager" = Depends(get_chat_manager),
+    current_user=Depends(get_current_active_user),
+    tweaks: dict = Body(None),
+    inputs: dict = Body(None),
+):
+    """Build a vertex instead of the entire graph."""
+    try:
+        graph = chat_manager.get_cache(flow_id)
+        if tweaks:
+            graph = process_tweaks_on_graph(graph, tweaks)
+        if not isinstance(graph, Graph):
+            raise ValueError("Invalid graph")
+        if not (vertex := graph.get_vertex(vertex_id)):
+            raise ValueError("Invalid vertex")
+        try:
+            if isinstance(vertex, StatelessVertex) or not vertex._built:
+                vertex.build(user_id=current_user.id, force=True)
+            params = vertex._built_object_repr()
+            valid = True
+            result_dict = vertex.get_result_dict()
+            # We need to set the artifacts to pass information
+            # to the frontend
+            vertex.set_artifacts()
+            artifacts = vertex.artifacts
+        except Exception as exc:
+            params = str(exc)
+            valid = False
+            result_dict = {}
+            artifacts = {}
+        chat_manager.set_cache(flow_id, graph)
+
+        return VertexBuildResponse(
+            valid=valid,
+            params=params,
+            id=vertex.id,
+            results=result_dict,
+            artifacts=artifacts,
+        )
+    except Exception as exc:
+        logger.error(f"Error building vertex: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
