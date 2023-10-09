@@ -189,7 +189,7 @@ export default function ParameterComponent({
     } else {
       //@ts-ignore
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
-    } 
+    }
   }
 
   useEffect(() => {
