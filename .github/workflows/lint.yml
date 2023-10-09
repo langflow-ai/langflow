@@ -3,7 +3,16 @@ name: lint
 on:
   push:
     branches: [main]
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
+
   pull_request:
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
 
 env:
   POETRY_VERSION: "1.4.0"
