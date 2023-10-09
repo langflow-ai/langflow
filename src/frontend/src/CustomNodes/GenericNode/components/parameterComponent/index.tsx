@@ -189,7 +189,7 @@ export default function ParameterComponent({
     } else {
       //@ts-ignore
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
-    }
+    } 
   }
 
   useEffect(() => {
@@ -204,7 +204,9 @@ export default function ParameterComponent({
       type === "code" ||
       type === "prompt" ||
       type === "file" ||
-      type === "int") &&
+      type === "int" ||
+      type === "dict" ||
+      type === "NestedDict") &&
     !optionalHandle ? (
       <></>
     ) : (
