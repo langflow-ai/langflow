@@ -17,6 +17,7 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -48,6 +49,7 @@ export type ParameterComponentType = {
   optionalHandle?: Array<String> | null;
   info?: string;
   showNode?: boolean;
+  index?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -131,24 +133,25 @@ export type FloatComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-  | "bottom-end"
-  | "bottom-start"
-  | "bottom"
-  | "left-end"
-  | "left-start"
-  | "left"
-  | "right-end"
-  | "right-start"
-  | "right"
-  | "top-end"
-  | "top-start"
-  | "top";
+    | "bottom-end"
+    | "bottom-start"
+    | "bottom"
+    | "left-end"
+    | "left-start"
+    | "left"
+    | "right-end"
+    | "right-start"
+    | "right"
+    | "top-end"
+    | "top-start"
+    | "top";
 };
 
 export type ProgressBarType = {

@@ -178,6 +178,7 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
+                            index={idx.toString()}
                             key={
                               (data.node!.template[
                                 templateField
@@ -348,6 +349,7 @@ export default function GenericNode({
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
+                        index={idx.toString()}
                         key={
                           (data.node!.template[templateField].input_types?.join(
                             ";"
