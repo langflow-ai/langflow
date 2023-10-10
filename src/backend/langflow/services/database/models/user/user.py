@@ -45,9 +45,9 @@ class UserRead(SQLModel):
 
 
 class UserUpdate(SQLModel):
-    username: Optional[str] = Field()
-    profile_image: Optional[str] = Field()
-    password: Optional[str] = Field()
-    is_active: Optional[bool] = Field()
-    is_superuser: Optional[bool] = Field()
-    last_login_at: Optional[datetime] = Field()
+    username: Optional[str]
+    profile_image: Optional[str]
+    password: Optional[str]
+    is_active: Optional[bool]
+    is_superuser: Optional[bool]
+    last_login_at: Optional[datetime]
