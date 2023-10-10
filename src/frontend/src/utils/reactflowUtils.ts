@@ -648,6 +648,10 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     ) {
       template[key].advanced = true;
     }
+    //prevent code fields from showing on the group node
+    if (type === "code") {
+      template[key].show = false;
+    }
   });
   return template;
 }
@@ -669,10 +673,7 @@ export function mergeNodeTemplates({
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
       .forEach((key) => {
-        if (
-          nodeTemplate[key].show &&
-          !isHandleConnected(edges, key, nodeTemplate[key], node.id)
-        ) {
+        if (!isHandleConnected(edges, key, nodeTemplate[key], node.id)) {
           template[key + "_" + node.id] = nodeTemplate[key];
           template[key + "_" + node.id].proxy = { id: node.id, field: key };
           if (node.type === "groupNode") {
@@ -764,7 +765,7 @@ export function generateNodeFromFlow(
       type: outputNode?.data.type!,
       node: {
         output_types: outputNode!.data.node!.output_types,
-        display_name: "group Component",
+        display_name: "Group",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
         description: "double click to edit description",
