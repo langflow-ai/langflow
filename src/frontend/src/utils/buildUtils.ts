@@ -7,12 +7,11 @@ type BuildVerticesParams = {
   onProgressUpdate?: (progress: number) => void; // Replace number with the actual type if it's not a number
   onBuildUpdate?: (data: any) => void; // Replace any with the actual type of data
   onBuildComplete?: (allNodesValid: boolean) => void;
-  onBuildError?: (error: Error) => void;
+  onBuildError?: (title, list) => void;
 };
 
 export async function buildVertices({
   flow,
-  // nodeId should be optional
   nodeId = null,
   onProgressUpdate,
   onBuildUpdate,
@@ -35,19 +34,26 @@ export async function buildVertices({
 
     const buildResults: boolean[] = [];
     for (let vertexId of buildRange) {
-      const buildResponse = await postBuildVertex(flow, vertexId);
-      const buildData = buildResponse.data;
-      if (onProgressUpdate) {
-        onProgressUpdate(
-          (prevProgress) => prevProgress + 1 / verticesOrder.length
-        );
+      try {
+        const buildResponse = await postBuildVertex(flow, vertexId);
+        const buildData = buildResponse.data;
+        if (onProgressUpdate) {
+          const progress =
+            verticesOrder.indexOf(vertexId) / verticesOrder.length;
+          onProgressUpdate(progress);
+        }
+        // Update SSE data
+        if (onBuildUpdate) {
+          onBuildUpdate({ [buildData.id]: buildData });
+        }
+        buildResults.push(buildData.valid);
+      } catch (error) {
+        if (onBuildError) {
+          onBuildError("Error Building Component", error);
+        }
       }
-      // Update SSE data
-      if (onBuildUpdate) {
-        onBuildUpdate({ [buildData.id]: buildData });
-      }
-      buildResults.push(buildData.valid);
     }
+
     // Callback for when all vertices have been built
     if (onBuildComplete) {
       const allNodesValid = buildResults.every((result) => result);
@@ -56,7 +62,9 @@ export async function buildVertices({
   } catch (error) {
     // Callback for handling errors
     if (onBuildError) {
-      onBuildError(error);
+      if (onBuildError) {
+        onBuildError("Error Building Component", error);
+      }
     }
   }
 }

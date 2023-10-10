@@ -56,8 +56,8 @@ export default function BuildTrigger({
         onProgressUpdate: setProgress,
         onBuildUpdate: updateSSEData,
         onBuildComplete: handleBuildComplete,
-        onBuildError: (error) => {
-          console.error("Error:", error);
+        onBuildError: (title, list) => {
+          setErrorData({ title, list });
         },
       });
 
