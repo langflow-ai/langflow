@@ -22,6 +22,7 @@ export default function SidebarDraggableComponent({
   color,
   onDragStart,
   apiClass,
+  official,
 }: {
   apiClass: APIClassType;
   display_name: string;
@@ -29,6 +30,7 @@ export default function SidebarDraggableComponent({
   error: boolean;
   color: string;
   onDragStart: DragEventHandler<HTMLDivElement>;
+  official: boolean;
 }) {
   const open = useRef(false);
   const { deleteComponent } = useContext(typesContext);
@@ -108,15 +110,17 @@ export default function SidebarDraggableComponent({
                     Download{" "}
                   </div>{" "}
                 </SelectItem>
-                <SelectItem value={"delete"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Trash2"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Delete{" "}
-                  </div>{" "}
-                </SelectItem>
+                {!official && (
+                  <SelectItem value={"delete"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Trash2"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Delete{" "}
+                    </div>{" "}
+                  </SelectItem>
+                )}
               </SelectContent>
             </div>
           </div>
