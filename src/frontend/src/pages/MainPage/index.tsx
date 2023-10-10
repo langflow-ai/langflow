@@ -104,7 +104,7 @@ export default function HomePage(): JSX.Element {
             <DropdownButton
               firstButtonName="New Project"
               onFirstBtnClick={() => {
-                addFlow(null!, true).then((id) => {
+                addFlow(true).then((id) => {
                   navigate("/flow/" + id);
                 });
               }}

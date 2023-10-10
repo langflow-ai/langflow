@@ -33,11 +33,18 @@ import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
 import { TabsState } from "../../../../types/tabs";
-import { isValidConnection } from "../../../../utils/reactflowUtils";
-import { isWrappedWithClass } from "../../../../utils/utils";
+import {
+  generateFlow,
+  generateNodeFromFlow,
+  isValidConnection,
+  scapeJSONParse,
+  validateSelection,
+} from "../../../../utils/reactflowUtils";
+import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
+import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 
 const nodeTypes = {
@@ -238,12 +245,19 @@ export default function Page({
         addEdge(
           {
             ...params,
+            data: {
+              targetHandle: scapeJSONParse(params.targetHandle!),
+              sourceHandle: scapeJSONParse(params.sourceHandle!),
+            },
             style: { stroke: "#555" },
             className:
-              (params.targetHandle?.split("|")[0] === "Text"
+              ((scapeJSONParse(params.targetHandle!) as targetHandleType)
+                .type === "Text"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
-            animated: params.targetHandle?.split("|")[0] === "Text",
+            animated:
+              (scapeJSONParse(params.targetHandle!) as targetHandleType)
+                .type === "Text",
           },
           eds
         )
@@ -394,7 +408,7 @@ export default function Page({
     edgeUpdateSuccessful.current = true;
   }, []);
 
-  const [selectionEnded, setSelectionEnded] = useState(false);
+  const [selectionEnded, setSelectionEnded] = useState(true);
 
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
@@ -434,7 +448,7 @@ export default function Page({
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div className="h-full w-full">
+              <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
@@ -481,6 +495,50 @@ export default function Page({
                    [&>button]:border-b-border hover:[&>button]:bg-border"
                     ></Controls>
                   )}
+                  <SelectionMenu
+                    isVisible={selectionMenuVisible}
+                    nodes={lastSelection?.nodes}
+                    onClick={() => {
+                      if (
+                        validateSelection(lastSelection!, edges).length === 0
+                      ) {
+                        const { newFlow } = generateFlow(
+                          lastSelection!,
+                          reactFlowInstance!,
+                          getRandomName()
+                        );
+                        const newGroupNode = generateNodeFromFlow(
+                          newFlow,
+                          getNodeId
+                        );
+                        setNodes((oldNodes) => [
+                          ...oldNodes.filter(
+                            (oldNodes) =>
+                              !lastSelection?.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldNodes.id
+                              )
+                          ),
+                          newGroupNode,
+                        ]);
+                        setEdges((oldEdges) =>
+                          oldEdges.filter(
+                            (oldEdge) =>
+                              !lastSelection!.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldEdge.target ||
+                                  selectionNode.id === oldEdge.source
+                              )
+                          )
+                        );
+                      } else {
+                        setErrorData({
+                          title: "Invalid selection",
+                          list: validateSelection(lastSelection!, edges),
+                        });
+                      }
+                    }}
+                  />
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
