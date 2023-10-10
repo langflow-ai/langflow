@@ -16,7 +16,10 @@
         "debug"
       ],
       "jinja": true,
-      "justMyCode": true
+      "justMyCode": true,
+      "env": {
+        "LANGFLOW_AUTO_LOGIN": "true"
+      }
     },
     {
       "name": "Python: Remote Attach",
