@@ -7,6 +7,7 @@ import { typesContext } from "../../../contexts/typesContext";
 import { FlowType } from "../../../types/flow";
 
 import { TabsContext } from "../../../contexts/tabsContext";
+import { buildVertices } from "../../../utils/buildUtils";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -28,8 +29,6 @@ export default function BuildTrigger({
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
-  const [verticesOrder, setVerticesOrder] = useState([]);
-  const [buildResults, setBuildResults] = useState({});
   const [error, setError] = useState(null);
 
   async function handleBuild(flow: FlowType): Promise<void> {
@@ -52,47 +51,17 @@ export default function BuildTrigger({
       const startTime = Date.now();
       setIsBuilding(true);
 
-      // Step 1: Get vertices order
-      await getVerticesOrder(flow.id);
-
-      // Step 2: Build each vertex in the order received
-      console.log("verticesOrder", verticesOrder);
-      const buildResults = [];
-      for (let vertexId of verticesOrder) {
-        const buildResponse = await fetch(
-          `/api/v1/build/${flow.id}/vertices/${vertexId}`,
-          {
-            method: "POST",
-          }
-        );
-        const buildData = await buildResponse.json();
-        if (buildData.valid) {
-          setProgress(
-            (prevProgress) => prevProgress + 1 / verticesOrder.length
-          );
-        }
-
-        buildResults.push(buildData.valid);
-      }
-
-      // Determine if all nodes are valid
-      const allNodesValid = buildResults.every((result) => result);
+      await buildVertices({
+        flow,
+        onProgressUpdate: setProgress,
+        onBuildUpdate: updateSSEData,
+        onBuildComplete: handleBuildComplete,
+        onBuildError: (error) => {
+          console.error("Error:", error);
+        },
+      });
 
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      setIsBuilt(allNodesValid);
-      if (!allNodesValid) {
-        setErrorData({
-          title: "Oops! Looks like you missed something",
-          list: [
-            "Check components and retry. Hover over component status icon 🔴 to inspect.",
-          ],
-        });
-      }
-      if (errors.length === 0 && allNodesValid) {
-        setSuccessData({
-          title: "Flow is ready to run",
-        });
-      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -100,31 +69,20 @@ export default function BuildTrigger({
     }
   }
 
-  // Function to get vertices order
-  async function getVerticesOrder(flowId) {
-    try {
-      const response = await fetch(`/api/v1/build/${flowId}/vertices`);
-      const data = await response.json();
-      setVerticesOrder(data.ids);
-    } catch (err) {
-      setError(err.message);
+  function handleBuildComplete(allNodesValid: boolean) {
+    setIsBuilt(allNodesValid);
+    if (!allNodesValid) {
+      setErrorData({
+        title: "Oops! Looks like you missed something",
+        list: [
+          "Check components and retry. Hover over component status icon 🔴 to inspect.",
+        ],
+      });
     }
-  }
-
-  // Function to build a vertex and update the results
-  async function buildVertex(flowId, vertexId) {
-    try {
-      const response = await fetch(
-        `/api/v1/build/${flowId}/vertices/${vertexId}`,
-        { method: "POST" }
-      );
-      const data = await response.json();
-      setBuildResults((prevResults) => ({
-        ...prevResults,
-        [vertexId]: data,
-      }));
-    } catch (err) {
-      setError(err.message);
+    if (allNodesValid) {
+      setSuccessData({
+        title: "Flow is ready to run",
+      });
     }
   }
 
