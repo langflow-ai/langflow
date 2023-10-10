@@ -5,6 +5,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { useSSE } from "../../contexts/SSEContext";
+import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -25,7 +26,7 @@ export default function GenericNode({
 }): JSX.Element {
   const [data, setData] = useState(olddata);
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const { updateFlow, saveFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
@@ -34,6 +35,8 @@ export default function GenericNode({
     useState<validationStatusType | null>(null);
   const [showNode, setShowNode] = useState<boolean>(true);
   const [handles, setHandles] = useState<boolean[] | []>([]);
+  const [isPinned, setIsPinned] = useState<boolean>(data.node?.pinned ?? false);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   let numberOfInputs: boolean[] = [];
 
   function countHandles(): void {
@@ -68,6 +71,11 @@ export default function GenericNode({
   useEffect(() => {
     countHandles();
   }, []);
+
+  useEffect(() => {
+    data.node!.pinned = isPinned;
+    setData(data);
+  }, [isPinned]);
 
   // State for outline color
   useEffect(() => {
@@ -115,12 +123,14 @@ export default function GenericNode({
     // get order first and then build
 
     if (flow) {
+      // updateFlow
+      await saveFlow(flow, true);
       await buildVertices({
         flow,
         nodeId: data.id,
         onBuildUpdate: updateSSEData,
-        onBuildError: (error) => {
-          console.log("Error:", error);
+        onBuildError: (title, list) => {
+          setErrorData({ title, list });
         },
       });
     } else {
@@ -284,6 +294,31 @@ export default function GenericNode({
               )}
             </div>
 
+            {showNode && (
+              <div
+                className="round-button-div"
+                onClick={() => setIsPinned(!isPinned)}
+              >
+                <div className="generic-node-status-position">
+                  <div
+                    className={classNames(
+                      data.node?.pinned
+                        ? "green-status"
+                        : "status-build-animation",
+                      "status-div"
+                    )}
+                  ></div>
+                  <div
+                    className={classNames(
+                      !data.node?.pinned
+                        ? "red-status"
+                        : "status-build-animation",
+                      "status-div"
+                    )}
+                  ></div>
+                </div>
+              </div>
+            )}
             {showNode && (
               <div className="round-button-div" onClick={buildVertex}>
                 <div>

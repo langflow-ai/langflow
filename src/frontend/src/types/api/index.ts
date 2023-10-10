@@ -21,6 +21,7 @@ export type APIClassType = {
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
   beta?: boolean;
+  pinned?: boolean;
   documentation: string;
   error?: string;
   [key: string]:
