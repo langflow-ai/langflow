@@ -6,6 +6,8 @@ import {
   APIObjectType,
   LoginType,
   Users,
+  VertexBuildTypeAPI,
+  VerticesOrderTypeAPI,
   changeUser,
   resetPasswordType,
   sendAllProps,
@@ -329,6 +331,22 @@ export async function postBuildInit(
   flow: FlowType
 ): Promise<AxiosResponse<InitTypeAPI>> {
   return await api.post(`${BASE_URL_API}build/init/${flow.id}`, flow);
+}
+
+export async function postBuildVertex(
+  flow: FlowType,
+  vertexId: string
+): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  return await api.post(
+    `${BASE_URL_API}build/${flow.id}/vertices/${vertexId}`,
+    flow
+  );
+}
+
+export async function getVerticesOrder(
+  flowId: string
+): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
+  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`);
 }
 
 // fetch(`/upload/${id}`, {
