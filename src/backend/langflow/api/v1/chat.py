@@ -268,13 +268,15 @@ def build_vertex(
     flow_id: str,
     vertex_id: str,
     chat_service: "ChatService" = Depends(get_chat_service),
-    current_user=Depends(get_current_active_user),
+    # current_user=Depends(get_current_active_user),
     tweaks: dict = Body(None),
     inputs: dict = Body(None),
 ):
     """Build a vertex instead of the entire graph."""
     try:
-        graph = chat_service.get_cache(flow_id)
+        cache = chat_service.get_cache(flow_id)
+        graph = cache.get("result")
+        result_dict = {}
         if tweaks:
             graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
@@ -283,10 +285,10 @@ def build_vertex(
             raise ValueError("Invalid vertex")
         try:
             if isinstance(vertex, StatelessVertex) or not vertex._built:
-                vertex.build(user_id=current_user.id, force=True)
+                vertex.build(user_id=None, force=True)
             params = vertex._built_object_repr()
             valid = True
-            result_dict = vertex.get_result_dict()
+            result_dict = vertex.get_built_result()
             # We need to set the artifacts to pass information
             # to the frontend
             vertex.set_artifacts()

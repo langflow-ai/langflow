@@ -203,7 +203,7 @@ class ChatService(Service):
         """
         Get the cache for a client.
         """
-        return self.in_memory_cache.get(client_id)
+        return self.cache_service.get(client_id)
 
     async def handle_websocket(self, client_id: str, websocket: WebSocket):
         await self.connect(client_id, websocket)

@@ -23,6 +23,10 @@ def get_settings_service() -> "SettingsService":
         return service_manager.get(ServiceType.SETTINGS_SERVICE)
 
 
+def get_chat_service() -> "ChatService":
+    return service_manager.get(ServiceType.CHAT_SERVICE)
+
+
 def get_db_service() -> "DatabaseService":
     return service_manager.get(ServiceType.DATABASE_SERVICE)
 

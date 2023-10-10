@@ -56,6 +56,11 @@ class Vertex:
                 edge_results[edge.target.id][edge.target_param] = edge.get_result()
         return edge_results
 
+    def get_built_result(self):
+        if isinstance(self._built_result, UnbuiltResult):
+            return {}
+        return {"result": self._built_result}
+
     def set_artifacts(self) -> None:
         pass
 
@@ -263,6 +268,8 @@ class Vertex:
             for key in self._built_object.input_keys:
                 if key not in inputs:
                     inputs[key] = ""
+            if inputs == {} and hasattr(self._built_object, "prompt"):
+                inputs = self._built_object.prompt.partial_variables
         self._built_result = self._built_object.run(inputs)
 
     def _build_each_node_in_params_dict(self, user_id=None):
@@ -293,7 +300,9 @@ class Vertex:
     def get_result(self, user_id=None, timeout=None) -> Any:
         # Check if the Vertex was built already
         if self._built:
-            return self._built_object
+            if isinstance(self._built_result, UnbuiltResult):
+                return self._built_object
+            return self._built_result
 
         if self.is_task and self.task_id is not None:
             task = self.get_task()
