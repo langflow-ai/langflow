@@ -10,6 +10,7 @@ import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
+import { buildVertices } from "../../utils/buildUtils";
 import { cleanEdges } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
@@ -23,6 +24,7 @@ export default function GenericNode({
   selected: boolean;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
+  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
@@ -68,7 +70,6 @@ export default function GenericNode({
   }, []);
 
   // State for outline color
-  const { sseData, isBuilding } = useSSE();
   useEffect(() => {
     olddata.node = data.node;
     let myFlow = flows.find((flow) => flow.id === tabId);
@@ -107,6 +108,26 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
+
+  async function buildVertex(): Promise<void> {
+    setValidationStatus(null);
+    let flow = flows.find((flow) => flow.id === tabId);
+    // get order first and then build
+
+    if (flow) {
+      await buildVertices({
+        flow,
+        nodeId: data.id,
+        onBuildUpdate: updateSSEData,
+        onBuildError: (error) => {
+          console.log("Error:", error);
+        },
+      });
+    } else {
+      console.log("flow not found");
+    }
+  }
+
   return (
     <>
       <NodeToolbar>
@@ -264,7 +285,7 @@ export default function GenericNode({
             </div>
 
             {showNode && (
-              <div className="round-button-div">
+              <div className="round-button-div" onClick={buildVertex}>
                 <div>
                   <Tooltip
                     title={
