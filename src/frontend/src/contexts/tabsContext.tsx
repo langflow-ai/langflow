@@ -21,10 +21,20 @@ import {
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
 import { tweakType } from "../types/components";
-import { FlowType, NodeDataType, NodeType } from "../types/flow";
+import {
+  FlowType,
+  NodeDataType,
+  NodeType,
+  sourceHandleType,
+  targetHandleType,
+} from "../types/flow";
 import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
+  checkOldEdgesHandles,
+  scapeJSONParse,
+  scapedJSONStringfy,
+  updateEdgesHandleIds,
   updateIds,
   updateTemplate,
 } from "../utils/reactflowUtils";
@@ -41,7 +51,7 @@ const TabsContextInitialValue: TabsContextType = {
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: async (flowData?: any) => "",
+  addFlow: async (newProject: boolean, flowData?: FlowType) => "",
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
@@ -134,14 +144,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         if (!flow.data) {
           return;
         }
-        processFlowEdges(flow);
-        processFlowNodes(flow);
+        processDataFromFlow(flow, false);
       } catch (e) {}
     });
   }
 
   function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
+    if (checkOldEdgesHandles(flow.data.edges)) {
+      const newEdges = updateEdgesHandleIds(flow.data);
+      flow.data.edges = newEdges;
+    }
+    //update edges colors
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555" };
@@ -159,6 +173,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function processFlowNodes(flow: FlowType) {
     if (!flow.data || !flow.data.nodes) return;
     flow.data.nodes.forEach((node: NodeType) => {
+      if (node.data.node?.flow) return;
       if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
@@ -168,6 +183,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (Object.keys(template["template"]).length > 0) {
         updateDisplay_name(node, template);
         updateNodeBaseClasses(node, template);
+        //update baseclasses in edges
         updateNodeEdges(flow, node, template);
         updateNodeDescription(node, template);
         updateNodeTemplate(node, template);
@@ -187,11 +203,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   ) {
     flow.data!.edges.forEach((edge) => {
       if (edge.source === node.id) {
-        edge.sourceHandle = edge.sourceHandle
-          ?.split("|")
-          .slice(0, 2)
-          .concat(template["base_classes"])
-          .join("|");
+        let sourceHandleObject: sourceHandleType = scapeJSONParse(
+          edge.sourceHandle!
+        );
+        sourceHandleObject.baseClasses = template["base_classes"];
+        edge.data.sourceHandle = sourceHandleObject;
+        edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
       }
     });
   }
@@ -274,7 +291,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * The resulting JSON object is passed to the addFlow function.
    */
   async function uploadFlow(
-    newProject?: boolean,
+    newProject: boolean,
     file?: File
   ): Promise<String | undefined> {
     let id;
@@ -283,7 +300,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       // parse the text into a JSON object
       let flow: FlowType = JSON.parse(text);
 
-      id = await addFlow(flow, newProject);
+      id = await addFlow(newProject, flow);
     } else {
       // create a file input
       const input = document.createElement("input");
@@ -298,7 +315,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-            const flowId = await addFlow(flow, newProject);
+            const flowId = await addFlow(newProject, flow);
             resolve(flowId);
           }
         };
@@ -349,7 +366,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * Add a new flow to the list of flows.
    * @param flow Optional flow to add.
    */
-
   function paste(
     selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -398,19 +414,27 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     reactFlowInstance!.setNodes(nodes);
 
-    selectionInstance.edges.forEach((edge) => {
+    selectionInstance.edges.forEach((edge: Edge) => {
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
-      let sourceHandleSplitted = edge.sourceHandle!.split("|");
-      let sourceHandle =
-        sourceHandleSplitted[0] +
-        "|" +
-        source +
-        "|" +
-        sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = edge.targetHandle!.split("|");
-      let targetHandle =
-        targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      let sourceHandle = scapedJSONStringfy({
+        ...sourceHandleObject,
+        id: source,
+      });
+      sourceHandleObject.id = source;
+      edge.data.sourceHandle = sourceHandleObject;
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      let targetHandle = scapedJSONStringfy({
+        ...targetHandleObject,
+        id: target,
+      });
+      targetHandleObject.id = target;
+      edge.data.targetHandle = targetHandleObject;
       let id =
         "reactflow__edge-" +
         source +
@@ -427,10 +451,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           id,
           style: { stroke: "#555" },
           className:
-            targetHandle.split("|")[0] === "Text"
+            targetHandleObject.type === "Text"
               ? "stroke-gray-800 "
               : "stroke-gray-900 ",
-          animated: targetHandle.split("|")[0] === "Text",
+          animated: targetHandleObject.type === "Text",
           selected: false,
         },
         edges.map((edge) => ({ ...edge, selected: false }))
@@ -440,19 +464,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   const addFlow = async (
-    flow?: FlowType,
-    newProject?: Boolean
+    newProject: Boolean,
+    flow?: FlowType
   ): Promise<String | undefined> => {
     if (newProject) {
-      let flowData = extractDataFromFlow(flow!);
-      if (flowData.description == "") {
-        flowData.description = getRandomDescription();
-      }
+      let flowData = flow
+        ? processDataFromFlow(flow)
+        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
       const newFlow = createNewFlow(flowData, flow!);
-      processFlowEdges(newFlow);
-      processFlowNodes(newFlow);
 
       const flowName = addVersionToDuplicates(newFlow, flows);
 
@@ -480,31 +501,36 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const extractDataFromFlow = (flow: FlowType) => {
+  const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     let data = flow?.data ? flow.data : null;
-    const description = flow?.description ? flow.description : "";
-
     if (data) {
+      processFlowEdges(flow);
+      processFlowNodes(flow);
+      //add animation to text type edges
       updateEdges(data.edges);
-      updateNodes(data.nodes, data.edges);
-      updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
+      // updateNodes(data.nodes, data.edges);
+      if (refreshIds) updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
-    return { data, description };
+    return data;
   };
 
   const updateEdges = (edges: Edge[]) => {
     edges.forEach((edge) => {
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
       edge.className =
-        (edge.targetHandle!.split("|")[0] === "Text"
+        (targetHandleObject.type === "Text"
           ? "stroke-gray-800 "
           : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = edge.targetHandle!.split("|")[0] === "Text";
+      edge.animated = targetHandleObject.type === "Text";
     });
   };
 
   const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
+      if (node.data.node?.flow) return;
       if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
@@ -514,12 +540,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (Object.keys(template["template"]).length > 0) {
         node.data.node.base_classes = template["base_classes"];
         edges.forEach((edge) => {
+          let sourceHandleObject: sourceHandleType = scapeJSONParse(
+            edge.sourceHandle!
+          );
           if (edge.source === node.id) {
-            edge.sourceHandle = edge
-              .sourceHandle!.split("|")
-              .slice(0, 2)
-              .concat(template["base_classes"])
-              .join("|");
+            let newSourceHandle = sourceHandleObject;
+            newSourceHandle.baseClasses.concat(template["base_classes"]);
+            edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
           }
         });
         node.data.node.description = template["description"];
@@ -532,12 +559,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   };
 
   const createNewFlow = (
-    flowData: { data: ReactFlowJsonObject | null; description: string },
+    flowData: ReactFlowJsonObject | null,
     flow: FlowType
   ) => ({
-    description: flowData.description,
+    description: flow?.description ?? getRandomDescription(),
     name: flow?.name ?? getRandomName(),
-    data: flowData.data,
+    data: flowData,
     id: "",
   });
 
