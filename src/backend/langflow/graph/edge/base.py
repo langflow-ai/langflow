@@ -79,7 +79,7 @@ class ContractEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result = None
 
-    def fulfill(self, force: bool = False) -> None:
+    def honor(self) -> None:
         """
         Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
@@ -91,7 +91,7 @@ class ContractEdge(Edge):
             return
 
         if not self.source._built:
-            self.source.build(force=force)
+            self.source.build()
 
         if self.matched_type == "Text":
             self.result = self.source._built_result
@@ -101,10 +101,10 @@ class ContractEdge(Edge):
         self.target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    def get_result(self, force: bool = False):
+    def get_result(self):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
-            self.fulfill(force)
+            self.honor()
         return self.result
 
     def __repr__(self) -> str:

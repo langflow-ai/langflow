@@ -208,7 +208,7 @@ class ChainVertex(StatelessVertex):
             if isinstance(value, PromptVertex):
                 # Build the PromptVertex, passing the tools if available
                 tools = kwargs.get("tools", None)
-                self.params[key] = value.build(tools=tools, force=force)
+                self.params[key] = value.build(tools=tools, pinned=force)
 
         self._build(user_id=user_id)
 

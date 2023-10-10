@@ -104,6 +104,7 @@ class Vertex:
         self.is_task = state["is_task"]
         self.edges = state["edges"]
         self.id = state["id"]
+        self.pinned = state.get("pinned", False)
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -117,6 +118,7 @@ class Vertex:
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
+        self.pinned = self.data["node"].get("pinned", False)
         template_dicts = {
             key: value
             for key, value in self.data["node"]["template"].items()
@@ -418,13 +420,13 @@ class Vertex:
 
     def build(
         self,
-        force: bool = False,
         requester: Optional["Vertex"] = None,
         user_id=None,
         **kwargs,
     ) -> Dict:
-        if force:
-            self._reset()
+        if self.pinned:
+            return self.get_requester_result(requester)
+        self._reset()
 
         # Run steps
         for step in self.steps:

@@ -53,6 +53,7 @@ class FrontendNode(BaseModel):
     output_types: List[str] = []
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
     beta: bool = False
+    pinned: bool = False
     error: Optional[str] = None
 
     # field formatters is an instance attribute but it is not used in the class
