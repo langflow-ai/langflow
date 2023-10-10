@@ -53,8 +53,8 @@ setup_devcontainer:
 	poetry run langflow --path src/frontend/build
 
 frontend:
-	make install_frontend
-	make run_frontend
+	@-make install_frontend || (echo "An error occurred while installing frontend dependencies. Attempting to fix." && make install_frontendc)
+	@make run_frontend
 
 frontendc:
 	make install_frontendc
@@ -65,7 +65,13 @@ install_backend:
 
 backend:
 	make install_backend
-	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
+ifeq ($(login),1)
+	@echo "Running backend without autologin";
+	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+else
+	@echo "Running backend with autologin";
+	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+endif
 
 build_and_run:
 	echo 'Removing dist folder'
