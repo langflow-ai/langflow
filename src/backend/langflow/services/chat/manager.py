@@ -108,7 +108,7 @@ class ChatService(Service):
         self.connection_ids.pop(client_id, None)
 
     async def send_message(self, message: str):
-        client_id = self.cache_manager.current_client_id
+        client_id = self.chat_cache.current_client_id
         websocket = self.active_connections[client_id]
         await websocket.send_text(message)
 
