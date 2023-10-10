@@ -70,6 +70,17 @@ export type InitTypeAPI = {
   flowId: string;
 };
 
+export type VertexBuildTypeAPI = {
+  id: string;
+  valid: boolean;
+  params: string;
+  results: { [key: string]: { [key: string]: string } };
+  artifacts: { [key: string]: string };
+};
+
+export type VerticesOrderTypeAPI = {
+  ids: Array<string>;
+};
 export type UploadFileTypeAPI = {
   file_path: string;
   flowId: string;
