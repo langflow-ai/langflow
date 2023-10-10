@@ -17,6 +17,7 @@ export type APIClassType = {
   beta?: boolean;
   documentation: string;
   error?: string;
+  official?: boolean;
   [key: string]: Array<string> | string | APITemplateType | boolean | undefined;
 };
 

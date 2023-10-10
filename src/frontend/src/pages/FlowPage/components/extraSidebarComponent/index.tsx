@@ -266,6 +266,12 @@ export default function ExtraSidebar(): JSX.Element {
                           display_name={
                             dataFilter[SBSectionName][SBItemName].display_name
                           }
+                          official={
+                            dataFilter[SBSectionName][SBItemName].official ===
+                            false
+                              ? false
+                              : true
+                          }
                         />
                       </ShadTooltip>
                     ))}

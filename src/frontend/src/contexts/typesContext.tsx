@@ -144,13 +144,17 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         removeCountFromString(component.node?.display_name!) +
         ` (${increment})`;
     }
+    component.node!.official = false;
     components[key] = component;
     savedComponentsJSON.components = components;
     localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
       let newData = { ...prev };
       //clone to prevent reference erro
-      newData["custom_components"][key] = _.cloneDeep(component.node);
+      newData["custom_components"][key] = _.cloneDeep({
+        ...component.node,
+        official: false,
+      });
       return newData;
     });
   }
