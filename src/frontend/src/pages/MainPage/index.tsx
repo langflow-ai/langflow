@@ -62,6 +62,7 @@ export default function HomePage(): JSX.Element {
     setIsDragging(false);
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       if (e.dataTransfer.files.item(0).type === "application/json") {
+        console.log(e.dataTransfer.files.item(0));
         uploadFlow(true, e.dataTransfer.files.item(0)!);
       } else {
         setErrorData({
