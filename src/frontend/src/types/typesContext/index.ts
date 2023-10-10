@@ -22,7 +22,7 @@ export type typesContextType = {
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
   saveComponent: (component: NodeDataType, key: string) => void;
-  deleteComponent: (key: string) => void;
+  deleteComponent: (id: string, key: string) => void;
 };
 
 export type alertContextType = {

@@ -37,7 +37,7 @@ const initialValue: typesContextType = {
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
   saveComponent: (component: NodeDataType, key: string) => {},
-  deleteComponent: (key: string) => {},
+  deleteComponent: (id: string, key: string) => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -159,16 +159,17 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function deleteComponent(key: string) {
+  function deleteComponent(id: string, key: string) {
     let savedComponentsJSON: localStorageUserType = { components: {} };
-    if (checkLocalStorageKey(userData?.id!)) {
-      let savedComponents = localStorage.getItem(userData?.id!)!;
+    if (checkLocalStorageKey(id)) {
+      let savedComponents = localStorage.getItem(id)!;
       savedComponentsJSON = JSON.parse(savedComponents);
     }
     let components = savedComponentsJSON.components;
     delete components[key];
     savedComponentsJSON.components = components;
-    localStorage.setItem(userData?.id!, JSON.stringify(savedComponentsJSON));
+    console.log(savedComponentsJSON);
+    localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
       let newData = _.cloneDeep(prev);
       //clone to prevent reference erro
