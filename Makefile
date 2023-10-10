@@ -22,6 +22,9 @@ tests:
 	@make install_backend
 	poetry run pytest tests
 
+tests_frontend:
+	cd src/frontend && ./run-tests.sh
+
 format:
 	poetry run black .
 	poetry run ruff . --fix
