@@ -280,6 +280,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let id;
     if (file) {
       let text = await file.text();
+      let fileData = JSON.parse(text);
+      if (fileData.flows) {
+        fileData.flows.forEach((flow: FlowType) => {
+          id = addFlow(flow, newProject);
+        });
+      }
       // parse the text into a JSON object
       let flow: FlowType = JSON.parse(text);
 
