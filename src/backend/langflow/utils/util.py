@@ -431,7 +431,7 @@ def set_headers_value(value: Dict[str, Any]) -> None:
     """
     Sets the value for the 'headers' key.
     """
-    value["value"] = """{'Authorization': 'Bearer <token>'}"""
+    value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
 def add_options_to_field(

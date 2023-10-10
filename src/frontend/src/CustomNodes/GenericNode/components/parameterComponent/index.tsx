@@ -204,7 +204,9 @@ export default function ParameterComponent({
       type === "code" ||
       type === "prompt" ||
       type === "file" ||
-      type === "int") &&
+      type === "int" ||
+      type === "dict" ||
+      type === "NestedDict") &&
     !optionalHandle ? (
       <></>
     ) : (
@@ -228,6 +230,9 @@ export default function ParameterComponent({
           style={{
             borderColor: color,
             top: position,
+          }}
+          onClick={() => {
+            setFilterEdge(groupedEdge.current);
           }}
         ></Handle>
       </ShadTooltip>
