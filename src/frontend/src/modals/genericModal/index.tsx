@@ -30,6 +30,7 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
+  id = "",
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -210,6 +211,7 @@ export default function GenericModal({
           >
             {type === TypeModal.PROMPT && isEdit ? (
               <Textarea
+                id={"modal-" + id}
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
@@ -284,7 +286,7 @@ export default function GenericModal({
                             className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                           >
                             <div className="relative bottom-[1px]">
-                              <span>
+                              <span id={"badge" + index.toString()}>
                                 {word.replace(/[{}]/g, "").length > 59
                                   ? word.replace(/[{}]/g, "").slice(0, 56) +
                                     "..."
@@ -304,6 +306,7 @@ export default function GenericModal({
               )}
             </div>
             <Button
+              id="genericModalBtnSave"
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:
