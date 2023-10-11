@@ -144,7 +144,11 @@ export default function CodeAreaModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
-        <Input value={code} className="absolute left-[500%]" id="codeValue" />
+        <Input
+          value={code}
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
