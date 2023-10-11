@@ -34,7 +34,7 @@ def get_langfuse_callback(trace_id):
     if langfuse := LangfuseInstance.get():
         logger.debug("Langfuse credentials found")
         try:
-            trace = langfuse.trace(CreateTrace(id=trace_id))
+            trace = langfuse.trace(CreateTrace(name="langflow-"+trace_id, id=trace_id))
             return trace.getNewHandler()
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
