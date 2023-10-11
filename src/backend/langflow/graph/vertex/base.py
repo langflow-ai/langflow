@@ -216,6 +216,10 @@ class Vertex:
                         }
                     elif isinstance(_value, dict):
                         params[key] = _value
+                elif value.get("type") == "int":
+                    params[key] = int(value.get("value"))
+                elif value.get("type") == "float":
+                    params[key] = float(value.get("value"))
                 else:
                     params[key] = value.get("value")
 
