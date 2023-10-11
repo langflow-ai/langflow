@@ -300,7 +300,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       let fileData = JSON.parse(text);
       if (fileData.flows) {
         fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(flow, newProject);
+          id = addFlow(newProject, flow);
         });
       }
       // parse the text into a JSON object
