@@ -14,6 +14,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
+  id = "",
 }: PromptAreaComponentType) {
   useEffect(() => {
     if (disabled) {
@@ -35,6 +36,7 @@ export default function PromptAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
+        id={id}
         type={TypeModal.PROMPT}
         value={value}
         buttonText="Check & Save"
@@ -47,6 +49,7 @@ export default function PromptAreaComponent({
       >
         <div className="flex w-full items-center">
           <span
+            id={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"

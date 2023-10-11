@@ -327,6 +327,7 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
+                id={"textarea-" + index}
               />
             ) : (
               <InputComponent
@@ -379,6 +380,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"code-input-" + index}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -419,6 +421,7 @@ export default function ParameterComponent({
               onChange={(e) => {
                 handleOnNewValue(e);
               }}
+              id={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (

@@ -83,6 +83,7 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  id?: string;
 };
 
 export type PromptAreaComponentType = {
@@ -93,6 +94,7 @@ export type PromptAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  id?: string;
 };
 
 export type CodeAreaComponentType = {
@@ -103,6 +105,7 @@ export type CodeAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   dynamic?: boolean;
+  id?: string;
 };
 
 export type FileComponentType = {
@@ -489,6 +492,7 @@ export type genericModalPropsType = {
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
   children: ReactNode;
+  id?: string;
 };
 
 export type buttonBoxPropsType = {
