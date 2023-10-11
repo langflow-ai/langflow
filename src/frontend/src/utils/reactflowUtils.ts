@@ -913,6 +913,7 @@ export function expandGroupNode(
   const { template, flow } = _.cloneDeep(groupNode.node!);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
+  //TODO update ids of intern nodes and proxy on edges before expanding
   console.log(gEdges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
