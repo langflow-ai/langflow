@@ -41,12 +41,16 @@ export default function HomePage(): JSX.Element {
 
   const dragOver = (e) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (e.dataTransfer.types.some((types) => types === "Files")) {
+      setIsDragging(true);
+    }
   };
 
   const dragEnter = (e) => {
+    if (e.dataTransfer.types.some((types) => types === "Files")) {
+      setIsDragging(true);
+    }
     e.preventDefault();
-    setIsDragging(true);
   };
 
   const dragLeave = () => {
@@ -100,7 +104,7 @@ export default function HomePage(): JSX.Element {
             <DropdownButton
               firstButtonName="New Project"
               onFirstBtnClick={() => {
-                addFlow(null!, true).then((id) => {
+                addFlow(true).then((id) => {
                   navigate("/flow/" + id);
                 });
               }}

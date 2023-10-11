@@ -10,7 +10,7 @@ from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from loguru import logger
 from langflow.services.chat.config import ChatConfig
-from langflow.services.getters import get_settings_manager
+from langflow.services.getters import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -36,7 +36,7 @@ def pil_to_base64(image: Image) -> str:
     return img_str.decode("utf-8")
 
 
-def try_setting_streaming_options(langchain_object, websocket):
+def try_setting_streaming_options(langchain_object):
     # If the LLM type is OpenAI or ChatOpenAI,
     # set streaming to True
     # First we need to find the LLM
@@ -64,11 +64,11 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
 
 def setup_llm_caching():
     """Setup LLM caching."""
-    settings_manager = get_settings_manager()
+    settings_service = get_settings_service()
     try:
-        set_langchain_cache(settings_manager.settings)
+        set_langchain_cache(settings_service.settings)
     except ImportError:
-        logger.warning(f"Could not import {settings_manager.settings.CACHE}. ")
+        logger.warning(f"Could not import {settings_service.settings.CACHE_TYPE}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
 
@@ -80,7 +80,7 @@ def set_langchain_cache(settings):
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:
             cache_class = import_class(
-                f"langchain.cache.{cache_type or settings.CACHE}"
+                f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}"
             )
 
             logger.debug(f"Setting up LLM caching with {cache_class.__name__}")

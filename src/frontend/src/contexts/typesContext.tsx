@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Node, ReactFlowInstance } from "reactflow";
+import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
@@ -38,6 +38,7 @@ const initialValue: typesContextType = {
   getFilterEdge: [],
   saveComponent: (component: NodeDataType, key: string) => {},
   deleteComponent: (id: string, key: string) => {},
+  deleteEdge: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -115,14 +116,31 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function deleteNode(idx: string) {
+  function deleteNode(idx: string | Array<string>) {
     reactFlowInstance!.setNodes(
-      reactFlowInstance!.getNodes().filter((node: Node) => node.id !== idx)
+      reactFlowInstance!
+        .getNodes()
+        .filter((node: Node) =>
+          typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
+        )
     );
     reactFlowInstance!.setEdges(
       reactFlowInstance!
         .getEdges()
-        .filter((edge) => edge.source !== idx && edge.target !== idx)
+        .filter((edge) =>
+          typeof idx === "string"
+            ? edge.source !== idx && edge.target !== idx
+            : !idx.includes(edge.source) && !idx.includes(edge.target)
+        )
+    );
+  }
+  function deleteEdge(idx: string | Array<string>) {
+    reactFlowInstance!.setEdges(
+      reactFlowInstance!
+        .getEdges()
+        .filter((edge: Edge) =>
+          typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
+        )
     );
   }
 
@@ -181,6 +199,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   return (
     <typesContext.Provider
       value={{
+        deleteEdge,
         deleteComponent,
         saveComponent,
         types,

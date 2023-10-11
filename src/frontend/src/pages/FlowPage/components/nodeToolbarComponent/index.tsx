@@ -16,6 +16,8 @@ import { nodeToolbarPropsType } from "../../../../types/components";
 import {
   createFlowComponent,
   downloadNode,
+  expandGroupNode,
+  updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 
@@ -23,6 +25,7 @@ export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  position,
   setShowNode,
   numberOfHandles,
   showNode,
@@ -54,6 +57,8 @@ export default function NodeToolbarComponent({
     return true;
   }
   const isMinimal = canMinimize();
+  const isGroup = data.node?.flow ? true : false;
+
   const { paste } = useContext(TabsContext);
   const { saveComponent } = useContext(typesContext);
   const reactFlowInstance = useReactFlow();
@@ -80,6 +85,12 @@ export default function NodeToolbarComponent({
         if (isAuthenticated) {
           saveComponent(data, autoLogin ? "auto" : userData?.id!);
         }
+        break;
+      case "disabled":
+        break;
+      case "ungroup":
+        updateFlowPosition(position, data.node?.flow!);
+        expandGroupNode(data, reactFlowInstance);
         break;
     }
   };
@@ -172,7 +183,7 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
-              <SelectItem value={"advanced"}>
+              <SelectItem value={nodeLength == 0 ? "disabled" : "advanced"}>
                 <div className="flex">
                   <IconComponent
                     name="Settings2"
@@ -219,6 +230,17 @@ export default function NodeToolbarComponent({
                   </div>
                 </SelectItem>
               )}
+              {isGroup && (
+                <SelectItem value="ungroup">
+                  <div className="flex">
+                    <IconComponent
+                      name="Ungroup"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Ungroup{" "}
+                  </div>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 
@@ -235,29 +257,6 @@ export default function NodeToolbarComponent({
               <></>
             </EditNodeModal>
           )}
-
-          {/* 
-          <ShadTooltip content="Edit" side="top">
-            <div>
-              <EditNodeModal
-                data={data}
-                setData={setData}
-                nodeLength={nodeLength}
-              >
-                <div
-                  className={classNames(
-                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                      (!canMinimize() && " rounded-r-md ") +
-                      (nodeLength == 0
-                        ? " text-muted-foreground"
-                        : " text-foreground")
-                  )}
-                >
-                  <IconComponent name="Settings2" className="h-4 w-4 " />
-                </div>
-              </EditNodeModal>
-            </div>
-          </ShadTooltip> */}
         </span>
       </div>
     </>

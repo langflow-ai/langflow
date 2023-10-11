@@ -63,7 +63,7 @@ export default function AdminPage() {
 
   function getUsers() {
     setLoadingUsers(true);
-    getUsersPage(index, size)
+    getUsersPage(index - 1, size)
       .then((users) => {
         setTotalRowsCount(users["total_count"]);
         userList.current = users["users"];

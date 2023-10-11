@@ -1,7 +1,7 @@
 from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
-# from langflow.services.chat.manager import ChatManager
+# from langflow.services.chat.manager import ChatService
 
 import pytest
 
@@ -28,7 +28,7 @@ def test_init_build(client, active_user, logged_in_headers):
 
 
 def test_websocket_endpoint(client: TestClient, active_user, logged_in_headers):
-    # Assuming your websocket_endpoint uses chat_manager which caches data from stream_build
+    # Assuming your websocket_endpoint uses chat_service which caches data from stream_build
     access_token = logged_in_headers["Authorization"].split(" ")[1]
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect(
@@ -40,12 +40,12 @@ def test_websocket_endpoint(client: TestClient, active_user, logged_in_headers):
 
 
 def test_websocket_endpoint_after_build(client, basic_graph_data):
-    # Assuming your websocket_endpoint uses chat_manager which caches data from stream_build
+    # Assuming your websocket_endpoint uses chat_service which caches data from stream_build
     client.post("api/v1/build/init", json=basic_graph_data)
     client.get("api/v1/build/stream/websocket_test")
 
     # There should be more to test here, but it depends on the inner workings of your websocket handler
-    # and how your chat_manager and other classes behave. The following is just an example structure.
+    # and how your chat_service and other classes behave. The following is just an example structure.
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("api/v1/chat/websocket_test") as websocket:
             websocket.send_json({"input": "test"})

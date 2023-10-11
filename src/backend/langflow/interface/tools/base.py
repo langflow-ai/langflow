@@ -15,7 +15,7 @@ from langflow.interface.tools.constants import (
     OTHER_TOOLS,
 )
 from langflow.interface.tools.util import get_tool_params
-from langflow.services.getters import get_settings_manager
+from langflow.services.getters import get_settings_service
 
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
@@ -67,7 +67,7 @@ class ToolCreator(LangChainTypeCreator):
 
     @property
     def type_to_loader_dict(self) -> Dict:
-        settings_manager = get_settings_manager()
+        settings_service = get_settings_service()
         if self.tools_dict is None:
             all_tools = {}
 
@@ -77,8 +77,8 @@ class ToolCreator(LangChainTypeCreator):
                 tool_name = tool_params.get("name") or tool
 
                 if (
-                    tool_name in settings_manager.settings.TOOLS
-                    or settings_manager.settings.DEV
+                    tool_name in settings_service.settings.TOOLS
+                    or settings_service.settings.DEV
                 ):
                     if tool_name == "JsonSpec":
                         tool_params["path"] = tool_params.pop("dict_")  # type: ignore

@@ -84,7 +84,7 @@ export default function SidebarDraggableComponent({
             );
           }}
         >
-          <div className="side-bar-components-div-form">
+          <div id={display_name} className="side-bar-components-div-form">
             <span className="side-bar-components-text">{display_name}</span>
             <div>
               <SelectTrigger>

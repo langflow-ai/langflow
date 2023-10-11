@@ -23,7 +23,7 @@ class AuthSettings(BaseSettings):
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 70
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12
 
     # API Key to execute /process endpoint
     API_KEY_SECRET_KEY: Optional[
@@ -34,7 +34,8 @@ class AuthSettings(BaseSettings):
 
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = False
+    AUTO_LOGIN: bool = True
+    NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
