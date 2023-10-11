@@ -26,10 +26,10 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get("access_token")
+    cookies.get("access_tkn_lflw")
   );
   const [refreshToken, setRefreshToken] = useState<string | null>(
-    cookies.get("refresh_token")
+    cookies.get("refresh_tkn_lflw")
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -37,7 +37,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const { setLoading } = useContext(alertContext);
   useEffect(() => {
-    const storedAccessToken = cookies.get("access_token");
+    const storedAccessToken = cookies.get("access_tkn_lflw");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
@@ -66,7 +66,10 @@ export function AuthProvider({ children }): React.ReactElement {
               const isSuperUser = user!.is_superuser;
               setIsAdmin(isSuperUser);
             })
-            .catch((error) => {});
+            .catch((error) => {
+              console.log("auth context");
+              setLoading(false);
+            });
         } else {
           setLoading(false);
         }
@@ -74,23 +77,23 @@ export function AuthProvider({ children }): React.ReactElement {
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
   function getAuthentication() {
-    const storedRefreshToken = cookies.get("refresh_token");
-    const storedAccess = cookies.get("access_token");
+    const storedRefreshToken = cookies.get("refresh_tkn_lflw");
+    const storedAccess = cookies.get("access_tkn_lflw");
     const auth = storedAccess && storedRefreshToken ? true : false;
     return auth;
   }
 
   function login(newAccessToken: string, refreshToken: string) {
-    cookies.set("access_token", newAccessToken, { path: "/" });
-    cookies.set("refresh_token", refreshToken, { path: "/" });
+    cookies.set("access_tkn_lflw", newAccessToken, { path: "/" });
+    cookies.set("refresh_tkn_lflw", refreshToken, { path: "/" });
     setAccessToken(newAccessToken);
     setRefreshToken(refreshToken);
     setIsAuthenticated(true);
   }
 
   function logout() {
-    cookies.remove("access_token", { path: "/" });
-    cookies.remove("refresh_token", { path: "/" });
+    cookies.remove("access_tkn_lflw", { path: "/" });
+    cookies.remove("refresh_tkn_lflw", { path: "/" });
     setIsAdmin(false);
     setUserData(null);
     setAccessToken(null);

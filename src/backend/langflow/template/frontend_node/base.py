@@ -164,7 +164,7 @@ class FrontendNode(BaseModel):
     ) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
-            field.value = """{'Authorization': 'Bearer <token>'}"""
+            field.value = """{"Authorization": "Bearer <token>"}"""
         FrontendNode._handle_model_specific_field_values(field, key, name)
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
@@ -249,4 +249,4 @@ class FrontendNode(BaseModel):
         if "default" in value:
             field.value = value["default"]
         if key == "headers":
-            field.value = """{'Authorization': 'Bearer <token>'}"""
+            field.value = """{"Authorization": "Bearer <token>"}"""

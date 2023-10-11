@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.services.getters import get_session
+from langflow.services.getters import get_session, get_settings_service
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
@@ -32,6 +32,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 def add_user(
     user: UserCreate,
     session: Session = Depends(get_session),
+    settings_service=Depends(get_settings_service),
 ) -> User:
     """
     Add a new user to the database.
@@ -39,7 +40,7 @@ def add_user(
     new_user = User.from_orm(user)
     try:
         new_user.password = get_password_hash(user.password)
-
+        new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
@@ -66,7 +67,7 @@ def read_current_user(
 def read_all_users(
     skip: int = 0,
     limit: int = 10,
-    current_user: Session = Depends(get_current_active_superuser),
+    _: Session = Depends(get_current_active_superuser),
     session: Session = Depends(get_session),
 ) -> UsersResponse:
     """
@@ -99,9 +100,11 @@ def patch_user(
             status_code=403, detail="You don't have the permission to update this user"
         )
     if user_update.password:
-        raise HTTPException(
-            status_code=400, detail="You can't change your password here"
-        )
+        if not user.is_superuser:
+            raise HTTPException(
+                status_code=400, detail="You can't change your password here"
+            )
+        user_update.password = get_password_hash(user_update.password)
 
     if user_db := get_user_by_id(session, user_id):
         return update_user(user_db, user_update, session)
@@ -164,31 +167,3 @@ def delete_user(
     session.commit()
 
     return {"detail": "User deleted"}
-
-
-# TODO: REMOVE - Just for testing purposes
-@router.post("/super_user", response_model=User)
-def add_super_user_for_testing_purposes_delete_me_before_merge_into_dev(
-    session: Session = Depends(get_session),
-) -> User:
-    """
-    Add a superuser for testing purposes.
-    (This should be removed in production)
-    """
-    new_user = User(
-        username="superuser",
-        password=get_password_hash("12345"),
-        is_active=True,
-        is_superuser=True,
-        last_login_at=None,
-    )
-
-    try:
-        session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-    except IntegrityError as e:
-        session.rollback()
-        raise HTTPException(status_code=400, detail="User exists") from e
-
-    return new_user

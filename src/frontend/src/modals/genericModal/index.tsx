@@ -17,11 +17,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import {
-  classNames,
-  getRandomKeyByssmm,
-  varHighlightHTML,
-} from "../../utils/utils";
+import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
 
 export default function GenericModal({
@@ -34,9 +30,11 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
+  readonly = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
+  const [modalOpen, setModalOpen] = useState(false);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -89,26 +87,13 @@ export default function GenericModal({
 
   useEffect(() => {
     setInputValue(value);
-  }, [value]);
+  }, [value, modalOpen]);
 
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
     .replace(/\n/g, "<br />");
-
-  const TextAreaContentView = (): JSX.Element => {
-    return (
-      <SanitizedHTMLWrapper
-        className={getClassByNumberLength()}
-        content={coloredContent}
-        onClick={() => {
-          setIsEdit(true);
-        }}
-        suppressWarning={true}
-      />
-    );
-  };
 
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
@@ -125,12 +110,17 @@ export default function GenericModal({
 
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
+        // if field_name is an empty string, then we need to set it
+        // to the first key of the custom_fields object
+        if (field_name === "") {
+          console.log(apiReturn.data?.frontend_node?.custom_fields);
+          field_name = Array.isArray(
+            apiReturn.data?.frontend_node?.custom_fields?.[""]
+          )
+            ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
+            : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
+        }
         if (apiReturn.data) {
-          setValue(inputValue);
-          apiReturn.data.frontend_node["template"]["template"]["value"] =
-            inputValue;
-          setNodeClass!(apiReturn?.data?.frontend_node);
-
           let inputVariables = apiReturn.data.input_variables ?? [];
           if (inputVariables && inputVariables.length === 0) {
             setIsEdit(true);
@@ -138,6 +128,17 @@ export default function GenericModal({
               title: "Your template does not have any variables.",
             });
             setModalOpen(false);
+            if (
+              JSON.stringify(apiReturn.data?.frontend_node) !==
+              JSON.stringify({})
+            )
+              setNodeClass!(apiReturn.data?.frontend_node);
+            setModalOpen(closeModal);
+            setValue(inputValue);
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
+            }
           } else {
             setIsEdit(false);
             setSuccessData({
@@ -150,6 +151,10 @@ export default function GenericModal({
               setNodeClass!(apiReturn.data?.frontend_node);
             setModalOpen(closeModal);
             setValue(inputValue);
+            if (field_name !== "") {
+              apiReturn.data.frontend_node["template"][field_name]["value"] =
+                inputValue;
+            }
           }
         } else {
           setIsEdit(true);
@@ -159,15 +164,14 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
+        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: "There is something wrong with this prompt, please review it",
-          list: [error?.response?.data?.detail],
+          list: [error.toString()],
         });
       });
   }
-
-  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <BaseModal
@@ -205,7 +209,7 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === TypeModal.PROMPT && isEdit ? (
+            {type === TypeModal.PROMPT && isEdit && !readonly ? (
               <Textarea
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
@@ -223,8 +227,15 @@ export default function GenericModal({
                   handleKeyDown(e, inputValue, "");
                 }}
               />
-            ) : type === TypeModal.PROMPT && !isEdit ? (
-              <TextAreaContentView />
+            ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
+              <SanitizedHTMLWrapper
+                className={getClassByNumberLength()}
+                content={coloredContent}
+                onClick={() => {
+                  setIsEdit(true);
+                }}
+                suppressWarning={true}
+              />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 //@ts-ignore
@@ -238,6 +249,7 @@ export default function GenericModal({
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}
+                readOnly={readonly}
               />
             ) : (
               <></>
@@ -263,7 +275,7 @@ export default function GenericModal({
 
                       {wordsHighlight.map((word, index) => (
                         <ShadTooltip
-                          key={getRandomKeyByssmm() + index}
+                          key={index}
                           content={word.replace(/[{}]/g, "")}
                           asChild={false}
                         >
@@ -294,6 +306,7 @@ export default function GenericModal({
               )}
             </div>
             <Button
+              disabled={readonly}
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:

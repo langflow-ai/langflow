@@ -1,12 +1,17 @@
 import { Edge, Node, Viewport } from "reactflow";
+import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
 export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
 export type APITemplateType = {
-  variable: TemplateVariableType;
   [key: string]: TemplateVariableType;
 };
+
+export type CustomFieldsType = {
+  [key: string]: Array<string>;
+};
+
 export type APIClassType = {
   base_classes: Array<string>;
   description: string;
@@ -14,11 +19,21 @@ export type APIClassType = {
   display_name: string;
   input_types?: Array<string>;
   output_types?: Array<string>;
+  custom_fields?: CustomFieldsType;
   beta?: boolean;
   documentation: string;
   error?: string;
   official?: boolean;
-  [key: string]: Array<string> | string | APITemplateType | boolean | undefined;
+  flow?: FlowType;
+  [key: string]:
+    | Array<string>
+    | string
+    | APITemplateType
+    | boolean
+    | FlowType
+    | CustomFieldsType
+    | boolean
+    | undefined;
 };
 
 export type TemplateVariableType = {
@@ -27,8 +42,11 @@ export type TemplateVariableType = {
   placeholder?: string;
   list: boolean;
   show: boolean;
+  readonly: boolean;
   multiline?: boolean;
   value?: any;
+  dynamic?: boolean;
+  proxy?: { id: string; field: string };
   input_types?: Array<string>;
   [key: string]: any;
 };
@@ -39,7 +57,7 @@ export type sendAllProps = {
   description: string;
   viewport: Viewport;
   inputs: { text?: string };
-
+  chatKey: string;
   chatHistory: { message: string | object; isSend: boolean }[];
 };
 export type errorsTypeAPI = {

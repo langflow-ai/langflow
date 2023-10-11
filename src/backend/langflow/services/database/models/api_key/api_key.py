@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class ApiKeyBase(SQLModelSerializable):
     name: Optional[str] = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = Field(default=None)
+    last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
 
@@ -22,8 +22,11 @@ class ApiKey(ApiKeyBase, table=True):
 
     api_key: str = Field(index=True, unique=True)
     # User relationship
+    # Delete API keys when user is deleted
     user_id: UUID = Field(index=True, foreign_key="user.id")
-    user: "User" = Relationship(back_populates="api_keys")
+    user: "User" = Relationship(
+        back_populates="api_keys",
+    )
 
 
 class ApiKeyCreate(ApiKeyBase):

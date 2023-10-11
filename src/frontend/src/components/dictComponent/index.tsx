@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DictComponentType } from "../../types/components";
 
 import DictAreaModal from "../../modals/dictAreaModal";
@@ -13,7 +13,7 @@ export default function DictComponent({
 }: DictComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
-      onChange([""]);
+      onChange({});
     }
   }, [disabled]);
 
@@ -21,6 +21,8 @@ export default function DictComponent({
     if (value) onChange(value);
   }, [value]);
 
+  const ref = useRef(value);
+  debugger;
   return (
     <div
       className={classNames(
@@ -31,7 +33,7 @@ export default function DictComponent({
       {
         <div className="flex w-full gap-3">
           <DictAreaModal
-            value={value}
+            value={ref.current}
             onChange={(obj) => {
               onChange(obj);
             }}

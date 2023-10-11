@@ -4,7 +4,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
@@ -19,11 +19,12 @@ export default function DictAreaModal({
   value,
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [dictObj, setDictObj] = useState(value);
+
+  const ref = useRef(value);
 
   useEffect(() => {
-    if (value) setDictObj(value);
-  }, [value]);
+    if (value) ref.current = value;
+  }, [ref]);
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
@@ -37,23 +38,26 @@ export default function DictAreaModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex h-full w-full flex-col transition-all">
+        <div className="flex h-full w-full flex-col transition-all ">
           <JsonView
             theme="vscode"
             dark={true}
             editable
             enableClipboard
             onEdit={(edit) => {
-              setDictObj(edit["src"]);
+              ref.current = edit["src"];
             }}
-            src={dictObj}
+            onChange={(edit) => {
+              ref.current = edit["src"];
+            }}
+            src={ref.current}
           />
           <div className="flex h-fit w-full justify-end">
             <Button
               className="mt-3"
               type="submit"
               onClick={() => {
-                onChange(dictObj);
+                onChange(ref.current);
                 setOpen(false);
               }}
             >

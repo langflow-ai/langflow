@@ -23,7 +23,7 @@ function ApiInterceptor() {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          const refreshToken = cookies.get("refresh_token");
+          const refreshToken = cookies.get("refresh_tkn_lflw");
           if (refreshToken && refreshToken !== "auto") {
             authenticationErrorCount = authenticationErrorCount + 1;
             if (authenticationErrorCount > 3) {
@@ -31,23 +31,25 @@ function ApiInterceptor() {
               logout();
               navigate("/login");
             }
-
-            const res = await renewAccessToken(refreshToken);
-            if (res?.data?.access_token && res?.data?.refresh_token) {
-              login(res?.data?.access_token, res?.data?.refresh_token);
-            }
-
             try {
+              const res = await renewAccessToken(refreshToken);
+              if (res?.data?.access_token && res?.data?.refresh_token) {
+                login(res?.data?.access_token, res?.data?.refresh_token);
+              }
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
                 error.config.headers["Authorization"] = `Bearer ${cookies.get(
-                  "access_token"
+                  "access_tkn_lflw"
                 )}`;
                 const response = await axios.request(error.config);
                 return response;
               }
             } catch (error) {
               if (axios.isAxiosError(error) && error.response?.status === 401) {
+                logout();
+                navigate("/login");
+              } else {
+                console.error(error);
                 logout();
                 navigate("/login");
               }
