@@ -98,10 +98,6 @@ services:
       - app-db-data:/var/lib/postgresql/data/pgdata
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
-    deploy:
-      placement:
-        constraints:
-          - node.labels.app-db-data == true
     healthcheck:
       test: "exit 0"
     env_file:
