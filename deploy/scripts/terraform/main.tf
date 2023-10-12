@@ -85,6 +85,13 @@ resource "aws_security_group" "swarm-sg" {
   }
 
   ingress {
+    from_port   = 7946
+    to_port     = 7946
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port   = 4789
     to_port     = 4789
     protocol    = "udp"
