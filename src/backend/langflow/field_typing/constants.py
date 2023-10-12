@@ -10,7 +10,14 @@ from langchain.schema.memory import BaseMemory
 from langchain.text_splitter import TextSplitter
 from langchain.tools import Tool
 from langchain.vectorstores.base import VectorStore
-from langflow.field_typing import Data, NestedDict
+from typing import Union, Dict
+
+# Type alias for more complex dicts
+NestedDict = Dict[str, Union[str, Dict]]
+
+
+class Data:
+    pass
 
 
 LANGCHAIN_BASE_TYPES = {
