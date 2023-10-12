@@ -79,6 +79,8 @@ services:
       - result_backend
     env_file:
       - .env
+    networks:
+      - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
     volumes:
       - ../:/app
       - ./startup-backend.sh:/startup-backend.sh # Ensure the paths match
@@ -102,6 +104,8 @@ services:
       test: "exit 0"
     env_file:
       - .env
+    networks:
+      - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
 
   pgadmin:
     image: dpage/pgadmin4
@@ -179,6 +183,8 @@ services:
     image: "ogabrielluiz/langflow_frontend:latest"
     env_file:
       - .env
+    networks:
+      - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
     # user: your-non-root-user
     build:
       context: ../src/frontend
