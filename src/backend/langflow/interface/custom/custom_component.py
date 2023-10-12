@@ -108,7 +108,9 @@ class CustomComponent(Component, extra=Extra.allow):
                         ),
                     },
                 )
-        # TODO arg type should be Data if it is None
+            elif not arg.get("type"):
+                # Set the type to Data
+                arg["type"] = "Data"
         return args
 
     @property
