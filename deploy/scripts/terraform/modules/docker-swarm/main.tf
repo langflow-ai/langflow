@@ -48,8 +48,9 @@ resource "aws_instance" "manager" {
 
                 sudo cp .env.example .env
                 
-                # Add the label to random worker node to ensure that the data volume is created on the same node                
-                # docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
+                sleep 20
+                # Add the label to random worker node to ensure that the data volume is created on the same node            
+                docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
 
                 docker network create --driver=overlay traefik-public
 
