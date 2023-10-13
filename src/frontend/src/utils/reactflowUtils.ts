@@ -913,7 +913,6 @@ export function expandGroupNode(
   const { template, flow } = _.cloneDeep(groupNode.node!);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
-  console.log(gEdges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   ReactFlowInstance.getEdges().forEach((edge) => {
@@ -1001,7 +1000,6 @@ export function expandGroupNode(
     ...gEdges,
     ...updatedEdges,
   ];
-  console.log(edges);
   ReactFlowInstance.setNodes(nodes);
   ReactFlowInstance.setEdges(edges);
 }
@@ -1024,7 +1022,6 @@ export function getGroupStatus(
   let status = { valid: true, params: "Built sucessfully ✨" };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
-  ids.forEach((id) => console.log(ssData[id]));
   ids.forEach((id) => {
     if (!ssData[id]) {
       status = ssData[id];
