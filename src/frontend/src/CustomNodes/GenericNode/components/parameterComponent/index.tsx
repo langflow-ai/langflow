@@ -25,6 +25,7 @@ import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { ParameterComponentType } from "../../../../types/components";
 import { TabsState } from "../../../../types/tabs";
 import {
@@ -88,9 +89,12 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
+  const { takeSnapshot } = useContext(undoRedoContext);
+
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
+    takeSnapshot();
     let newData = cloneDeep(data);
     newData.node!.template[name].value = newValue;
     setData(newData);
