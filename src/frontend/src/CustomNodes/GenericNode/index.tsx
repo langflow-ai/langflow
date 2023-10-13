@@ -9,6 +9,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { typesContext } from "../../contexts/typesContext";
+import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
@@ -49,6 +50,8 @@ export default function GenericNode({
   const [showNode, setShowNode] = useState<boolean>(true);
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
+
+  const { takeSnapshot } = useContext(undoRedoContext);
 
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)
@@ -189,6 +192,7 @@ export default function GenericNode({
                           } else {
                             setNodeName(data.node!.display_name);
                           }
+                          takeSnapshot();
                         }}
                         value={nodeName}
                         onChange={setNodeName}
