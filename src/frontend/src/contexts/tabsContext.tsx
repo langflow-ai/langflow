@@ -300,7 +300,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       let fileData = JSON.parse(text);
       if (fileData.flows) {
         fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(flow, newProject);
+          id = addFlow(newProject, flow);
         });
       }
       // parse the text into a JSON object
@@ -376,6 +376,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) {
+    console.log(selectionInstance);
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -395,79 +396,103 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       : reactFlowInstance!.project({ x: position.x, y: position.y });
 
     selectionInstance.nodes.forEach((node: NodeType) => {
-      // Generate a unique node ID
-      let newId = getNodeId(node.data.type);
-      idsMap[node.id] = newId;
-
-      // Create a new node object
-      const newNode: NodeType = {
-        id: newId,
-        type: "genericNode",
-        position: {
-          x: insidePosition.x + node.position!.x - minimumX,
-          y: insidePosition.y + node.position!.y - minimumY,
-        },
-        data: {
-          ..._.cloneDeep(node.data),
-          id: newId,
-        },
-      };
-
-      // Add the new node to the list of nodes in state
-      nodes = nodes
-        .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
+      nodes = updateNodeId(
+        node,
+        idsMap,
+        nodes,
+        insidePosition,
+        minimumX,
+        minimumY
+      );
     });
+
     reactFlowInstance!.setNodes(nodes);
 
     selectionInstance.edges.forEach((edge: Edge) => {
-      let source = idsMap[edge.source];
-      let target = idsMap[edge.target];
-      const sourceHandleObject: sourceHandleType = scapeJSONParse(
-        edge.sourceHandle!
-      );
-      let sourceHandle = scapedJSONStringfy({
-        ...sourceHandleObject,
-        id: source,
-      });
-      sourceHandleObject.id = source;
-      edge.data.sourceHandle = sourceHandleObject;
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!
-      );
-      let targetHandle = scapedJSONStringfy({
-        ...targetHandleObject,
-        id: target,
-      });
-      targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
-      let id =
-        "reactflow__edge-" +
-        source +
-        sourceHandle +
-        "-" +
-        target +
-        targetHandle;
-      edges = addEdge(
-        {
-          source,
-          target,
-          sourceHandle,
-          targetHandle,
-          id,
-          style: { stroke: "#555" },
-          className:
-            targetHandleObject.type === "Text"
-              ? "stroke-gray-800 "
-              : "stroke-gray-900 ",
-          animated: targetHandleObject.type === "Text",
-          selected: false,
-        },
-        edges.map((edge) => ({ ...edge, selected: false }))
-      );
+      edges = updateEdgeId(edge, idsMap, edges);
     });
+
     reactFlowInstance!.setEdges(edges);
   }
+
+  const updateNodeId = (
+    node: NodeType,
+    idsMap,
+    nodes,
+    insidePosition,
+    minimumX,
+    minimumY
+  ) => {
+    // Generate a unique node ID
+    let newId = getNodeId(node.data.type);
+    idsMap[node.id] = newId;
+
+    // Create a new node object
+    const newNode: NodeType = {
+      id: newId,
+      type: "genericNode",
+      position: {
+        x: insidePosition.x + node.position!.x - minimumX,
+        y: insidePosition.y + node.position!.y - minimumY,
+      },
+      data: {
+        ..._.cloneDeep(node.data),
+        id: newId,
+      },
+    };
+
+    // Add the new node to the list of nodes in state
+    nodes = nodes
+      .map((node) => ({ ...node, selected: false }))
+      .concat({ ...newNode, selected: false });
+
+    return nodes;
+  };
+
+  const updateEdgeId = (edge: Edge, idsMap, edges) => {
+    let source = idsMap[edge.source];
+    let target = idsMap[edge.target];
+    const sourceHandleObject: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle!
+    );
+    let sourceHandle = scapedJSONStringfy({
+      ...sourceHandleObject,
+      id: source,
+    });
+    sourceHandleObject.id = source;
+    edge.data.sourceHandle = sourceHandleObject;
+    const targetHandleObject: targetHandleType = scapeJSONParse(
+      edge.targetHandle!
+    );
+    let targetHandle = scapedJSONStringfy({
+      ...targetHandleObject,
+      id: target,
+    });
+    targetHandleObject.id = target;
+    edge.data.targetHandle = targetHandleObject;
+    let id =
+      "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle;
+    edges = addEdge(
+      {
+        data: edge.data,
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+        id,
+        style: { stroke: "#555" },
+        className:
+          targetHandleObject.type === "Text"
+            ? "stroke-gray-800 "
+            : "stroke-gray-900 ",
+        animated: targetHandleObject.type === "Text",
+        selected: false,
+      },
+      edges.map((edge) => ({ ...edge, selected: false }))
+    );
+
+    return edges;
+  };
 
   const addFlow = async (
     newProject: Boolean,
