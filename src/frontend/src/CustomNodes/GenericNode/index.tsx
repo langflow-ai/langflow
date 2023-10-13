@@ -114,6 +114,14 @@ export default function GenericNode({
     }, 300);
   }, [showNode]);
 
+  useEffect(() => {
+    setNodeDescription(data.node!.description);
+  }, [data.node!.description]);
+
+  useEffect(() => {
+    setNodeName(data.node!.display_name);
+  }, [data.node!.display_name]);
+
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
     const relevantData = sseData[data.id];
@@ -189,7 +197,6 @@ export default function GenericNode({
                           } else {
                             setNodeName(data.node!.display_name);
                           }
-                          takeSnapshot();
                         }}
                         value={nodeName}
                         onChange={setNodeName}
@@ -201,7 +208,10 @@ export default function GenericNode({
                     <ShadTooltip content={data.node?.display_name}>
                       <div
                         className="generic-node-tooltip-div text-primary"
-                        onDoubleClick={() => setInputName(true)}
+                        onDoubleClick={() => {
+                          setInputName(true);
+                          takeSnapshot();
+                        }}
                       >
                         {data.node?.display_name}
                       </div>
@@ -412,7 +422,10 @@ export default function GenericNode({
             ) : (
               <div
                 className="generic-node-desc-text"
-                onDoubleClick={() => setInputDescription(true)}
+                onDoubleClick={() => {
+                  setInputDescription(true);
+                  takeSnapshot();
+                }}
               >
                 {data.node?.description}
               </div>
