@@ -376,7 +376,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) {
-    console.log(selectionInstance);
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -445,6 +444,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         );
       });
       data.node.flow.data!.nodes = internNodes;
+
+      let internEdges = [];
+      data.node.flow.data!.edges.map((edge) => {
+        internEdges = updateEdgeId(edge, idsMap, internEdges);
+      });
+      data.node.flow.data!.edges = internEdges;
     }
 
     // Create a new node object
