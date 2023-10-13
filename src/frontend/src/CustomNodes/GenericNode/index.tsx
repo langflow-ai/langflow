@@ -23,7 +23,7 @@ import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data: olddata,
+  data,
   xPos,
   yPos,
   selected,
@@ -33,7 +33,6 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(TabsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
@@ -89,7 +88,6 @@ export default function GenericNode({
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
-    olddata.node = data.node;
     let myFlow = flows.find((flow) => flow.id === tabId);
     if (reactFlowInstance && myFlow) {
       let flow = cloneDeep(myFlow);
@@ -132,7 +130,6 @@ export default function GenericNode({
         <NodeToolbarComponent
           position={{ x: xPos, y: yPos }}
           data={data}
-          setData={setData}
           deleteNode={deleteNode}
           setShowNode={setShowNode}
           numberOfHandles={handles}
@@ -232,7 +229,6 @@ export default function GenericNode({
                               proxy: data.node!.template[templateField].proxy,
                             })}
                             data={data}
-                            setData={setData}
                             color={
                               nodeColors[
                                 types[data.node?.template[templateField].type!]
@@ -286,7 +282,6 @@ export default function GenericNode({
                       dataType: data.type,
                     })}
                     data={data}
-                    setData={setData}
                     color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                     title={
                       data.node?.output_types &&
@@ -439,7 +434,6 @@ export default function GenericNode({
                           proxy: data.node!.template[templateField].proxy,
                         })}
                         data={data}
-                        setData={setData}
                         color={
                           nodeColors[
                             types[data.node?.template[templateField].type!]
@@ -501,7 +495,6 @@ export default function GenericNode({
                   dataType: data.type,
                 })}
                 data={data}
-                setData={setData}
                 color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                 title={
                   data.node?.output_types && data.node.output_types.length > 0
