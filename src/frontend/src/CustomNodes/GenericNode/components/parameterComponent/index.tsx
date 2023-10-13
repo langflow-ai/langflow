@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import React, {
   ReactNode,
   useContext,
@@ -46,7 +45,6 @@ export default function ParameterComponent({
   left,
   id,
   data,
-  setData,
   tooltipTitle,
   title,
   color,
@@ -95,9 +93,7 @@ export default function ParameterComponent({
     newValue: string | string[] | boolean | Object[]
   ): void => {
     takeSnapshot();
-    let newData = cloneDeep(data);
-    newData.node!.template[name].value = newValue;
-    setData(newData);
+    data.node!.template[name].value = newValue;
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
@@ -444,9 +440,6 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
-                const clone = cloneDeep(data);
-                clone.node = nodeClass;
-                setData(clone);
               }}
               nodeClass={data.node}
               disabled={disabled}

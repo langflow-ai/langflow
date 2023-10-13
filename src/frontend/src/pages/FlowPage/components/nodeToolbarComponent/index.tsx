@@ -19,7 +19,6 @@ import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
-  setData,
   deleteNode,
   position,
   setShowNode,
@@ -235,7 +234,6 @@ export default function NodeToolbarComponent({
           {showModalAdvanced && (
             <EditNodeModal
               data={data}
-              setData={setData}
               nodeLength={nodeLength}
               open={showModalAdvanced}
               onClose={(modal) => {

@@ -48,14 +48,12 @@ const EditNodeModal = forwardRef(
   (
     {
       data,
-      setData,
       nodeLength,
       children,
       open,
       onClose,
     }: {
       data: NodeDataType;
-      setData: (data: NodeDataType) => void;
       nodeLength: number;
       children: ReactNode;
       open?: boolean;

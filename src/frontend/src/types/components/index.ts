@@ -38,7 +38,6 @@ export type DropDownComponentType = {
 };
 export type ParameterComponentType = {
   data: NodeDataType;
-  setData: (value: NodeDataType) => void;
   title: string;
   id: sourceHandleType | targetHandleType;
   color: string;
@@ -433,7 +432,6 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setData: (newState: NodeDataType) => void;
   position: XYPosition;
   setShowNode: (boolean: any) => void;
   numberOfHandles: boolean[] | [];
