@@ -427,6 +427,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let newId = getNodeId(node.data.type);
     idsMap[node.id] = newId;
 
+    let data = {
+      ..._.cloneDeep(node.data),
+      id: newId,
+    };
+
+    if (data.node?.flow) {
+      let internNodes = [];
+      data.node.flow.data!.nodes.map((node) => {
+        internNodes = updateNodeId(
+          node,
+          idsMap,
+          internNodes,
+          insidePosition,
+          minimumX,
+          minimumY
+        );
+      });
+      data.node.flow.data!.nodes = internNodes;
+    }
+
     // Create a new node object
     const newNode: NodeType = {
       id: newId,
@@ -435,10 +455,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         x: insidePosition.x + node.position!.x - minimumX,
         y: insidePosition.y + node.position!.y - minimumY,
       },
-      data: {
-        ..._.cloneDeep(node.data),
-        id: newId,
-      },
+      data,
     };
 
     // Add the new node to the list of nodes in state
