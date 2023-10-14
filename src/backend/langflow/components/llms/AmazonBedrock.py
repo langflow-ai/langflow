@@ -46,5 +46,5 @@ class AmazonBedrockComponent(CustomComponent):
                 model_kwargs=model_kwargs,
             )
         except Exception as e:
-            raise ValueError("Could not connect to Test Endpoints API.") from e
+            raise ValueError("Could not connect to AmazonBedrock API.") from e
         return output
