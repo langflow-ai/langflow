@@ -10,7 +10,6 @@ class AmazonBedrockComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "credentials_profile_name": {"display_name": "Credentials Profile Name", "password": True},
             "model_id": {
                 "display_name": "Model Id",
                 "options": [
@@ -26,25 +25,24 @@ class AmazonBedrockComponent(CustomComponent):
                     "cohere.command-text-v14",
                 ],
             },
-            "model_kwargs": {
-                "display_name": "Model Keyword Arguments",
-                "field_type": "code",
+            "credentials_profile_name": {"display_name": "Credentials Profile Name"},
+            "streaming": {
+                "display_name": "Streaming",
+                "field_type": "bool"
             },
             "code": {"show": False},
         }
 
     def build(
         self,
-        credentials_profile_name: str,
         model_id: str = "anthropic.claude-instant-v1",
-        model_kwargs: Optional[dict] = None,
+        credentials_profile_name: Optional[str] = None,
     ) -> BaseLLM:
         try:
             output = Bedrock(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
-                model_kwargs=model_kwargs,
-            )
+            )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
         return output
