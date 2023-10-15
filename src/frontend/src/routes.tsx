@@ -44,7 +44,7 @@ const Router = () => {
           }
         />
         <Route
-          path="view"
+          path="view/:theme?"
           element={
             <ProtectedRoute>
               <ViewPage />
