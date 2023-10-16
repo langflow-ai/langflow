@@ -47,6 +47,7 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { isAuthenticated, autoLogin, userData } = useContext(AuthContext);
+  const { getNodeId } = useContext(TabsContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -90,7 +91,7 @@ export default function NodeToolbarComponent({
         break;
       case "ungroup":
         updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, reactFlowInstance);
+        expandGroupNode(data, reactFlowInstance, getNodeId);
         break;
     }
   };
