@@ -29,7 +29,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase } from "./utils";
+import { toTitleCase } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges({
@@ -246,7 +246,9 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       errors.push(
         `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
+          template[t].display_name ||
+          toTitleCase(template[t].name) ||
+          toTitleCase(t)
         }.`
       );
     } else if (
