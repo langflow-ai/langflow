@@ -13,7 +13,7 @@ import {
   cleanEdgesType,
   unselectAllNodesType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase } from "./utils";
+import { toTitleCase } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -216,7 +216,9 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       errors.push(
         `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
+          template[t].display_name ||
+          toTitleCase(template[t].name) ||
+          toTitleCase(t)
         }.`
       );
     } else if (
