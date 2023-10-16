@@ -911,7 +911,7 @@ function updateProxyIdsOnTemplate(
   idsMap: { [key: string]: string }
 ) {
   Object.keys(template).forEach((key) => {
-    if (template[key].proxy) {
+    if (template[key].proxy && idsMap[template[key].proxy!.id]) {
       template[key].proxy!.id = idsMap[template[key].proxy!.id];
     }
   });
