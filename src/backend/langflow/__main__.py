@@ -52,6 +52,18 @@ def display_results(results):
         console.print()  # Print a new line
 
 
+def set_var_for_macos_issue():
+    # OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+    # we need to set this var is we are running on MacOS
+    # otherwise we get an error when running gunicorn
+
+    if platform.system() in ["Darwin"]:
+        import os
+
+        os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
+
+
 def update_settings(
     config: str,
     cache: Optional[str] = None,
@@ -84,7 +96,7 @@ def run(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
     workers: int = typer.Option(
-        2, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
@@ -143,7 +155,10 @@ def run(
     """
     Run the Langflow.
     """
+
+    set_var_for_macos_issue()
     # override env variables with .env file
+
     if env_file:
         load_dotenv(env_file, override=True)
 
@@ -165,7 +180,6 @@ def run(
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
-        "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
 

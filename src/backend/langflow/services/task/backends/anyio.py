@@ -34,6 +34,8 @@ class AnyIOTaskResult:
 
 
 class AnyIOBackend(TaskBackend):
+    name = "anyio"
+
     def __init__(self):
         self.tasks = {}
 

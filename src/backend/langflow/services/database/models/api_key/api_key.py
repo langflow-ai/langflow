@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class ApiKeyBase(SQLModelSerializable):
     name: Optional[str] = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = Field(default=None)
+    last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
 

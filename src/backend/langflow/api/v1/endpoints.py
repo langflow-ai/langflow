@@ -69,7 +69,7 @@ def get_all(
     "/process/{flow_id}",
     response_model=ProcessResponse,
 )
-async def process_flow(
+async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[dict] = None,
@@ -156,7 +156,7 @@ async def process_flow(
             result=task_result,
             task=task_response,
             session_id=session_id,
-            backend=str(type(task_service.backend)),
+            backend=task_service.backend_name,
         )
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')

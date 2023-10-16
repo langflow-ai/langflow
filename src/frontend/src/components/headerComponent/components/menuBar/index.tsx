@@ -26,7 +26,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(undefined, true).then((id) => {
+      addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();

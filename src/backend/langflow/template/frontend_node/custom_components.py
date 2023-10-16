@@ -2,6 +2,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from langflow.interface.custom.constants import DEFAULT_CUSTOM_COMPONENT_CODE
+from typing import Optional
 
 
 class CustomComponentFrontendNode(FrontendNode):
@@ -24,7 +25,7 @@ class CustomComponentFrontendNode(FrontendNode):
             )
         ],
     )
-    description: str = "Create any custom component you want!"
+    description: Optional[str] = None
     base_classes: list[str] = []
 
     def to_dict(self):
