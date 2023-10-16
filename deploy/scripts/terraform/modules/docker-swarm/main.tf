@@ -52,7 +52,7 @@ resource "aws_instance" "manager" {
                 # Add the label to random worker node to ensure that the data volume is created on the same node            
                 docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
 
-                docker network create --driver=overlay traefik-public
+                docker network create --driver=overlay traefik-public --attachable
 
                 env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-compose.yml -c docker-compose.override.yml langflow_stack
 
@@ -80,7 +80,9 @@ resource "aws_instance" "worker" {
             sudo service docker start
             sudo usermod -a -G docker ec2-user
             sudo chkconfig docker on
-            docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) $MANAGER_IP:2377
+            TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+            IP_ADDR=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/local-ipv4)
+            docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) --advertise-addr $IP_ADDR $MANAGER_IP:2377 
             EOT
 
   tags = {
