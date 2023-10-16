@@ -918,7 +918,16 @@ function updateProxyIdsOnTemplate(
   });
 }
 
-function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {}
+function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
+  edges.forEach((edge) => {
+    let targetHandle: targetHandleType = edge.data.targetHandle;
+    if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
+      targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
+    }
+    edge.data.targetHandle = targetHandle;
+    edge.targetHandle = scapedJSONStringfy(targetHandle);
+  });
+}
 
 export function expandGroupNode(
   groupNode: NodeDataType,
@@ -936,7 +945,7 @@ export function expandGroupNode(
   console.log(gEdges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
-  ReactFlowInstance.getEdges().forEach((edge) => {
+  flowEdges.forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
     if (newEdge.target === groupNode.id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
