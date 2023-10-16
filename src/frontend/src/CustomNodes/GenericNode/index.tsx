@@ -21,7 +21,7 @@ import {
   scapedJSONStringfy,
 } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, toTitleCase } from "../../utils/utils";
+import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -257,15 +257,10 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                             }
-                            title={
-                              data.node?.template[templateField].display_name
-                                ? data.node.template[templateField].display_name
-                                : data.node?.template[templateField].name
-                                ? toTitleCase(
-                                    data.node.template[templateField].name
-                                  )
-                                : toTitleCase(templateField)
-                            }
+                            title={getFieldTitle(
+                              data.node?.template!,
+                              templateField
+                            )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
                             tooltipTitle={
@@ -455,15 +450,10 @@ export default function GenericNode({
                           ] ??
                           nodeColors.unknown
                         }
-                        title={
-                          data.node?.template[templateField].display_name
-                            ? data.node.template[templateField].display_name
-                            : data.node?.template[templateField].name
-                            ? toTitleCase(
-                                data.node.template[templateField].name
-                              )
-                            : toTitleCase(templateField)
-                        }
+                        title={getFieldTitle(
+                          data.node?.template!,
+                          templateField
+                        )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
