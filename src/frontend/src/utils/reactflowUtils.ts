@@ -13,7 +13,7 @@ import {
   cleanEdgesType,
   unselectAllNodesType,
 } from "../types/utils/reactflowUtils";
-import { toTitleCase } from "./utils";
+import { getFieldTitle } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -214,13 +214,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
           edge.targetHandle.split("|")[2] === node.id
       )
     ) {
-      errors.push(
-        `${type} is missing ${
-          template[t].display_name ||
-          toTitleCase(template[t].name) ||
-          toTitleCase(t)
-        }.`
-      );
+      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
@@ -231,15 +225,14 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) contains duplicate keys with the same values.`
+          `${type} (${getFieldTitle(
+            template,
+            t
+          )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) field must not be empty.`
+          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
         );
     }
     return errors;
