@@ -703,7 +703,6 @@ function isHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
-  scapedJSONStringfy({ type: field.type, fieldName: key, id: nodeId });
   if (field.proxy) {
     if (
       edges.some(
