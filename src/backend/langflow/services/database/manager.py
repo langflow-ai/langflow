@@ -66,23 +66,27 @@ class DatabaseService(Service):
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             with Session(self.engine) as session:
-                flows = (
-                    session.query(models.Flow)
-                    .filter(models.Flow.user_id.is_(None))
-                    .all()
-                )
-                if flows:
-                    logger.debug("Migrating flows to default superuser")
-                    username = settings_service.auth_settings.SUPERUSER
-                    user = get_user_by_username(session, username)
-                    if user is None:
-                        logger.error("No superuser found.")
-                        return
-                    session.query(models.Flow).filter(
-                        models.Flow.user_id.is_(None)
-                    ).update({models.Flow.user_id: user.id})
-                    session.commit()
-                    logger.debug("Flows migrated successfully")
+                try:
+                    flows = (
+                        session.query(models.Flow)
+                        .filter(models.Flow.user_id.is_(None))
+                        .all()
+                    )
+                    if flows:
+                        logger.debug("Migrating flows to default superuser")
+                        username = settings_service.auth_settings.SUPERUSER
+                        user = get_user_by_username(session, username)
+                        if user is None:
+                            logger.error("No superuser found.")
+                            return
+                        session.query(models.Flow).filter(
+                            models.Flow.user_id.is_(None)
+                        ).update({models.Flow.user_id: user.id})
+                        session.commit()
+                        logger.debug("Flows migrated successfully")
+                except Exception as e:
+                    logger.error(f"An error occurred while migrating flows: {str(e)}")
+                    session.rollback()
 
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
