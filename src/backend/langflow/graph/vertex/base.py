@@ -216,6 +216,16 @@ class Vertex:
                         }
                     elif isinstance(_value, dict):
                         params[key] = _value
+                elif value.get("type") == "int" and value.get("value") is not None:
+                    try:
+                        params[key] = int(value.get("value"))
+                    except ValueError:
+                        params[key] = value.get("value")
+                elif value.get("type") == "float" and value.get("value") is not None:
+                    try:
+                        params[key] = float(value.get("value"))
+                    except ValueError:
+                        params[key] = value.get("value")
                 else:
                     params[key] = value.get("value")
 
