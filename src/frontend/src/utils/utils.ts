@@ -1,7 +1,11 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  APIDataType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   IVarHighlightType,
   groupedObjType,
@@ -526,4 +530,15 @@ export function tabsArray(codes: string[], method: number) {
       code: codes[4],
     },
   ];
+}
+
+export function getFieldTitle(
+  template: APITemplateType,
+  templateField: string
+): string {
+  return template[templateField].display_name
+    ? template[templateField].display_name!
+    : template[templateField].name
+    ? toTitleCase(template[templateField].name!)
+    : toTitleCase(templateField);
 }
