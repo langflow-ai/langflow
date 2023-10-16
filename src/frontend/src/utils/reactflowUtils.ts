@@ -204,6 +204,7 @@ export function updateIds(
       edge.target +
       edge.targetHandle;
   });
+  return idsMap;
 }
 
 export function buildTweaks(flow: FlowType) {
@@ -906,11 +907,29 @@ export function ungroupNode(
   BaseFlow.edges = edges;
 }
 
+function updateProxyIdsOnTemplate(
+  template: APITemplateType,
+  idsMap: { [key: string]: string }
+) {
+  Object.keys(template).forEach((key) => {
+    if (template[key].proxy) {
+      template[key].proxy!.id = idsMap[template[key].proxy!.id];
+    }
+  });
+}
+
+function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {}
+
 export function expandGroupNode(
   groupNode: NodeDataType,
-  ReactFlowInstance: ReactFlowInstance
+  ReactFlowInstance: ReactFlowInstance,
+  getNodeId: (type: string) => string
 ) {
   const { template, flow } = _.cloneDeep(groupNode.node!);
+  const idsMap = updateIds(flow!.data!, getNodeId);
+  updateProxyIdsOnTemplate(template, idsMap);
+  let flowEdges = ReactFlowInstance.getEdges();
+  updateEdgesIds(flowEdges, idsMap);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
   //TODO update ids of intern nodes and proxy on edges before expanding
@@ -1002,7 +1021,6 @@ export function expandGroupNode(
     ...gEdges,
     ...updatedEdges,
   ];
-  console.log(edges);
   ReactFlowInstance.setNodes(nodes);
   ReactFlowInstance.setEdges(edges);
 }
