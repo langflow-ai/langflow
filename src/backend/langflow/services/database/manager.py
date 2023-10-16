@@ -68,15 +68,19 @@ class DatabaseService(Service):
             with Session(self.engine) as session:
                 flows = (
                     session.query(models.Flow)
-                    .filter(models.Flow.user_id == None)  # noqa
+                    .filter(models.Flow.user_id.is_(None))
                     .all()
                 )
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
                     user = get_user_by_username(session, username)
-                    for flow in flows:
-                        flow.user_id = user.id
+                    if user is None:
+                        logger.error("No superuser found.")
+                        return
+                    session.query(models.Flow).filter(
+                        models.Flow.user_id.is_(None)
+                    ).update({models.Flow.user_id: user.id})
                     session.commit()
                     logger.debug("Flows migrated successfully")
 
