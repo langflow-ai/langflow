@@ -85,7 +85,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         setTemplates(
           Object.keys(data).reduce((acc, curr) => {
             Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
-              acc[c] = data[curr][c];
+              //prevent wrong overwriting of the component template by a group of the same type
+              if (!data[curr][c].flow) acc[c] = data[curr][c];
             });
             return acc;
           }, {})
