@@ -12,12 +12,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
       # Enable Docker in Traefik, so that it reads labels from Docker services
-      - --providers.docker
+      - --providers.swarm
       # Add a constraint to only use services with the label for this stack
       # from the env var TRAEFIK_TAG
-      - --providers.docker.constraints=Label(`traefik.constraint-label-stack`, `${TRAEFIK_TAG?Variable not set}`)
+      - --providers.swarm.constraints=Label(`traefik.constraint-label-stack`, `${TRAEFIK_TAG?Variable not set}`)
       # Do not expose all Docker services, only the ones explicitly exposed
-      - --providers.docker.exposedbydefault=false
+      - --providers.swarm.exposedbydefault=false
       # Enable the access log, with HTTP requests
       - --accesslog
       # Enable the Traefik log, for configurations and errors
@@ -126,7 +126,6 @@ services:
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
         - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
         - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
-
 volumes:
   app-db-data:
 
