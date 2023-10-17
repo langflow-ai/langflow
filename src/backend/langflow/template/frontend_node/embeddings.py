@@ -15,8 +15,7 @@ class EmbeddingFrontendNode(FrontendNode):
                     show=True,
                     name="credentials",
                     value="",
-                    suffixes=[".json"],
-                    file_types=["json"],
+                    file_types=[".json"],
                 )
             )
 

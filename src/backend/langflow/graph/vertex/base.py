@@ -157,7 +157,7 @@ class Vertex:
             # If the type is not transformable to a python base class
             # then we need to get the edge that connects to this node
             if value.get("type") == "file":
-                # Load the type in value.get('suffixes') using
+                # Load the type in value.get('fileTypes') using
                 # what is inside value.get('content')
                 # value.get('value') is the file name
                 if file_path := value.get("file_path"):
