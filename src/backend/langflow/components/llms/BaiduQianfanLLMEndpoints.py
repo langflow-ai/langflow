@@ -78,7 +78,7 @@ class QianfanLLMEndpointComponent(CustomComponent):
         endpoint: Optional[str] = None,
     ) -> BaseLLM:
         try:
-            output = QianfanLLMEndpoint(
+            output = QianfanLLMEndpoint(  # type: ignore
                 model=model,
                 qianfan_ak=qianfan_ak,
                 qianfan_sk=qianfan_sk,
@@ -89,4 +89,4 @@ class QianfanLLMEndpointComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
-        return output
+        return output  # type: ignore
