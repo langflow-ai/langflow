@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Auto_login tests", () => {
-
-    
   test("auto_login sign in", async ({ page }) => {
     await page.routeFromHAR("harFiles/langflow.har", {
       url: "**/api/v1/**",
