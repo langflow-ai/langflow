@@ -444,11 +444,6 @@ export default function CodeTabsComponent({
                                                       templateField
                                                     ].fileTypes
                                                   }
-                                                  suffixes={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].suffixes
-                                                  }
                                                   onFileChange={(
                                                     value: any
                                                   ) => {

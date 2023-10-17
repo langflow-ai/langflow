@@ -462,7 +462,6 @@ export default function ParameterComponent({
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
               fileTypes={data.node?.template[name].fileTypes}
-              suffixes={data.node?.template[name].suffixes}
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
               }}
