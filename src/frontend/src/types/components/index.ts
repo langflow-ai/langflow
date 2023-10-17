@@ -119,7 +119,6 @@ export type FileComponentType = {
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
-  suffixes: Array<string>;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
   editNode?: boolean;
