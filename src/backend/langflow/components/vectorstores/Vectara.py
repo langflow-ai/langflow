@@ -37,12 +37,12 @@ class VectaraComponent(CustomComponent):
                 vectara_customer_id=vectara_customer_id,
                 vectara_corpus_id=vectara_corpus_id,
                 vectara_api_key=vectara_api_key,
-                source='langflow',
+                source="langflow",
             )
 
         return Vectara(
             vectara_customer_id=vectara_customer_id,
             vectara_corpus_id=vectara_corpus_id,
             vectara_api_key=vectara_api_key,
-            source='langflow',
+            source="langflow",
         )
