@@ -14,6 +14,7 @@ export default function DisclosureComponent({
           <div>
             <Disclosure.Button className="components-disclosure-arrangement">
               <div className="flex gap-4">
+                {/* BUG ON THIS ICON */}
                 <Icon strokeWidth={1.5} size={22} className="text-primary" />
                 <span className="components-disclosure-title">{title}</span>
               </div>

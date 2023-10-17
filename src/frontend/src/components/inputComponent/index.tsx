@@ -1,11 +1,13 @@
 import * as Form from "@radix-ui/react-form";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
 export default function InputComponent({
+  autoFocus = false,
+  onBlur,
   value,
   onChange,
   disabled,
@@ -16,9 +18,10 @@ export default function InputComponent({
   placeholder = "Type something...",
   className,
   id = "",
+  blurOnEnter = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
-
+  const refInput = useRef<HTMLInputElement>(null);
   // Clear component state
   useEffect(() => {
     if (disabled) {
@@ -32,6 +35,9 @@ export default function InputComponent({
         <Form.Control asChild>
           <Input
             id={"form-" + id}
+            ref={refInput}
+            onBlur={onBlur}
+            autoFocus={autoFocus}
             type={password && !pwdVisible ? "password" : "text"}
             value={value}
             disabled={disabled}
@@ -51,14 +57,18 @@ export default function InputComponent({
             }}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
+              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
           />
         </Form.Control>
       ) : (
         <Input
           id={id}
+          ref={refInput}
           type="text"
+          onBlur={onBlur}
           value={value}
+          autoFocus={autoFocus}
           disabled={disabled}
           required={required}
           className={classNames(
@@ -76,6 +86,7 @@ export default function InputComponent({
           }}
           onKeyDown={(e) => {
             handleKeyDown(e, value, "");
+            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
         />
       )}
