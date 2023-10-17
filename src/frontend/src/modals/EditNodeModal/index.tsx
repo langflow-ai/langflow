@@ -417,11 +417,6 @@ const EditNodeModal = forwardRef(
                                         templateParam
                                       ].fileTypes
                                     }
-                                    suffixes={
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].suffixes
-                                    }
                                     onFileChange={(filePath: string) => {
                                       data.node!.template[
                                         templateParam
