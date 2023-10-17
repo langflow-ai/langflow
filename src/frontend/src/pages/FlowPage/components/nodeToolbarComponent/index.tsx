@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -84,7 +85,7 @@ export default function NodeToolbarComponent({
         break;
       case "SaveAll":
         if (isAuthenticated) {
-          saveComponent(data, autoLogin ? "auto" : userData?.id!);
+          saveComponent(cloneDeep(data), autoLogin ? "auto" : userData?.id!);
         }
         break;
       case "disabled":
