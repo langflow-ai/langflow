@@ -9,8 +9,8 @@ export type TabsContextType = {
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (
-    flow?: FlowType,
-    newProject?: Boolean
+    newProject: boolean,
+    flow?: FlowType
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -23,7 +23,7 @@ export type TabsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  uploadFlow: (newFlow?: boolean, file?: File) => Promise<String | undefined>;
+  uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   tabsState: TabsState;

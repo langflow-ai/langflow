@@ -120,11 +120,7 @@ test("CodeAreaModalComponent", async ({ page }) => {
     await page.locator('//*[@id="showcode"]').click();
     expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
 
-    await page
-      .locator(
-        '//*[@id="radix-:r2l:"]/div[2]/div/div[2]/div/div/div/table/tbody/tr[1]/td[2]/div/div/button/div/span'
-      )
-      .click();
+    await page.locator('//*[@id="code-area-edit0"]').click();
 
     let value = await page.locator('//*[@id="codeValue"]').inputValue();
 

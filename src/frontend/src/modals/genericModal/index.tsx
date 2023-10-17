@@ -31,6 +31,7 @@ export default function GenericModal({
   setNodeClass,
   children,
   id = "",
+  readonly = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -209,7 +210,7 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === TypeModal.PROMPT && isEdit ? (
+            {type === TypeModal.PROMPT && isEdit && !readonly ? (
               <Textarea
                 id={"modal-" + id}
                 ref={divRefPrompt}
@@ -228,7 +229,7 @@ export default function GenericModal({
                   handleKeyDown(e, inputValue, "");
                 }}
               />
-            ) : type === TypeModal.PROMPT && !isEdit ? (
+            ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
               <SanitizedHTMLWrapper
                 className={getClassByNumberLength()}
                 content={coloredContent}
@@ -250,6 +251,7 @@ export default function GenericModal({
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}
+                readOnly={readonly}
               />
             ) : (
               <></>
@@ -307,6 +309,7 @@ export default function GenericModal({
             </div>
             <Button
               id="genericModalBtnSave"
+              disabled={readonly}
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:

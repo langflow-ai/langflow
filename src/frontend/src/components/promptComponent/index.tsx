@@ -15,7 +15,8 @@ export default function PromptAreaComponent({
   disabled,
   editNode = false,
   id = "",
-}: PromptAreaComponentType) {
+  readonly = false,
+}: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange("");
@@ -23,7 +24,7 @@ export default function PromptAreaComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value !== "" && !editNode) {
+    if (value !== "" && !editNode && !readonly) {
       postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
         if (apiReturn.data) {
           setNodeClass!(apiReturn.data.frontend_node);
@@ -37,6 +38,7 @@ export default function PromptAreaComponent({
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
         id={id}
+        readonly={readonly}
         type={TypeModal.PROMPT}
         value={value}
         buttonText="Check & Save"
