@@ -603,3 +603,17 @@ export function sensitiveSort(a: string, b: string): number {
     return a.localeCompare(b);
   }
 }
+// this function is used to get the set of keys from an object
+export function getSetFromObject(obj: object, key?: string): Set<string> {
+  const set = new Set<string>();
+  if (key) {
+    for (const objKey in obj) {
+      set.add(obj[objKey][key]);
+    }
+  } else {
+    for (const key in obj) {
+      set.add(key);
+    }
+  }
+  return set;
+}

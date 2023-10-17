@@ -8,12 +8,13 @@ import {
 } from "react";
 import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
-import { APIKindType } from "../types/api";
+import { APIClassType, APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
 import {
   checkLocalStorageKey,
+  getSetFromObject,
   IncrementObjectKey,
   removeCountFromString,
 } from "../utils/utils";
@@ -154,14 +155,30 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     let components = savedComponentsJSON.components;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
-      const { newKey, increment } = IncrementObjectKey(
+      let { newKey, increment } = IncrementObjectKey(
         data["custom_components"],
         key
       );
       key = newKey;
-      component.node!.display_name =
-        removeCountFromString(component.node?.display_name!) +
-        ` (${increment})`;
+      let componentNodes: { [key: string]: APIClassType } = {};
+      Object.keys(data["custom_components"]).forEach((key) => {
+        componentNodes[key] = data["custom_components"][key];
+      });
+      const display_nameSet = getSetFromObject(componentNodes, "display_name");
+      if (display_nameSet.has(component.node?.display_name!)) {
+        increment = 1;
+        while (
+          display_nameSet.has(
+            removeCountFromString(component.node?.display_name!) +
+              ` (${increment})`
+          )
+        ) {
+          increment++;
+        }
+        component.node!.display_name =
+          removeCountFromString(component.node?.display_name!) +
+          ` (${increment})`;
+      }
     }
     component.node!.official = false;
     components[key] = component;
