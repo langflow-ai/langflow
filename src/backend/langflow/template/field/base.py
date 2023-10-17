@@ -26,9 +26,6 @@ class TemplateFieldCreator(BaseModel, ABC):
     value: Any = None
     """The value of the field. Default is None."""
 
-    suffixes: list[str] = []
-    """List of suffixes for a file field. Default is an empty list."""
-
     file_types: list[str] = []
     """List of file types associated with the field. Default is an empty list. (duplicate)"""
 

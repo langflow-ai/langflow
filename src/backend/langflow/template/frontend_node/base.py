@@ -142,8 +142,7 @@ class FrontendNode(BaseModel):
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
-            field.suffixes = [".json", ".yaml", ".yml"]
-            field.file_types = ["json", "yaml", "yml"]
+            field.file_types = [".json", ".yaml", ".yml"]
         elif (
             _type.startswith("Dict")
             or _type.startswith("Mapping")

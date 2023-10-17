@@ -416,8 +416,7 @@ def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     Sets the file attributes for the 'dict_' key.
     """
     value["type"] = "file"
-    value["suffixes"] = [".json", ".yaml", ".yml"]
-    value["fileTypes"] = ["json", "yaml", "yml"]
+    value["fileTypes"] = [".json", ".yaml", ".yml"]
 
 
 def replace_default_value_with_actual(value: Dict[str, Any]) -> None:
