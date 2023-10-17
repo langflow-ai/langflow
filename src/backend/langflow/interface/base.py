@@ -83,7 +83,6 @@ class LangChainTypeCreator(BaseModel, ABC):
                     show=value.get("show", True),
                     multiline=value.get("multiline", False),
                     value=value.get("value", None),
-                    suffixes=value.get("suffixes", []),
                     file_types=value.get("fileTypes", []),
                     file_path=value.get("file_path", None),
                 )
