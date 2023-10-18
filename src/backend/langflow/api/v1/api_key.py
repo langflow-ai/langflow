@@ -1,6 +1,5 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, Body
-from httpx import get
 from langflow.api.v1.schemas import ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.api_key import (
@@ -35,7 +34,7 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 @router.get("/", response_model=ApiKeysResponse)
 def get_api_keys_route(
     db: Session = Depends(get_session),
-    current_user: User = Depends(auth_utils.auth_utils.get_current_active_user),
+    current_user: User = Depends(auth_utils.get_current_active_user),
 ):
     try:
         user_id = current_user.id
