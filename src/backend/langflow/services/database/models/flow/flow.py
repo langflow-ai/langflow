@@ -15,6 +15,7 @@ class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
     description: Optional[str] = Field(index=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
+    is_component: bool = Field(default=False)
 
     @validator("data")
     def validate_json(v):
