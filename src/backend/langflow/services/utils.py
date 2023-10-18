@@ -7,7 +7,7 @@ from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from sqlmodel import Session
-from .getters import get_db_service, get_session, get_settings_service
+from .deps import get_db_service, get_session, get_settings_service
 from loguru import logger
 
 

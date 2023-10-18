@@ -6,7 +6,7 @@ from langflow.interface.run import (
     get_memory_key,
     update_memory_keys,
 )
-from langflow.services.getters import get_session_service
+from langflow.services.deps import get_session_service
 from loguru import logger
 from langflow.graph import Graph
 from langchain.chains.base import Chain

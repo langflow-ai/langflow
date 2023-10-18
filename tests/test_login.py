@@ -1,5 +1,5 @@
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
+from langflow.services.deps import get_db_service
 import pytest
 from langflow.services.database.models.user import User
 from langflow.services.auth.utils import get_password_hash

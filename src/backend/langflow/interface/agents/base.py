@@ -5,7 +5,7 @@ from langchain.agents import types
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.agents import AgentFrontendNode
 from loguru import logger

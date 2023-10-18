@@ -1,6 +1,6 @@
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
+from langflow.services.deps import get_db_service
 import orjson
 import pytest
 

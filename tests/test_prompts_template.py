@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 def test_prompts_settings(client: TestClient, logged_in_headers):

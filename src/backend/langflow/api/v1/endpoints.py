@@ -7,7 +7,7 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
-from langflow.services.getters import (
+from langflow.services.deps import (
     get_session_service,
     get_settings_service,
     get_task_service,
@@ -27,7 +27,7 @@ from langflow.api.v1.schemas import (
 )
 
 
-from langflow.services.getters import get_session
+from langflow.services.deps import get_session
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -40,7 +40,7 @@ except ImportError:
 from sqlmodel import Session
 
 
-from langflow.services.task.manager import TaskService
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])

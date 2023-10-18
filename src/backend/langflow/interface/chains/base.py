@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Type
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.chains import ChainFrontendNode
 from loguru import logger

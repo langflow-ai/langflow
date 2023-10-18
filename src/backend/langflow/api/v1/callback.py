@@ -7,7 +7,7 @@ from langflow.api.v1.schemas import ChatResponse, PromptResponse
 
 
 from typing import Any, Dict, List, Optional
-from langflow.services.getters import get_chat_service
+from langflow.services.deps import get_chat_service
 
 
 from langflow.utils.util import remove_ansi_escape_codes

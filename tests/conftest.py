@@ -10,7 +10,7 @@ from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
 import orjson
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
+from langflow.services.deps import get_db_service
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
@@ -22,7 +22,7 @@ from typer.testing import CliRunner
 import tempfile
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
+    from langflow.services.database.service import DatabaseService
 
 
 def pytest_configure():
