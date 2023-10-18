@@ -260,9 +260,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
     // simulate a click on the link element to trigger the download
     link.click();
-    setNoticeData({
-      title: "Warning: Critical data, JSON file may include API keys.",
-    });
   }
 
   function downloadFlows() {
@@ -300,7 +297,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       let fileData = JSON.parse(text);
       if (fileData.flows) {
         fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(flow, newProject);
+          id = addFlow(newProject, flow);
         });
       }
       // parse the text into a JSON object
