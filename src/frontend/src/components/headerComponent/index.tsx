@@ -64,6 +64,16 @@ export default function Header(): JSX.Element {
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
+        <Link to="/store">
+          <Button
+            className="gap-2"
+            variant={location.pathname === "/store" ? "primary" : "secondary"}
+            size="sm"
+          >
+            <IconComponent name="Store" className="h-4 w-4" />
+            <div className="flex-1">Store</div>
+          </Button>
+        </Link>
       </div>
       <div className="header-end-division">
         <div className="header-end-display">
