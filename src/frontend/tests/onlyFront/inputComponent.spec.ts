@@ -28,12 +28,12 @@ test("InputComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.locator('//*[@id="input-10"]').click();
+  await page.locator("#input-8").click();
   await page
-    .locator('//*[@id="input-10"]')
+    .locator("#input-8")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  let value = await page.locator('//*[@id="input-10"]').inputValue();
+  let value = await page.locator("#input-8").inputValue();
 
   if (value != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
@@ -144,7 +144,7 @@ test("InputComponent", async ({ page }) => {
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  const plusButtonLocator = page.locator('//*[@id="input-10"]');
+  const plusButtonLocator = page.locator("#input-8");
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -163,7 +163,7 @@ test("InputComponent", async ({ page }) => {
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    let value = await page.locator('//*[@id="input-10"]').inputValue();
+    let value = await page.locator("#input-8").inputValue();
 
     if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@") {
       expect(false).toBeTruthy();

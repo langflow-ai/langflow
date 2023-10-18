@@ -21,7 +21,6 @@ test("ToggleComponent", async ({ page }) => {
   await page.getByPlaceholder("Search").fill("directoryLoader");
 
   await page.waitForTimeout(2000);
-
   await page
     .locator('//*[@id="sideDirectoryLoader"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
