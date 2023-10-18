@@ -50,4 +50,4 @@ def get_chat_service() -> "ChatService":
 
 
 def get_store_service() -> "StoreService":
-    return service_manager.get(ServiceType.MARKETPLACE_SERVICE)
+    return service_manager.get(ServiceType.STORE_SERVICE)
