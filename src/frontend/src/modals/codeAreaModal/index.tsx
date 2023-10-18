@@ -8,6 +8,7 @@ import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -144,6 +145,11 @@ export default function CodeAreaModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
+        <Input
+          value={code}
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
@@ -183,10 +189,11 @@ export default function CodeAreaModal({
           </div>
           <div className="flex h-fit w-full justify-end">
             <Button
-              disabled={readonly}
               className="mt-3"
               onClick={handleClick}
               type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
             >
               Check & Save
             </Button>

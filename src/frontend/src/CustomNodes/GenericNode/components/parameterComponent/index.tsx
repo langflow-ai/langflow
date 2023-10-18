@@ -56,6 +56,7 @@ export default function ParameterComponent({
   info = "",
   proxy,
   showNode,
+  index = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -351,9 +352,11 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
+                id={"textarea-" + index}
               />
             ) : (
               <InputComponent
+                id={"input-" + index}
                 disabled={disabled}
                 password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
@@ -364,6 +367,7 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2 w-full">
             <ToggleShadComponent
+              id={"toggle-" + index}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
               setEnabled={(isEnabled) => {
@@ -406,6 +410,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"code-input-" + index}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -427,6 +432,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"int-input-" + index}
             />
           </div>
         ) : left === true && type === "prompt" ? (
@@ -450,6 +456,7 @@ export default function ParameterComponent({
               onChange={(e) => {
                 handleOnNewValue(e);
               }}
+              id={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
