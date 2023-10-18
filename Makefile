@@ -23,7 +23,11 @@ tests:
 	poetry run pytest tests
 
 tests_frontend:
-	cd src/frontend && ./run-tests.sh
+ifeq ($(UI), true)
+		cd src/frontend && ./run-tests.sh --ui
+else
+		cd src/frontend && ./run-tests.sh
+endif
 
 format:
 	poetry run black .
