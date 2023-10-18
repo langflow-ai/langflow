@@ -44,7 +44,11 @@ export default function StoreApiKeyModal({
   return (
     <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={"Insert your Langflow API key."}>
+      <BaseModal.Header
+        description={
+          "Insert your Langflow API key. If you don't have it, please sign up."
+        }
+      >
         <span className="pr-2">API Key</span>
         <IconComponent
           name="Key"
@@ -60,14 +64,21 @@ export default function StoreApiKeyModal({
         >
           <div className="grid gap-5">
             <Form.Field name="username">
-              <Form.Control asChild>
-                <Input
-                  onChange={({ target: { value } }) => {
-                    handleInput({ target: { name: "apikey", value } });
-                  }}
-                  placeholder="Insert your API Key"
-                />
-              </Form.Control>
+              <div className="flex items-center justify-between gap-2">
+                <a href="https://langflow.store/" target="_blank">
+                  <Button type="button" className="w-24" variant="secondary">
+                    Sign up
+                  </Button>
+                </a>
+                <Form.Control asChild>
+                  <Input
+                    onChange={({ target: { value } }) => {
+                      handleInput({ target: { name: "apikey", value } });
+                    }}
+                    placeholder="Insert your API Key"
+                  />
+                </Form.Control>
+              </div>
             </Form.Field>
           </div>
           <div className="float-right">
