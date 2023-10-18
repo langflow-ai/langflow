@@ -10,6 +10,7 @@ import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
@@ -31,6 +32,14 @@ const Router = () => {
         element={
           <ProtectedRoute>
             <CommunityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/store"
+        element={
+          <ProtectedRoute>
+            <StorePage />
           </ProtectedRoute>
         }
       />

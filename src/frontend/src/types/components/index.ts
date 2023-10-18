@@ -326,6 +326,11 @@ export type ApiKeyType = {
   onCloseModal: () => void;
 };
 
+export type StoreApiKeyType = {
+  children: ReactElement;
+  onCloseModal: () => void;
+};
+
 export type ApiKeyInputType = {
   apikeyname: string;
 };
