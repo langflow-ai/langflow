@@ -31,7 +31,7 @@ def upgrade() -> None:
                     "store_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=True
                 )
             )
-    except Exception as exc:
+    except Exception:
         pass
     # ### end Alembic commands ###
 
@@ -44,6 +44,6 @@ def downgrade() -> None:
 
         with op.batch_alter_table("flow", schema=None) as batch_op:
             batch_op.drop_column("is_component")
-    except Exception as exc:
+    except Exception:
         pass
     # ### end Alembic commands ###

@@ -10,7 +10,6 @@ from langflow.services.deps import get_store_service
 def test_search_components(mock_httpx: Mock, client):
     # Mock the response from the HTTP GET request
     from langflow.services.store.schema import ComponentResponse
-    from langflow.services.store.service import StoreService
 
     mock_response = Mock()
     mock_response.json.return_value = {
