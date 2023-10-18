@@ -1,6 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Body
-from langflow.api.v1.schemas import ApiKeysResponse
+from fastapi import APIRouter, HTTPException, Depends
+from langflow.api.v1.schemas import ApiKeysResponse, ApiKeyCreateRequest
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.api_key import (
     ApiKeyCreate,
@@ -15,7 +15,6 @@ from langflow.services.database.models.api_key.crud import (
 )
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
-    get_store_service,
     get_session,
     get_settings_service,
 )
@@ -25,8 +24,7 @@ from typing import TYPE_CHECKING
 from sqlmodel import Session
 
 if TYPE_CHECKING:
-    from langflow.services.store.service import StoreService
-    from langflow.services.settings.service import SettingsService
+    pass
 
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
@@ -73,7 +71,7 @@ def delete_api_key_route(
 
 @router.post("/store")
 def save_store_api_key(
-    api_key: Body(str, embed=True),
+    api_key: ApiKeyCreateRequest,
     current_user: User = Depends(auth_utils.get_current_active_user),
     db: Session = Depends(get_session),
     settings_service=Depends(get_settings_service),
