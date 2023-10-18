@@ -12,12 +12,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
       # Enable Docker in Traefik, so that it reads labels from Docker services
-      - --providers.swarm
+      - --providers.docker
       # Add a constraint to only use services with the label for this stack
       # from the env var TRAEFIK_TAG
-      - --providers.swarm.constraints=Label(`traefik.constraint-label-stack`, `${TRAEFIK_TAG?Variable not set}`)
+      - --providers.docker.constraints=Label(`traefik.constraint-label-stack`, `${TRAEFIK_TAG?Variable not set}`)
       # Do not expose all Docker services, only the ones explicitly exposed
-      - --providers.swarm.exposedbydefault=false
+      - --providers.docker.exposedbydefault=false
       # Enable the access log, with HTTP requests
       - --accesslog
       # Enable the Traefik log, for configurations and errors
@@ -107,6 +107,78 @@ services:
     networks:
       - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
 
+  pgadmin:
+    image: dpage/pgadmin4
+    networks:
+      - ${TRAEFIK_PUBLIC_NETWORK?Variable not set}
+      - default
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    env_file:
+      - .env
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_PUBLIC_NETWORK?Variable not set}
+        - traefik.constraint-label=${TRAEFIK_PUBLIC_TAG?Variable not set}
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-http.rule=Host(`pgadmin.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-http.entrypoints=http
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-http.middlewares=${STACK_NAME?Variable not set}-https-redirect
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.rule=Host(`pgadmin.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.entrypoints=https
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.tls=true
+        - traefik.http.routers.${STACK_NAME?Variable not set}-pgadmin-https.tls.certresolver=le
+        - traefik.http.services.${STACK_NAME?Variable not set}-pgadmin.loadbalancer.server.port=5050
+
+  result_backend:
+    image: redis:6.2.5
+    env_file:
+      - .env
+    # ports:
+    #   - 6379:6379
+    healthcheck:
+      test: "exit 0"
+
+  celeryworker:
+    <<: *backend
+    env_file:
+      - .env
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h
+    healthcheck:
+      test: "exit 0"
+    deploy:
+      replicas: 1
+
+  flower:
+    <<: *backend
+    env_file:
+      - .env
+    networks:
+      - default
+    build:
+      context: ../
+      dockerfile: base.Dockerfile
+    environment:
+      - FLOWER_PORT=5555
+
+    command: /bin/sh -c "celery -A langflow.worker.celery_app --broker=${BROKER_URL?Variable not set} flower --port=5555"
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_PUBLIC_NETWORK?Variable not set}
+        - traefik.constraint-label=${TRAEFIK_PUBLIC_TAG?Variable not set}
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.rule=Host(`flower.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.entrypoints=http
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-http.middlewares=${STACK_NAME?Variable not set}-https-redirect
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.rule=Host(`flower.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.entrypoints=https
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.tls=true
+        - traefik.http.routers.${STACK_NAME?Variable not set}-flower-https.tls.certresolver=le
+        - traefik.http.services.${STACK_NAME?Variable not set}-flower.loadbalancer.server.port=5555
+
   frontend:
     image: "ogabrielluiz/langflow_frontend:latest"
     env_file:
@@ -126,10 +198,63 @@ services:
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
         - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
         - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
+
+  broker:
+    # RabbitMQ management console
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-admin}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-admin}
+    volumes:
+      - rabbitmq_data:/etc/rabbitmq/
+      - rabbitmq_data:/var/lib/rabbitmq/
+      - rabbitmq_log:/var/log/rabbitmq/
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  prometheus:
+    image: prom/prometheus:v2.37.9
+    env_file:
+      - .env
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    # ports:
+    #   - 9090:9090
+    healthcheck:
+      test: "exit 0"
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+        - traefik.http.routers.${STACK_NAME?Variable not set}-prometheus-http.rule=PathPrefix(`/metrics`)
+        - traefik.http.services.${STACK_NAME?Variable not set}-prometheus.loadbalancer.server.port=9090
+
+  grafana:
+    image: grafana/grafana:8.2.6
+    env_file:
+      - .env
+    # ports:
+    #   - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
+        - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.rule=PathPrefix(`/grafana`)
+        - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
+
 volumes:
+  grafana_data:
   app-db-data:
+  rabbitmq_data:
+  rabbitmq_log:
+  pgadmin-data:
 
 networks:
   traefik-public:
     # Allow setting it to false for testing
-    external: true
+    external: false
