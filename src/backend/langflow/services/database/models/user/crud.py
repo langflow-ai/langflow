@@ -3,7 +3,7 @@ from typing import Union
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from langflow.services.database.models.user.user import User, UserUpdate
-from langflow.services.getters import get_session
+from langflow.services.deps import get_session
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 from typing import Optional

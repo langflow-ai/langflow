@@ -14,7 +14,7 @@ from langflow.services.database.models.api_key.crud import (
     delete_api_key,
 )
 from langflow.services.database.models.user.user import User
-from langflow.services.getters import get_session
+from langflow.services.deps import get_session
 from sqlmodel import Session
 
 

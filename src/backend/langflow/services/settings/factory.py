@@ -1,5 +1,5 @@
 from pathlib import Path
-from langflow.services.settings.manager import SettingsService
+from langflow.services.settings.service import SettingsService
 from langflow.services.factory import ServiceFactory
 
 

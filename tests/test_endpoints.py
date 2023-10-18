@@ -3,9 +3,9 @@ import uuid
 from langflow.processing.process import Result
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.api_key import ApiKey
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
+from langflow.services.deps import get_db_service
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS

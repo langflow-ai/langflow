@@ -3,7 +3,7 @@ from langflow.services.auth.utils import create_super_user, get_password_hash
 
 from langflow.services.database.models.user.user import User
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service, get_settings_service
+from langflow.services.deps import get_db_service, get_settings_service
 import pytest
 from langflow.services.database.models.user import UserUpdate
 

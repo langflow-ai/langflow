@@ -2,7 +2,7 @@ from sqlmodel import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from langflow.services.getters import get_session
+from langflow.services.deps import get_session
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -12,7 +12,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
 )
 
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Login"])
 

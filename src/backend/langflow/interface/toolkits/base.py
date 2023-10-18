@@ -4,7 +4,7 @@ from langchain.agents import agent_toolkits
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from loguru import logger
 from langflow.utils.util import build_template_from_class
