@@ -74,10 +74,10 @@ backend:
 	make install_backend
 ifeq ($(login),1)
 	@echo "Running backend without autologin";
-	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
 else
 	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
 endif
 
 build_and_run:
