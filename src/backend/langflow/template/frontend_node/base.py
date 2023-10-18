@@ -44,7 +44,7 @@ class FieldFormatters(BaseModel):
 
 class FrontendNode(BaseModel):
     template: Template
-    description: str
+    description: Optional[str] = None
     base_classes: List[str]
     name: str = ""
     display_name: str = ""
