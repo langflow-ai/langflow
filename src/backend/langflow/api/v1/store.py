@@ -16,8 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
-if TYPE_CHECKING:
-    from langflow.services.store.service import StoreService
+from langflow.services.store.service import StoreService
 
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
@@ -26,7 +25,7 @@ router = APIRouter(prefix="/store", tags=["Components Store"])
 @router.post("/", response_model=ComponentResponse)
 def create_component(
     component: Flow,
-    store_service: "StoreService" = Depends(get_store_service),
+    store_service: StoreService = Depends(get_store_service),
     user=Depends(auth_utils.get_current_active_user),
     settings_service=Depends(get_settings_service),
 ):
