@@ -19,6 +19,7 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
   blurOnEnter?: boolean;
 };
 export type ToggleComponentType = {
@@ -52,6 +53,7 @@ export type ParameterComponentType = {
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
+  index?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -85,6 +87,7 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -97,6 +100,7 @@ export type PromptAreaComponentType = {
   value: string;
   readonly?: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type CodeAreaComponentType = {
@@ -107,6 +111,7 @@ export type CodeAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   dynamic?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -138,6 +143,7 @@ export type FloatComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TooltipComponentType = {
@@ -495,6 +501,7 @@ export type genericModalPropsType = {
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
   children: ReactNode;
+  id?: string;
   readonly?: boolean;
 };
 

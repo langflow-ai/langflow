@@ -10,6 +10,7 @@ export default function TextAreaComponent({
   onChange,
   disabled,
   editNode = false,
+  id = "",
 }: TextAreaComponentType): JSX.Element {
   // Clear text area
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function TextAreaComponent({
   return (
     <div className="flex w-full items-center">
       <Input
+        id={id}
         value={value}
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
