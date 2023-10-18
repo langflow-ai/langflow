@@ -14,6 +14,7 @@ from langflow.services.database.models.user.crud import (
 )
 from langflow.services.deps import get_session, get_settings_service
 from sqlmodel import Session
+from cryptography.fernet import Fernet
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")
 
@@ -294,3 +295,26 @@ def authenticate_user(
         raise HTTPException(status_code=400, detail="Inactive user")
 
     return user if verify_password(password, user.password) else None
+
+
+def get_fernet(settings_service=Depends(get_settings_service)):
+    SECRET_KEY = settings_service.auth_settings.SECRET_KEY
+    # It's important that your secret key is 32 url-safe base64-encoded bytes
+    fernet = Fernet(SECRET_KEY)
+    return fernet
+
+
+def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):
+    fernet = get_fernet(settings_service)
+    # Two-way encryption
+    encrypted_key = fernet.encrypt(api_key.encode())
+    return encrypted_key
+
+
+def decrypt_api_key(
+    encrypted_api_key: str, settings_service=Depends(get_settings_service)
+):
+    fernet = get_fernet(settings_service)
+    # Two-way decryption
+    decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
+    return decrypted_key
