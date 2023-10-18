@@ -1,0 +1,96 @@
+{
+  "description": "Engineered for Excellence, Built for Business.",
+  "name": "Fluffy Sinoussi",
+  "data": {
+    "nodes": [
+      {
+        "id": "AgentInitializer-Zza0A",
+        "type": "genericNode",
+        "position": { "x": 595, "y": 224.25 },
+        "data": {
+          "type": "AgentInitializer",
+          "node": {
+            "template": {
+              "llm": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "llm",
+                "display_name": "LLM",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "type": "BaseLanguageModel",
+                "list": false
+              },
+              "memory": {
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "memory",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "type": "BaseChatMemory",
+                "list": false
+              },
+              "tools": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "password": false,
+                "name": "tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "type": "Tool",
+                "list": true
+              },
+              "agent": {
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "multiline": false,
+                "value": "zero-shot-react-description",
+                "password": false,
+                "options": [
+                  "zero-shot-react-description",
+                  "react-docstore",
+                  "self-ask-with-search",
+                  "conversational-react-description",
+                  "openai-functions",
+                  "openai-multi-functions"
+                ],
+                "name": "agent",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "type": "str",
+                "list": true
+              },
+              "_type": "initialize_agent"
+            },
+            "description": "Construct a zero shot agent from an LLM and tools.",
+            "base_classes": ["AgentExecutor", "function"],
+            "display_name": "AgentInitializer",
+            "custom_fields": {},
+            "output_types": [],
+            "documentation": "https://python.langchain.com/docs/modules/agents/agent_types/",
+            "beta": false,
+            "error": null
+          },
+          "id": "AgentInitializer-Zza0A"
+        },
+        "positionAbsolute": { "x": 595, "y": 224.25 }
+      }
+    ],
+    "edges": [],
+    "viewport": { "x": 0, "y": 0, "zoom": 1 }
+  },
+  "id": "84c4b46f-063b-4d48-bf7f-6c668013064f"
+}
