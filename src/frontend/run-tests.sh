@@ -59,7 +59,7 @@ cd ../../
 make backend &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
-sleep 10
+sleep 25
 
 # Navigate back to the test directory
 cd src/frontend
