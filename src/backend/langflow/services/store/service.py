@@ -3,18 +3,18 @@ from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 import httpx
 from httpx import HTTPError
-from langflow.services.marketplace.schema import ComponentResponse
+from langflow.services.store.schema import ComponentResponse
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-class MarketplaceService(Service):
-    """This is a service that integrates langflow with the marketplace which
+class StoreService(Service):
+    """This is a service that integrates langflow with the store which
     is a Directus instance. It allows to search, get and post components to
-    the marketplace."""
+    the store."""
 
-    name = "marketplace_service"
+    name = "store_service"
 
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
@@ -25,7 +25,10 @@ class MarketplaceService(Service):
         self, url: str, api_key: str, params: Dict[str, Any] = None
     ) -> List[Dict[str, Any]]:
         """Utility method to perform GET requests."""
-        headers = {"Authorization": f"Bearer {api_key}"}
+        if api_key:
+            headers = {"Authorization": f"Bearer {api_key}"}
+        else:
+            headers = {}
         try:
             response = httpx.get(url, headers=headers, params=params)
             response.raise_for_status()
@@ -35,7 +38,7 @@ class MarketplaceService(Service):
 
     def search(
         self,
-        api_key: str,
+        api_key: Optional[str],
         query: str,
         page: int = 1,
         limit: int = 10,
@@ -44,7 +47,8 @@ class MarketplaceService(Service):
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
         sort_by: Optional[str] = "likes",
-        sort_order: Optional[str] = "desc",  # or "asc"
+        sort: Optional[List[str]] = None,
+        fields: Optional[List[str]] = None,
     ) -> List[ComponentResponse]:
         params = {
             "filter[name][_like]": query,
@@ -65,8 +69,11 @@ class MarketplaceService(Service):
         if date_to:
             params["filter[date_updated][_lte]"] = date_to.isoformat()
 
-        if sort_order:
-            params["sort"] = f"{sort_order}_{sort_by}"
+        if sort:
+            params["sort"] = ",".join(sort)
+
+        if fields:
+            params["fields"] = ",".join(fields)
 
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
