@@ -12,6 +12,7 @@ export default function CodeAreaComponent({
   nodeClass,
   dynamic,
   setNodeClass,
+  id = "",
   readonly = false,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
@@ -43,6 +44,7 @@ export default function CodeAreaComponent({
       >
         <div className="flex w-full items-center">
           <span
+            id={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"
