@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.flow.flow import Flow
+from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
     get_session,
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/store", tags=["Components Store"])
 
 @router.post("/", response_model=ComponentResponse)
 def create_component(
-    component: Flow,
+    component: FlowCreate,
     store_service: StoreService = Depends(get_store_service),
     user=Depends(auth_utils.get_current_active_user),
     settings_service=Depends(get_settings_service),
