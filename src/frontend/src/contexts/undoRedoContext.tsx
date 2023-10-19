@@ -54,11 +54,21 @@ export function UndoRedoProvider({ children }) {
     // push the current graph to the past state
     setPast((old) => {
       let newPast = cloneDeep(old);
-      newPast[tabIndex] = old[tabIndex].slice(
-        old[tabIndex].length - defaultOptions.maxHistorySize + 1,
-        old[tabIndex].length
-      );
-      newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+      let newState = {
+        nodes: cloneDeep(getNodes()),
+        edges: cloneDeep(getEdges()),
+      };
+      if (
+        old[tabIndex] &&
+        JSON.stringify(old[tabIndex][old[tabIndex].length - 1]) !==
+          JSON.stringify(newState)
+      ) {
+        newPast[tabIndex] = old[tabIndex].slice(
+          old[tabIndex].length - defaultOptions.maxHistorySize + 1,
+          old[tabIndex].length
+        );
+        newPast[tabIndex].push(newState);
+      }
       return newPast;
     });
 
