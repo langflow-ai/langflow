@@ -75,6 +75,9 @@ class StoreService(Service):
         if fields:
             params["fields"] = ",".join(fields)
 
+        # ?aggregate[count]=likes
+        params["aggregate[count]"] = "likes"
+
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
