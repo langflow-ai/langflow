@@ -437,8 +437,8 @@ export function convertValuesToNumbers(arr) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         let value = obj[key];
-        if (/\s/g.test(value)) {
-          value = value.trim();
+        if (/^\d+$/.test(value)) {
+          value = value?.toString().trim();
         }
         newObj[key] =
           value === "" || isNaN(value) ? value.toString() : Number(value);
@@ -1079,9 +1079,9 @@ export function createFlowComponent(nodeData: NodeDataType): FlowType {
       viewport: { x: 1, y: 1, zoom: 1 },
     },
     description: nodeData.node?.description || "",
-    name: nodeData.node?.display_name || "",
+    name: nodeData.node?.display_name || nodeData.type || "",
     id: nodeData.id || "",
-    isNode: true,
+    is_component: true,
   };
   return flowNode;
 }

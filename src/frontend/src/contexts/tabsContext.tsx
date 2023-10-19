@@ -90,7 +90,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
-  const { templates, reactFlowInstance } = useContext(typesContext);
+  const { templates, reactFlowInstance, setData } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;
@@ -139,11 +139,24 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function processDBData(DbData: FlowType[]) {
+    let storeComponents: { [key: string]: APIClassType } = {};
     DbData.forEach((flow: FlowType) => {
       try {
         if (!flow.data) {
           return;
         }
+        if (flow.data && flow.is_component) {
+          storeComponents[(flow.data.nodes[0].data as NodeDataType).type] = (
+            flow.data.nodes[0].data as NodeDataType
+          ).node!;
+        }
+        setData((prev) => {
+          let newData = _.cloneDeep(prev);
+          Object.keys(storeComponents).forEach((key) => {
+            newData["custom_components"][key] = storeComponents[key];
+          });
+          return newData;
+        });
         processDataFromFlow(flow, false);
       } catch (e) {}
     });
