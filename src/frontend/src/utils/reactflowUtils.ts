@@ -1081,7 +1081,7 @@ export function createFlowComponent(nodeData: NodeDataType): FlowType {
     description: nodeData.node?.description || "",
     name: nodeData.node?.display_name || nodeData.type || "",
     id: nodeData.id || "",
-    isComponent: true,
+    is_component: true,
   };
   return flowNode;
 }
