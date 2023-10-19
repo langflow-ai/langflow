@@ -26,6 +26,10 @@ def create_component(
     user=Depends(auth_utils.get_current_active_user),
     settings_service=Depends(get_settings_service),
 ):
+    if not user.store_api_key:
+        raise HTTPException(
+            status_code=400, detail="You must have a store API key set."
+        )
     try:
         api_key = user.store_api_key
         decrypted = auth_utils.decrypt_api_key(api_key, settings_service)
