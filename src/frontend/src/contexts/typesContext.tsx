@@ -163,6 +163,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         key
       );
       key = newKey;
+      component.type = newKey;
       let componentNodes: { [key: string]: APIClassType } = {};
       Object.keys(data["custom_components"]).forEach((key) => {
         componentNodes[key] = data["custom_components"][key];
