@@ -1,7 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { Page, expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test.describe("save component tests", () => {
+  async function saveComponent(page: Page, pattern: RegExp, n: number) {
+    for (let i = 0; i < n; i++) {
+      await page.getByTestId(pattern).click();
+      //more node options
+      await page
+        .locator(
+          "//html/body/div/div/div[2]/div/main/div/div/div/div[1]/div[1]/div[2]/div/span/button[3]/div/div"
+        )
+        .click();
+      await page.getByLabel("Save").click();
+    }
+  }
+
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
     await page.routeFromHAR("harFiles/langflow.har", {
@@ -142,15 +155,7 @@ test.describe("save component tests", () => {
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.locator("#input-8").click();
     await page.locator("#input-8").fill("test");
-
-    await page.getByTestId(/.*rf__node-Chroma.*/).click();
-    //more node options
-    await page
-      .locator(
-        "//html/body/div/div/div[2]/div/main/div/div/div/div[1]/div[1]/div[2]/div/span/button[3]/div/div"
-      )
-      .click();
-    await page.getByLabel("Save").click();
+    await saveComponent(page, /.*rf__node-Chroma.*/, 1);
     await page.getByTestId(/.*rf__node-Chroma.*/).press("Backspace");
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("");
@@ -159,5 +164,51 @@ test.describe("save component tests", () => {
       .locator('//*[@id="custom_componentsChroma"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     expect(await page.locator("#input-8").inputValue()).toBe("test");
+  });
+
+  test("save same component multiple times", async ({ page }) => {
+    await page.routeFromHAR("harFiles/langflow.har", {
+      url: "**/api/v1/**",
+      update: false,
+    });
+    await page.route("**/api/v1/flows/", async (route) => {
+      const json = {
+        id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
+      };
+      await route.fulfill({ json, status: 201 });
+    });
+    await page.goto("http://localhost:3000/");
+    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(2000);
+
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("Chroma");
+
+    await page
+      .locator('//*[@id="vectorstoresChroma"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await saveComponent(page, /.*rf__node-Chroma.*/, 3);
+    await page.getByTestId(/.*rf__node-Chroma.*/).press("Backspace");
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("");
+    await page.getByPlaceholder("Search").fill("Chroma");
+    expect(
+      await page.locator('//*[@id="custom_componentsChroma"]').isVisible()
+    ).toBeTruthy();
+    expect(
+      await page.locator('[id="custom_componentsChroma\\ \\(1\\)"]').isVisible()
+    ).toBeTruthy();
+    expect(
+      await page.locator('[id="custom_componentsChroma\\ \\(2\\)"]').isVisible()
+    ).toBeTruthy();
+    await page
+      .locator('[id="custom_componentsChroma\\ \\(2\\)"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    expect(
+      (await page.getByTestId(/.*rf__node-Chroma.*/).allInnerTexts()).includes(
+        "Chroma (2)"
+      )
+    ).toBeTruthy();
   });
 });
