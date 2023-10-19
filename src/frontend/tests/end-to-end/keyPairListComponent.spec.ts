@@ -21,7 +21,17 @@ test("KeypairListComponent", async ({ page }) => {
   await page.locator('//*[@id="keypair0"]').click();
   await page.locator('//*[@id="keypair0"]').fill("testtesttesttest");
   await page.locator('//*[@id="keypair100"]').click();
-  await page.locator('//*[@id="keypair100"]').fill("testtesttesttesttesttest");
+  await page
+    .locator('//*[@id="keypair100"]')
+    .fill("test test test test test test");
+
+  const valueWithSpace = await page
+    .locator('//*[@id="keypair100"]')
+    .inputValue();
+
+  if (valueWithSpace !== "test test test test test test") {
+    expect(false).toBeTruthy();
+  }
 
   const plusButtonLocatorNode = page.locator('//*[@id="plusbtn0"]');
   const elementCountNode = await plusButtonLocatorNode.count();
@@ -94,7 +104,7 @@ test("KeypairListComponent", async ({ page }) => {
     await page.locator('//*[@id="keypair100"]').click();
     await page
       .locator('//*[@id="keypair100"]')
-      .fill("testtesttesttesttesttest");
+      .fill("test test test test test test");
 
     const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
     const elementCount = await plusButtonLocator.count();
@@ -132,7 +142,7 @@ test("KeypairListComponent", async ({ page }) => {
 
       if (
         key1 === "testtesttesttest" &&
-        value1 === "testtesttesttesttesttest" &&
+        value1 === "test test test test test test" &&
         key2 === "testtesttesttest2" &&
         value2 === "testtesttesttesttesttest2"
       ) {
