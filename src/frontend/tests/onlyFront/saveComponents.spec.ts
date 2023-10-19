@@ -17,6 +17,7 @@ test.describe("save component tests", () => {
 
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
+    //make front work withoput backend
     await page.routeFromHAR("harFiles/langflow.har", {
       url: "**/api/v1/**",
       update: false,
@@ -210,5 +211,44 @@ test.describe("save component tests", () => {
         "Chroma (2)"
       )
     ).toBeTruthy();
+  });
+
+  test("save default component and delete it", async ({ page }) => {
+    await page.routeFromHAR("harFiles/langflow.har", {
+      url: "**/api/v1/**",
+      update: false,
+    });
+    await page.route("**/api/v1/flows/", async (route) => {
+      const json = {
+        id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
+      };
+      await route.fulfill({ json, status: 201 });
+    });
+    await page.goto("http://localhost:3000/");
+    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(2000);
+
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("Chroma");
+
+    await page
+      .locator('//*[@id="vectorstoresChroma"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await saveComponent(page, /.*rf__node-Chroma.*/, 1);
+    await page.getByTestId(/.*rf__node-Chroma.*/).press("Backspace");
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("");
+    await page.getByPlaceholder("Search").fill("Chroma");
+    await page.locator("#custom_componentsChroma").getByRole("combobox").click({
+      button: "right",
+    });
+    await page.getByLabel("Delete").click();
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill(" ");
+    await page.getByPlaceholder("Search").fill("Chroma");
+    expect(
+      await page.locator("#custom_componentsChroma").isVisible()
+    ).toBeFalsy();
   });
 });
