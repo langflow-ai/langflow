@@ -12,6 +12,7 @@ import { APIClassType, APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
+import { createFlowComponent } from "../utils/reactflowUtils";
 import {
   checkLocalStorageKey,
   getSetFromObject,
@@ -79,7 +80,9 @@ export function TypesProvider({ children }: { children: ReactNode }) {
             savedComponents!
           );
           Object.keys(components).forEach((key) => {
-            data["custom_components"][key] = components[key].node!;
+            data["custom_components"][key] = (
+              components[key].data?.nodes[0].data! as NodeDataType
+            ).node!;
           });
         }
         setData(data);
@@ -181,7 +184,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       }
     }
     component.node!.official = false;
-    components[key] = component;
+    components[key] = createFlowComponent(component);
     savedComponentsJSON.components = components;
     localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
