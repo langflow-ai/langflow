@@ -536,3 +536,35 @@ export async function addApiKeyStore(key: string) {
     throw error;
   }
 }
+
+/**
+ * Saves a new flow to the database.
+ *
+ * @param {FlowType} newFlow - The flow data to save.
+ * @returns {Promise<any>} The saved flow data.
+ * @throws Will throw an error if saving fails.
+ */
+export async function saveFlowStore(newFlow: {
+  name: string;
+  data: ReactFlowJsonObject | null;
+  description: string;
+  style?: FlowStyleType;
+  is_component?: boolean;
+}): Promise<FlowType> {
+  try {
+    const response = await api.post(`${BASE_URL_API}store/`, {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
+      is_component: newFlow.is_component,
+    });
+
+    if (response.status !== 201) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}

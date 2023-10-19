@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { Edge, Node, ReactFlowInstance } from "reactflow";
-import { getAll, getHealth } from "../controllers/API";
+import { getAll, getHealth, saveFlowStore } from "../controllers/API";
 import { APIClassType, APIKindType } from "../types/api";
 import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
@@ -185,6 +185,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
     component.node!.official = false;
     components[key] = createFlowComponent(component);
+    saveFlowStore(createFlowComponent(component));
     savedComponentsJSON.components = components;
     localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
