@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_NEW_API_KEY } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { addApiKeyStore } from "../../controllers/API";
 import {
   ApiKeyInputType,
   StoreApiKeyType,
@@ -20,7 +21,7 @@ export default function StoreApiKeyModal({
   const [apiKeyValue, setApiKeyValue] = useState("");
   const [inputState, setInputState] =
     useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
-  const { setSuccessData } = useContext(alertContext);
+  const { setSuccessData, setErrorData } = useContext(alertContext);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleInput({
@@ -40,6 +41,24 @@ export default function StoreApiKeyModal({
   function resetForm() {
     setApiKeyValue("");
   }
+
+  const handleSaveKey = () => {
+    if (inputState && inputState["apikey"]) {
+      addApiKeyStore(inputState["apikey"]).then(
+        () => {
+          setSuccessData({
+            title: "Success! Your API Key has been saved.",
+          });
+        },
+        (error) => {
+          setErrorData({
+            title: "There was an error saving the API Key, please try again.",
+            list: [error["response"]["data"]["detail"]],
+          });
+        }
+      );
+    }
+  };
 
   return (
     <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
@@ -93,7 +112,14 @@ export default function StoreApiKeyModal({
             </Button>
 
             <Form.Submit asChild>
-              <Button className="mt-8">Save</Button>
+              <Button
+                className="mt-8"
+                onClick={() => {
+                  handleSaveKey();
+                }}
+              >
+                Save
+              </Button>
             </Form.Submit>
           </div>
         </Form.Root>
