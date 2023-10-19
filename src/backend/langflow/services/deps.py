@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from langflow.services.session.service import SessionService
     from langflow.services.task.service import TaskService
     from langflow.services.chat.service import ChatService
-    from langflow.services.marketplace.service import MarketplaceService
+    from langflow.services.store.service import StoreService
     from sqlmodel import Session
 
 
@@ -49,5 +49,5 @@ def get_chat_service() -> "ChatService":
     return service_manager.get(ServiceType.CHAT_SERVICE)
 
 
-def get_marketplace_service() -> "MarketplaceService":
-    return service_manager.get(ServiceType.MARKETPLACE_SERVICE)
+def get_store_service() -> "StoreService":
+    return service_manager.get(ServiceType.STORE_SERVICE)

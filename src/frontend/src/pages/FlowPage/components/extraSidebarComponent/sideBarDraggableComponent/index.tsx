@@ -17,6 +17,7 @@ import {
 import { removeCountFromString } from "../../../../../utils/utils";
 
 export default function SidebarDraggableComponent({
+  sectionName,
   display_name,
   itemName,
   error,
@@ -25,6 +26,7 @@ export default function SidebarDraggableComponent({
   apiClass,
   official,
 }: {
+  sectionName: string;
   apiClass: APIClassType;
   display_name: string;
   itemName: string;
@@ -84,7 +86,10 @@ export default function SidebarDraggableComponent({
             );
           }}
         >
-          <div id={display_name} className="side-bar-components-div-form">
+          <div
+            id={sectionName + display_name}
+            className="side-bar-components-div-form"
+          >
             <span className="side-bar-components-text">{display_name}</span>
             <div>
               <SelectTrigger>

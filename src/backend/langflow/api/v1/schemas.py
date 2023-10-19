@@ -198,3 +198,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+
+class ApiKeyCreateRequest(BaseModel):
+    api_key: str

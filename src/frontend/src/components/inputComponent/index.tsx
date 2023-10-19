@@ -17,6 +17,7 @@ export default function InputComponent({
   editNode = false,
   placeholder = "Type something...",
   className,
+  id = "",
   blurOnEnter = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
@@ -33,6 +34,7 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
+            id={"form-" + id}
             ref={refInput}
             onBlur={onBlur}
             autoFocus={autoFocus}
@@ -61,6 +63,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <Input
+          id={id}
           ref={refInput}
           type="text"
           onBlur={onBlur}

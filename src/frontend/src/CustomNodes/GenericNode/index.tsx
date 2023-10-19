@@ -219,6 +219,7 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
+                            index={idx.toString()}
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -421,11 +422,13 @@ export default function GenericNode({
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
+                .sort()
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
+                        index={idx.toString()}
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,

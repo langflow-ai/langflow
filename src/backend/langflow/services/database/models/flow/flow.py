@@ -15,6 +15,7 @@ class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
     description: Optional[str] = Field(index=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
+    is_component: bool = Field(default=False, nullable=True)
 
     @validator("data")
     def validate_json(v):
@@ -35,7 +36,7 @@ class FlowBase(SQLModelSerializable):
 class Flow(FlowBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
-    user_id: UUID = Field(index=True, foreign_key="user.id")
+    user_id: UUID = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
 
 

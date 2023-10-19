@@ -57,8 +57,10 @@ export default function ExtraSidebar(): JSX.Element {
       let ret = {};
       Object.keys(data).forEach((d: keyof APIObjectType, i) => {
         ret[d] = {};
-        let keys = Object.keys(data[d]).filter((nd) =>
-          nd.toLowerCase().includes(e.toLowerCase())
+        let keys = Object.keys(data[d]).filter(
+          (nd) =>
+            nd.toLowerCase().includes(e.toLowerCase()) ||
+            data[d][nd].display_name?.toLowerCase().includes(e.toLowerCase())
         );
         keys.forEach((element) => {
           ret[d][element] = data[d][element];
@@ -87,14 +89,13 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
-
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
       setFilterData(data);
       setFilterEdge([]);
       setSearch("");
     }
-  }, [getFilterEdge]);
+  }, [getFilterEdge, data]);
 
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
@@ -131,7 +132,7 @@ export default function ExtraSidebar(): JSX.Element {
         return ret;
       });
     }
-  }, [getFilterEdge]);
+  }, [getFilterEdge, data]);
 
   return (
     <div className="side-bar-arrangement">
@@ -252,6 +253,7 @@ export default function ExtraSidebar(): JSX.Element {
                         key={index}
                       >
                         <SidebarDraggableComponent
+                          sectionName={SBSectionName as string}
                           apiClass={dataFilter[SBSectionName][SBItemName]}
                           key={SBItemName}
                           onDragStart={(event) =>

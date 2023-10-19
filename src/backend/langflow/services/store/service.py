@@ -18,7 +18,7 @@ class StoreService(Service):
 
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
-        self.base_url = self.settings_service.settings.MARKETPLACE_URL
+        self.base_url = self.settings_service.settings.STORE_URL
         self.components_url = f"{self.base_url}/items/components"
 
     def _get(
@@ -101,8 +101,3 @@ class StoreService(Service):
             return ComponentResponse(**component)
         except HTTPError as exc:
             raise ValueError(f"Upload failed: {exc}")
-
-    def get_api_key(self, hashed_api_key: str):
-        # We will use the settings_service.auth_settings.SECRET_KEY to decode the hashed_api_key
-        # and return the api_key
-        pass
