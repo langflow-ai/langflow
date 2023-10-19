@@ -24,7 +24,8 @@ export default function PromptAreaComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value !== "" && !editNode && !readonly) {
+    //prevent update from prompt template after group node if prompt is wrongly marked as not dynamic
+    if (value !== "" && !editNode && !readonly && !nodeClass?.flow) {
       postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
         if (apiReturn.data) {
           setNodeClass!(apiReturn.data.frontend_node);

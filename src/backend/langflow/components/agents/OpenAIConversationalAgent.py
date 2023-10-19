@@ -79,4 +79,5 @@ class ConversationalAgent(CustomComponent):
             memory=memory,
             verbose=True,
             return_intermediate_steps=True,
+            handle_parsing_errors=True,
         )
