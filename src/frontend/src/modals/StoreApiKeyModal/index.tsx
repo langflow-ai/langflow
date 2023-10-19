@@ -49,6 +49,7 @@ export default function StoreApiKeyModal({
           setSuccessData({
             title: "Success! Your API Key has been saved.",
           });
+          setOpen(false);
         },
         (error) => {
           setErrorData({
