@@ -19,6 +19,7 @@ def get_factories_and_deps():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.store import factory as store_factory
 
     return [
         (settings_factory.SettingsServiceFactory(), []),
@@ -40,6 +41,7 @@ def get_factories_and_deps():
             session_service_factory.SessionServiceFactory(),
             [ServiceType.CACHE_SERVICE],
         ),
+        (store_factory.StoreServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
     ]
 
 

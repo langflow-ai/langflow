@@ -25,6 +25,7 @@ class User(SQLModelSerializable, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
+    store_api_key: str = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
 
 

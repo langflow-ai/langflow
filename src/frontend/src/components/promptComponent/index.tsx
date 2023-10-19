@@ -14,6 +14,7 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
+  id = "",
   readonly = false,
 }: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function PromptAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
+        id={id}
         readonly={readonly}
         type={TypeModal.PROMPT}
         value={value}
@@ -49,6 +51,7 @@ export default function PromptAreaComponent({
       >
         <div className="flex w-full items-center">
           <span
+            id={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"

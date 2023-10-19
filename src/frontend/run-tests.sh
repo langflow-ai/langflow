@@ -30,6 +30,9 @@ terminate_process_by_port() {
 # Trap signals to ensure cleanup on script termination
 trap 'terminate_process_by_port 7860; terminate_process_by_port 3000' EXIT
 
+# install playwright if there is not installed yet
+npx playwright install
+
 # Navigate to the project root directory (where the Makefile is located)
 cd ../../
 
@@ -56,7 +59,7 @@ cd ../../
 make backend &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
-sleep 10
+sleep 25
 
 # Navigate back to the test directory
 cd src/frontend
