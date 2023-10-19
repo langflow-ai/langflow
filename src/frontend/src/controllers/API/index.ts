@@ -522,3 +522,17 @@ export async function deleteApiKey(api_key: string) {
     throw error;
   }
 }
+
+export async function addApiKeyStore(key: string) {
+  try {
+    const res = await api.post(`${BASE_URL_API}api_key/store`, {
+      api_key: key,
+    });
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
