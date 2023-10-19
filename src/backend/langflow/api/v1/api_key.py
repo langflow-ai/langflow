@@ -79,7 +79,7 @@ def save_store_api_key(
     try:
         # Encrypt the API key
         encrypted = auth_utils.encrypt_api_key(
-            api_key, fernet=auth_utils.get_fernet(settings_service)
+            api_key, settings_service=settings_service
         )
         current_user.store_api_key = encrypted
         db.commit()
