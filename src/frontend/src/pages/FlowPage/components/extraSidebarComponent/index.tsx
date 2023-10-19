@@ -89,7 +89,6 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
-
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
       setFilterData(data);
@@ -254,6 +253,7 @@ export default function ExtraSidebar(): JSX.Element {
                         key={index}
                       >
                         <SidebarDraggableComponent
+                          sectionName={SBSectionName as string}
                           apiClass={dataFilter[SBSectionName][SBItemName]}
                           key={SBItemName}
                           onDragStart={(event) =>
