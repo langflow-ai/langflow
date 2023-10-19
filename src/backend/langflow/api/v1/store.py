@@ -1,10 +1,9 @@
 from typing import List, Optional
 from uuid import UUID
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.flow.flow import Flow, FlowCreate
+from langflow.services.database.models.flow.flow import FlowCreate
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
-    get_session,
     get_store_service,
     get_settings_service,
 )
@@ -19,20 +18,23 @@ from langflow.services.store.service import StoreService
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
-@router.post("/", response_model=ComponentResponse)
-def create_component(
-    component: FlowCreate,
-    store_service: StoreService = Depends(get_store_service),
-    user=Depends(auth_utils.get_current_active_user),
-    settings_service=Depends(get_settings_service),
-):
+def get_user_store_api_key(user: User = Depends(auth_utils.get_current_active_user)):
     if not user.store_api_key:
         raise HTTPException(
             status_code=400, detail="You must have a store API key set."
         )
+    return user.store_api_key
+
+
+@router.post("/", response_model=ComponentResponse)
+def create_component(
+    component: FlowCreate,
+    store_service: StoreService = Depends(get_store_service),
+    settings_service=Depends(get_settings_service),
+    store_api_Key: str = Depends(get_user_store_api_key),
+):
     try:
-        api_key = user.store_api_key
-        decrypted = auth_utils.decrypt_api_key(api_key, settings_service)
+        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
         return store_service.upload(decrypted, component.dict())
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -42,30 +44,13 @@ def create_component(
 def read_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
-    user: User = Depends(auth_utils.get_current_active_user),
-    session=Depends(get_session),
+    store_api_Key: str = Depends(get_user_store_api_key),
+    settings_service=Depends(get_settings_service),
 ):
-    if not user.store_api_key:
-        raise HTTPException(
-            status_code=400, detail="You must have a store API key set."
-        )
     # If the component is from the store, we need to get it from the store
     try:
-        api_key = user.store_api_key
-        component = store_service.get(api_key, component_id)
-        if component is not None:
-            # Turn component into a Flow
-            required_fields = ["data", "name", "description", "is_component"]
-            if all(field in component for field in required_fields):
-                component = Flow(
-                    name=component["name"],
-                    description=component["description"],
-                    data=component["data"],
-                    user_id=user.id,
-                )
-                session.add(component)
-                session.commit()
-                session.refresh(component)
+        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
+        component = store_service.get(decrypted, component_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -79,14 +64,14 @@ def list_components(
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    user=Depends(auth_utils.get_current_active_user),
+    store_api_Key: str = Depends(get_user_store_api_key),
     settings_service=Depends(get_settings_service),
 ):
-    if user.store_api_key:
-        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-    else:
-        decrypted = None
-    return store_service.list_components(decrypted, page, limit)
+    try:
+        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
+        return store_service.list_components(decrypted, page, limit)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/search", response_model=List[ComponentResponse])
