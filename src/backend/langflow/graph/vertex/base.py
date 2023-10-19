@@ -359,7 +359,7 @@ class Vertex:
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(
-                f"Error building node {self.vertex_type}: {str(exc)}"
+                f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}"
             ) from exc
 
     def _update_built_object_and_artifacts(self, result):
