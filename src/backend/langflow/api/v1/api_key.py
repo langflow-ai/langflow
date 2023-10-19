@@ -71,12 +71,13 @@ def delete_api_key_route(
 
 @router.post("/store")
 def save_store_api_key(
-    api_key: ApiKeyCreateRequest,
+    api_key_request: ApiKeyCreateRequest,
     current_user: User = Depends(auth_utils.get_current_active_user),
     db: Session = Depends(get_session),
     settings_service=Depends(get_settings_service),
 ):
     try:
+        api_key = api_key_request.api_key
         # Encrypt the API key
         encrypted = auth_utils.encrypt_api_key(
             api_key, settings_service=settings_service
