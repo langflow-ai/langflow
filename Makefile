@@ -31,7 +31,7 @@ endif
 
 format:
 	poetry run black .
-	poetry run ruff . --fix
+	poetry run ruff . --fix --exclude src/backend/langflow/alembic
 	cd src/frontend && npm run format
 
 lint:
