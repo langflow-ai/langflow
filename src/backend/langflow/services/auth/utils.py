@@ -297,10 +297,17 @@ def authenticate_user(
     return user if verify_password(password, user.password) else None
 
 
+def add_padding(s):
+    # Calculate the number of padding characters needed
+    padding_needed = 4 - len(s) % 4
+    return s + "=" * padding_needed
+
+
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY = settings_service.auth_settings.SECRET_KEY
     # It's important that your secret key is 32 url-safe base64-encoded bytes
-    fernet = Fernet(SECRET_KEY)
+    padded_secret_key = add_padding(SECRET_KEY)
+    fernet = Fernet(padded_secret_key)
     return fernet
 
 
