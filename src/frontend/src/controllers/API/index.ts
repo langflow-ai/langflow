@@ -112,12 +112,14 @@ export async function saveFlowToDatabase(newFlow: {
   data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
+  is_component?: boolean;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}flows/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
+      is_component: newFlow.is_component,
     });
 
     if (response.status !== 201) {
@@ -567,4 +569,13 @@ export async function saveFlowStore(newFlow: {
     console.error(error);
     throw error;
   }
+}
+
+/**
+ * Fetches the flows from the store.
+ * @returns {Promise<>} A promise that resolves to an AxiosResponse containing the build status.
+ *
+ */
+export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
+  return await api.get(`${BASE_URL_API}store/`);
 }

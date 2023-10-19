@@ -42,9 +42,7 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
-    setErrorData,
     loading,
-    setLoading,
   } = useContext(alertContext);
   const navigate = useNavigate();
   const { fetchError } = useContext(typesContext);
