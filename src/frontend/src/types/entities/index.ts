@@ -1,4 +1,4 @@
-import { NodeDataType } from "../flow";
+import { FlowType } from "../flow";
 
 export type sidebarNavigationItemType = {
   name: string;
@@ -8,5 +8,5 @@ export type sidebarNavigationItemType = {
 };
 
 export type localStorageUserType = {
-  components: { [key: string]: NodeDataType };
+  components: { [key: string]: FlowType };
 };

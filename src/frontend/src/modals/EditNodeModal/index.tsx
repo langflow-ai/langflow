@@ -438,12 +438,7 @@ const EditNodeModal = forwardRef(
                                 <div className="mx-auto">
                                   <PromptAreaComponent
                                     readonly={
-                                      myData.current.node?.flow &&
-                                      myData.current.node.template[
-                                        templateParam
-                                      ].dynamic
-                                        ? true
-                                        : false
+                                      myData.current.node?.flow ? true : false
                                     }
                                     field_name={templateParam}
                                     editNode={true}

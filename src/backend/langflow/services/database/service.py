@@ -116,7 +116,35 @@ class DatabaseService(Service):
 
         return True
 
+    def init_alembic(self):
+        logger.info("Initializing alembic")
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option("script_location", str(self.script_location))
+        alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
+        command.stamp(alembic_cfg, "head")
+        logger.info("Alembic initialized")
+
     def run_migrations(self):
+        # First we need to check if alembic has been initialized
+        # If not, we need to initialize it
+        # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
+        # We need to check if the alembic_version table exists
+        # if not, we need to initialize alembic
+        with Session(self.engine) as session:
+            # If the table does not exist it throws an error
+            # so we need to catch it
+            try:
+                session.execute("SELECT * FROM alembic_version")
+            except Exception:
+                logger.info("Alembic not initialized")
+                try:
+                    self.init_alembic()
+                except Exception as exc:
+                    logger.error(f"Error initializing alembic: {exc}")
+                    raise RuntimeError("Error initializing alembic") from exc
+            else:
+                logger.info("Alembic already initialized")
+
         logger.info(f"Running DB migrations in {self.script_location}")
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", str(self.script_location))

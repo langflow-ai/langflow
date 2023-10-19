@@ -438,11 +438,7 @@ export default function ParameterComponent({
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
-              readonly={
-                data.node?.flow && data.node.template[name].dynamic
-                  ? true
-                  : false
-              }
+              readonly={data.node?.flow ? true : false}
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
