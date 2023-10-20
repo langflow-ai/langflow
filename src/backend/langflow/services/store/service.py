@@ -37,7 +37,7 @@ class StoreService(Service):
         except HTTPError as exc:
             try:
                 raise ValueError(response_text) from exc
-            except ValueError:
+            except Exception:
                 raise ValueError(f"GET request failed: {exc}") from exc
 
     def search(
