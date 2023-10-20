@@ -51,7 +51,7 @@ class StoreService(Service):
         fields: Optional[List[str]] = None,
     ) -> List[ComponentResponse]:
         params = {
-            "filter[name][_like]": query,
+            "search": query,
             "page": page,
             "limit": limit,
             "sort": sort_by,
