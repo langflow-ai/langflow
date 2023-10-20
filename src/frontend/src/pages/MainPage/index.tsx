@@ -145,31 +145,33 @@ export default function HomePage(): JSX.Element {
                   <SkeletonCardComponent />
                 </>
               ) : (
-                flows.map((flow, idx) => (
-                  <CardComponent
-                    key={idx}
-                    flow={flow}
-                    id={flow.id}
-                    button={
-                      <Link to={"/flow/" + flow.id}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="whitespace-nowrap "
-                        >
-                          <IconComponent
-                            name="ExternalLink"
-                            className="main-page-nav-button"
-                          />
-                          Edit Flow
-                        </Button>
-                      </Link>
-                    }
-                    onDelete={() => {
-                      removeFlow(flow.id);
-                    }}
-                  />
-                ))
+                flows
+                  .filter((flow) => !flow.is_component)
+                  .map((flow, idx) => (
+                    <CardComponent
+                      key={idx}
+                      flow={flow}
+                      id={flow.id}
+                      button={
+                        <Link to={"/flow/" + flow.id}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="whitespace-nowrap "
+                          >
+                            <IconComponent
+                              name="ExternalLink"
+                              className="main-page-nav-button"
+                            />
+                            Edit Flow
+                          </Button>
+                        </Link>
+                      }
+                      onDelete={() => {
+                        removeFlow(flow.id);
+                      }}
+                    />
+                  ))
               )}
             </div>
           )}

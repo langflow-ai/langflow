@@ -146,19 +146,21 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (flow.data && flow.is_component) {
-          storeComponents[(flow.data.nodes[0].data as NodeDataType).type] = (
-            flow.data.nodes[0].data as NodeDataType
-          ).node!;
+          storeComponents[(flow.data.nodes[0].data as NodeDataType).type] =
+            _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+          return;
         }
-        setData((prev) => {
-          let newData = _.cloneDeep(prev);
-          Object.keys(storeComponents).forEach((key) => {
-            newData["custom_components"][key] = storeComponents[key];
-          });
-          return newData;
-        });
         processDataFromFlow(flow, false);
-      } catch (e) {}
+      } catch (e) {
+        console.log(e);
+      }
+    });
+    setData((prev) => {
+      let newData = _.cloneDeep(prev);
+      Object.keys(storeComponents).forEach((key) => {
+        newData["custom_components"][key] = storeComponents[key];
+      });
+      return newData;
     });
   }
 
