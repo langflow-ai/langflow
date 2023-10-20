@@ -499,6 +499,7 @@ export default function Page({
                     isVisible={selectionMenuVisible}
                     nodes={lastSelection?.nodes}
                     onClick={() => {
+                      takeSnapshot();
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
