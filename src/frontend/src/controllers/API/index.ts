@@ -4,6 +4,7 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
+  Component,
   LoginType,
   Users,
   changeUser,
@@ -578,4 +579,85 @@ export async function saveFlowStore(newFlow: {
  */
 export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
   return await api.get(`${BASE_URL_API}store/`);
+}
+
+export async function getStoreComponents(page: number = 1, limit: number = 10) {
+  try {
+    const res = await api.get(
+      `${BASE_URL_API}store/components/?page=${page}&limit=${limit}`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function postStoreComponents(component: Component) {
+  try {
+    const res = await api.post(`${BASE_URL_API}store/components/`, component);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getComponent(component_id: string) {
+  try {
+    const res = await api.get(
+      `${BASE_URL_API}store/components/${component_id}`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function searchComponent(
+  query: string,
+  page?: number,
+  limit?: number,
+  status?: string,
+  tags?: [string]
+) {
+  try {
+    debugger;
+    let url = `${BASE_URL_API}store/search/`;
+    const queryParams: any = [];
+    if (query !== undefined) {
+      queryParams.push(`query=${query}`);
+    }
+    if (page !== undefined) {
+      queryParams.push(`page=${page}`);
+    }
+    if (limit !== undefined) {
+      queryParams.push(`limit=${limit}`);
+    }
+    if (status !== undefined) {
+      queryParams.push(`status=${status}`);
+    }
+    if (tags !== undefined) {
+      queryParams.push(`tags=${tags}`);
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
 }
