@@ -99,7 +99,8 @@ class StoreService(Service):
 
     def download(self, api_key: str, id: str) -> ComponentResponse:
         url = f"{self.components_url}/{id}"
-        component = self._get(url, api_key)
+        params = {"fields": ",".join(["id", "name", "description", "data"])}
+        component = self._get(url, api_key, params)[0]
         return ComponentResponse(**component)
 
     def upload(self, api_key: str, component_data: Dict[str, Any]) -> ComponentResponse:
