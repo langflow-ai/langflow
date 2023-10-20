@@ -33,8 +33,8 @@ class StoreService(Service):
             response = httpx.get(url, headers=headers, params=params)
             response.raise_for_status()
             return response.json()["data"]
-        except HTTPError as exc:
-            raise ValueError(f"Request failed: {exc}")
+        except HTTPError:
+            raise ValueError(response.text)
 
     def search(
         self,
@@ -75,16 +75,25 @@ class StoreService(Service):
         if fields:
             params["fields"] = ",".join(fields)
 
-        # ?aggregate[count]=likes
-        params["aggregate[count]"] = "likes"
-
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
     def list_components(
-        self, api_key: str, page: int = 1, limit: int = 10
+        self,
+        api_key: str,
+        page: int = 1,
+        limit: int = 10,
+        fields: Optional[List[str]] = None,
     ) -> List[ComponentResponse]:
-        params = {"page": page, "limit": limit}
+        # params = {"page": page, "limit": limit}
+        params = {}
+        # ?aggregate[count]=likes
+        params["fields"] = (
+            ",".join(fields)
+            if fields
+            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
+        )
+
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
