@@ -32,7 +32,7 @@ export default function SidebarNav({
           className={cn(
             buttonVariants({ variant: "ghost" }),
             pathname === item.href
-              ? "bg-background hover:bg-background"
+              ? "border border-border bg-background hover:bg-background"
               : "hover:bg-transparent hover:underline",
             "justify-start"
           )}
