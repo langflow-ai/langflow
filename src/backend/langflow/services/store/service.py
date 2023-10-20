@@ -31,14 +31,12 @@ class StoreService(Service):
             headers = {}
         try:
             response = httpx.get(url, headers=headers, params=params)
-            response_text = response.text
             response.raise_for_status()
             return response.json()["data"]
         except HTTPError as exc:
-            try:
-                raise ValueError(response_text) from exc
-            except Exception:
-                raise ValueError(f"GET request failed: {exc}") from exc
+            raise exc
+        except Exception as exc:
+            raise ValueError(f"GET failed: {exc}")
 
     def search(
         self,
