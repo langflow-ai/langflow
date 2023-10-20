@@ -100,6 +100,10 @@ export default function ExtraSidebar(): JSX.Element {
     }
   }, [getFilterEdge, data]);
 
+  useEffect(() => {
+    handleSearchInput(search);
+  }, [data]);
+
   const handleShareFlow = () => {
     const reactFlow = flow!.data as ReactFlowJsonObject;
     const saveFlow = {
