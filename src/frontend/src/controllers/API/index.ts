@@ -629,7 +629,6 @@ export async function searchComponent(
   tags?: [string]
 ) {
   try {
-    debugger;
     let url = `${BASE_URL_API}store/search/`;
     const queryParams: any = [];
     if (query !== undefined) {
