@@ -531,7 +531,8 @@ export type groupDataType = {
 };
 
 export type cardComponentPropsType = {
-  flow: FlowType;
+  isFlow?: boolean;
+  data: FlowType;
   id: string;
   onDelete?: () => void;
   button?: JSX.Element;

@@ -12,7 +12,8 @@ import {
 } from "../ui/card";
 
 export const CardComponent = ({
-  flow,
+  isFlow,
+  data,
   id,
   onDelete,
   button,
@@ -26,10 +27,10 @@ export const CardComponent = ({
           <span
             className={
               "card-component-image " +
-              gradients[parseInt(flow.id.slice(0, 12), 16) % gradients.length]
+              gradients[parseInt(data.id.slice(0, 12), 16) % gradients.length]
             }
           ></span>
-          <span className="card-component-title-size">{flow.name}</span>
+          <span className="card-component-title-size">{data.name}</span>
           {onDelete && (
             <button className="card-component-delete-button" onClick={onDelete}>
               <IconComponent
@@ -41,18 +42,20 @@ export const CardComponent = ({
         </CardTitle>
         <CardDescription className="card-component-desc">
           <div className="card-component-desc-text">
-            {flow.description}
+            {data.description}
             {/* {flow.description} */}
           </div>
         </CardDescription>
       </CardHeader>
 
-      <CardFooter>
-        <div className="card-component-footer-arrangement">
-          <div className="card-component-footer"></div>
-          {button && button}
-        </div>
-      </CardFooter>
+      {isFlow && (
+        <CardFooter>
+          <div className="card-component-footer-arrangement">
+            <div className="card-component-footer"></div>
+            {button && button}
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 };

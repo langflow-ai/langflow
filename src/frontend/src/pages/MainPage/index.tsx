@@ -1,11 +1,11 @@
 import { useContext, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
-import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
-import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
+import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
+import { Separator } from "../../components/ui/separator";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -28,6 +28,16 @@ export default function HomePage(): JSX.Element {
         uploadFlow(true).then((id) => {
           navigate("/flow/" + id);
         }),
+    },
+  ];
+  const sidebarNavItems = [
+    {
+      title: "Flows",
+      href: "/flows",
+    },
+    {
+      title: "Components",
+      href: "/components",
     },
   ];
 
@@ -115,66 +125,15 @@ export default function HomePage(): JSX.Element {
         <span className="main-page-description-text">
           Manage your personal projects. Download or upload your collection.
         </span>
-        <div
-          onDragOver={dragOver}
-          onDragEnter={dragEnter}
-          onDragLeave={dragLeave}
-          onDrop={fileDrop}
-          className={
-            "h-full w-full " +
-            (isDragging
-              ? "mb-24 flex flex-col items-center justify-center gap-4 text-2xl font-light"
-              : "")
-          }
-        >
-          {isDragging ? (
-            <>
-              <IconComponent
-                name="ArrowUpToLine"
-                className="h-12 w-12 stroke-1"
-              />
-              Drop your flow here
-            </>
-          ) : (
-            <div className="main-page-flows-display">
-              {isLoading && flows.length == 0 ? (
-                <>
-                  <SkeletonCardComponent />
-                  <SkeletonCardComponent />
-                  <SkeletonCardComponent />
-                  <SkeletonCardComponent />
-                </>
-              ) : (
-                flows
-                  .filter((flow) => !flow.is_component)
-                  .map((flow, idx) => (
-                    <CardComponent
-                      key={idx}
-                      flow={flow}
-                      id={flow.id}
-                      button={
-                        <Link to={"/flow/" + flow.id}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="whitespace-nowrap "
-                          >
-                            <IconComponent
-                              name="ExternalLink"
-                              className="main-page-nav-button"
-                            />
-                            Edit Flow
-                          </Button>
-                        </Link>
-                      }
-                      onDelete={() => {
-                        removeFlow(flow.id);
-                      }}
-                    />
-                  ))
-              )}
-            </div>
-          )}
+        <Separator className="my-6" />
+        <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
+          <aside className="space-y-6 lg:w-1/5">
+            {/* <Input placeholder="Search" onChange={(e) => {}} /> */}
+            <SidebarNav items={sidebarNavItems} />
+          </aside>
+          <div className="w-full flex-1">
+            <Outlet />
+          </div>
         </div>
       </div>
     </>
