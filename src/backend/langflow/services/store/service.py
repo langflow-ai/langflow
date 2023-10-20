@@ -31,10 +31,14 @@ class StoreService(Service):
             headers = {}
         try:
             response = httpx.get(url, headers=headers, params=params)
+            response_text = response.text
             response.raise_for_status()
             return response.json()["data"]
-        except HTTPError:
-            raise ValueError(response.text)
+        except HTTPError as exc:
+            try:
+                raise ValueError(response_text) from exc
+            except ValueError:
+                raise ValueError(f"GET request failed: {exc}") from exc
 
     def search(
         self,
@@ -46,15 +50,20 @@ class StoreService(Service):
         tags: Optional[List[str]] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
-        sort_by: Optional[str] = "likes",
-        sort: Optional[List[str]] = None,
+        sort: Optional[List[str]] = ["-likes"],
         fields: Optional[List[str]] = None,
     ) -> List[ComponentResponse]:
+        # ?sort=sort,-date_created,author.name
+
+        # // or
+
+        # ?sort[]=sort
+        # &sort[]=-date_created
+        # &sort[]=-author.name
         params = {
             "search": query,
             "page": page,
             "limit": limit,
-            "sort": sort_by,
         }
 
         if status:
