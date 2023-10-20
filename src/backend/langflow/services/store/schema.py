@@ -1,20 +1,27 @@
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
+from uuid import UUID
 
 
 class ComponentResponse(BaseModel):
-    name: str
-    description: Optional[str]
-    id: int
+    id: UUID
     status: Optional[str]
     sort: Optional[int]
-    user_created: Optional[int]
+    user_created: Optional[UUID]
     date_created: Optional[datetime]
-    user_updated: Optional[int]
+    user_updated: Optional[UUID]
     date_updated: Optional[datetime]
-    is_component: bool
-    likes: Optional[int]
+    is_component: Optional[bool]
+    name: Optional[str]
+    description: Optional[str]
+    data: Optional[dict]
+    tags: Optional[List[int]]
+    likes_count: Optional[List[UUID]]
+
+
+class StoreComponentCreate(BaseModel):
+    name: str
+    description: Optional[str]
+    data: dict
     tags: Optional[List[str]]
-    data: Optional[str]
-    documentation: Optional[str]
