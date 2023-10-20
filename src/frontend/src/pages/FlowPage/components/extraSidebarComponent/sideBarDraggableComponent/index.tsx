@@ -8,7 +8,6 @@ import {
 } from "../../../../../components/ui/select-custom";
 import { AuthContext } from "../../../../../contexts/authContext";
 import { TabsContext } from "../../../../../contexts/tabsContext";
-import { typesContext } from "../../../../../contexts/typesContext";
 import { APIClassType } from "../../../../../types/api";
 import {
   createFlowComponent,
@@ -36,8 +35,7 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const open = useRef(false);
-  const { deleteComponent } = useContext(typesContext);
-  const { getNodeId } = useContext(TabsContext);
+  const { getNodeId, deleteComponent } = useContext(TabsContext);
   const { autoLogin, userData } = useContext(AuthContext);
 
   function handleSelectChange(value: string) {

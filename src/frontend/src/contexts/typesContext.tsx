@@ -7,16 +7,9 @@ import {
   useState,
 } from "react";
 import { Edge, Node, ReactFlowInstance } from "reactflow";
-import { getAll, getHealth, saveFlowToDatabase } from "../controllers/API";
-import { APIClassType, APIKindType } from "../types/api";
-import { NodeDataType } from "../types/flow";
+import { getAll, getHealth } from "../controllers/API";
+import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
-import { createFlowComponent } from "../utils/reactflowUtils";
-import {
-  getSetFromObject,
-  IncrementObjectKey,
-  removeCountFromString,
-} from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 
@@ -36,8 +29,6 @@ const initialValue: typesContextType = {
   fetchError: false,
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
-  saveComponent: (component: NodeDataType, key: string) => {},
-  deleteComponent: (id: string, key: string) => {},
   deleteEdge: () => {},
 };
 
@@ -134,62 +125,10 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function saveComponent(component: NodeDataType, id: string) {
-    let key = component.type;
-    if (data["custom_components"][key] !== undefined) {
-      let { newKey, increment } = IncrementObjectKey(
-        data["custom_components"],
-        key
-      );
-      key = newKey;
-      component.type = newKey;
-      let componentNodes: { [key: string]: APIClassType } = {};
-      Object.keys(data["custom_components"]).forEach((key) => {
-        componentNodes[key] = data["custom_components"][key];
-      });
-      const display_nameSet = getSetFromObject(componentNodes, "display_name");
-      if (display_nameSet.has(component.node?.display_name!)) {
-        increment = 1;
-        while (
-          display_nameSet.has(
-            removeCountFromString(component.node?.display_name!) +
-              ` (${increment})`
-          )
-        ) {
-          increment++;
-        }
-        component.node!.display_name =
-          removeCountFromString(component.node?.display_name!) +
-          ` (${increment})`;
-      }
-    }
-    component.node!.official = false;
-    saveFlowToDatabase(createFlowComponent(component));
-    setData((prev) => {
-      let newData = { ...prev };
-      //clone to prevent reference erro
-      newData["custom_components"][key] = _.cloneDeep({
-        ...component.node,
-        official: false,
-      });
-      return newData;
-    });
-  }
-
-  function deleteComponent(id: string, key: string) {
-    setData((prev) => {
-      let newData = _.cloneDeep(prev);
-      delete newData["custom_components"][key];
-      return newData;
-    });
-  }
-
   return (
     <typesContext.Provider
       value={{
         deleteEdge,
-        deleteComponent,
-        saveComponent,
         types,
         setTypes,
         reactFlowInstance,
