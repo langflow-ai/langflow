@@ -86,7 +86,8 @@ export default function CommunityPage(): JSX.Element {
             examples.map((flow, idx) => (
               <CardComponent
                 key={idx}
-                flow={flow}
+                isFlow
+                data={flow}
                 id={flow.id}
                 button={
                   <Button
