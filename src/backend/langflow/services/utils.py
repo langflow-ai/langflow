@@ -102,6 +102,9 @@ def get_or_create_super_user(session: Session, username, password, is_default):
 def setup_superuser(settings_service, session: Session):
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
+    else:
+        # Remove the default superuser if it exists
+        teardown_superuser(settings_service, session)
 
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
@@ -132,10 +135,12 @@ def teardown_superuser(settings_service, session):
     # If AUTO_LOGIN is True, we will remove the default superuser
     # from the database.
 
-    if settings_service.auth_settings.AUTO_LOGIN:
+    if not settings_service.auth_settings.AUTO_LOGIN:
         try:
-            logger.debug("AUTO_LOGIN is set to True. Removing default superuser.")
-            username = settings_service.auth_settings.SUPERUSER
+            logger.debug(
+                "AUTO_LOGIN is set to False. Removing default superuser if exists."
+            )
+            username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.user import User
 
             user = session.query(User).filter(User.username == username).first()
