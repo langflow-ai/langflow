@@ -119,3 +119,10 @@ export type Users = {
   create_at: Date;
   updated_at: Date;
 };
+
+export type Component = {
+  name: string;
+  description: string;
+  data: Object;
+  tags: [string];
+};

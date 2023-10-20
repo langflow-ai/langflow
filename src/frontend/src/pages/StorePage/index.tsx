@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
+import { alertContext } from "../../contexts/alertContext";
 import { TabsContext } from "../../contexts/tabsContext";
+import { getStoreComponents, searchComponent } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { FlowComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
@@ -33,20 +35,36 @@ export default function StorePage(): JSX.Element {
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState(data);
+  const { setErrorData } = useContext(alertContext);
 
   useEffect(() => {
-    setLoading(false);
-    /* getComponents()
+    handleGetComponents();
+  }, []);
+
+  const handleGetComponents = () => {
+    setLoading(true);
+    getStoreComponents(1, 10)
       .then((res) => {
-        setData(res);
-        setSearchData(res);
-        setDataSelect(res);
+        console.log(res);
         setLoading(false);
       })
       .catch((err) => {
         setLoading(false);
-      }); */
-  }, []);
+        setErrorData({
+          title: "Error on delete user",
+          list: [err["response"]["data"]["detail"]],
+        });
+      });
+  };
+
+  const handleSearch = (inputText: string) => {
+    searchComponent(inputText).then(
+      (res) => {
+        console.log(res);
+      },
+      (error) => {}
+    );
+  };
 
   return (
     <>
@@ -59,7 +77,11 @@ export default function StorePage(): JSX.Element {
             Langflow Store
           </span>
           <div className="community-page-nav-button">
-            <StoreApiKeyModal onCloseModal={() => {}}>
+            <StoreApiKeyModal
+              onCloseModal={() => {
+                handleGetComponents();
+              }}
+            >
               <Button variant="primary">
                 <IconComponent name="Key" className="main-page-nav-button" />
                 API Key
@@ -80,7 +102,10 @@ export default function StorePage(): JSX.Element {
                 <Input
                   placeholder="Search Flows and Components"
                   className="absolute h-12 px-5"
-                  onChange={(e) => {}}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
                   value={inputText}
                 />
                 <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
