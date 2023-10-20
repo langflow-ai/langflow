@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
+import { ReactFlowJsonObject } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -7,7 +8,9 @@ import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { saveFlowStore } from "../../../../controllers/API";
 import ApiModal from "../../../../modals/ApiModal";
+import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
@@ -97,6 +100,29 @@ export default function ExtraSidebar(): JSX.Element {
     }
   }, [getFilterEdge, data]);
 
+  const handleShareFlow = () => {
+    const reactFlow = flow!.data as ReactFlowJsonObject;
+    const saveFlow = {
+      data: {
+        ...reactFlow,
+      },
+      is_component: false,
+    };
+    saveFlowStore(saveFlow).then(
+      () => {
+        setSuccessData({
+          title: "Flow shared successfully",
+        });
+      },
+      (err) => {
+        setErrorData({
+          title: "Error sharing flow",
+          list: [err["response"]["data"]["detail"]],
+        });
+      }
+    );
+  };
+
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
       setFilterData((_) => {
@@ -145,7 +171,10 @@ export default function ExtraSidebar(): JSX.Element {
                 uploadFlow(false);
               }}
             >
-              <IconComponent name="FileUp" className="side-bar-button-size " />
+              <IconComponent
+                name="FileDown"
+                className="side-bar-button-size "
+              />
             </button>
           </ShadTooltip>
         </div>
@@ -153,10 +182,7 @@ export default function ExtraSidebar(): JSX.Element {
           <ExportModal>
             <ShadTooltip content="Export" side="top">
               <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent
-                  name="FileDown"
-                  className="side-bar-button-size"
-                />
+                <IconComponent name="FileUp" className="side-bar-button-size" />
               </div>
             </ShadTooltip>
           </ExportModal>
@@ -201,6 +227,28 @@ export default function ExtraSidebar(): JSX.Element {
               />
             </button>
           </ShadTooltip>
+        </div>
+
+        <div className="side-bar-button">
+          <ConfirmationModal
+            index={0}
+            modalContentTitle="Are you sure you want to share this flow?"
+            modalContent="This flow will be available for everyone to use."
+            title="Share Flow"
+            confirmationText="Share"
+            icon="Share2"
+            onConfirm={() => {
+              handleShareFlow();
+            }}
+            titleHeader=""
+            cancelText="Cancel"
+          >
+            <ShadTooltip content="Share" side="top">
+              <div className={classNames("extra-side-bar-buttons")}>
+                <IconComponent name="Share2" className="side-bar-button-size" />
+              </div>
+            </ShadTooltip>
+          </ConfirmationModal>
         </div>
       </div>
       <Separator />

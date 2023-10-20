@@ -66,7 +66,7 @@
     @apply fixed right-4;
   }
   .side-bar-arrangement {
-    @apply flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide;
+    @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
     @apply relative mx-auto mb-2 mt-2 flex items-center;

@@ -547,9 +547,9 @@ export async function addApiKeyStore(key: string) {
  * @throws Will throw an error if saving fails.
  */
 export async function saveFlowStore(newFlow: {
-  name: string;
+  name?: string;
   data: ReactFlowJsonObject | null;
-  description: string;
+  description?: string;
   style?: FlowStyleType;
   is_component?: boolean;
 }): Promise<FlowType> {

@@ -283,7 +283,7 @@ export type ConfirmationModalType = {
   confirmationText: string;
   children: ReactElement;
   icon: string;
-  data: any;
+  data?: any;
   index: number;
   onConfirm: (index, data) => void;
 };
