@@ -229,7 +229,7 @@
   }
 
   .main-page-description-text {
-    @apply flex w-[60%] px-6 pb-14 text-muted-foreground;
+    @apply flex w-[60%] px-6 pb-4 text-muted-foreground;
   }
 
   .admin-page-description-text {
@@ -237,7 +237,7 @@
   }
 
   .main-page-flows-display {
-    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
+    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4;
   }
 
   .community-page-arrangement {
