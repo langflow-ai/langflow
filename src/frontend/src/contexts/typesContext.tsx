@@ -9,12 +9,10 @@ import {
 import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth, saveFlowToDatabase } from "../controllers/API";
 import { APIClassType, APIKindType } from "../types/api";
-import { localStorageUserType } from "../types/entities";
 import { NodeDataType } from "../types/flow";
 import { typesContextType } from "../types/typesContext";
 import { createFlowComponent } from "../utils/reactflowUtils";
 import {
-  checkLocalStorageKey,
   getSetFromObject,
   IncrementObjectKey,
   removeCountFromString,
@@ -72,19 +70,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       if (isMounted && result?.status === 200) {
         setLoading(false);
         let { data } = _.cloneDeep(result);
-        // const savedComponents = autoLogin
-        //   ? localStorage.getItem("auto")
-        //   : localStorage.getItem(userData?.id!);
-        // if (savedComponents !== null) {
-        //   // const { components }: localStorageUserType = JSON.parse(
-        //   //   savedComponents!
-        //   // );
-        //   Object.keys(components).forEach((key) => {
-        //     data["custom_components"][key] = (
-        //       components[key].data?.nodes[0].data! as NodeDataType
-        //     ).node!;
-        //   });
-        // }
         setData(data);
         setTemplates(
           Object.keys(data).reduce((acc, curr) => {
@@ -150,12 +135,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   }
 
   function saveComponent(component: NodeDataType, id: string) {
-    // let savedComponentsJSON: localStorageUserType = { components: {} };
-    // if (checkLocalStorageKey(id)) {
-    //   let savedComponents = localStorage.getItem(id)!;
-    //   savedComponentsJSON = JSON.parse(savedComponents);
-    // }
-    // let components = savedComponentsJSON.components;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
       let { newKey, increment } = IncrementObjectKey(
@@ -185,10 +164,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       }
     }
     component.node!.official = false;
-    // components[key] = createFlowComponent(component);
     saveFlowToDatabase(createFlowComponent(component));
-    // savedComponentsJSON.components = components;
-    // localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
       let newData = { ...prev };
       //clone to prevent reference erro
@@ -201,19 +177,8 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteComponent(id: string, key: string) {
-    let savedComponentsJSON: localStorageUserType = { components: {} };
-    if (checkLocalStorageKey(id)) {
-      let savedComponents = localStorage.getItem(id)!;
-      savedComponentsJSON = JSON.parse(savedComponents);
-    }
-    let components = savedComponentsJSON.components;
-    delete components[key];
-    savedComponentsJSON.components = components;
-    console.log(savedComponentsJSON);
-    localStorage.setItem(id, JSON.stringify(savedComponentsJSON));
     setData((prev) => {
       let newData = _.cloneDeep(prev);
-      //clone to prevent reference erro
       delete newData["custom_components"][key];
       return newData;
     });
