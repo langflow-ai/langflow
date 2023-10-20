@@ -45,6 +45,25 @@ def create_component(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.get("/components/", response_model=List[ComponentResponse])
+def list_components(
+    page: int = 1,
+    limit: int = 10,
+    store_service: StoreService = Depends(get_store_service),
+    store_api_Key: str = Depends(get_optional_user_store_api_key),
+    settings_service=Depends(get_settings_service),
+):
+    try:
+        if store_api_Key:
+            decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
+        else:
+            decrypted = None
+        result = store_service.list_components(decrypted, page, limit)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.get("/components/{component_id}", response_model=ComponentResponse)
 def read_component(
     component_id: UUID,
@@ -62,22 +81,6 @@ def read_component(
     if component is None:
         raise HTTPException(status_code=400, detail="Component not found")
     return component
-
-
-@router.get("/components/", response_model=List[ComponentResponse])
-def list_components(
-    page: int = 1,
-    limit: int = 10,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
-    settings_service=Depends(get_settings_service),
-):
-    try:
-        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        result = store_service.list_components(decrypted, page, limit)
-        return result
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/search", response_model=List[ComponentResponse])
