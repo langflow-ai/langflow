@@ -32,13 +32,20 @@ import { TabsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
+  createFlowComponent,
   scapeJSONParse,
   scapedJSONStringfy,
   updateEdgesHandleIds,
   updateIds,
   updateTemplate,
 } from "../utils/reactflowUtils";
-import { getRandomDescription, getRandomName } from "../utils/utils";
+import {
+  IncrementObjectKey,
+  getRandomDescription,
+  getRandomName,
+  getSetFromObject,
+  removeCountFromString,
+} from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
@@ -73,6 +80,8 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
+  saveComponent: (component: NodeDataType, id: string) => {},
+  deleteComponent: (id: string, key: string) => {},
 };
 
 export const TabsContext = createContext<TabsContextType>(
@@ -90,7 +99,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
-  const { templates, reactFlowInstance, setData } = useContext(typesContext);
+  const { templates, reactFlowInstance, setData, data } =
+    useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;
@@ -647,6 +657,64 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function saveComponent(component: NodeDataType, id: string) {
+    let key = component.type;
+    if (data["custom_components"][key] !== undefined) {
+      let { newKey, increment } = IncrementObjectKey(
+        data["custom_components"],
+        key
+      );
+      key = newKey;
+      component.type = newKey;
+      let componentNodes: { [key: string]: APIClassType } = {};
+      Object.keys(data["custom_components"]).forEach((key) => {
+        componentNodes[key] = data["custom_components"][key];
+      });
+      const display_nameSet = getSetFromObject(componentNodes, "display_name");
+      if (display_nameSet.has(component.node?.display_name!)) {
+        increment = 1;
+        while (
+          display_nameSet.has(
+            removeCountFromString(component.node?.display_name!) +
+              ` (${increment})`
+          )
+        ) {
+          increment++;
+        }
+        component.node!.display_name =
+          removeCountFromString(component.node?.display_name!) +
+          ` (${increment})`;
+      }
+    }
+    component.node!.official = false;
+    saveFlowToDatabase(createFlowComponent(component));
+    setData((prev) => {
+      let newData = { ...prev };
+      //clone to prevent reference erro
+      newData["custom_components"][key] = _.cloneDeep({
+        ...component.node,
+        official: false,
+      });
+      return newData;
+    });
+  }
+
+  function deleteComponent(id: string, key: string) {
+    let flow = flows.find(
+      (flow) =>
+        flow.is_component &&
+        (flow.data?.nodes[0].data as NodeDataType).type === key
+    );
+    if (flow) {
+      removeFlow(flow.id);
+      setData((prev) => {
+        let newData = _.cloneDeep(prev);
+        delete newData["custom_components"][key];
+        return newData;
+      });
+    }
+  }
+
   const [isBuilt, setIsBuilt] = useState(false);
 
   return (
@@ -676,6 +744,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         getTweak,
         setTweak,
         isLoading,
+        saveComponent,
+        deleteComponent,
       }}
     >
       {children}
