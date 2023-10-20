@@ -25,7 +25,13 @@ def get_user_store_api_key(user: User = Depends(auth_utils.get_current_active_us
     return user.store_api_key
 
 
-@router.post("/", response_model=ComponentResponse)
+def get_optional_user_store_api_key(
+    user: User = Depends(auth_utils.get_current_active_user),
+):
+    return user.store_api_key
+
+
+@router.post("/components/", response_model=ComponentResponse)
 def create_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
@@ -39,7 +45,7 @@ def create_component(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/{component_id}", response_model=ComponentResponse)
+@router.get("/components/{component_id}", response_model=ComponentResponse)
 def read_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
@@ -58,7 +64,7 @@ def read_component(
     return component
 
 
-@router.get("/", response_model=List[ComponentResponse])
+@router.get("/components/", response_model=List[ComponentResponse])
 def list_components(
     page: int = 1,
     limit: int = 10,
@@ -76,7 +82,6 @@ def list_components(
 
 @router.get("/search", response_model=List[ComponentResponse])
 async def search_endpoint(
-    api_key: Optional[str] = Query(None),
     query: str = Query(...),
     page: int = Query(1),
     limit: int = Query(10),
@@ -88,10 +93,11 @@ async def search_endpoint(
     sort: Optional[List[str]] = Query(None),
     fields: Optional[List[str]] = Query(None),
     store_service: "StoreService" = Depends(get_store_service),
+    store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        return await store_service.search(
-            api_key=api_key,
+        return store_service.search(
+            api_key=store_api_Key,
             query=query,
             page=page,
             limit=limit,
@@ -104,6 +110,4 @@ async def search_endpoint(
             fields=fields,
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-        )
+        raise HTTPException(status_code=500, detail=str(exc))
