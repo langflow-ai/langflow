@@ -1,13 +1,12 @@
 from typing import List, Optional
 from uuid import UUID
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.flow.flow import FlowCreate
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
     get_store_service,
     get_settings_service,
 )
-from langflow.services.store.schema import ComponentResponse
+from langflow.services.store.schema import ComponentResponse, StoreComponentCreate
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime
@@ -28,7 +27,7 @@ def get_user_store_api_key(user: User = Depends(auth_utils.get_current_active_us
 
 @router.post("/", response_model=ComponentResponse)
 def create_component(
-    component: FlowCreate,
+    component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
     settings_service=Depends(get_settings_service),
     store_api_Key: str = Depends(get_user_store_api_key),
@@ -69,7 +68,8 @@ def list_components(
 ):
     try:
         decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        return store_service.list_components(decrypted, page, limit)
+        result = store_service.list_components(decrypted, page, limit)
+        return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
