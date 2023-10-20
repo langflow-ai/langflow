@@ -86,7 +86,6 @@ class StoreService(Service):
         fields: Optional[List[str]] = None,
     ) -> List[ComponentResponse]:
         params = {"page": page, "limit": limit}
-        params = {}
         # ?aggregate[count]=likes
         params["fields"] = (
             ",".join(fields)
