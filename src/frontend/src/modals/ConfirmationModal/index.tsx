@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { ConfirmationModalType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
@@ -17,12 +17,18 @@ export default function ConfirmationModal({
   data,
   index,
   onConfirm,
+  open,
+  onClose,
 }: ConfirmationModalType) {
   const Icon: any = nodeIconsLucide[icon];
+  const [modalOpen, setModalOpen] = useState(open ?? false);
 
-  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (onClose) onClose!(modalOpen);
+  }, [modalOpen]);
+
   return (
-    <BaseModal size="x-small" open={open} setOpen={setOpen}>
+    <BaseModal size="x-small" open={modalOpen} setOpen={setModalOpen}>
       <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
@@ -46,7 +52,7 @@ export default function ConfirmationModal({
         <Button
           className="ml-3"
           onClick={() => {
-            setOpen(false);
+            setModalOpen(false);
             onConfirm(index, data);
           }}
         >
@@ -56,7 +62,7 @@ export default function ConfirmationModal({
         <Button
           variant="outline"
           onClick={() => {
-            setOpen(false);
+            setModalOpen(false);
           }}
         >
           {cancelText}
