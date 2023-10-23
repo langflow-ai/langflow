@@ -12,6 +12,7 @@ import {
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { saveFlowStore } from "../../../../controllers/API";
+import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import {
@@ -64,8 +65,26 @@ export default function NodeToolbarComponent({
   const { paste, saveComponent } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
+  const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
 
+  function handleShareComponent() {
+    const componentFlow = cloneDeep(data);
+    saveFlowStore(createFlowComponent(componentFlow)).then(
+      () => {
+        saveComponent(componentFlow);
+        setSuccessData({
+          title: "Component shared successfully",
+        });
+      },
+      (err) => {
+        setErrorData({
+          title: "Error sharing component",
+          list: [err["response"]["data"]["detail"]],
+        });
+      }
+    );
+  }
   const handleSelectChange = (event) => {
     switch (event) {
       case "advanced":
@@ -79,21 +98,8 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data)));
         break;
       case "Share":
-        const componentFlow = cloneDeep(data);
-        saveFlowStore(createFlowComponent(componentFlow)).then(
-          () => {
-            saveComponent(componentFlow);
-            setSuccessData({
-              title: "Component shared successfully",
-            });
-          },
-          (err) => {
-            setErrorData({
-              title: "Error sharing component",
-              list: [err["response"]["data"]["detail"]],
-            });
-          }
-        );
+        console.log("Share");
+        setShowconfirmShare(true);
         break;
       case "SaveAll":
         saveComponent(cloneDeep(data));
@@ -268,6 +274,28 @@ export default function NodeToolbarComponent({
             >
               <></>
             </EditNodeModal>
+          )}
+          {showconfirmShare && (
+            <ConfirmationModal
+              key={data.id}
+              index={0}
+              modalContentTitle="Are you sure you want to share this component?"
+              modalContent="This component will be available for everyone to use."
+              title="Share Component"
+              confirmationText="Share"
+              icon="Share2"
+              onConfirm={() => {
+                handleShareComponent();
+              }}
+              titleHeader=""
+              cancelText="Cancel"
+              open={showconfirmShare}
+              onClose={(modal) => {
+                setShowconfirmShare(modal);
+              }}
+            >
+              <div></div>
+            </ConfirmationModal>
           )}
         </span>
       </div>

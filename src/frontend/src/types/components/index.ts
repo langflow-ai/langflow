@@ -286,6 +286,8 @@ export type ConfirmationModalType = {
   data?: any;
   index: number;
   onConfirm: (index, data) => void;
+  open?: boolean;
+  onClose?: (close: boolean) => void;
 };
 
 export type UserManagementType = {
