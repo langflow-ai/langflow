@@ -15,6 +15,7 @@ import {
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { getStoreComponents, searchComponent } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -23,6 +24,8 @@ import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
   const { setTabId } = useContext(TabsContext);
+
+  const { setApiKey, apiKey } = useContext(AuthContext);
 
   // set null id
   useEffect(() => {
@@ -91,7 +94,7 @@ export default function StorePage(): JSX.Element {
         <span className="community-page-description-text">
           Search flows and components from the community.
         </span>
-        {!loading && (
+        {!loading && apiKey && (
           <div className="flex w-full flex-col gap-4 p-4">
             <div className="flex items-center justify-center gap-4">
               <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
@@ -187,6 +190,16 @@ export default function StorePage(): JSX.Element {
                 ))}
             </div>
           </div>
+        )}
+
+        {!apiKey && (
+          <div className="flex w-full flex-col gap-4 p-4">
+            Try add an API Key :)
+          </div>
+        )}
+
+        {apiKey && loading && (
+          <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
         )}
       </div>
     </>
