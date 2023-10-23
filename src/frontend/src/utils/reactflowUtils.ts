@@ -1065,6 +1065,7 @@ export function getGroupStatus(
 }
 
 export function createFlowComponent(nodeData: NodeDataType): FlowType {
+  nodeData.node!.official = false;
   const flowNode: FlowType = {
     data: {
       edges: [],

@@ -75,8 +75,7 @@ export default function NodeToolbarComponent({
         updateNodeInternals(data.id);
         break;
       case "Download":
-        //TODO add logic to save node on backend and update toolbar
-        downloadNode(createFlowComponent(data));
+        downloadNode(createFlowComponent(cloneDeep(data)));
         break;
       case "Share":
         //TODO add logic to save node on backend and update toolbar
