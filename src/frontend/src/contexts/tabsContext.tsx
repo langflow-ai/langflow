@@ -697,7 +697,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           ` (${increment})`;
       }
     }
-    component.node!.official = false;
     addFlow(true, createFlowComponent(component));
   }
 
