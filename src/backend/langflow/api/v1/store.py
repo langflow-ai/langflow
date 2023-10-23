@@ -1,7 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.flow.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
     get_session,
@@ -87,56 +86,6 @@ def read_component(
         raise HTTPException(status_code=400, detail="Component not found")
 
     return component
-
-
-@router.post("/components/{component_id}/fork", response_model=FlowRead)
-def fork_component(
-    component_id: UUID,
-    store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
-    settings_service=Depends(get_settings_service),
-    user: User = Depends(auth_utils.get_current_active_user),
-    session=Depends(get_session),
-):
-    # If the component is from the store, we need to get it from the store
-    try:
-        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        component = store_service.get(decrypted, component_id)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    if component is None:
-        raise HTTPException(status_code=400, detail="Component not found")
-
-    # Now we need to get the component id and put it in StoreComponentCreate.parent
-    parent_id = component.id
-    new_component = StoreComponentCreate(
-        name=component.name,
-        data=component.data,
-        parent=parent_id,
-        description=component.description,
-        tags=component.tags,
-    )
-
-    try:
-        created_component = store_service.upload(decrypted, new_component.dict())
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    if created_component is None:
-        raise HTTPException(status_code=500, detail="Component not created")
-
-    # Now save it locally
-    db_component = FlowCreate(
-        name=created_component.name,
-        data=created_component.data,
-        description=created_component.description,
-        user_id=user.id,
-    )
-    session.add(db_component)
-    session.commit()
-    session.refresh(db_component)
-    return db_component
 
 
 @router.get("/search", response_model=List[ComponentResponse])
