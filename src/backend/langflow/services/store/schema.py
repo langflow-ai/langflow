@@ -27,3 +27,4 @@ class StoreComponentCreate(BaseModel):
     data: dict
     tags: Optional[List[str]]
     parent: Optional[UUID]
+    is_component: Optional[bool]
