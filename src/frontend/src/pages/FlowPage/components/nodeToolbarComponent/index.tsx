@@ -9,8 +9,9 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { AuthContext } from "../../../../contexts/authContext";
+import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
+import { saveFlowStore } from "../../../../controllers/API";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import {
@@ -46,8 +47,8 @@ export default function NodeToolbarComponent({
     ).length
   );
   const updateNodeInternals = useUpdateNodeInternals();
-  const { isAuthenticated, autoLogin, userData } = useContext(AuthContext);
   const { getNodeId } = useContext(TabsContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -78,12 +79,24 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data)));
         break;
       case "Share":
-        //TODO add logic to save node on backend and update toolbar
+        const componentFlow = cloneDeep(data);
+        saveFlowStore(createFlowComponent(componentFlow)).then(
+          () => {
+            saveComponent(componentFlow);
+            setSuccessData({
+              title: "Component shared successfully",
+            });
+          },
+          (err) => {
+            setErrorData({
+              title: "Error sharing component",
+              list: [err["response"]["data"]["detail"]],
+            });
+          }
+        );
         break;
       case "SaveAll":
-        if (isAuthenticated) {
-          saveComponent(cloneDeep(data), autoLogin ? "auto" : userData?.id!);
-        }
+        saveComponent(cloneDeep(data));
         break;
       case "disabled":
         break;

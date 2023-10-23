@@ -80,7 +80,7 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
-  saveComponent: (component: NodeDataType, id: string) => {},
+  saveComponent: (component: NodeDataType) => {},
   deleteComponent: (id: string, key: string) => {},
 };
 
@@ -667,7 +667,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function saveComponent(component: NodeDataType, id: string) {
+  function saveComponent(component: NodeDataType) {
     component.node!.official = false;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
