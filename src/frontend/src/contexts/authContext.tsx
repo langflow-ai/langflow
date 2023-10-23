@@ -19,6 +19,9 @@ const initialValue: AuthContextType = {
   authenticationErrorCount: 0,
   autoLogin: false,
   setAutoLogin: () => {},
+  setApiKey: () => {},
+  apiKey: null,
+  hasApiKey: false,
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -36,10 +39,22 @@ export function AuthProvider({ children }): React.ReactElement {
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const { setLoading } = useContext(alertContext);
+  const [apiKey, setApiKey] = useState<string | null>(
+    cookies.get("apikey_tkn_lflw")
+  );
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+
   useEffect(() => {
     const storedAccessToken = cookies.get("access_tkn_lflw");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
+    }
+  }, []);
+
+  useEffect(() => {
+    const apiKey = cookies.get("apikey_tkn_lflw");
+    if (apiKey) {
+      setApiKey(apiKey);
     }
   }, []);
 
@@ -83,6 +98,10 @@ export function AuthProvider({ children }): React.ReactElement {
     return auth;
   }
 
+  function hasApiKeyCheck() {
+    return hasApiKey;
+  }
+
   function login(newAccessToken: string, refreshToken: string) {
     cookies.set("access_tkn_lflw", newAccessToken, { path: "/" });
     cookies.set("refresh_tkn_lflw", refreshToken, { path: "/" });
@@ -99,6 +118,10 @@ export function AuthProvider({ children }): React.ReactElement {
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
+  }
+
+  function apikey(apikey: string) {
+    cookies.set("apikey_tkn_lflw", apikey, { path: "/" });
   }
 
   return (
@@ -118,6 +141,9 @@ export function AuthProvider({ children }): React.ReactElement {
         authenticationErrorCount: 0,
         setAutoLogin,
         autoLogin,
+        setApiKey,
+        apiKey,
+        hasApiKey,
       }}
     >
       {children}

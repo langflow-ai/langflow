@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_NEW_API_KEY } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { addApiKeyStore } from "../../controllers/API";
 import {
   ApiKeyInputType,
@@ -23,6 +24,7 @@ export default function StoreApiKeyModal({
     useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const { setApiKey, apiKey } = useContext(AuthContext);
 
   function handleInput({
     target: { name, value },
@@ -49,6 +51,7 @@ export default function StoreApiKeyModal({
           setSuccessData({
             title: "Success! Your API Key has been saved.",
           });
+          setApiKey(inputState["apikey"]);
           setOpen(false);
         },
         (error) => {
