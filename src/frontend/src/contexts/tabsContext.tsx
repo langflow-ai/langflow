@@ -125,7 +125,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     getTabsDataFromDB().then((DbData) => {
       if (DbData && Object.keys(templates).length > 0) {
         try {
-          processDBData(DbData);
+          processFlows(DbData, false);
           updateStateWithDbData(DbData);
           setIsLoading(false);
         } catch (e) {}
@@ -146,7 +146,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     return readFlowsFromDatabase();
   }
 
-  function processDBData(DbData: FlowType[]) {
+  function processFlows(DbData: FlowType[], skipUpdate = true) {
     let storeComponents: { [key: string]: APIClassType } = {};
     DbData.forEach((flow: FlowType) => {
       try {
@@ -158,7 +158,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
             _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
           return;
         }
-        processDataFromFlow(flow, false);
+        if (!skipUpdate) processDataFromFlow(flow, false);
       } catch (e) {
         console.log(e);
       }
@@ -200,7 +200,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (skipNodeUpdate.includes(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
-        setErrorData({ title: `Unknown node type: ${node.data.type}` });
         return;
       }
       if (Object.keys(template["template"]).length > 0) {
@@ -384,6 +383,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const index = flows.findIndex((flow) => flow.id === id);
     if (index >= 0) {
       await deleteFlowFromDatabase(id);
+      //removes component from data if there is any
+      if (flows[index].is_component) {
+        setData((prev) => {
+          let newData = _.cloneDeep(prev);
+          const key = flows[index].data!.nodes[0].data.type;
+          delete newData["custom_components"][key];
+          return newData;
+        });
+      }
       setFlows(flows.filter((flow) => flow.id !== id));
     }
   }
@@ -595,9 +603,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   });
 
   const addFlowToLocalState = (newFlow: FlowType) => {
+    let newFlows: FlowType[] = [];
     setFlows((prevState) => {
+      newFlows.concat(prevState);
+      newFlows.push(newFlow);
       return [...prevState, newFlow];
     });
+    processFlows(newFlows);
   };
 
   /**
@@ -656,6 +668,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   function saveComponent(component: NodeDataType, id: string) {
+    component.node!.official = false;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
       let { newKey, increment } = IncrementObjectKey(
@@ -685,22 +698,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     }
     component.node!.official = false;
-
-    saveFlowToDatabase(createFlowComponent(component))
-      .then((res) => {
-        setData((prev) => {
-          let newData = { ...prev };
-          //clone to prevent reference erro
-          newData["custom_components"][key] = _.cloneDeep({
-            ...component.node,
-            official: false,
-          });
-          return newData;
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+    addFlow(true, createFlowComponent(component));
   }
 
   function deleteComponent(id: string, key: string) {
@@ -710,13 +708,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         (componentFlow.data?.nodes[0].data as NodeDataType).type === key
     );
     if (componentFlow) {
-      removeFlow(componentFlow.id).then((response) => {
-        setData((prev) => {
-          let newData = _.cloneDeep(prev);
-          delete newData["custom_components"][key];
-          return newData;
-        });
-      });
+      removeFlow(componentFlow.id);
     }
   }
 
