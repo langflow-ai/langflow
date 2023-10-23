@@ -22,8 +22,7 @@ import { FlowComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
-    useContext(TabsContext);
+  const { setTabId } = useContext(TabsContext);
 
   // set null id
   useEffect(() => {
@@ -51,7 +50,7 @@ export default function StorePage(): JSX.Element {
       .catch((err) => {
         setLoading(false);
         setErrorData({
-          title: "Error on delete user",
+          title: "Error to get components.",
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -104,11 +103,24 @@ export default function StorePage(): JSX.Element {
                   className="absolute h-12 px-5"
                   onChange={(e) => {
                     setInputText(e.target.value);
-                    handleSearch(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch(inputText);
+                    }
                   }}
                   value={inputText}
                 />
                 <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
+              </div>
+              <div className="flex items-center justify-center text-sm">
+                <Button
+                  onClick={() => {
+                    handleSearch(inputText);
+                  }}
+                >
+                  Search
+                </Button>
               </div>
               <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
                 <Select

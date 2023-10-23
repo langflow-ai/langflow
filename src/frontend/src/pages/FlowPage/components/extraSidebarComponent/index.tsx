@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -168,6 +168,44 @@ export default function ExtraSidebar(): JSX.Element {
     }
   }, [getFilterEdge, data]);
 
+  const ModalMemo = useMemo(
+    () => (
+      <ConfirmationModal
+        index={0}
+        modalContentTitle="Are you sure you want to share this flow?"
+        modalContent="This flow will be available for everyone to use."
+        title="Share Flow"
+        confirmationText="Share"
+        icon="Share2"
+        onConfirm={() => {
+          handleShareFlow();
+        }}
+        titleHeader=""
+        cancelText="Cancel"
+      >
+        <ShadTooltip content="Share" side="top">
+          <div className={classNames("extra-side-bar-buttons")}>
+            <IconComponent name="Share2" className="side-bar-button-size" />
+          </div>
+        </ShadTooltip>
+      </ConfirmationModal>
+    ),
+    []
+  );
+
+  const ExportMemo = useMemo(
+    () => (
+      <ExportModal>
+        <ShadTooltip content="Export" side="top">
+          <div className={classNames("extra-side-bar-buttons")}>
+            <IconComponent name="FileUp" className="side-bar-button-size" />
+          </div>
+        </ShadTooltip>
+      </ExportModal>
+    ),
+    []
+  );
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
@@ -186,15 +224,7 @@ export default function ExtraSidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        <div className="side-bar-button">
-          <ExportModal>
-            <ShadTooltip content="Export" side="top">
-              <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent name="FileUp" className="side-bar-button-size" />
-              </div>
-            </ShadTooltip>
-          </ExportModal>
-        </div>
+        <div className="side-bar-button">{ExportMemo}</div>
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
@@ -237,27 +267,7 @@ export default function ExtraSidebar(): JSX.Element {
           </ShadTooltip>
         </div>
 
-        <div className="side-bar-button">
-          <ConfirmationModal
-            index={0}
-            modalContentTitle="Are you sure you want to share this flow?"
-            modalContent="This flow will be available for everyone to use."
-            title="Share Flow"
-            confirmationText="Share"
-            icon="Share2"
-            onConfirm={() => {
-              handleShareFlow();
-            }}
-            titleHeader=""
-            cancelText="Cancel"
-          >
-            <ShadTooltip content="Share" side="top">
-              <div className={classNames("extra-side-bar-buttons")}>
-                <IconComponent name="Share2" className="side-bar-button-size" />
-              </div>
-            </ShadTooltip>
-          </ConfirmationModal>
-        </div>
+        <div className="side-bar-button">{ModalMemo}</div>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
