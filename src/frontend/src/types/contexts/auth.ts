@@ -16,5 +16,5 @@ export type AuthContextType = {
   setAutoLogin: (autoLogin: boolean) => void;
   apiKey: string | null;
   setApiKey: (apiKey: string | null) => void;
-  hasApiKey: boolean;
+  storeApiKey: (apiKey: string) => void;
 };

@@ -24,7 +24,7 @@ export default function StoreApiKeyModal({
     useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { setApiKey, apiKey } = useContext(AuthContext);
+  const { storeApiKey } = useContext(AuthContext);
 
   function handleInput({
     target: { name, value },
@@ -51,7 +51,7 @@ export default function StoreApiKeyModal({
           setSuccessData({
             title: "Success! Your API Key has been saved.",
           });
-          setApiKey(inputState["apikey"]);
+          storeApiKey(inputState["apikey"]);
           setOpen(false);
         },
         (error) => {
