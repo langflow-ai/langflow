@@ -16,7 +16,6 @@ export default function HomePage(): JSX.Element {
     downloadFlows,
     uploadFlows,
     addFlow,
-    removeFlow,
     uploadFlow,
     isLoading,
   } = useContext(TabsContext);

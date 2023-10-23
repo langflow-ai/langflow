@@ -137,8 +137,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (getAuthentication() === true) {
       // get data from db
-      //get tabs locally saved
-      // let tabsData = getLocalStorageTabsData();
       refreshFlows();
     }
   }, [templates, getAuthentication()]);
@@ -382,12 +380,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
    * @param {string} id - The id of the flow to remove.
    */
-  function removeFlow(id: string) {
+  async function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
     if (index >= 0) {
-      deleteFlowFromDatabase(id).then(() => {
-        setFlows(flows.filter((flow) => flow.id !== id));
-      });
+      await deleteFlowFromDatabase(id);
+      setFlows(flows.filter((flow) => flow.id !== id));
     }
   }
   /**
@@ -688,30 +685,37 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }
     }
     component.node!.official = false;
-    saveFlowToDatabase(createFlowComponent(component));
-    setData((prev) => {
-      let newData = { ...prev };
-      //clone to prevent reference erro
-      newData["custom_components"][key] = _.cloneDeep({
-        ...component.node,
-        official: false,
+
+    saveFlowToDatabase(createFlowComponent(component))
+      .then((res) => {
+        setData((prev) => {
+          let newData = { ...prev };
+          //clone to prevent reference erro
+          newData["custom_components"][key] = _.cloneDeep({
+            ...component.node,
+            official: false,
+          });
+          return newData;
+        });
+      })
+      .catch((err) => {
+        console.error(err);
       });
-      return newData;
-    });
   }
 
   function deleteComponent(id: string, key: string) {
-    let flow = flows.find(
-      (flow) =>
-        flow.is_component &&
-        (flow.data?.nodes[0].data as NodeDataType).type === key
+    let componentFlow = flows.find(
+      (componentFlow) =>
+        componentFlow.is_component &&
+        (componentFlow.data?.nodes[0].data as NodeDataType).type === key
     );
-    if (flow) {
-      removeFlow(flow.id);
-      setData((prev) => {
-        let newData = _.cloneDeep(prev);
-        delete newData["custom_components"][key];
-        return newData;
+    if (componentFlow) {
+      removeFlow(componentFlow.id).then((response) => {
+        setData((prev) => {
+          let newData = _.cloneDeep(prev);
+          delete newData["custom_components"][key];
+          return newData;
+        });
       });
     }
   }
