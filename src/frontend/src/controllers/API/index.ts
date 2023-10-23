@@ -555,7 +555,7 @@ export async function saveFlowStore(newFlow: {
   is_component?: boolean;
 }): Promise<FlowType> {
   try {
-    const response = await api.post(`${BASE_URL_API}store/`, {
+    const response = await api.post(`${BASE_URL_API}store/components/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
