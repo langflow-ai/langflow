@@ -37,6 +37,7 @@ export default function StorePage(): JSX.Element {
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState(data);
+  const [errorApiKey, setErrorApiKey] = useState(false);
   const { setErrorData } = useContext(alertContext);
 
   useEffect(() => {
@@ -49,9 +50,11 @@ export default function StorePage(): JSX.Element {
       .then((res) => {
         console.log(res);
         setLoading(false);
+        setErrorApiKey(false);
       })
       .catch((err) => {
         setLoading(false);
+        setErrorApiKey(true);
         setErrorData({
           title: "Error to get components.",
           list: [err["response"]["data"]["detail"]],
@@ -67,6 +70,11 @@ export default function StorePage(): JSX.Element {
       (error) => {}
     );
   };
+
+  const loadingWithApiKey = apiKey && loading;
+  const noApiKey = !apiKey;
+  const errorMessage = errorApiKey && !loading;
+  const renderComponents = !loading && !errorApiKey && apiKey;
 
   return (
     <>
@@ -94,7 +102,7 @@ export default function StorePage(): JSX.Element {
         <span className="community-page-description-text">
           Search flows and components from the community.
         </span>
-        {!loading && apiKey && (
+        {renderComponents && (
           <div className="flex w-full flex-col gap-4 p-4">
             <div className="flex items-center justify-center gap-4">
               <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
@@ -192,14 +200,20 @@ export default function StorePage(): JSX.Element {
           </div>
         )}
 
-        {!apiKey && (
+        {noApiKey && (
           <div className="flex w-full flex-col gap-4 p-4">
             Try add an API Key :)
           </div>
         )}
 
-        {apiKey && loading && (
+        {loadingWithApiKey && (
           <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
+        )}
+
+        {errorMessage && (
+          <div className="flex w-full flex-col gap-4 p-4">
+            An error has occurred. Please check your API key.
+          </div>
         )}
       </div>
     </>
