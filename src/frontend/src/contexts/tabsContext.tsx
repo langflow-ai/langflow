@@ -594,6 +594,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     name: flow?.name ?? getRandomName(),
     data: flowData,
     id: "",
+    is_component: flow?.is_component ?? false,
   });
 
   const addFlowToLocalState = (newFlow: FlowType) => {
