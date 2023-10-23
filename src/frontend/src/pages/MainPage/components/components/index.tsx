@@ -98,7 +98,7 @@ export default function ComponentsComponent() {
             </>
           ) : (
             flows
-              .filter((flow) => !flow.is_component)
+              .filter((flow) => flow.is_component)
               .map((flow, idx) => (
                 <CardComponent
                   key={idx}
