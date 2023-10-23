@@ -18,6 +18,7 @@ class ComponentResponse(BaseModel):
     data: Optional[dict]
     tags: Optional[List[int]]
     likes_count: Optional[List[UUID]]
+    parent: Optional[UUID]
 
 
 class StoreComponentCreate(BaseModel):
@@ -25,3 +26,4 @@ class StoreComponentCreate(BaseModel):
     description: Optional[str]
     data: dict
     tags: Optional[List[str]]
+    parent: Optional[UUID]
