@@ -13,6 +13,7 @@ import ApiModal from "../../../../modals/ApiModal";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
+import { FlowType } from "../../../../types/flow";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -106,7 +107,10 @@ export default function ExtraSidebar(): JSX.Element {
 
   const handleShareFlow = () => {
     const reactFlow = flow!.data as ReactFlowJsonObject;
-    const saveFlow = {
+    const saveFlow: FlowType = {
+      name: flow!.name,
+      id: flow!.id,
+      description: flow!.description,
       data: {
         ...reactFlow,
       },
