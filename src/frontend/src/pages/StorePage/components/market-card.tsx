@@ -1,5 +1,5 @@
 import { Link, ToyBrick } from "lucide-react";
-import { useState } from "react";
+import { useContext, useRef, useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
@@ -10,16 +10,65 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { TabsContext } from "../../../contexts/tabsContext";
+import { getComponent, saveFlowStore } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
 import { FlowComponent } from "../../../types/store";
+import cloneFLowWithParent from "../../../utils/storeUtils";
 
-export const MarketCardComponent = ({
-  data,
-  onAdd,
-}: {
-  data: FlowComponent;
-  onAdd: () => void;
-}) => {
+export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   const [added, setAdded] = useState(false);
+  const { addFlow } = useContext(TabsContext);
+  const flowData = useRef<FlowType>();
+
+  function handleAdd() {
+    getComponent(data.id).then(
+      (res) => {
+        console.log(res);
+        const newFLow = cloneFLowWithParent(
+          res.data,
+          res.id,
+          data.is_component
+        );
+        flowData.current = newFLow;
+        console.log(newFLow);
+        saveFlowStore(newFLow)
+          .then(() => setAdded(true))
+          .catch((error) => {
+            console.error(error);
+          });
+      },
+      (error) => {
+        console.log(error);
+      }
+    );
+  }
+
+  function handleInstall() {
+    addFlow(true, flowData.current!);
+  }
+
+  function handleFork(flowId: string, is_component: boolean) {
+    getComponent(flowId).then(
+      (res) => {
+        console.log(res);
+        const newFLow = cloneFLowWithParent(res.data, res.id, is_component);
+        console.log(newFLow);
+        saveFlowStore(newFLow).then(
+          (res) => {
+            console.log(JSON.parse(JSON.stringify(res)));
+            addFlow(true, newFLow);
+          },
+          (error) => {
+            console.error(error);
+          }
+        );
+      },
+      (error) => {
+        console.log(error);
+      }
+    );
+  }
 
   return (
     <Card className="group relative flex cursor-pointer flex-col justify-between overflow-hidden transition-all hover:shadow-md">
@@ -97,11 +146,10 @@ export const MarketCardComponent = ({
               className="whitespace-nowrap "
               onClick={() => {
                 if (!added) {
-                  setAdded(true);
+                  handleAdd();
                 } else {
-                  //download
+                  handleInstall();
                 }
-                onAdd();
               }}
             >
               <IconComponent

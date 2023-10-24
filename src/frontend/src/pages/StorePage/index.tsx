@@ -17,15 +17,9 @@ import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import {
-  getComponent,
-  getStoreComponents,
-  saveFlowStore,
-  searchComponent,
-} from "../../controllers/API";
+import { getStoreComponents, searchComponent } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { FlowComponent } from "../../types/store";
-import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
@@ -82,28 +76,6 @@ export default function StorePage(): JSX.Element {
 
   const loadingWithApiKey = loading;
   const renderComponents = !loading;
-
-  function handleFork(flowId: string, is_component: boolean) {
-    getComponent(flowId).then(
-      (res) => {
-        console.log(res);
-        const newFLow = cloneFLowWithParent(res.data, res.id, is_component);
-        console.log(newFLow);
-        saveFlowStore(newFLow).then(
-          (res) => {
-            console.log(JSON.parse(JSON.stringify(res)));
-            addFlow(true, newFLow);
-          },
-          (error) => {
-            console.error(error);
-          }
-        );
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
-  }
 
   return (
     <>
@@ -223,21 +195,8 @@ export default function StorePage(): JSX.Element {
                     filteredCategories.has(f.is_component)
                 )
                 .map((item, idx) => (
-                  <MarketCardComponent
-                    key={idx}
-                    data={item}
-                    onAdd={() => {
-                      handleFork(item.id, item.is_component);
-                    }}
-                  />
+                  <MarketCardComponent key={idx} data={item} />
                 ))}
-              <button
-                onClick={() => {
-                  handleFork(data[0].id, data[0].is_component);
-                }}
-              >
-                test
-              </button>
             </div>
           </div>
         )}
