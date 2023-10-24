@@ -553,6 +553,7 @@ export async function saveFlowStore(newFlow: {
   description?: string;
   style?: FlowStyleType;
   is_component?: boolean;
+  parent?: string;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}store/components/`, {
@@ -560,6 +561,7 @@ export async function saveFlowStore(newFlow: {
       data: newFlow.data,
       description: newFlow.description,
       is_component: newFlow.is_component,
+      parent: newFlow.parent,
     });
 
     if (response.status !== 201) {
