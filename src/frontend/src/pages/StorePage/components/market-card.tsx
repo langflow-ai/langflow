@@ -18,6 +18,7 @@ import cloneFLowWithParent from "../../../utils/storeUtils";
 
 export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   const [added, setAdded] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
   const flowData = useRef<FlowType>();
 
@@ -25,15 +26,14 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
     getComponent(data.id).then(
       (res) => {
         console.log(res);
-        const newFLow = cloneFLowWithParent(
-          res.data,
-          res.id,
-          data.is_component
-        );
+        const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
         flowData.current = newFLow;
         console.log(newFLow);
         saveFlowStore(newFLow)
-          .then(() => setAdded(true))
+          .then(() => {
+            setAdded(true);
+            setLoading(false);
+          })
           .catch((error) => {
             console.error(error);
           });
@@ -145,6 +145,7 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
               size="sm"
               className="whitespace-nowrap "
               onClick={() => {
+                setLoading(true);
                 if (!added) {
                   handleAdd();
                 } else {
@@ -153,8 +154,12 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
               }}
             >
               <IconComponent
-                name={added ? "GitBranchPlus" : "BookmarkPlus"}
-                className="main-page-nav-button"
+                name={
+                  loading ? "Loader2" : added ? "GitBranchPlus" : "BookmarkPlus"
+                }
+                className={
+                  "main-page-nav-button" + (loading ? " animate-spin" : "")
+                }
               />
               {added ? "Install Localy" : "Add to Account"}
             </Button>

@@ -46,6 +46,7 @@ import {
   Layers,
   Lightbulb,
   Link,
+  Loader2,
   Lock,
   LucideSend,
   Maximize2,
@@ -331,5 +332,6 @@ export const nodeIconsLucide: iconsType = {
   SaveAll,
   Share2,
   GitBranchPlus,
+  Loader2,
   BookmarkPlus,
 };
