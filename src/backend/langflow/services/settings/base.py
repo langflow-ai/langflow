@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     LANGFUSE_HOST: Optional[str] = None
 
     STORE_URL: Optional[str] = None
+    DOWNLOAD_WEBHOOK_URL: Optional[str] = None
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
