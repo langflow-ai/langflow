@@ -8,6 +8,7 @@ export type FlowType = {
   description: string;
   style?: FlowStyleType;
   is_component?: boolean;
+  parent?: string;
 };
 export type NodeType = {
   id: string;
