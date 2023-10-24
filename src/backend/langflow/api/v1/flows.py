@@ -46,7 +46,6 @@ def create_flow(
 @router.get("/", response_model=list[FlowRead], status_code=200)
 def read_flows(
     *,
-    session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ):
     """Read all flows."""
