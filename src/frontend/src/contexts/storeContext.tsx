@@ -10,7 +10,7 @@ const initialValue = {
 
 export const StoreContext = createContext<storeContextType>(initialValue);
 
-export function storeProvider({ children }) {
+export function StoreProvider({ children }) {
   const [savedFlows, setSavedFlows] = useState<{ [key: string]: FlowType }>({});
 
   return (
