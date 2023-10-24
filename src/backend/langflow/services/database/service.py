@@ -4,6 +4,7 @@ from langflow.services.base import Service
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
+from langflow.services.utils import teardown_superuser
 from sqlalchemy import inspect
 import sqlalchemy as sa
 from sqlalchemy.exc import OperationalError
@@ -243,14 +244,8 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            if settings_service.auth_settings.AUTO_LOGIN:
-                logger.debug("Removing default superuser")
-                username = settings_service.auth_settings.SUPERUSER
-                with Session(self.engine) as session:
-                    user = get_user_by_username(session, username)
-                    session.delete(user)
-                    session.commit()
-                    logger.debug("Default superuser removed")
+            with Session(self.engine) as session:
+                teardown_superuser(settings_service, session)
 
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")
