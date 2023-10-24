@@ -74,7 +74,7 @@ export default function StorePage(): JSX.Element {
   const handleSearch = (inputText: string) => {
     searchComponent(inputText).then(
       (res) => {
-        console.log(res);
+        setSearchData(res);
       },
       (error) => {}
     );
