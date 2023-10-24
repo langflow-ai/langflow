@@ -135,7 +135,7 @@ export default function StorePage(): JSX.Element {
           <div className="flex w-full flex-col gap-4 p-4">
             <div className="flex items-center justify-center gap-4">
               <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-                Installed Only <Switch />
+                Added Only <Switch />
               </div>
               <div className="relative h-12 w-[35%]">
                 <Input
