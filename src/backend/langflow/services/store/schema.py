@@ -21,6 +21,23 @@ class ComponentResponse(BaseModel):
     parent: Optional[UUID]
 
 
+class ListComponentResponse(BaseModel):
+    (["id", "name", "description", "count(likes)", "is_component"])
+    id: UUID
+    name: Optional[str]
+    description: Optional[str]
+    likes_count: Optional[int]
+    is_component: Optional[bool]
+
+
+class DownloadComponentResponse(BaseModel):
+    id: UUID
+    name: Optional[str]
+    description: Optional[str]
+    data: Optional[dict]
+    is_component: Optional[bool]
+
+
 class StoreComponentCreate(BaseModel):
     name: str
     description: Optional[str]

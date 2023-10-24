@@ -3,7 +3,12 @@ from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 import httpx
 from httpx import HTTPError
-from langflow.services.store.schema import ComponentResponse, StoreComponentCreate
+from langflow.services.store.schema import (
+    ComponentResponse,
+    DownloadComponentResponse,
+    ListComponentResponse,
+    StoreComponentCreate,
+)
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -91,7 +96,7 @@ class StoreService(Service):
         page: int = 1,
         limit: int = 10,
         fields: Optional[List[str]] = None,
-    ) -> List[ComponentResponse]:
+    ) -> List[ListComponentResponse]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = (
@@ -101,13 +106,15 @@ class StoreService(Service):
         )
 
         results = self._get(self.components_url, api_key, params)
-        return [ComponentResponse(**component) for component in results]
+        return [ListComponentResponse(**component) for component in results]
 
-    def download(self, api_key: str, id: str) -> ComponentResponse:
+    def download(self, api_key: str, id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{id}"
-        params = {"fields": ",".join(["id", "name", "description", "data"])}
+        params = {
+            "fields": ",".join(["id", "name", "description", "data", "is_component"])
+        }
         component = self._get(url, api_key, params)
-        return ComponentResponse(**component)
+        return DownloadComponentResponse(**component)
 
     def upload(
         self, api_key: str, component_data: StoreComponentCreate

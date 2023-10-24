@@ -3,11 +3,15 @@ from uuid import UUID
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
-    get_session,
     get_store_service,
     get_settings_service,
 )
-from langflow.services.store.schema import ComponentResponse, StoreComponentCreate
+from langflow.services.store.schema import (
+    ComponentResponse,
+    DownloadComponentResponse,
+    ListComponentResponse,
+    StoreComponentCreate,
+)
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime
@@ -46,7 +50,7 @@ def create_component(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/components/", response_model=List[ComponentResponse])
+@router.get("/components/", response_model=List[ListComponentResponse])
 def list_components(
     page: int = 1,
     limit: int = 10,
@@ -66,13 +70,12 @@ def list_components(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/components/{component_id}", response_model=ComponentResponse)
+@router.get("/components/{component_id}", response_model=DownloadComponentResponse)
 def read_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
     settings_service=Depends(get_settings_service),
-    session=Depends(get_session),
 ):
     # If the component is from the store, we need to get it from the store
 
