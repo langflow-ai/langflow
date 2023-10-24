@@ -97,15 +97,6 @@ export default function SidebarDraggableComponent({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={"share"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Share2"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Share{" "}
-                  </div>{" "}
-                </SelectItem>
                 <SelectItem value={"download"}>
                   <div className="flex">
                     <IconComponent
