@@ -41,7 +41,7 @@ def create_component(
 ):
     try:
         decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        return store_service.upload(decrypted, component.dict())
+        return store_service.upload(decrypted, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
