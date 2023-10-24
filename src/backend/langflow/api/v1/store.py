@@ -73,6 +73,7 @@ def list_components(
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
 def read_component(
     component_id: UUID,
+    filter_by_user: bool = Query(False),
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
     settings_service=Depends(get_settings_service),
@@ -81,7 +82,7 @@ def read_component(
 
     try:
         decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        component = store_service.download(decrypted, component_id)
+        component = store_service.download(decrypted, component_id, filter_by_user)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
