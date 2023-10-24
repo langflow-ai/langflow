@@ -2,6 +2,7 @@ import {
   ArrowUpToLine,
   Bell,
   BookMarked,
+  BookmarkPlus,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -32,6 +33,7 @@ import {
   FileUp,
   Fingerprint,
   Gift,
+  GitBranchPlus,
   GitFork,
   GithubIcon,
   Group,
@@ -328,4 +330,6 @@ export const nodeIconsLucide: iconsType = {
   Maximize2,
   SaveAll,
   Share2,
+  GitBranchPlus,
+  BookmarkPlus,
 };

@@ -1,5 +1,8 @@
 import { Link, ToyBrick } from "lucide-react";
+import { useState } from "react";
+import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
+import { Button } from "../../../components/ui/button";
 import {
   Card,
   CardDescription,
@@ -16,6 +19,8 @@ export const MarketCardComponent = ({
   data: FlowComponent;
   onAdd: () => void;
 }) => {
+  const [added, setAdded] = useState(false);
+
   return (
     <Card className="group relative flex cursor-pointer flex-col justify-between overflow-hidden transition-all hover:shadow-md">
       <div>
@@ -86,6 +91,25 @@ export const MarketCardComponent = ({
                 Added
               </Button>
             )} */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap "
+              onClick={() => {
+                if (!added) {
+                  setAdded(true);
+                } else {
+                  //download
+                }
+                onAdd();
+              }}
+            >
+              <IconComponent
+                name={added ? "GitBranchPlus" : "BookmarkPlus"}
+                className="main-page-nav-button"
+              />
+              {added ? "Install Localy" : "Add to Account"}
+            </Button>
           </div>
         </div>
       </CardFooter>
