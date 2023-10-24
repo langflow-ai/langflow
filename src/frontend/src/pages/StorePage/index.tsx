@@ -79,10 +79,8 @@ export default function StorePage(): JSX.Element {
     );
   };
 
-  const loadingWithApiKey = apiKey && loading;
-  const noApiKey = !apiKey;
-  const errorMessage = errorApiKey && !loading;
-  const renderComponents = !loading && !errorApiKey && apiKey;
+  const loadingWithApiKey = loading;
+  const renderComponents = !loading;
 
   function handleFork(flowId: string) {
     getComponent(flowId).then(
@@ -237,20 +235,8 @@ export default function StorePage(): JSX.Element {
           </div>
         )}
 
-        {noApiKey && (
-          <div className="flex w-full flex-col gap-4 p-4">
-            Try add an API Key :)
-          </div>
-        )}
-
         {loadingWithApiKey && (
           <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
-        )}
-
-        {errorMessage && (
-          <div className="flex w-full flex-col gap-4 p-4">
-            An error has occurred. Please check your API key.
-          </div>
         )}
       </div>
     </>
