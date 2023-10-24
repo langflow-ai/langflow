@@ -17,9 +17,15 @@ import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getStoreComponents, searchComponent } from "../../controllers/API";
+import {
+  getComponent,
+  getStoreComponents,
+  saveFlowStore,
+  searchComponent,
+} from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { FlowComponent } from "../../types/store";
+import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
@@ -39,6 +45,7 @@ export default function StorePage(): JSX.Element {
   const [searchData, setSearchData] = useState(data);
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setErrorData } = useContext(alertContext);
+  const { addFlow } = useContext(TabsContext);
 
   useEffect(() => {
     handleGetComponents();
@@ -51,6 +58,7 @@ export default function StorePage(): JSX.Element {
         console.log(res);
         setLoading(false);
         setErrorApiKey(false);
+        setData(res);
       })
       .catch((err) => {
         setLoading(false);
@@ -75,6 +83,27 @@ export default function StorePage(): JSX.Element {
   const noApiKey = !apiKey;
   const errorMessage = errorApiKey && !loading;
   const renderComponents = !loading && !errorApiKey && apiKey;
+
+  function handleFork(flowId: string) {
+    getComponent(flowId).then(
+      (res) => {
+        console.log(res);
+        const newFLow = cloneFLowWithParent(res);
+        saveFlowStore(newFLow).then(
+          (res) => {
+            console.log(res);
+            addFlow(true, newFLow);
+          },
+          (error) => {
+            console.error(error);
+          }
+        );
+      },
+      (error) => {
+        console.log(error);
+      }
+    );
+  }
 
   return (
     <>
@@ -196,6 +225,14 @@ export default function StorePage(): JSX.Element {
                 .map((item, idx) => (
                   <MarketCardComponent key={idx} data={item} onAdd={() => {}} />
                 ))}
+              <button
+                onClick={() => {
+                  console.log(data);
+                  handleFork(data[0].id);
+                }}
+              >
+                test
+              </button>
             </div>
           </div>
         )}
