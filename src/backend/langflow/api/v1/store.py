@@ -55,7 +55,7 @@ def list_components(
     settings_service=Depends(get_settings_service),
 ):
     try:
-        fields = ["id", "name", "description", "user_created"]
+        fields = ["id", "name", "description", "user_created.name", "is_component"]
         if store_api_Key:
             decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
         else:
