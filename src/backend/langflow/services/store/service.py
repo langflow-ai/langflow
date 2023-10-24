@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 from uuid import UUID
 from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
@@ -124,11 +125,21 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ListComponentResponse(**component) for component in results]
 
-    def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
+    def download(
+        self, api_key: str, component_id: str, filter_by_user: bool
+    ) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
         params = {
             "fields": ",".join(["id", "name", "description", "data", "is_component"])
         }
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
         component = self._get(url, api_key, params)
         self.call_webhook(api_key, self.webhook_url, component_id)
 
