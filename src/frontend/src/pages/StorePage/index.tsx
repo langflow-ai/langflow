@@ -55,12 +55,13 @@ export default function StorePage(): JSX.Element {
     setLoading(true);
     getStoreComponents(1, 10)
       .then((res) => {
-        console.log(res);
+        setSearchData(res);
         setLoading(false);
         setErrorApiKey(false);
         setData(res);
       })
       .catch((err) => {
+        setSearchData([]);
         setLoading(false);
         setErrorApiKey(true);
         setErrorData({
