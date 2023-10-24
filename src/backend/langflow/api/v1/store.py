@@ -32,7 +32,7 @@ def get_optional_user_store_api_key(
     return user.store_api_key
 
 
-@router.post("/components/", response_model=ComponentResponse)
+@router.post("/components/", response_model=ComponentResponse, status_code=201)
 def create_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
