@@ -8,7 +8,7 @@ class ComponentResponse(BaseModel):
     id: UUID
     status: Optional[str]
     sort: Optional[int]
-    user_created: Optional[UUID]
+    user_name: Optional[str]
     date_created: Optional[datetime]
     user_updated: Optional[UUID]
     date_updated: Optional[datetime]
