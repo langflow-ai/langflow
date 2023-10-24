@@ -122,6 +122,7 @@ class StoreService(Service):
         headers = {"Authorization": f"Bearer {api_key}"}
         component_dict = component_data.dict(exclude_unset=True)
         # Parent is a UUID, but the store expects a string
+        response = None
         if component_dict.get("parent"):
             component_dict["parent"] = str(component_dict["parent"])
         try:
@@ -132,4 +133,11 @@ class StoreService(Service):
             component = response.json()["data"]
             return ComponentResponse(**component)
         except HTTPError as exc:
+            if response:
+                try:
+                    errors = response.json()
+                    message = errors["errors"][0]["message"]
+                    raise ValueError(message)
+                except UnboundLocalError:
+                    pass
             raise ValueError(f"Upload failed: {exc}")
