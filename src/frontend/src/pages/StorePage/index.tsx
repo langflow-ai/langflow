@@ -87,7 +87,7 @@ export default function StorePage(): JSX.Element {
     getComponent(flowId).then(
       (res) => {
         console.log(res);
-        const newFLow = cloneFLowWithParent(res.data, is_component);
+        const newFLow = cloneFLowWithParent(res.data, res.id, is_component);
         console.log(newFLow);
         saveFlowStore(newFLow).then(
           (res) => {
