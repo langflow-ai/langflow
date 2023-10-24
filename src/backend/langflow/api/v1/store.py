@@ -78,7 +78,7 @@ def read_component(
 
     try:
         decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        component = store_service.get(decrypted, component_id)
+        component = store_service.download(decrypted, component_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
