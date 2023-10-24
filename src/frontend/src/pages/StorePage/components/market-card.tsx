@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { StoreContext } from "../../../contexts/storeContext";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { getComponent, saveFlowStore } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
@@ -17,7 +18,8 @@ import { FlowComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 
 export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
-  const [added, setAdded] = useState(false);
+  const { savedFlows } = useContext(StoreContext);
+  const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
   const flowData = useRef<FlowType>();

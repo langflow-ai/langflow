@@ -16,8 +16,13 @@ import {
 import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
+import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getStoreComponents, searchComponent } from "../../controllers/API";
+import {
+  getStoreComponents,
+  getStoreSavedComponents,
+  searchComponent,
+} from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { FlowComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
@@ -39,14 +44,23 @@ export default function StorePage(): JSX.Element {
   const [searchData, setSearchData] = useState(data);
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setErrorData } = useContext(alertContext);
-  const { addFlow } = useContext(TabsContext);
+  const { setSavedFlows } = useContext(StoreContext);
+
+  async function getSavedComponents() {
+    setLoading(true);
+    const result = await getStoreSavedComponents();
+    let savedIds = new Set<string>();
+    result.forEach((flow) => {
+      savedIds.add(flow.id);
+    });
+    setSavedFlows(savedIds);
+  }
 
   useEffect(() => {
-    handleGetComponents();
+    getSavedComponents().then((_) => handleGetComponents());
   }, []);
 
   const handleGetComponents = () => {
-    setLoading(true);
     getStoreComponents(1, 10)
       .then((res) => {
         setSearchData(res);
