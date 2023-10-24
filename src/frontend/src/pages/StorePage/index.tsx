@@ -83,14 +83,15 @@ export default function StorePage(): JSX.Element {
   const loadingWithApiKey = loading;
   const renderComponents = !loading;
 
-  function handleFork(flowId: string) {
+  function handleFork(flowId: string, is_component: boolean) {
     getComponent(flowId).then(
       (res) => {
         console.log(res);
-        const newFLow = cloneFLowWithParent(res);
+        const newFLow = cloneFLowWithParent(res.data, is_component);
+        console.log(newFLow);
         saveFlowStore(newFLow).then(
           (res) => {
-            console.log(res);
+            console.log(JSON.parse(JSON.stringify(res)));
             addFlow(true, newFLow);
           },
           (error) => {
@@ -222,12 +223,17 @@ export default function StorePage(): JSX.Element {
                     filteredCategories.has(f.is_component)
                 )
                 .map((item, idx) => (
-                  <MarketCardComponent key={idx} data={item} onAdd={() => {}} />
+                  <MarketCardComponent
+                    key={idx}
+                    data={item}
+                    onAdd={() => {
+                      handleFork(item.id, item.is_component);
+                    }}
+                  />
                 ))}
               <button
                 onClick={() => {
-                  console.log(data);
-                  handleFork(data[0].id);
+                  handleFork(data[0].id, data[0].is_component);
                 }}
               >
                 test
