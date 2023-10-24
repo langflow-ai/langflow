@@ -3,7 +3,7 @@ from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 import httpx
 from httpx import HTTPError
-from langflow.services.store.schema import ComponentResponse
+from langflow.services.store.schema import ComponentResponse, StoreComponentCreate
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -109,11 +109,17 @@ class StoreService(Service):
         component = self._get(url, api_key, params)
         return ComponentResponse(**component)
 
-    def upload(self, api_key: str, component_data: Dict[str, Any]) -> ComponentResponse:
+    def upload(
+        self, api_key: str, component_data: StoreComponentCreate
+    ) -> ComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
+        component_dict = component_data.dict(exclude_unset=True)
+        # Parent is a UUID, but the store expects a string
+        if component_dict.get("parent"):
+            component_dict["parent"] = str(component_dict["parent"])
         try:
             response = httpx.post(
-                self.components_url, headers=headers, json=component_data
+                self.components_url, headers=headers, json=component_dict
             )
             response.raise_for_status()
             component = response.json()["data"]
