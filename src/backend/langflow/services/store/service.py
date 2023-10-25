@@ -72,6 +72,7 @@ class StoreService(Service):
         date_to: Optional[datetime] = None,
         sort: Optional[List[str]] = ["-likes"],
         fields: Optional[List[str]] = None,
+        filter_by_user: bool = False,
     ) -> List[ComponentResponse]:
         # ?sort=sort,-date_created,author.name
 
@@ -103,6 +104,17 @@ class StoreService(Service):
 
         if fields:
             params["fields"] = ",".join(fields)
+
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
+        else:
+            params["filter"] = json.dumps({"status": {"_eq": "public"}})
 
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
