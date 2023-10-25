@@ -579,6 +579,10 @@ export function removeCountFromString(input: string): string {
   return result.trim(); // Trim any leading/trailing spaces
 }
 
+export function createRandomKey(key: string, uid: string): string {
+  return removeCountFromString(key) + ` (${uid})`;
+}
+
 export function sensitiveSort(a: string, b: string): number {
   // Extract the name and number from each string using regular expressions
   const regex = /(.+) \((\w+)\)/;
