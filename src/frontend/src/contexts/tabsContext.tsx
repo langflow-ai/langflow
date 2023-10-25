@@ -508,7 +508,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let data = flow?.data ? flow.data : null;
     if (data) {
       processFlowEdges(flow);
-      processFlowNodes(flow);
+      //prevent node update for now
+      // processFlowNodes(flow);
       //add animation to text type edges
       updateEdges(data.edges);
       // updateNodes(data.nodes, data.edges);
