@@ -1,4 +1,4 @@
-import { NodeType } from "../flow";
+import { FlowType, NodeType } from "../flow";
 
 export type FlowPoolType = {
     //TODO improve the flowPool type
@@ -9,4 +9,5 @@ export type FlowManagerContextType = {
     flowPool: FlowPoolType;
     updateFlowPoolNodes: (nodes:NodeType[]) => void,
     addDataToFlowPool: (data:any,nodeId:string) => void,
+    checkInputandOutput: (flow:FlowType) => boolean,
 }

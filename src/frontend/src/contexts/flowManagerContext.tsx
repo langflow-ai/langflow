@@ -1,12 +1,14 @@
 import { createContext, useState } from "react";
-import { NodeType } from "../types/flow";
+import { FlowType, NodeDataType, NodeType } from "../types/flow";
 import { FlowManagerContextType, FlowPoolType } from "../types/contexts/flowManager";
 import { cloneDeep, flow } from "lodash";
+import { isInputNode, isOutputNode } from "../utils/reactflowUtils";
 
 const initialValue: FlowManagerContextType = {
     flowPool: {},
     updateFlowPoolNodes: (nodes: NodeType[]) => { },
     addDataToFlowPool: (data: any, nodeId: string) => { },
+    checkInputandOutput: (flow:FlowType)=>false
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -31,8 +33,23 @@ export default function FlowManagerProvider({ children }) {
         flowPool[nodeId] = data;
     }
 
+    function checkInputandOutput(flow:FlowType):boolean{
+        let has_input= false;
+        let has_output = false;
+        flow.data?.nodes.forEach(node=>{
+            const nodeData: NodeDataType = node.data as NodeDataType;
+            if(isInputNode(nodeData)){
+                has_input = true;
+            }
+            if(isOutputNode(nodeData)){
+                has_output = true;
+            }
+        })
+        return has_input && has_output;
+    }
+
     return (
-        <flowManagerContext.Provider value={{flowPool,addDataToFlowPool,updateFlowPoolNodes}}>
+        <flowManagerContext.Provider value={{flowPool,addDataToFlowPool,updateFlowPoolNodes,checkInputandOutput}}>
             {children}
         </flowManagerContext.Provider>
     );

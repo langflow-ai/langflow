@@ -37,6 +37,7 @@ export async function buildVertices({
       try {
         const buildResponse = await postBuildVertex(flow, vertexId);
         const buildData = buildResponse.data;
+        console.log(buildData);
         if (onProgressUpdate) {
           const progress =
             verticesOrder.indexOf(vertexId) / verticesOrder.length;
@@ -49,7 +50,7 @@ export async function buildVertices({
         buildResults.push(buildData.valid);
       } catch (error) {
         if (onBuildError) {
-          onBuildError("Error Building Component", error);
+          onBuildError("Error Building Component", [error]);
         }
       }
     }
@@ -63,7 +64,7 @@ export async function buildVertices({
     // Callback for handling errors
     if (onBuildError) {
       if (onBuildError) {
-        onBuildError("Error Building Component", error);
+        onBuildError("Error Building Component", [error]);
       }
     }
   }

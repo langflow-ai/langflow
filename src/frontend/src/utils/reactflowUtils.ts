@@ -6,9 +6,9 @@ import {
   ReactFlowInstance,
   ReactFlowJsonObject,
 } from "reactflow";
-import { specialCharsRegex } from "../constants/constants";
+import { INPUT_TYPES, OUTPUT_TYPES, specialCharsRegex } from "../constants/constants";
 import { APITemplateType } from "../types/api";
-import { FlowType, NodeType } from "../types/flow";
+import { FlowType, NodeDataType, NodeType } from "../types/flow";
 import {
   cleanEdgesType,
   unselectAllNodesType,
@@ -376,4 +376,12 @@ export function convertValuesToNumbers(arr) {
     }
     return newObj;
   });
+}
+
+export function isInputNode(nodeData:NodeDataType):boolean{
+  return INPUT_TYPES.has(nodeData.type);
+}
+
+export function isOutputNode(nodeData:NodeDataType):boolean{
+  return OUTPUT_TYPES.has(nodeData.type);
 }
