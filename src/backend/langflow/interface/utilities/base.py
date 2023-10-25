@@ -28,10 +28,14 @@ class UtilityCreator(LangChainTypeCreator):
         """
         if self.type_dict is None:
             settings_service = get_settings_service()
-            self.type_dict = {
-                utility_name: import_class(f"langchain.utilities.{utility_name}")
-                for utility_name in utilities.__all__
-            }
+            self.type_dict = {}
+            for utility_name in utilities.__all__:
+                try:
+                    imported = import_class(f"langchain.utilities.{utility_name}")
+                    self.type_dict[utility_name] = imported
+                except Exception:
+                    pass
+
             self.type_dict["SQLDatabase"] = utilities.SQLDatabase
             # Filter according to settings.utilities
             self.type_dict = {
