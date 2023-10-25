@@ -35,6 +35,7 @@ format:
 	cd src/frontend && npm run format
 
 lint:
+	make install_backend
 	poetry run mypy src/backend/langflow
 	poetry run black . --check
 	poetry run ruff . --fix
