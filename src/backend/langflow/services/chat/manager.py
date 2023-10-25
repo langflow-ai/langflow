@@ -1,6 +1,7 @@
 from collections import defaultdict
 import uuid
 from fastapi import WebSocket, status
+from starlette.websockets import WebSocketState
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
 from langflow.services.base import Service
@@ -125,7 +126,8 @@ class ChatService(Service):
     ):
         # Process the graph data and chat message
         chat_inputs = payload.pop("inputs", {})
-        chat_inputs = ChatMessage(message=chat_inputs)
+        chatkey = payload.pop("chatKey", None)
+        chat_inputs = ChatMessage(message=chat_inputs, chatKey=chatkey)
         self.chat_history.add_message(client_id, chat_inputs)
 
         # graph_data = payload
@@ -140,7 +142,7 @@ class ChatService(Service):
             result, intermediate_steps = await process_graph(
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
-                websocket=self.active_connections[client_id],
+                client_id=client_id,
                 session_id=self.connection_ids[client_id],
             )
             self.set_cache(client_id, langchain_object)
@@ -200,11 +202,11 @@ class ChatService(Service):
 
             while True:
                 json_payload = await websocket.receive_json()
-                try:
+                if isinstance(json_payload, str):
                     payload = orjson.loads(json_payload)
-                except Exception:
+                elif isinstance(json_payload, dict):
                     payload = json_payload
-                if "clear_history" in payload:
+                if "clear_history" in payload and payload["clear_history"]:
                     self.chat_history.history[client_id] = []
                     continue
 
@@ -216,23 +218,29 @@ class ChatService(Service):
 
                     else:
                         raise RuntimeError(
-                            f"Could not find a LangChain object for client_id {client_id}"
+                            f"Could not find a build result for client_id {client_id}"
                         )
         except Exception as exc:
             # Handle any exceptions that might occur
-            logger.error(f"Error handling websocket: {exc}")
-            await self.close_connection(
-                client_id=client_id,
-                code=status.WS_1011_INTERNAL_ERROR,
-                reason=str(exc)[:120],
-            )
-        finally:
-            try:
+            logger.exception(f"Error handling websocket: {exc}")
+            if websocket.client_state == WebSocketState.CONNECTED:
                 await self.close_connection(
                     client_id=client_id,
-                    code=status.WS_1000_NORMAL_CLOSURE,
-                    reason="Client disconnected",
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason=str(exc)[:120],
                 )
+            elif websocket.client_state == WebSocketState.DISCONNECTED:
+                self.disconnect(client_id)
+
+        finally:
+            try:
+                # first check if the connection is still open
+                if websocket.client_state == WebSocketState.CONNECTED:
+                    await self.close_connection(
+                        client_id=client_id,
+                        code=status.WS_1000_NORMAL_CLOSURE,
+                        reason="Client disconnected",
+                    )
             except Exception as exc:
                 logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)

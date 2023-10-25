@@ -1,7 +1,7 @@
 from langflow import CustomComponent
 
 from langchain.llms.base import BaseLLM
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
 

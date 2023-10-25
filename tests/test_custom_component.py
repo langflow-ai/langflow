@@ -20,7 +20,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
 import requests

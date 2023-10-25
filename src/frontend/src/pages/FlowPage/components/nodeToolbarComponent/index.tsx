@@ -11,12 +11,17 @@ import {
 import { TabsContext } from "../../../../contexts/tabsContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import {
+  expandGroupNode,
+  updateFlowPosition,
+} from "../../../../utils/reactflowUtils";
 import { classNames, getRandomKeyByssmm } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
   setData,
   deleteNode,
+  position,
   setShowNode,
   numberOfHandles,
   showNode,
@@ -47,6 +52,8 @@ export default function NodeToolbarComponent({
     return true;
   }
   const isMinimal = canMinimize();
+  const isGroup = data.node?.flow ? true : false;
+
   const { paste } = useContext(TabsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -64,6 +71,10 @@ export default function NodeToolbarComponent({
     }
     if (event.includes("disabled")) {
       return;
+    }
+    if (event.includes("ungroup")) {
+      updateFlowPosition(position, data.node?.flow!);
+      expandGroupNode(data, reactFlowInstance);
     }
   };
 
@@ -134,11 +145,11 @@ export default function NodeToolbarComponent({
             </a>
           </ShadTooltip>
 
-          {isMinimal ? (
+          {isMinimal || isGroup ? (
             <Select onValueChange={handleSelectChange} value={selectedValue}>
               <ShadTooltip content="More" side="top">
                 <SelectTrigger>
-                  <div>
+                  <div id="advancedIcon">
                     <div
                       className={classNames(
                         "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
@@ -163,6 +174,7 @@ export default function NodeToolbarComponent({
                   }
                 >
                   <div
+                    id="editAdvancedBtn"
                     className={
                       "flex " +
                       (nodeLength == 0
@@ -179,7 +191,7 @@ export default function NodeToolbarComponent({
                 </SelectItem>
                 {isMinimal && (
                   <SelectItem value={getRandomKeyByssmm() + "show"}>
-                    <div className="flex">
+                    <div className="flex" id="editAdvanced">
                       <IconComponent
                         name={showNode ? "Minimize2" : "Maximize2"}
                         className="relative top-0.5 mr-2 h-4 w-4"
@@ -188,11 +200,22 @@ export default function NodeToolbarComponent({
                     </div>
                   </SelectItem>
                 )}
+                {isGroup && (
+                  <SelectItem value={getRandomKeyByssmm() + "ungroup"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Ungroup"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Ungroup{" "}
+                    </div>
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           ) : (
             <ShadTooltip content="Edit" side="top">
-              <div>
+              <div id="editAdvancedIcon">
                 <button
                   disabled={nodeLength === 0}
                   onClick={() => setShowModalAdvanced(true)}
@@ -222,29 +245,6 @@ export default function NodeToolbarComponent({
               <></>
             </EditNodeModal>
           )}
-
-          {/* 
-          <ShadTooltip content="Edit" side="top">
-            <div>
-              <EditNodeModal
-                data={data}
-                setData={setData}
-                nodeLength={nodeLength}
-              >
-                <div
-                  className={classNames(
-                    "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                      (!canMinimize() && " rounded-r-md ") +
-                      (nodeLength == 0
-                        ? " text-muted-foreground"
-                        : " text-foreground")
-                  )}
-                >
-                  <IconComponent name="Settings2" className="h-4 w-4 " />
-                </div>
-              </EditNodeModal>
-            </div>
-          </ShadTooltip> */}
         </span>
       </div>
     </>

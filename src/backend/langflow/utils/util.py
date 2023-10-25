@@ -11,6 +11,10 @@ from langflow.utils import constants
 from langchain.schema import Document
 
 
+def remove_ansi_escape_codes(text):
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+
+
 def build_template_from_function(
     name: str, type_to_loader_dict: Dict, add_function: bool = False
 ):
@@ -187,7 +191,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
@@ -428,7 +434,7 @@ def set_headers_value(value: Dict[str, Any]) -> None:
     """
     Sets the value for the 'headers' key.
     """
-    value["value"] = """{'Authorization': 'Bearer <token>'}"""
+    value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
 def add_options_to_field(

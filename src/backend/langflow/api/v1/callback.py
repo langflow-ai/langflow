@@ -1,15 +1,17 @@
 import asyncio
+from uuid import UUID
 
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
 
-from langflow.api.v1.schemas import ChatResponse
+from langflow.api.v1.schemas import ChatResponse, PromptResponse
 
 
-from typing import Any, Dict, List, Union
-from fastapi import WebSocket
+from typing import Any, Dict, List, Optional
+from langflow.services.getters import get_chat_service
 
 
-from langchain.schema import AgentAction, LLMResult, AgentFinish
+from langflow.utils.util import remove_ansi_escape_codes
+from langchain.schema import AgentAction, AgentFinish
 from loguru import logger
 
 
@@ -17,38 +19,14 @@ from loguru import logger
 class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
-    def __init__(self, websocket: WebSocket):
-        self.websocket = websocket
+    def __init__(self, client_id: str):
+        self.chat_service = get_chat_service()
+        self.client_id = client_id
+        self.websocket = self.chat_service.active_connections[self.client_id]
 
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.websocket.send_json(resp.dict())
-
-    async def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
-    ) -> Any:
-        """Run when LLM starts running."""
-
-    async def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
-        """Run when LLM ends running."""
-
-    async def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
-        """Run when LLM errors."""
-
-    async def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
-    ) -> Any:
-        """Run when chain starts running."""
-
-    async def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
-        """Run when chain ends running."""
-
-    async def on_chain_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
-        """Run when chain errors."""
 
     async def on_tool_start(
         self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -95,8 +73,14 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
             logger.error(f"Error sending response: {exc}")
 
     async def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> Any:
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> None:
         """Run when tool errors."""
 
     async def on_text(self, text: str, **kwargs: Any) -> Any:
@@ -104,6 +88,14 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         # This runs when first sending the prompt
         # to the LLM, adding it will send the final prompt
         # to the frontend
+        if "Prompt after formatting" in text:
+            text = text.replace("Prompt after formatting:\n", "")
+            text = remove_ansi_escape_codes(text)
+            resp = PromptResponse(
+                prompt=text,
+            )
+            await self.websocket.send_json(resp.dict())
+            self.chat_service.chat_history.add_message(self.client_id, resp)
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"
@@ -131,8 +123,10 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
 class StreamingLLMCallbackHandler(BaseCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
-    def __init__(self, websocket):
-        self.websocket = websocket
+    def __init__(self, client_id: str):
+        self.chat_service = get_chat_service()
+        self.client_id = client_id
+        self.websocket = self.chat_service.active_connections[self.client_id]
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")

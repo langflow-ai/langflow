@@ -4,7 +4,7 @@ from typing import Any, List
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
@@ -288,6 +288,24 @@ def add_base_classes(frontend_node, return_types: List[str]):
                 frontend_node.get("base_classes").append(base_class)
 
 
+def add_output_types(frontend_node, return_types: List[str]):
+    """Add output types to the frontend node"""
+    for return_type in return_types:
+        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Invalid return type should be one of: "
+                        f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
+
+        frontend_node.get("output_types").append(return_type)
+
+
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
     try:
@@ -312,6 +330,9 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         )
         logger.debug("Added code field")
         add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        add_output_types(
             frontend_node, custom_component.get_function_entrypoint_return_type
         )
         logger.debug("Added base classes")

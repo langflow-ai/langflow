@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Type
 
-from langchain import SQLDatabase, utilities
+from langchain import utilities
 
 from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
@@ -32,7 +32,7 @@ class UtilityCreator(LangChainTypeCreator):
                 utility_name: import_class(f"langchain.utilities.{utility_name}")
                 for utility_name in utilities.__all__
             }
-            self.type_dict["SQLDatabase"] = SQLDatabase
+            self.type_dict["SQLDatabase"] = utilities.SQLDatabase
             # Filter according to settings.utilities
             self.type_dict = {
                 name: utility

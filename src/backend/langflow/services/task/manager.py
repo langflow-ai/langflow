@@ -35,6 +35,10 @@ class TaskService(Service):
         self.backend = self.get_backend()
         self.use_celery = USE_CELERY
 
+    @property
+    def backend_name(self) -> str:
+        return self.backend.name
+
     def get_backend(self) -> TaskBackend:
         if USE_CELERY:
             from langflow.services.task.backends.celery import CeleryBackend

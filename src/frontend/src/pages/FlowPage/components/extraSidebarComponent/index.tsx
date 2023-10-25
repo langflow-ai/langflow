@@ -76,9 +76,11 @@ export default function ExtraSidebar(): JSX.Element {
   }, []);
 
   function handleBlur() {
-    setFilterData(data);
-    setFilterEdge([]);
-    setSearch("");
+    if (!search && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
   }
 
   useEffect(() => {
@@ -134,7 +136,7 @@ export default function ExtraSidebar(): JSX.Element {
             <button
               className="extra-side-bar-buttons"
               onClick={() => {
-                uploadFlow();
+                uploadFlow(false);
               }}
             >
               <IconComponent name="FileUp" className="side-bar-button-size " />
@@ -203,7 +205,7 @@ export default function ExtraSidebar(): JSX.Element {
           name="search"
           id="search"
           placeholder="Search"
-          className="nopan nodrag noundo nocopy input-search"
+          className="nopan nodelete nodrag noundo nocopy input-search"
           onChange={(event) => {
             handleSearchInput(event.target.value);
             // Set search input state
@@ -269,7 +271,13 @@ export default function ExtraSidebar(): JSX.Element {
                               );
                             }}
                           >
-                            <div className="side-bar-components-div-form">
+                            <div
+                              className="side-bar-components-div-form"
+                              id={
+                                "side" +
+                                data[SBSectionName][SBItemName].display_name
+                              }
+                            >
                               <span className="side-bar-components-text">
                                 {data[SBSectionName][SBItemName].display_name}
                               </span>
