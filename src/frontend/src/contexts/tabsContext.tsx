@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
@@ -428,6 +428,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         id: source,
       });
       sourceHandleObject.id = source;
+
       edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
@@ -452,6 +453,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
+          data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className:
             targetHandleObject.type === "Text"
