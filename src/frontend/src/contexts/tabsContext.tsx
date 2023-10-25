@@ -40,7 +40,6 @@ import {
   updateTemplate,
 } from "../utils/reactflowUtils";
 import {
-  IncrementObjectKey,
   getRandomDescription,
   getRandomName,
   getSetFromObject,
@@ -154,6 +153,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (flow.data && flow.is_component) {
+          console.log(flow.data.nodes[0].data);
           storeComponents[(flow.data.nodes[0].data as NodeDataType).type] =
             _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
           return;
@@ -674,12 +674,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     component.node!.official = false;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
-      let { newKey, increment } = IncrementObjectKey(
-        data["custom_components"],
-        key
-      );
-      key = newKey;
-      component.type = newKey;
+      let increment: number;
+      component.type = removeCountFromString(key) + ` (${uid()})`;
       let componentNodes: { [key: string]: APIClassType } = {};
       Object.keys(data["custom_components"]).forEach((key) => {
         componentNodes[key] = data["custom_components"][key];
