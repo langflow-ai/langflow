@@ -237,7 +237,7 @@
   }
 
   .main-page-flows-display {
-    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4;
+    @apply grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3;
   }
 
   .community-page-arrangement {
@@ -495,7 +495,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[200px] cursor-pointer items-center gap-2;
+    @apply flex max-w-[120px] lg:max-w-[200px] cursor-pointer items-center gap-2;
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -505,13 +505,13 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-border bg-background;
+    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
   }
   .header-start-display {
-    @apply flex w-[30%] items-center justify-start gap-2;
+    @apply flex items-center justify-start gap-2;
   }
   .header-end-division {
-    @apply flex w-[30%] justify-end px-2;
+    @apply flex justify-end px-2;
   }
   .header-end-display {
     @apply ml-auto mr-2 flex items-center gap-5;
@@ -535,7 +535,7 @@
     @apply hover:bg-accent hover:text-accent-foreground;
   }
   .header-github-display {
-    @apply -mr-px ml-2 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
+    @apply -mr-px ml-1 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
   }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
