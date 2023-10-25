@@ -3,6 +3,7 @@ import { Link, Search } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
+import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -117,60 +118,58 @@ export default function StorePage(): JSX.Element {
         <span className="community-page-description-text">
           Search flows and components from the community.
         </span>
-        {renderComponents && (
-          <div className="flex w-full flex-col gap-4 p-4">
-            <div className="flex items-center justify-center gap-4">
-              <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-                Added Only <Switch />
-              </div>
-              <div className="relative h-12 w-[35%]">
-                <Input
-                  placeholder="Search Flows and Components"
-                  className="absolute h-12 px-5"
-                  onChange={(e) => {
-                    setInputText(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch(inputText);
-                    }
-                  }}
-                  value={inputText}
-                />
-                <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
-              </div>
-              <div className="flex items-center justify-center text-sm">
-                <Button
-                  onClick={() => {
-                    handleSearch(inputText);
-                  }}
-                >
-                  Search
-                </Button>
-              </div>
-              <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-                <Select
-                  onValueChange={(value) => {
-                    const filter = value === "Flow" ? false : true;
-                    const search = data.filter(
-                      (f) => f.is_component === filter
-                    );
-                    value === "" ? setSearchData(data) : setSearchData(search);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Flows" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Flow">Flows</SelectItem>
-                    <SelectItem value="Component">Components</SelectItem>
-                    <SelectItem value="">Both</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="flex w-full flex-col gap-4 p-4">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
+              Added Only <Switch />
             </div>
-            <div className="flex items-center justify-center gap-4">
-              {Array.from(new Set(searchData.map((i) => i.is_component))).map(
+            <div className="relative h-12 w-[35%]">
+              <Input
+                placeholder="Search Flows and Components"
+                className="absolute h-12 px-5"
+                onChange={(e) => {
+                  setInputText(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch(inputText);
+                  }
+                }}
+                value={inputText}
+              />
+              <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
+            </div>
+            <div className="flex items-center justify-center text-sm">
+              <Button
+                onClick={() => {
+                  handleSearch(inputText);
+                }}
+              >
+                Search
+              </Button>
+            </div>
+            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
+              <Select
+                onValueChange={(value) => {
+                  const filter = value === "Flow" ? false : true;
+                  const search = data.filter((f) => f.is_component === filter);
+                  value === "" ? setSearchData(data) : setSearchData(search);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Flows" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Flow">Flows</SelectItem>
+                  <SelectItem value="Component">Components</SelectItem>
+                  <SelectItem value="">Both</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex h-2 items-center justify-center gap-4">
+            {renderComponents &&
+              Array.from(new Set(searchData.map((i) => i.is_component))).map(
                 (i, idx) => (
                   <Badge
                     onClick={() => {
@@ -200,9 +199,16 @@ export default function StorePage(): JSX.Element {
                   </Badge>
                 )
               )}
-            </div>
-            <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {searchData
+          </div>
+          <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {loadingWithApiKey ? (
+              <>
+                <SkeletonCardComponent />
+                <SkeletonCardComponent />
+                <SkeletonCardComponent />
+              </>
+            ) : (
+              searchData
                 .filter(
                   (f) =>
                     Array.from(filteredCategories).length === 0 ||
@@ -210,14 +216,10 @@ export default function StorePage(): JSX.Element {
                 )
                 .map((item, idx) => (
                   <MarketCardComponent key={idx} data={item} />
-                ))}
-            </div>
+                ))
+            )}
           </div>
-        )}
-
-        {loadingWithApiKey && (
-          <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
-        )}
+        </div>
       </div>
     </>
   );
