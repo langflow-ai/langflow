@@ -80,7 +80,7 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
-  saveComponent: (component: NodeDataType) => {},
+  saveComponent: async (component: NodeDataType) => "",
   deleteComponent: (id: string, key: string) => {},
 };
 
@@ -700,7 +700,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           ` (${increment})`;
       }
     }
-    addFlow(true, createFlowComponent(component));
+    return addFlow(true, createFlowComponent(component));
   }
 
   function deleteComponent(id: string, key: string) {

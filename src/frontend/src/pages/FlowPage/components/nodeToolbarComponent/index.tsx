@@ -70,20 +70,21 @@ export default function NodeToolbarComponent({
 
   function handleShareComponent() {
     const componentFlow = cloneDeep(data);
-    saveFlowStore(createFlowComponent(componentFlow)).then(
-      () => {
-        saveComponent(componentFlow);
-        setSuccessData({
-          title: "Component shared successfully",
-        });
-      },
-      (err) => {
-        setErrorData({
-          title: "Error sharing component",
-          list: [err["response"]["data"]["detail"]],
-        });
-      }
-    );
+    saveComponent(componentFlow).then(() => {
+      saveFlowStore(createFlowComponent(componentFlow)).then(
+        (_) => {
+          setSuccessData({
+            title: "Component shared successfully",
+          });
+        },
+        (err) => {
+          setErrorData({
+            title: "Error sharing component",
+            list: [err["response"]["data"]["detail"]],
+          });
+        }
+      );
+    });
   }
   const handleSelectChange = (event) => {
     switch (event) {
@@ -98,7 +99,6 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data)));
         break;
       case "Share":
-        console.log("Share");
         setShowconfirmShare(true);
         break;
       case "SaveAll":

@@ -36,7 +36,7 @@ export type TabsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
-  saveComponent: (component: NodeDataType) => void;
+  saveComponent: (component: NodeDataType) => Promise<String | undefined>;
   deleteComponent: (id: string, key: string) => void;
 };
 
