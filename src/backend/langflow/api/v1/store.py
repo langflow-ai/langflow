@@ -22,30 +22,36 @@ from langflow.services.store.service import StoreService
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
 
-def get_user_store_api_key(user: User = Depends(auth_utils.get_current_active_user)):
+def get_user_store_api_key(
+    user: User = Depends(auth_utils.get_current_active_user),
+    settings_service=Depends(get_settings_service),
+):
     if not user.store_api_key:
         raise HTTPException(
             status_code=400, detail="You must have a store API key set."
         )
-    return user.store_api_key
+    decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+    return decrypted
 
 
 def get_optional_user_store_api_key(
     user: User = Depends(auth_utils.get_current_active_user),
+    settings_service=Depends(get_settings_service),
 ):
-    return user.store_api_key
+    if not user.store_api_key:
+        return None
+    decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+    return decrypted
 
 
 @router.post("/components/", response_model=ComponentResponse, status_code=201)
 def create_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
-    settings_service=Depends(get_settings_service),
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
-        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        return store_service.upload(decrypted, component)
+        return store_service.upload(store_api_Key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -57,16 +63,11 @@ def list_components(
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_optional_user_store_api_key),
-    settings_service=Depends(get_settings_service),
 ):
     try:
         fields = ["id", "name", "description", "user_created.name", "is_component"]
-        if store_api_Key:
-            decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        else:
-            decrypted = None
         result = store_service.list_components(
-            decrypted, page, limit, fields=fields, filter_by_user=filter_by_user
+            store_api_Key, page, limit, fields=fields, filter_by_user=filter_by_user
         )
         return result
     except Exception as exc:
@@ -78,13 +79,11 @@ def read_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
-    settings_service=Depends(get_settings_service),
 ):
     # If the component is from the store, we need to get it from the store
 
     try:
-        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        component = store_service.download(decrypted, component_id)
+        component = store_service.download(store_api_Key, component_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -104,15 +103,14 @@ async def search_endpoint(
     date_from: Optional[datetime] = Query(None),
     date_to: Optional[datetime] = Query(None),
     sort: Optional[List[str]] = Query(None),
+    filter_by_user: bool = Query(False),
     fields: Optional[List[str]] = Query(None),
     store_service: "StoreService" = Depends(get_store_service),
     store_api_Key: str = Depends(get_optional_user_store_api_key),
-    settings_service=Depends(get_settings_service),
 ):
     try:
-        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
         return store_service.search(
-            api_key=decrypted,
+            api_key=store_api_Key,
             query=query,
             page=page,
             limit=limit,
@@ -122,6 +120,7 @@ async def search_endpoint(
             date_to=date_to,
             sort=sort,
             fields=fields,
+            filter_by_user=filter_by_user,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
