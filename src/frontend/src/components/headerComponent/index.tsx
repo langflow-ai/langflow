@@ -6,6 +6,7 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
+import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
@@ -27,6 +28,7 @@ export default function Header(): JSX.Element {
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
+  const { hasStore } = useContext(StoreContext);
   const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
 
@@ -64,16 +66,18 @@ export default function Header(): JSX.Element {
             <div className="flex-1">Community Examples</div>
           </Button>
         </Link>
-        <Link to="/store">
-          <Button
-            className="gap-2"
-            variant={location.pathname === "/store" ? "primary" : "secondary"}
-            size="sm"
-          >
-            <IconComponent name="Store" className="h-4 w-4" />
-            <div className="flex-1">Store</div>
-          </Button>
-        </Link>
+        {hasStore && (
+          <Link to="/store">
+            <Button
+              className="gap-2"
+              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              size="sm"
+            >
+              <IconComponent name="Store" className="h-4 w-4" />
+              <div className="flex-1">Store</div>
+            </Button>
+          </Link>
+        )}
       </div>
       <div className="header-end-division">
         <div className="header-end-display">

@@ -662,3 +662,17 @@ export async function searchComponent(
     throw error;
   }
 }
+
+export async function checkHasStore() {
+  try {
+    const res = await api.get(
+      `https://65384701a543859d1bb15e63.mockapi.io/Store`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}

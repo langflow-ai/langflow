@@ -3,6 +3,7 @@ import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
+import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
@@ -11,6 +12,7 @@ import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import FlowsComponent from "./pages/MainPage/components/flows";
+import SavedComponents from "./pages/MainPage/components/saved-components";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
@@ -38,6 +40,14 @@ const Router = () => {
       >
         <Route path="flows" element={<FlowsComponent />} />
         <Route path="components" element={<ComponentsComponent />} />
+        <Route
+          path="saved-components"
+          element={
+            <StoreGuard>
+              <SavedComponents />
+            </StoreGuard>
+          }
+        />
       </Route>
       <Route
         path="/community"
@@ -51,10 +61,13 @@ const Router = () => {
         path="/store"
         element={
           <ProtectedRoute>
-            <StorePage />
+            <StoreGuard>
+              <StorePage />
+            </StoreGuard>
           </ProtectedRoute>
         }
       />
+
       <Route path="/flow/:id/">
         <Route
           path=""

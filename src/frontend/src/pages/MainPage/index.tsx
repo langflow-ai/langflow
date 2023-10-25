@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage(): JSX.Element {
   const {
@@ -20,6 +21,7 @@ export default function HomePage(): JSX.Element {
     isLoading,
   } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
+  const { hasStore } = useContext(StoreContext);
   const dropdownOptions = [
     {
       name: "Import from JSON",
@@ -39,6 +41,13 @@ export default function HomePage(): JSX.Element {
       href: "/components",
     },
   ];
+
+  if (hasStore) {
+    sidebarNavItems.push({
+      title: "Saved Components",
+      href: "/saved-components",
+    });
+  }
 
   // Set a null id
   useEffect(() => {
