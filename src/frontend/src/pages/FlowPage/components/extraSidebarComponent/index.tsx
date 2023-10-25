@@ -228,7 +228,7 @@ export default function ExtraSidebar(): JSX.Element {
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={index}
+                key={index + search}
                 button={{
                   title: nodeNames[SBSectionName] ?? nodeNames.unknown,
                   Icon:
