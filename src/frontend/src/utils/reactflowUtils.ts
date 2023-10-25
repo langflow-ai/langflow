@@ -1097,3 +1097,8 @@ export function downloadNode(NodeFLow: FlowType) {
   element.download = `${NodeFLow.name}.json`;
   element.click();
 }
+
+export function updateComponentNameAndType(
+  data: any,
+  component: NodeDataType
+) {}
