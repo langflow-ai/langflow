@@ -138,9 +138,7 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ListComponentResponse(**component) for component in results]
 
-    def download(
-        self, api_key: str, component_id: str, filter_by_user: bool
-    ) -> DownloadComponentResponse:
+    def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
         params = {
             "fields": ",".join(["id", "name", "description", "data", "is_component"])
