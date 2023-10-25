@@ -19,7 +19,7 @@
 </p>
 
 <a href="https://github.com/logspace-ai/langflow">
-    <img width="100%" src="https://github.com/logspace-ai/langflow/blob/main/img/langflow-demo.gif?raw=true"></a>
+    <img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/img/langflow-demo.gif?raw=true"></a>
 
 <p>
 </p>
@@ -76,7 +76,7 @@ python -m langflow
 or
 
 ```shell
-langflow # or langflow --help
+langflow run # or langflow --help
 ```
 
 ### HuggingFace Spaces
@@ -92,7 +92,7 @@ Langflow provides a command-line interface (CLI) for easy management and configu
 You can run the Langflow using the following command:
 
 ```shell
-langflow [OPTIONS]
+langflow run [OPTIONS]
 ```
 
 Each option is detailed below:
@@ -131,7 +131,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
-
 ## Deploy on Railway
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
@@ -144,7 +143,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://langchain.readthedocs.io/en/latest/reference.html) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://docs.langchain.com/docs/category/components) to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 

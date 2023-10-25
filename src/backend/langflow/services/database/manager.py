@@ -6,6 +6,7 @@ from langflow.services.database.utils import Result, TableResults
 from langflow.services.getters import get_settings_service
 from sqlalchemy import inspect
 import sqlalchemy as sa
+from sqlalchemy.exc import OperationalError
 from sqlmodel import SQLModel, Session, create_engine
 from loguru import logger
 from alembic.config import Config
@@ -58,6 +59,27 @@ class DatabaseService(Service):
         with Session(self.engine) as session:
             yield session
 
+    def migrate_flows_if_auto_login(self):
+        # if auto_login is enabled, we need to migrate the flows
+        # to the default superuser if they don't have a user id
+        # associated with them
+        settings_service = get_settings_service()
+        if settings_service.auth_settings.AUTO_LOGIN:
+            with Session(self.engine) as session:
+                flows = (
+                    session.query(models.Flow)
+                    .filter(models.Flow.user_id == None)  # noqa
+                    .all()
+                )
+                if flows:
+                    logger.debug("Migrating flows to default superuser")
+                    username = settings_service.auth_settings.SUPERUSER
+                    user = get_user_by_username(session, username)
+                    for flow in flows:
+                        flow.user_id = user.id
+                    session.commit()
+                    logger.debug("Flows migrated successfully")
+
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
@@ -93,7 +115,35 @@ class DatabaseService(Service):
 
         return True
 
+    def init_alembic(self):
+        logger.info("Initializing alembic")
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option("script_location", str(self.script_location))
+        alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
+        command.stamp(alembic_cfg, "head")
+        logger.info("Alembic initialized")
+
     def run_migrations(self):
+        # First we need to check if alembic has been initialized
+        # If not, we need to initialize it
+        # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
+        # We need to check if the alembic_version table exists
+        # if not, we need to initialize alembic
+        with Session(self.engine) as session:
+            # If the table does not exist it throws an error
+            # so we need to catch it
+            try:
+                session.execute("SELECT * FROM alembic_version")
+            except Exception:
+                logger.info("Alembic not initialized")
+                try:
+                    self.init_alembic()
+                except Exception as exc:
+                    logger.error(f"Error initializing alembic: {exc}")
+                    raise RuntimeError("Error initializing alembic") from exc
+            else:
+                logger.info("Alembic already initialized")
+
         logger.info(f"Running DB migrations in {self.script_location}")
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -133,19 +183,31 @@ class DatabaseService(Service):
         return results
 
     def create_db_and_tables(self):
-        logger.debug("Creating database and tables")
-        try:
-            SQLModel.metadata.create_all(self.engine)
-        except Exception as exc:
-            logger.error(f"Error creating database and tables: {exc}")
-            raise RuntimeError("Error creating database and tables") from exc
-
-        # Now check if the table "flow" exists, if not, something went wrong
-        # and we need to create the tables again.
         from sqlalchemy import inspect
 
         inspector = inspect(self.engine)
+        table_names = inspector.get_table_names()
         current_tables = ["flow", "user", "apikey"]
+
+        if table_names and all(table in table_names for table in current_tables):
+            logger.debug("Database and tables already exist")
+            return
+
+        logger.debug("Creating database and tables")
+
+        for table in SQLModel.metadata.sorted_tables:
+            try:
+                table.create(self.engine, checkfirst=True)
+            except OperationalError as oe:
+                logger.warning(
+                    f"Table {table} already exists, skipping. Exception: {oe}"
+                )
+            except Exception as exc:
+                logger.error(f"Error creating table {table}: {exc}")
+                raise RuntimeError(f"Error creating table {table}") from exc
+
+        # Now check if the required tables exist, if not, something went wrong.
+        inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
         for table in current_tables:
             if table not in table_names:

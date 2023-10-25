@@ -146,8 +146,8 @@ export async function updateFlowInDatabase(
       description: updatedFlow.description,
     });
 
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
     }
     return response.data;
   } catch (error) {
@@ -399,7 +399,6 @@ export async function renewAccessToken(token: string) {
       return await api.post(`${BASE_URL_API}refresh?token=${token}`);
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }

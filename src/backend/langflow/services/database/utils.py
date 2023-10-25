@@ -13,7 +13,17 @@ def initialize_database():
     logger.debug("Initializing database")
     from langflow.services import service_manager, ServiceType
 
-    database_service = service_manager.get(ServiceType.DATABASE_SERVICE)
+    database_service: "DatabaseService" = service_manager.get(
+        ServiceType.DATABASE_SERVICE
+    )
+    try:
+        database_service.create_db_and_tables()
+    except Exception as exc:
+        # if the exception involves tables already existing
+        # we can ignore it
+        if "already exists" not in str(exc):
+            logger.error(f"Error creating DB and tables: {exc}")
+            raise RuntimeError("Error creating DB and tables") from exc
     try:
         database_service.check_schema_health()
     except Exception as exc:
@@ -22,7 +32,11 @@ def initialize_database():
     try:
         database_service.run_migrations()
     except CommandError as exc:
-        if "Can't locate revision identified by" not in str(exc):
+        # if "overlaps with other requested revisions" or "Can't locate revision identified by"
+        # are not in the exception, we can't handle it
+        if "overlaps with other requested revisions" not in str(
+            exc
+        ) and "Can't locate revision identified by" not in str(exc):
             raise exc
         # This means there's wrong revision in the DB
         # We need to delete the alembic_version table
@@ -39,7 +53,6 @@ def initialize_database():
         if "already exists" not in str(exc):
             logger.error(f"Error running migrations: {exc}")
             raise RuntimeError("Error running migrations") from exc
-    database_service.create_db_and_tables()
     logger.debug("Database initialized")
 
 

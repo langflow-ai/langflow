@@ -189,7 +189,7 @@ class InitializeAgentNode(FrontendNode):
             ),
             TemplateField(
                 field_type="Tool",
-                required=False,
+                required=True,
                 show=True,
                 name="tools",
                 is_list=True,

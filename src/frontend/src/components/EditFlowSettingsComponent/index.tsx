@@ -67,12 +67,12 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           )}
         </div>
         <Input
-          className="nopan nodrag noundo nocopy mt-2 font-normal"
+          className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
           onChange={handleNameChange}
           type="text"
           name="name"
           value={name ?? ""}
-          placeholder="File name"
+          placeholder="Flow name"
           id="name"
           maxLength={maxLength}
         />
@@ -86,7 +86,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           name="description"
           id="description"
           onChange={handleDescriptionChange}
-          value={description}
+          value={description!}
           placeholder="Flow description"
           className="mt-2 max-h-[100px] font-normal"
           rows={3}

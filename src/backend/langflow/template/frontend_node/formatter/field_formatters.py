@@ -145,7 +145,7 @@ class HeadersDefaultValueFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
         key = field.name
         if key == "headers":
-            field.value = """{'Authorization': 'Bearer <token>'}"""
+            field.value = """{"Authorization": "Bearer <token>"}"""
 
 
 class DictCodeFileFormatter(FieldFormatter):
