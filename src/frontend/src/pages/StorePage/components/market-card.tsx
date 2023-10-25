@@ -1,5 +1,5 @@
 import { Link, ToyBrick } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
@@ -24,6 +24,10 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   const { addFlow } = useContext(TabsContext);
   const flowData = useRef<FlowType>();
 
+  useEffect(() => {
+    setAdded(savedFlows.has(data.id) ? true : false);
+  }, [added]);
+
   function handleAdd() {
     getComponent(data.id).then(
       (res) => {
@@ -47,7 +51,16 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   }
 
   function handleInstall() {
-    addFlow(true, flowData.current!);
+    if (flowData.current) {
+      addFlow(true, flowData.current!);
+    } else {
+      getComponent(data.id).then((res) => {
+        console.log(res);
+        const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
+        flowData.current = newFLow;
+        addFlow(true, newFLow);
+      });
+    }
   }
 
   function handleFork(flowId: string, is_component: boolean) {
