@@ -29,6 +29,7 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   }, [added]);
 
   function handleAdd() {
+    setLoading(true);
     getComponent(data.id).then(
       (res) => {
         console.log(res);
@@ -160,7 +161,6 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
               size="sm"
               className="whitespace-nowrap "
               onClick={() => {
-                setLoading(true);
                 if (!added) {
                   handleAdd();
                 } else {
