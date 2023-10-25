@@ -23,5 +23,7 @@ class SQLModelSerializable(SQLModel):
     # TODO[pydantic]: The following keys were removed: `json_loads`, `json_dumps`.
     # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
     model_config = ConfigDict(
-        from_attributes=True, json_loads=orjson.loads, json_dumps=orjson_dumps
+        from_attributes=True,
+        # json_loads=orjson.loads,
+        # json_dumps=orjson_dumps
     )
