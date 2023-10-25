@@ -147,7 +147,7 @@ class StoreService(Service):
             )
         else:
             params["filter"] = params["filter"] = json.dumps(
-                {"_or": [{"status": {"_eq": "public"}}, {"status": {"_eq": "Public"}}]}
+                {"status": {"_in": ["public", "Public"]}}
             )
 
         results = self._get(self.components_url, api_key, params)
