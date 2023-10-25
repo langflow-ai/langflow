@@ -123,7 +123,7 @@ class StoreService(Service):
         self,
         api_key: str,
         page: int = 1,
-        limit: int = 10,
+        limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
     ) -> List[ListComponentResponse]:
@@ -136,9 +136,6 @@ class StoreService(Service):
         )
         # Only public components or the ones created by the user
         # check for "public" or "Public"
-        params["filter"] = json.dumps(
-            {"_or": [{"status": {"_eq": "public"}}, {"status": {"_eq": "Public"}}]}
-        )
 
         if filter_by_user:
             params["deep"] = json.dumps(
@@ -149,7 +146,10 @@ class StoreService(Service):
                 }
             )
         else:
-            params["filter"] = json.dumps({"status": {"_eq": "public"}})
+            params["filter"] = params["filter"] = json.dumps(
+                {"_or": [{"status": {"_eq": "public"}}, {"status": {"_eq": "Public"}}]}
+            )
+
         results = self._get(self.components_url, api_key, params)
         return [ListComponentResponse(**component) for component in results]
 
