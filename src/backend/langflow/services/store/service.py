@@ -135,7 +135,10 @@ class StoreService(Service):
             else ",".join(["id", "name", "description", "count(likes)", "is_component"])
         )
         # Only public components or the ones created by the user
-        params["filter"] = json.dumps({"status": {"_eq": "public"}})
+        # check for "public" or "Public"
+        params["filter"] = json.dumps(
+            {"_or": [{"status": {"_eq": "public"}}, {"status": {"_eq": "Public"}}]}
+        )
 
         if filter_by_user:
             params["deep"] = json.dumps(
