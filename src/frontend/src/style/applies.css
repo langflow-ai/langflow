@@ -123,7 +123,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-sm;
   }
 
   .skeleton-card {
