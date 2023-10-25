@@ -52,6 +52,7 @@ def create_component(
 
 @router.get("/components/", response_model=List[ListComponentResponse])
 def list_components(
+    filter_by_user: bool = Query(False),
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
@@ -64,7 +65,9 @@ def list_components(
             decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
         else:
             decrypted = None
-        result = store_service.list_components(decrypted, page, limit, fields=fields)
+        result = store_service.list_components(
+            decrypted, page, limit, fields=fields, filter_by_user=filter_by_user
+        )
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -73,7 +76,6 @@ def list_components(
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
 def read_component(
     component_id: UUID,
-    filter_by_user: bool = Query(False),
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
     settings_service=Depends(get_settings_service),
@@ -82,7 +84,7 @@ def read_component(
 
     try:
         decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
-        component = store_service.download(decrypted, component_id, filter_by_user)
+        component = store_service.download(decrypted, component_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -105,10 +107,12 @@ async def search_endpoint(
     fields: Optional[List[str]] = Query(None),
     store_service: "StoreService" = Depends(get_store_service),
     store_api_Key: str = Depends(get_optional_user_store_api_key),
+    settings_service=Depends(get_settings_service),
 ):
     try:
+        decrypted = auth_utils.decrypt_api_key(store_api_Key, settings_service)
         return store_service.search(
-            api_key=store_api_Key,
+            api_key=decrypted,
             query=query,
             page=page,
             limit=limit,

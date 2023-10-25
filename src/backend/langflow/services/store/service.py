@@ -113,6 +113,7 @@ class StoreService(Service):
         page: int = 1,
         limit: int = 10,
         fields: Optional[List[str]] = None,
+        filter_by_user: bool = False,
     ) -> List[ListComponentResponse]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
@@ -121,7 +122,19 @@ class StoreService(Service):
             if fields
             else ",".join(["id", "name", "description", "count(likes)", "is_component"])
         )
+        # Only public components or the ones created by the user
+        params["filter"] = json.dumps({"status": {"_eq": "public"}})
 
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
+        else:
+            params["filter"] = json.dumps({"status": {"_eq": "public"}})
         results = self._get(self.components_url, api_key, params)
         return [ListComponentResponse(**component) for component in results]
 
@@ -132,14 +145,7 @@ class StoreService(Service):
         params = {
             "fields": ",".join(["id", "name", "description", "data", "is_component"])
         }
-        if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
-            )
+
         component = self._get(url, api_key, params)
         self.call_webhook(api_key, self.webhook_url, component_id)
 
