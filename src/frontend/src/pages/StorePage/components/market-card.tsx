@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { alertContext } from "../../../contexts/alertContext";
 import { StoreContext } from "../../../contexts/storeContext";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { getComponent, saveFlowStore } from "../../../controllers/API";
@@ -22,6 +23,7 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
+  const { setSuccessData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
 
   useEffect(() => {
@@ -53,13 +55,16 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
 
   function handleInstall() {
     if (flowData.current) {
-      addFlow(true, flowData.current!);
+      addFlow(true, flowData.current!).then(() => {
+        setSuccessData({ title: "Flow Installed" });
+      });
     } else {
       getComponent(data.id).then((res) => {
         console.log(res);
         const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
         flowData.current = newFLow;
         addFlow(true, newFLow);
+        setSuccessData({ title: "Flow Installed" });
       });
     }
   }

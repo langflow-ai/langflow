@@ -171,12 +171,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     setData((prev) => {
       let newData = _.cloneDeep(prev);
-      console.log(newData["custom_components"]);
-      console.log(storeComponents);
+
       const customComponent = newData["custom_components"]["CustomComponent"];
       newData["custom_components"] = cloneDeep(storeComponents);
       newData["custom_components"]["CustomComponent"] = customComponent;
-      console.log(newData["custom_components"]);
       return newData;
     });
   }
