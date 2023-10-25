@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { Link, Search } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
+import PaginatorComponent from "../../components/PaginatorComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import { Badge } from "../../components/ui/badge";
@@ -40,6 +41,11 @@ export default function StorePage(): JSX.Element {
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setErrorData } = useContext(alertContext);
   const { addFlow } = useContext(TabsContext);
+  const [totalRowsCount, setTotalRowsCount] = useState(0);
+  const [size, setPageSize] = useState(10);
+  const [index, setPageIndex] = useState(1);
+
+  function handleChangePagination(pageIndex: number, pageSize: number) {}
 
   useEffect(() => {
     handleGetComponents();
@@ -66,11 +72,15 @@ export default function StorePage(): JSX.Element {
   };
 
   const handleSearch = (inputText: string) => {
+    setLoading(true);
     searchComponent(inputText).then(
       (res) => {
+        setLoading(false);
         setSearchData(res);
       },
-      (error) => {}
+      (error) => {
+        setLoading(false);
+      }
     );
   };
 
@@ -198,6 +208,15 @@ export default function StorePage(): JSX.Element {
                   <MarketCardComponent key={idx} data={item} />
                 ))}
             </div>
+
+            <PaginatorComponent
+              pageIndex={index}
+              pageSize={size}
+              totalRowsCount={totalRowsCount}
+              paginate={(pageSize, pageIndex) => {
+                handleChangePagination(pageIndex, pageSize);
+              }}
+            ></PaginatorComponent>
           </div>
         )}
 

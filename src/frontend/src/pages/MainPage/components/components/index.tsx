@@ -19,6 +19,7 @@ export default function ComponentsComponent() {
     isLoading,
   } = useContext(TabsContext);
   const { setErrorData } = useContext(alertContext);
+
   const dropdownOptions = [
     {
       name: "Import from JSON",
@@ -69,6 +70,7 @@ export default function ComponentsComponent() {
       }
     }
   };
+
   return (
     <div
       onDragOver={dragOver}
