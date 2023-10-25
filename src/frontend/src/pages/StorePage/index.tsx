@@ -61,7 +61,7 @@ export default function StorePage(): JSX.Element {
   }, []);
 
   const handleGetComponents = () => {
-    getStoreComponents(1, 10)
+    getStoreComponents(1, 1000)
       .then((res) => {
         setSearchData(res);
         setLoading(false);

@@ -26,7 +26,7 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
-  }, [added]);
+  }, [savedFlows]);
 
   function handleAdd() {
     setLoading(true);
