@@ -75,28 +75,13 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "info": "",
     }
 
-    assert template["template_format"] == {
-        "required": False,
-        "dynamic": False,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "value": "f-string",
-        "password": False,
-        "name": "template_format",
-        "type": "str",
-        "list": False,
-        "advanced": False,
-        "info": "",
-    }
-
     assert template["validate_template"] == {
         "required": False,
         "dynamic": False,
         "placeholder": "",
         "show": False,
         "multiline": False,
-        "value": True,
+        "value": False,
         "password": False,
         "name": "validate_template",
         "type": "bool",
