@@ -40,6 +40,7 @@ import {
   updateTemplate,
 } from "../utils/reactflowUtils";
 import {
+  createRandomKey,
   getRandomDescription,
   getRandomName,
   getSetFromObject,
@@ -153,9 +154,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (flow.data && flow.is_component) {
-          console.log(flow.data.nodes[0].data);
-          storeComponents[(flow.data.nodes[0].data as NodeDataType).type] =
-            _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+          (flow.data.nodes[0].data as NodeDataType).node!.display_name =
+            flow.name;
+          storeComponents[
+            createRandomKey(
+              (flow.data.nodes[0].data as NodeDataType).type,
+              uid()
+            )
+          ] = _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
           return;
         }
         if (!skipUpdate) processDataFromFlow(flow, false);
@@ -165,9 +171,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     setData((prev) => {
       let newData = _.cloneDeep(prev);
-      Object.keys(storeComponents).forEach((key) => {
-        newData["custom_components"][key] = storeComponents[key];
-      });
+      console.log(newData["custom_components"]);
+      console.log(storeComponents);
+      const customComponent = newData["custom_components"]["CustomComponent"];
+      newData["custom_components"] = cloneDeep(storeComponents);
+      newData["custom_components"]["CustomComponent"] = customComponent;
+      console.log(newData["custom_components"]);
       return newData;
     });
   }
@@ -608,7 +617,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const addFlowToLocalState = (newFlow: FlowType) => {
     let newFlows: FlowType[] = [];
     setFlows((prevState) => {
-      newFlows.concat(prevState);
+      newFlows = newFlows.concat(prevState);
       newFlows.push(newFlow);
       return [...prevState, newFlow];
     });
@@ -675,7 +684,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
       let increment: number;
-      component.type = removeCountFromString(key) + ` (${uid()})`;
+      component.type = createRandomKey(key, uid());
       let componentNodes: { [key: string]: APIClassType } = {};
       Object.keys(data["custom_components"]).forEach((key) => {
         componentNodes[key] = data["custom_components"][key];
