@@ -27,7 +27,7 @@ class ComponentResponse(BaseModel):
     description: Optional[str]
     data: Optional[dict]
     tags: Optional[List[int]]
-    liked_by_count: Optional[List[UUID]]
+    liked_by_count: Optional[int]
     parent: Optional[UUID]
 
 
