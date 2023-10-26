@@ -38,6 +38,7 @@ import {
   GithubIcon,
   Group,
   Hammer,
+  Heart,
   HelpCircle,
   Home,
   Info,
@@ -75,6 +76,7 @@ import {
   Store,
   SunIcon,
   TerminalSquare,
+  ToyBrick,
   Trash2,
   Undo,
   Ungroup,
@@ -334,4 +336,7 @@ export const nodeIconsLucide: iconsType = {
   GitBranchPlus,
   Loader2,
   BookmarkPlus,
+  Heart,
+  Link,
+  ToyBrick,
 };

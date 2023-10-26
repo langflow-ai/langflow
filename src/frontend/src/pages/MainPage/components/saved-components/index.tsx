@@ -6,7 +6,7 @@ import { alertContext } from "../../../../contexts/alertContext";
 import { AuthContext } from "../../../../contexts/authContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { getStoreComponents } from "../../../../controllers/API";
-import { FlowComponent } from "../../../../types/store";
+import { storeComponent } from "../../../../types/store";
 import { MarketCardComponent } from "../../../StorePage/components/market-card";
 
 export default function SavedComponents(): JSX.Element {
@@ -18,7 +18,7 @@ export default function SavedComponents(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const [data, setData] = useState<FlowComponent[]>([]);
+  const [data, setData] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const { setErrorData } = useContext(alertContext);
