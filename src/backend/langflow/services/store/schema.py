@@ -9,6 +9,11 @@ class TagResponse(BaseModel):
     name: Optional[str]
 
 
+class UsersLikesResponse(BaseModel):
+    id: UUID
+    likes: Optional[List[UUID]]
+
+
 class ComponentResponse(BaseModel):
     id: UUID
     status: Optional[str]
