@@ -177,20 +177,11 @@ class StoreService(Service):
                 f"{self.base_url}/users/me", api_key, params={"fields": "id"}
             )
             params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
-            params["limit"] = 100
-            params["fields"] = [
-                "id",
-                "name",
-                "description",
-                "user_created.first_name",
-                "user_created.id",
-                "is_component",
-                "tags.tags_id.name",
-                "tags.tags_id.id",
-                "count(liked_by)",
-                "count(downloads)",
-                "metadata",
-            ]
+            # Get the
+            params.pop("page", None)
+            params.pop("limit", None)
+
+            params["fields"] = ["id"]
         else:
             params["filter"] = params["filter"] = json.dumps(
                 {"status": {"_in": ["public", "Public"]}}
