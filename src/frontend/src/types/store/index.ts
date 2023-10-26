@@ -1,13 +1,10 @@
-export type FlowComponent = {
+export type storeComponent = {
   id: string;
-  status: string;
-  sort: null | any;
-  user_created: string;
-  date_created: string;
-  user_updated: string;
-  date_updated: string;
   is_component: boolean;
+  tags: string[];
+  metadata?: {};
+  downloads_count: number;
   name: string;
   description: string;
-  data: Object;
+  liked_by_count: number;
 };
