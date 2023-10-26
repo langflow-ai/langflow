@@ -85,12 +85,10 @@ def count_components(
     store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        result = store_service.query_components(
-            store_api_Key,
-            count=True,
-            filter_by_user=filter_by_user,
+        result = store_service.count_components(
+            api_key=store_api_Key, filter_by_user=filter_by_user
         )
-        return {"count": result[0].get("count", 0)}
+        return {"count": result}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
