@@ -4,6 +4,11 @@ from typing import Optional, List
 from uuid import UUID
 
 
+class TagResponse(BaseModel):
+    id: UUID
+    name: Optional[str]
+
+
 class ComponentResponse(BaseModel):
     id: UUID
     status: Optional[str]
@@ -17,16 +22,15 @@ class ComponentResponse(BaseModel):
     description: Optional[str]
     data: Optional[dict]
     tags: Optional[List[int]]
-    likes_count: Optional[List[UUID]]
+    liked_by_count: Optional[List[UUID]]
     parent: Optional[UUID]
 
 
 class ListComponentResponse(BaseModel):
-    (["id", "name", "description", "count(likes)", "is_component"])
     id: UUID
     name: Optional[str]
     description: Optional[str]
-    likes_count: Optional[int]
+    liked_by_count: Optional[int]
     is_component: Optional[bool]
 
 

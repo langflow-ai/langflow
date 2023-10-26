@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_HOST: Optional[str] = None
 
+    STORE: Optional[bool] = True
     STORE_URL: Optional[str] = None
     DOWNLOAD_WEBHOOK_URL: Optional[str] = None
 

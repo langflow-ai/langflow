@@ -72,6 +72,7 @@ def update_settings(
     dev: bool = False,
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
+    store: bool = True,
 ):
     """Update the settings from a config file."""
 
@@ -90,6 +91,9 @@ def update_settings(
     if components_path:
         logger.debug(f"Adding component path {components_path}")
         settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
+    if not store:
+        logger.debug("Setting store to False")
+        settings_service.settings.update_settings(STORE=False)
 
 
 @app.command()
@@ -126,13 +130,6 @@ def run(
         default=None,
     ),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    # This variable does not work but is set by the .env file
-    # and works with Pydantic
-    # database_url: str = typer.Option(
-    #     None,
-    #     help="Database URL to connect to. If not provided, a local SQLite database will be used.",
-    #     envvar="LANGFLOW_DATABASE_URL",
-    # ),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -152,6 +149,11 @@ def run(
         False,
         help="Run only the backend server without the frontend.",
         envvar="LANGFLOW_BACKEND_ONLY",
+    ),
+    store: bool = typer.Option(
+        True,
+        help="Enables the store features.",
+        envvar="LANGFLOW_STORE",
     ),
 ):
     """

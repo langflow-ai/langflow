@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 from uuid import UUID
 from langflow.services.base import Service
-from typing import TYPE_CHECKING, List, Dict, Any, Optional
+from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
 
 from httpx import HTTPError
@@ -70,7 +70,7 @@ class StoreService(Service):
         tags: Optional[List[str]] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
-        sort: Optional[List[str]] = ["-likes"],
+        sort: Optional[List[str]] = ["-count(liked_by)"],
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
     ) -> List[ComponentResponse]:
@@ -119,20 +119,41 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
-    def list_components(
+    def count_components(
+        self,
+        api_key: Optional[str] = None,
+        filter_by_user: bool = False,
+    ) -> int:
+        params = {"aggregate": json.dumps({"count": "*"})}
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
+        else:
+            params["filter"] = json.dumps({"status": {"_in": ["public", "Public"]}})
+        results = self._get(self.components_url, api_key, params)
+        return results[0].get("count", 0)
+
+    def query_components(
         self,
         api_key: str,
         page: int = 1,
         limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
-    ) -> List[ListComponentResponse]:
+    ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = (
             ",".join(fields)
             if fields
-            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
+            else ",".join(
+                ["id", "name", "description", "count(liked_by)", "is_component"]
+            )
         )
         # Only public components or the ones created by the user
         # check for "public" or "Public"
@@ -189,3 +210,9 @@ class StoreService(Service):
                 except UnboundLocalError:
                     pass
             raise ValueError(f"Upload failed: {exc}")
+
+    def get_tags(self, api_key: str) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/items/tags"
+        params = {"fields": ",".join(["id", "name"])}
+        tags = self._get(url, api_key, params)
+        return tags
