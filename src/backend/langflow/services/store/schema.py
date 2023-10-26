@@ -32,6 +32,10 @@ class ComponentResponse(BaseModel):
     metadata: Optional[dict]
 
 
+class TagsIdResponse(BaseModel):
+    tags_id: Optional[TagResponse]
+
+
 class ListComponentResponse(BaseModel):
     id: UUID
     name: Optional[str]
@@ -39,6 +43,8 @@ class ListComponentResponse(BaseModel):
     liked_by_count: Optional[int]
     is_component: Optional[bool]
     metadata: Optional[dict]
+    user_created: Optional[dict]
+    tags: Optional[List[TagsIdResponse]] = None
 
 
 class DownloadComponentResponse(BaseModel):
