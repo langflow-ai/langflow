@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 from uuid import UUID
-from bs4 import Tag
 from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
@@ -12,7 +11,6 @@ from langflow.services.store.schema import (
     DownloadComponentResponse,
     ListComponentResponse,
     StoreComponentCreate,
-    TagResponse,
 )
 
 if TYPE_CHECKING:
