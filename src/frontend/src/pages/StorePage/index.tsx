@@ -45,20 +45,19 @@ export default function StorePage(): JSX.Element {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
 
-  function handleChangePagination(pageIndex: number, pageSize: number) {}
-
   useEffect(() => {
     handleGetComponents();
   }, []);
 
   const handleGetComponents = () => {
     setLoading(true);
-    getStoreComponents(1, 10)
+    getStoreComponents(index - 1, 10000)
       .then((res) => {
-        setSearchData(res);
+        setSearchData(res.slice(0, 10));
         setLoading(false);
         setErrorApiKey(false);
         setData(res);
+        setTotalRowsCount(res.length);
       })
       .catch((err) => {
         setSearchData([]);
@@ -83,6 +82,34 @@ export default function StorePage(): JSX.Element {
       }
     );
   };
+
+  function handleChangePagination(pageIndex: number, pageSize: number) {
+    setLoading(true);
+    getStoreComponents(pageIndex, pageSize)
+      .then((res) => {
+        setPageIndex(pageIndex);
+        setPageSize(pageSize);
+        setSearchData(res);
+        setLoading(false);
+        setErrorApiKey(false);
+        setData(res);
+      })
+      .catch((err) => {
+        setSearchData([]);
+        setLoading(false);
+        setErrorApiKey(true);
+        setErrorData({
+          title: "Error to get components.",
+          list: [err["response"]["data"]["detail"]],
+        });
+      });
+  }
+
+  function resetFilter() {
+    setPageIndex(1);
+    setPageSize(10);
+    handleGetComponents();
+  }
 
   const loadingWithApiKey = loading;
   const renderComponents = !loading;
@@ -113,103 +140,108 @@ export default function StorePage(): JSX.Element {
         <span className="community-page-description-text">
           Search flows and components from the community.
         </span>
-        {renderComponents && (
-          <div className="flex w-full flex-col gap-4 p-4">
-            <div className="flex items-center justify-center gap-4">
-              <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-                Added Only <Switch />
-              </div>
-              <div className="relative h-12 w-[35%]">
-                <Input
-                  placeholder="Search Flows and Components"
-                  className="absolute h-12 px-5"
-                  onChange={(e) => {
-                    setInputText(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch(inputText);
-                    }
-                  }}
-                  value={inputText}
-                />
-                <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
-              </div>
-              <div className="flex items-center justify-center text-sm">
-                <Button
-                  onClick={() => {
+        <div className="flex w-full flex-col gap-4 p-4">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
+              Added Only <Switch />
+            </div>
+            <div className="relative h-12 w-[35%]">
+              <Input
+                placeholder="Search Flows and Components"
+                className="absolute h-12 px-5"
+                onChange={(e) => {
+                  setInputText(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
                     handleSearch(inputText);
+                  }
+                }}
+                value={inputText}
+              />
+              <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
+            </div>
+            <div className="flex items-center justify-center text-sm">
+              <Button
+                onClick={() => {
+                  handleSearch(inputText);
+                }}
+              >
+                Search
+              </Button>
+            </div>
+            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
+              <Select
+                onValueChange={(value) => {
+                  const filter = value === "Flow" ? false : true;
+                  const search = data.filter((f) => f.is_component === filter);
+                  value === "" ? setSearchData(data) : setSearchData(search);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Flows" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Flow">Flows</SelectItem>
+                  <SelectItem value="Component">Components</SelectItem>
+                  <SelectItem value="">Both</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            {Array.from(new Set(searchData.map((i) => i.is_component))).map(
+              (i, idx) => (
+                <Badge
+                  onClick={() => {
+                    filteredCategories.has(i)
+                      ? setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.delete(i);
+                          return newFilteredCategories;
+                        })
+                      : setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.add(i);
+                          return newFilteredCategories;
+                        });
                   }}
+                  variant="gray"
+                  size="md"
+                  className={cn(
+                    "cursor-pointer border-none",
+                    filteredCategories.has(i)
+                      ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                      : ""
+                  )}
                 >
-                  Search
-                </Button>
-              </div>
-              <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-                <Select
-                  onValueChange={(value) => {
-                    const filter = value === "Flow" ? false : true;
-                    const search = data.filter(
-                      (f) => f.is_component === filter
-                    );
-                    value === "" ? setSearchData(data) : setSearchData(search);
-                  }}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Flows" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Flow">Flows</SelectItem>
-                    <SelectItem value="Component">Components</SelectItem>
-                    <SelectItem value="">Both</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-4">
-              {Array.from(new Set(searchData.map((i) => i.is_component))).map(
-                (i, idx) => (
-                  <Badge
-                    onClick={() => {
-                      filteredCategories.has(i)
-                        ? setFilteredCategories((old) => {
-                            let newFilteredCategories = cloneDeep(old);
-                            newFilteredCategories.delete(i);
-                            return newFilteredCategories;
-                          })
-                        : setFilteredCategories((old) => {
-                            let newFilteredCategories = cloneDeep(old);
-                            newFilteredCategories.add(i);
-                            return newFilteredCategories;
-                          });
-                    }}
-                    variant="gray"
-                    size="md"
-                    className={cn(
-                      "cursor-pointer border-none",
-                      filteredCategories.has(i)
-                        ? "bg-beta-foreground text-background hover:bg-beta-foreground"
-                        : ""
-                    )}
-                  >
-                    <Link className="mr-1.5 w-4" />
-                    {i}
-                  </Badge>
-                )
-              )}
-            </div>
-            <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {searchData
-                .filter(
-                  (f) =>
-                    Array.from(filteredCategories).length === 0 ||
-                    filteredCategories.has(f.is_component)
-                )
-                .map((item, idx) => (
-                  <MarketCardComponent key={idx} data={item} />
-                ))}
-            </div>
+                  <Link className="mr-1.5 w-4" />
+                  {i}
+                </Badge>
+              )
+            )}
+          </div>
 
+          {renderComponents && (
+            <>
+              <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {searchData
+                  .filter(
+                    (f) =>
+                      Array.from(filteredCategories).length === 0 ||
+                      filteredCategories.has(f.is_component)
+                  )
+                  .map((item, idx) => (
+                    <MarketCardComponent key={idx} data={item} />
+                  ))}
+              </div>
+            </>
+          )}
+        </div>
+        {totalRowsCount > 0 && !loading && (
+          <div className="relative bottom-2">
             <PaginatorComponent
+              storeComponent={true}
               pageIndex={index}
               pageSize={size}
               totalRowsCount={totalRowsCount}
@@ -219,7 +251,6 @@ export default function StorePage(): JSX.Element {
             ></PaginatorComponent>
           </div>
         )}
-
         {loadingWithApiKey && (
           <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
         )}
