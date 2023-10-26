@@ -221,3 +221,11 @@ class StoreService(Service):
         params = {"fields": ",".join(["id", "name"])}
         tags = self._get(url, api_key, params)
         return tags
+
+    def get_user_likes(self, api_key: str) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/users/me"
+        params = {
+            "fields": ",".join(["id", "likes"]),
+        }
+        likes = self._get(url, api_key, params)
+        return likes
