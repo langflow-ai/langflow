@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from uuid import UUID
+from bs4 import Tag
 from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
@@ -11,6 +12,7 @@ from langflow.services.store.schema import (
     DownloadComponentResponse,
     ListComponentResponse,
     StoreComponentCreate,
+    TagResponse,
 )
 
 if TYPE_CHECKING:
@@ -152,7 +154,19 @@ class StoreService(Service):
             ",".join(fields)
             if fields
             else ",".join(
-                ["id", "name", "description", "count(liked_by)", "is_component"]
+                [
+                    "id",
+                    "name",
+                    "description",
+                    "user_created.first_name",
+                    "user_created.id",
+                    "is_component",
+                    "tags.tags_id.name",
+                    "tags.tags_id.id",
+                    "count(liked_by)",
+                    "count(downloads)",
+                    "metadata",
+                ]
             )
         )
         # Only public components or the ones created by the user
@@ -174,6 +188,7 @@ class StoreService(Service):
                 "tags.tags_id.name",
                 "tags.tags_id.id",
                 "count(liked_by)",
+                "count(downloads)",
                 "metadata",
             ]
         else:
@@ -182,7 +197,12 @@ class StoreService(Service):
             )
 
         results = self._get(self.components_url, api_key, params)
-        return [ListComponentResponse(**component) for component in results]
+        results_objects = [ListComponentResponse(**component) for component in results]
+        # Flatten the tags
+        for component in results_objects:
+            if component.tags:
+                component.tags = [tags_id.tags_id for tags_id in component.tags]
+        return results_objects
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
