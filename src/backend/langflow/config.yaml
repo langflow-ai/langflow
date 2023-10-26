@@ -106,6 +106,9 @@ embeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere"
   VertexAIEmbeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/google_vertex_ai_palm"
+  BedrockEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
+
 llms:
   OpenAI:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai"
