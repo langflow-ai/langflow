@@ -26,7 +26,7 @@ import {
   searchComponent,
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
-import { FlowComponent } from "../../types/store";
+import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
@@ -35,7 +35,7 @@ export default function StorePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const [data, setData] = useState<FlowComponent[]>([]);
+  const [data, setData] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(new Set());
@@ -45,6 +45,7 @@ export default function StorePage(): JSX.Element {
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
+  const [errorApiKey, setErrorApiKey] = useState(false);
   const { setSavedFlows } = useContext(StoreContext);
 
   async function getSavedComponents() {
@@ -58,10 +59,15 @@ export default function StorePage(): JSX.Element {
   }
 
   useEffect(() => {
-    getSavedComponents().then((_) => handleGetComponents());
     getNumberOfComponents().then((res) => {
       setTotalRowsCount(Number(res["count"]));
     });
+    getSavedComponents()
+      .finally(() => handleGetComponents())
+      .catch((err) => {
+        setErrorApiKey(true);
+        console.error(err);
+      });
   }, []);
 
   const handleGetComponents = () => {
@@ -138,7 +144,10 @@ export default function StorePage(): JSX.Element {
                 handleGetComponents();
               }}
             >
-              <Button variant="primary">
+              <Button
+                className={`${errorApiKey ? "animate-pulse border-error" : ""}`}
+                variant="primary"
+              >
                 <IconComponent name="Key" className="main-page-nav-button" />
                 API Key
               </Button>

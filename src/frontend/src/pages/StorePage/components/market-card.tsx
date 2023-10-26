@@ -1,5 +1,5 @@
-import { Link, ToyBrick } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
+import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
@@ -15,15 +15,15 @@ import { StoreContext } from "../../../contexts/storeContext";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { getComponent, saveFlowStore } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
-import { FlowComponent } from "../../../types/store";
+import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 
-export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
+export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { savedFlows } = useContext(StoreContext);
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
-  const { setSuccessData } = useContext(alertContext);
+  const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
 
   useEffect(() => {
@@ -42,9 +42,14 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
           .then(() => {
             setAdded(true);
             setLoading(false);
+            setSuccessData({ title: "Component Added to account" });
           })
           .catch((error) => {
             console.error(error);
+            setErrorData({
+              title: "Error on adding Component",
+              list: [error["response"]["data"]["detail"]],
+            });
           });
       },
       (error) => {
@@ -67,28 +72,6 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
         setSuccessData({ title: "Flow Installed" });
       });
     }
-  }
-
-  function handleFork(flowId: string, is_component: boolean) {
-    getComponent(flowId).then(
-      (res) => {
-        console.log(res);
-        const newFLow = cloneFLowWithParent(res.data, res.id, is_component);
-        console.log(newFLow);
-        saveFlowStore(newFLow).then(
-          (res) => {
-            console.log(JSON.parse(JSON.stringify(res)));
-            addFlow(true, newFLow);
-          },
-          (error) => {
-            console.error(error);
-          }
-        );
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
   }
 
   return (
@@ -143,12 +126,29 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
             <div className=" flex items-center gap-3">
               <Badge size="md" variant="outline">
                 chain
-                <Link className="ml-1.5 w-3 text-green-700" />
+                <IconComponent
+                  name="Link"
+                  className="ml-1.5 w-3 text-green-700"
+                />
               </Badge>
-              <span className="flex items-center gap-1.5 text-xs text-foreground">
-                <ToyBrick className="h-4 w-4" />
-                123
-              </span>
+              <ShadTooltip content="Components">
+                <span className="flex items-center gap-1.5 text-xs text-foreground">
+                  <IconComponent name="ToyBrick" className="h-4 w-4" />
+                  123
+                </span>
+              </ShadTooltip>
+              <ShadTooltip content="Favorites">
+                <span className="flex items-center gap-1.5 text-xs text-foreground">
+                  <IconComponent name="Heart" className="h-4 w-4" />
+                  {data.liked_by_count ?? 0}
+                </span>
+              </ShadTooltip>
+              <ShadTooltip content="Downloads">
+                <span className="flex items-center gap-1.5 text-xs text-foreground">
+                  <IconComponent name="DownloadCloud" className="h-4 w-4" />
+                  {data.downloads_count}
+                </span>
+              </ShadTooltip>
             </div>
             {/* {data.isChat ? (
               <Button size="sm" variant="outline">
