@@ -18,7 +18,7 @@ export function StoreProvider({ children }) {
   const [hasStore, setHasStore] = useState(false);
 
   checkHasStore().then((res) => {
-    setHasStore(res[0].has_store);
+    setHasStore(res["enabled"]);
   });
 
   return (

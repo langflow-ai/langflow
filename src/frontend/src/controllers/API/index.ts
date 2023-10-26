@@ -679,9 +679,7 @@ export async function searchComponent(
 
 export async function checkHasStore() {
   try {
-    const res = await api.get(
-      `https://65384701a543859d1bb15e63.mockapi.io/Store`
-    );
+    const res = await api.get(`${BASE_URL_API}store`);
     if (res.status === 200) {
       return res.data;
     }
