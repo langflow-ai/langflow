@@ -159,13 +159,22 @@ class StoreService(Service):
         # check for "public" or "Public"
 
         if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
+            user_data = self._get(
+                f"{self.base_url}/users/me", api_key, params={"fields": "id"}
             )
+            params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+            params["limit"] = 100
+            params["fields"] = [
+                "id",
+                "name",
+                "description",
+                "user_created.first_name",
+                "user_created.id",
+                "is_component",
+                "tags.tags_id.name",
+                "tags.tags_id.id",
+                "count(liked_by)",
+            ]
         else:
             params["filter"] = params["filter"] = json.dumps(
                 {"status": {"_in": ["public", "Public"]}}
