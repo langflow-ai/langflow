@@ -10,12 +10,14 @@ import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
+import IOView from "../IOview";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
   const {checkInputandOutput,getInputTypes,getOutputTypes} = useContext(flowManagerContext)
+  const [validIO, setValidIO] = useState(false);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -36,8 +38,8 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   useEffect(() => {
     // Define an async function within the useEffect hook
     const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id);
-      setIsBuilt(response.built);
+      const response = await getBuildStatus(flow.id).catch((err) => {console.error(err)});
+      setIsBuilt(!!response.built);
     };
 
     // Call the async function
@@ -67,15 +69,16 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     ) {
       setCanOpen(true);
     } else {
+      console.log(tabsState)
       setCanOpen(false);
     }
 
     prevNodesRef.current = currentNodes;
   }, [tabsState, flow.id]);
 
-  useEffect((
-  
-  ) => {})
+  useEffect((  ) => {
+    setValidIO(checkInputandOutput(flow))
+  },[isBuilt, setValidIO])
 
   return (
     <>
@@ -90,12 +93,14 @@ export default function Chat({ flow }: ChatType): JSX.Element {
           tabsState[flow.id] &&
           tabsState[flow.id].formKeysData &&
           canOpen && (
-            <FormModal
+            <IOView inputTypes={getInputTypes(flow)} outputTypes={getOutputTypes(flow)}>
+              <FormModal
               key={flow.id}
               flow={flow}
               open={open}
               setOpen={setOpen}
             />
+            </IOView>
           )}
         <ChatTrigger
           canOpen={canOpen}

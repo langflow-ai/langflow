@@ -70,6 +70,7 @@ export default function BuildTrigger({
   }
 
   function handleBuildComplete(allNodesValid: boolean) {
+    console.log(allNodesValid)
     setIsBuilt(allNodesValid);
     if (!allNodesValid) {
       setErrorData({

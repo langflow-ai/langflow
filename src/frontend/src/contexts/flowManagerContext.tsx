@@ -36,6 +36,7 @@ export default function FlowManagerProvider({ children }) {
     }
 
     function checkInputandOutput(flow: FlowType): boolean {
+        console.log("rodou");
         let has_input = false;
         let has_output = false;
         flow.data?.nodes.forEach(node => {
@@ -72,6 +73,28 @@ export default function FlowManagerProvider({ children }) {
             }
         })
         return outputType;
+    }
+
+    function getInputIds(flow: FlowType) {
+        let inputIds: string[] = [];
+        flow.data?.nodes.forEach(node => {
+            const nodeData: NodeDataType = node.data as NodeDataType;
+            if (isInputNode(nodeData)) {
+                inputIds.push(nodeData.id);
+            }
+        })
+        return inputIds;
+    }
+
+    function getOutputIds(flow: FlowType) {
+        let outputIds: string[] = [];
+        flow.data?.nodes.forEach(node => {
+            const nodeData: NodeDataType = node.data as NodeDataType;
+            if (isOutputNode(nodeData)) {
+                outputIds.push(nodeData.id);
+            }
+        })
+        return outputIds;
     }
 
     return (
