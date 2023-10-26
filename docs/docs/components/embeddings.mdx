@@ -12,6 +12,22 @@ Embeddings are vector representations of text that capture the semantic meaning 
 
 ---
 
+### BedrockEmbeddings
+
+Used to load [Amazon Bedrocks’s](https://aws.amazon.com/bedrock/) embedding models.
+
+**Params**
+
+- **credentials_profile_name:** The name of the profile in the ~/.aws/credentials or ~/.aws/config files, which has either access keys or role information specified. If not specified, the default credential profile or, if on an EC2 instance, credentials from IMDS will be used. See [the AWS documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html) for more details.
+
+- **model_id:** Id of the model to call, e.g., amazon.titan-embed-text-v1, this is equivalent to the modelId property in the list-foundation-models api.
+
+- **endpoint_url:** Needed if you don’t want to default to us-east-1 endpoint.
+
+- **region_name:** The aws region e.g., us-west-2. Fallsback to AWS_DEFAULT_REGION env variable or region specified in ~/.aws/config in case it is not provided here.
+
+---
+
 ### CohereEmbeddings
 
 Used to load [Cohere’s](https://cohere.com/) embedding models.
