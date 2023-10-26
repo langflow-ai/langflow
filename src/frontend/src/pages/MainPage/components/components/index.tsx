@@ -96,7 +96,6 @@ export default function ComponentsComponent() {
               <SkeletonCardComponent />
               <SkeletonCardComponent />
               <SkeletonCardComponent />
-              <SkeletonCardComponent />
             </>
           ) : (
             flows

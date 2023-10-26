@@ -4,6 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
+import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -16,53 +17,61 @@ import {
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
-import { AuthContext } from "../../contexts/authContext";
+import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import { getStoreComponents, searchComponent } from "../../controllers/API";
+import {
+  getStoreComponents,
+  getStoreSavedComponents,
+  searchComponent,
+} from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { FlowComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
   const { setTabId } = useContext(TabsContext);
-
-  const { setApiKey, apiKey } = useContext(AuthContext);
-
   // set null id
   useEffect(() => {
     setTabId("");
   }, []);
   const [data, setData] = useState<FlowComponent[]>([]);
-  const [dataSelect, setDataSelect] = useState<FlowComponent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState(data);
-  const [errorApiKey, setErrorApiKey] = useState(false);
   const { setErrorData } = useContext(alertContext);
-  const { addFlow } = useContext(TabsContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
+  const { setSavedFlows } = useContext(StoreContext);
+
+  async function getSavedComponents() {
+    setLoading(true);
+    const result = await getStoreSavedComponents();
+    let savedIds = new Set<string>();
+    result.forEach((flow) => {
+      savedIds.add(flow.id);
+    });
+    setSavedFlows(savedIds);
+  }
 
   useEffect(() => {
-    handleGetComponents();
+    getSavedComponents().then((_) => handleGetComponents());
   }, []);
 
   const handleGetComponents = () => {
     setLoading(true);
     getStoreComponents(index - 1, 10000)
       .then((res) => {
-        setSearchData(res.slice(0, 10));
-        setLoading(false);
-        setErrorApiKey(false);
-        setData(res);
+        setSearchData(res.slice(0, size));
         setTotalRowsCount(res.length);
+        setData(res);
+        setLoading(false);
       })
       .catch((err) => {
         setSearchData([]);
         setLoading(false);
-        setErrorApiKey(true);
         setErrorData({
           title: "Error to get components.",
           list: [err["response"]["data"]["detail"]],
@@ -71,6 +80,12 @@ export default function StorePage(): JSX.Element {
   };
 
   const handleSearch = (inputText: string) => {
+    if (inputText === "") {
+      handleGetComponents();
+      setSearch(false);
+      return;
+    }
+    setSearch(true);
     setLoading(true);
     searchComponent(inputText).then(
       (res) => {
@@ -87,17 +102,15 @@ export default function StorePage(): JSX.Element {
     setLoading(true);
     getStoreComponents(pageIndex, pageSize)
       .then((res) => {
+        setSearchData(res.slice(0, size));
+        setData(res);
         setPageIndex(pageIndex);
         setPageSize(pageSize);
-        setSearchData(res);
         setLoading(false);
-        setErrorApiKey(false);
-        setData(res);
       })
       .catch((err) => {
         setSearchData([]);
         setLoading(false);
-        setErrorApiKey(true);
         setErrorData({
           title: "Error to get components.",
           list: [err["response"]["data"]["detail"]],
@@ -105,14 +118,9 @@ export default function StorePage(): JSX.Element {
       });
   }
 
-  function resetFilter() {
-    setPageIndex(1);
-    setPageSize(10);
-    handleGetComponents();
-  }
-
   const loadingWithApiKey = loading;
   const renderComponents = !loading;
+  const renderPagination = searchData.length > 0 && !loading && !search;
 
   return (
     <>
@@ -189,56 +197,61 @@ export default function StorePage(): JSX.Element {
               </Select>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-4">
-            {Array.from(new Set(searchData.map((i) => i.is_component))).map(
-              (i, idx) => (
-                <Badge
-                  onClick={() => {
-                    filteredCategories.has(i)
-                      ? setFilteredCategories((old) => {
-                          let newFilteredCategories = cloneDeep(old);
-                          newFilteredCategories.delete(i);
-                          return newFilteredCategories;
-                        })
-                      : setFilteredCategories((old) => {
-                          let newFilteredCategories = cloneDeep(old);
-                          newFilteredCategories.add(i);
-                          return newFilteredCategories;
-                        });
-                  }}
-                  variant="gray"
-                  size="md"
-                  className={cn(
-                    "cursor-pointer border-none",
-                    filteredCategories.has(i)
-                      ? "bg-beta-foreground text-background hover:bg-beta-foreground"
-                      : ""
-                  )}
-                >
-                  <Link className="mr-1.5 w-4" />
-                  {i}
-                </Badge>
-              )
+          <div className="flex h-2 items-center justify-center gap-4">
+            {renderComponents &&
+              Array.from(new Set(searchData.map((i) => i.is_component))).map(
+                (i, idx) => (
+                  <Badge
+                    onClick={() => {
+                      filteredCategories.has(i)
+                        ? setFilteredCategories((old) => {
+                            let newFilteredCategories = cloneDeep(old);
+                            newFilteredCategories.delete(i);
+                            return newFilteredCategories;
+                          })
+                        : setFilteredCategories((old) => {
+                            let newFilteredCategories = cloneDeep(old);
+                            newFilteredCategories.add(i);
+                            return newFilteredCategories;
+                          });
+                    }}
+                    variant="gray"
+                    size="md"
+                    className={cn(
+                      "cursor-pointer border-none",
+                      filteredCategories.has(i)
+                        ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                        : ""
+                    )}
+                  >
+                    <Link className="mr-1.5 w-4" />
+                    {i}
+                  </Badge>
+                )
+              )}
+          </div>
+          <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {loadingWithApiKey ? (
+              <>
+                <SkeletonCardComponent />
+                <SkeletonCardComponent />
+                <SkeletonCardComponent />
+              </>
+            ) : (
+              searchData
+                .filter(
+                  (f) =>
+                    Array.from(filteredCategories).length === 0 ||
+                    filteredCategories.has(f.is_component)
+                )
+                .map((item, idx) => (
+                  <MarketCardComponent key={idx} data={item} />
+                ))
             )}
           </div>
-
-          {renderComponents && (
-            <>
-              <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {searchData
-                  .filter(
-                    (f) =>
-                      Array.from(filteredCategories).length === 0 ||
-                      filteredCategories.has(f.is_component)
-                  )
-                  .map((item, idx) => (
-                    <MarketCardComponent key={idx} data={item} />
-                  ))}
-              </div>
-            </>
-          )}
         </div>
-        {totalRowsCount > 0 && !loading && (
+
+        {renderPagination && (
           <div className="relative bottom-2">
             <PaginatorComponent
               storeComponent={true}
@@ -250,9 +263,6 @@ export default function StorePage(): JSX.Element {
               }}
             ></PaginatorComponent>
           </div>
-        )}
-        {loadingWithApiKey && (
-          <div className="flex w-full flex-col gap-4 p-4">Loading...</div>
         )}
       </div>
     </>

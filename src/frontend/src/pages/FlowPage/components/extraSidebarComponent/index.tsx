@@ -309,7 +309,12 @@ export default function ExtraSidebar(): JSX.Element {
               >
                 <div className="side-bar-components-gap">
                   {Object.keys(dataFilter[SBSectionName])
-                    .sort(sensitiveSort)
+                    .sort((a, b) =>
+                      sensitiveSort(
+                        dataFilter[SBSectionName][a].display_name,
+                        dataFilter[SBSectionName][b].display_name
+                      )
+                    )
                     .map((SBItemName: string, index) => (
                       <ShadTooltip
                         content={

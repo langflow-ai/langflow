@@ -72,6 +72,7 @@ class StoreService(Service):
         date_to: Optional[datetime] = None,
         sort: Optional[List[str]] = ["-likes"],
         fields: Optional[List[str]] = None,
+        filter_by_user: bool = False,
     ) -> List[ComponentResponse]:
         # ?sort=sort,-date_created,author.name
 
@@ -104,34 +105,6 @@ class StoreService(Service):
         if fields:
             params["fields"] = ",".join(fields)
 
-        results = self._get(self.components_url, api_key, params)
-        return [ComponentResponse(**component) for component in results]
-
-    def list_components(
-        self,
-        api_key: str,
-        page: int = 1,
-        limit: int = 10,
-        fields: Optional[List[str]] = None,
-    ) -> List[ListComponentResponse]:
-        params = {"page": page, "limit": limit}
-        # ?aggregate[count]=likes
-        params["fields"] = (
-            ",".join(fields)
-            if fields
-            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
-        )
-
-        results = self._get(self.components_url, api_key, params)
-        return [ListComponentResponse(**component) for component in results]
-
-    def download(
-        self, api_key: str, component_id: str, filter_by_user: bool
-    ) -> DownloadComponentResponse:
-        url = f"{self.components_url}/{component_id}"
-        params = {
-            "fields": ",".join(["id", "name", "description", "data", "is_component"])
-        }
         if filter_by_user:
             params["deep"] = json.dumps(
                 {
@@ -140,6 +113,52 @@ class StoreService(Service):
                     }
                 }
             )
+        else:
+            params["filter"] = json.dumps({"status": {"_eq": "public"}})
+
+        results = self._get(self.components_url, api_key, params)
+        return [ComponentResponse(**component) for component in results]
+
+    def list_components(
+        self,
+        api_key: str,
+        page: int = 1,
+        limit: int = 15,
+        fields: Optional[List[str]] = None,
+        filter_by_user: bool = False,
+    ) -> List[ListComponentResponse]:
+        params = {"page": page, "limit": limit}
+        # ?aggregate[count]=likes
+        params["fields"] = (
+            ",".join(fields)
+            if fields
+            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
+        )
+        # Only public components or the ones created by the user
+        # check for "public" or "Public"
+
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
+        else:
+            params["filter"] = params["filter"] = json.dumps(
+                {"status": {"_in": ["public", "Public"]}}
+            )
+
+        results = self._get(self.components_url, api_key, params)
+        return [ListComponentResponse(**component) for component in results]
+
+    def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
+        url = f"{self.components_url}/{component_id}"
+        params = {
+            "fields": ",".join(["id", "name", "description", "data", "is_component"])
+        }
+
         component = self._get(url, api_key, params)
         self.call_webhook(api_key, self.webhook_url, component_id)
 

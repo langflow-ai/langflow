@@ -597,6 +597,20 @@ export async function getStoreComponents(page: number = 1, limit: number = 10) {
   }
 }
 
+export async function getStoreSavedComponents() {
+  try {
+    const res = await api.get(
+      `${BASE_URL_API}store/components/?filter_by_user=true`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
 export async function postStoreComponents(component: Component) {
   try {
     const res = await api.post(`${BASE_URL_API}store/components/`, component);
@@ -668,6 +682,18 @@ export async function checkHasStore() {
     const res = await api.get(
       `https://65384701a543859d1bb15e63.mockapi.io/Store`
     );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function getNumberOfComponents() {
+  try {
+    const res = await api.get(`${BASE_URL_API}store/components/count`);
     if (res.status === 200) {
       return res.data;
     }
