@@ -58,7 +58,12 @@ export default function StorePage(): JSX.Element {
   }
 
   useEffect(() => {
-    getSavedComponents().then((_) => handleGetComponents());
+    getSavedComponents()
+      .finally(() => handleGetComponents())
+      .catch((err) => {
+        setErrorApiKey(true);
+        console.error(err);
+      });
   }, []);
 
   const handleGetComponents = () => {
@@ -108,7 +113,10 @@ export default function StorePage(): JSX.Element {
                 handleGetComponents();
               }}
             >
-              <Button variant="primary">
+              <Button
+                className={`${errorApiKey ? "animate-pulse border-error" : ""}`}
+                variant="primary"
+              >
                 <IconComponent name="Key" className="main-page-nav-button" />
                 API Key
               </Button>
