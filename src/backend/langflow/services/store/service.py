@@ -121,7 +121,7 @@ class StoreService(Service):
 
     def count_components(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         filter_by_user: bool = False,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
