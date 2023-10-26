@@ -118,8 +118,6 @@ export default function StorePage(): JSX.Element {
       });
   }
 
-  const loadingWithApiKey = loading;
-  const renderComponents = !loading;
   const renderPagination = searchData.length > 0 && !loading && !search;
 
   return (
@@ -198,7 +196,7 @@ export default function StorePage(): JSX.Element {
             </div>
           </div>
           <div className="flex h-2 items-center justify-center gap-4">
-            {renderComponents &&
+            {!loading &&
               Array.from(new Set(searchData.map((i) => i.is_component))).map(
                 (i, idx) => (
                   <Badge
@@ -231,7 +229,7 @@ export default function StorePage(): JSX.Element {
               )}
           </div>
           <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loadingWithApiKey ? (
+            {loading ? (
               <>
                 <SkeletonCardComponent />
                 <SkeletonCardComponent />
@@ -252,7 +250,7 @@ export default function StorePage(): JSX.Element {
         </div>
 
         {renderPagination && (
-          <div className="relative bottom-2">
+          <div className="relative mt-3">
             <PaginatorComponent
               storeComponent={true}
               pageIndex={index}
