@@ -9,12 +9,13 @@ import { TabsContext } from "../../contexts/tabsContext";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
-
+  const {checkInputandOutput,getInputTypes,getOutputTypes} = useContext(flowManagerContext)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -71,6 +72,10 @@ export default function Chat({ flow }: ChatType): JSX.Element {
 
     prevNodesRef.current = currentNodes;
   }, [tabsState, flow.id]);
+
+  useEffect((
+  
+  ) => {})
 
   return (
     <>

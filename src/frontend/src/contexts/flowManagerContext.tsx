@@ -8,7 +8,9 @@ const initialValue: FlowManagerContextType = {
     flowPool: {},
     updateFlowPoolNodes: (nodes: NodeType[]) => { },
     addDataToFlowPool: (data: any, nodeId: string) => { },
-    checkInputandOutput: (flow:FlowType)=>false
+    checkInputandOutput: (flow: FlowType) => false,
+    getInputTypes: (flow: FlowType) => [],
+    getOutputTypes: (flow: FlowType) => [],
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -33,23 +35,54 @@ export default function FlowManagerProvider({ children }) {
         flowPool[nodeId] = data;
     }
 
-    function checkInputandOutput(flow:FlowType):boolean{
-        let has_input= false;
+    function checkInputandOutput(flow: FlowType): boolean {
+        let has_input = false;
         let has_output = false;
-        flow.data?.nodes.forEach(node=>{
+        flow.data?.nodes.forEach(node => {
             const nodeData: NodeDataType = node.data as NodeDataType;
-            if(isInputNode(nodeData)){
+            if (isInputNode(nodeData)) {
                 has_input = true;
             }
-            if(isOutputNode(nodeData)){
+            if (isOutputNode(nodeData)) {
                 has_output = true;
             }
         })
         return has_input && has_output;
     }
 
+    function getInputTypes(flow: FlowType) {
+        let inputType: string[] = [];
+        flow.data?.nodes.forEach(node => {
+            const nodeData: NodeDataType = node.data as NodeDataType;
+            if (isInputNode(nodeData)) {
+                // TODO remove count and ramdom key from type before pushing
+                inputType.push(nodeData.type);
+            }
+        })
+        return inputType;
+    }
+
+    function getOutputTypes(flow: FlowType) {
+        let outputType: string[] = [];
+        flow.data?.nodes.forEach(node => {
+            const nodeData: NodeDataType = node.data as NodeDataType;
+            if (isOutputNode(nodeData)) {
+                // TODO remove count and ramdom key from type before pushing
+                outputType.push(nodeData.type);
+            }
+        })
+        return outputType;
+    }
+
     return (
-        <flowManagerContext.Provider value={{flowPool,addDataToFlowPool,updateFlowPoolNodes,checkInputandOutput}}>
+        <flowManagerContext.Provider value={{
+            flowPool,
+            addDataToFlowPool, 
+            updateFlowPoolNodes, 
+            checkInputandOutput,
+            getOutputTypes,
+            getInputTypes
+        }}>
             {children}
         </flowManagerContext.Provider>
     );

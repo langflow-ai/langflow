@@ -10,4 +10,6 @@ export type FlowManagerContextType = {
     updateFlowPoolNodes: (nodes:NodeType[]) => void,
     addDataToFlowPool: (data:any,nodeId:string) => void,
     checkInputandOutput: (flow:FlowType) => boolean,
+    getInputTypes: (flow:FlowType) => string[],
+    getOutputTypes: (flow:FlowType) => string[],
 }
