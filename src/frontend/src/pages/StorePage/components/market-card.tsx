@@ -23,7 +23,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
-  const { setSuccessData } = useContext(alertContext);
+  const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
 
   useEffect(() => {
@@ -42,9 +42,14 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
           .then(() => {
             setAdded(true);
             setLoading(false);
+            setSuccessData({ title: "Component Added to account" });
           })
           .catch((error) => {
             console.error(error);
+            setErrorData({
+              title: "Error on adding Component",
+              list: [error["response"]["data"]["detail"]],
+            });
           });
       },
       (error) => {
@@ -67,28 +72,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         setSuccessData({ title: "Flow Installed" });
       });
     }
-  }
-
-  function handleFork(flowId: string, is_component: boolean) {
-    getComponent(flowId).then(
-      (res) => {
-        console.log(res);
-        const newFLow = cloneFLowWithParent(res.data, res.id, is_component);
-        console.log(newFLow);
-        saveFlowStore(newFLow).then(
-          (res) => {
-            console.log(JSON.parse(JSON.stringify(res)));
-            addFlow(true, newFLow);
-          },
-          (error) => {
-            console.error(error);
-          }
-        );
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
   }
 
   return (
