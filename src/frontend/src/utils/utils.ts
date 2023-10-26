@@ -571,7 +571,7 @@ export function IncrementObjectKey(
 
 export function removeCountFromString(input: string): string {
   // Define a regex pattern to match the count in parentheses
-  const pattern = /\s*\(\d+\)\s*$/;
+  const pattern = /\s*\(\w+\)\s*$/;
 
   // Use the `replace` method to remove the matched pattern
   const result = input.replace(pattern, "");
@@ -579,9 +579,13 @@ export function removeCountFromString(input: string): string {
   return result.trim(); // Trim any leading/trailing spaces
 }
 
+export function createRandomKey(key: string, uid: string): string {
+  return removeCountFromString(key) + ` (${uid})`;
+}
+
 export function sensitiveSort(a: string, b: string): number {
   // Extract the name and number from each string using regular expressions
-  const regex = /(.+) \((\d+)\)/;
+  const regex = /(.+) \((\w+)\)/;
   const matchA = a.match(regex);
   const matchB = b.match(regex);
 

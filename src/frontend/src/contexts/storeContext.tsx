@@ -1,11 +1,10 @@
 import { createContext, useState } from "react";
 import { checkHasStore } from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
-import { FlowType } from "../types/flow";
 
 //store context to share user components and update them
 const initialValue = {
-  savedFlows: {},
+  savedFlows: new Set<string>(),
   setSavedFlows: () => {},
   hasStore: false,
   setHasStore: () => {},
@@ -14,7 +13,8 @@ const initialValue = {
 export const StoreContext = createContext<storeContextType>(initialValue);
 
 export function StoreProvider({ children }) {
-  const [savedFlows, setSavedFlows] = useState<{ [key: string]: FlowType }>({});
+  const [savedFlows, setSavedFlows] = useState<Set<string>>(new Set());
+
   const [hasStore, setHasStore] = useState(false);
 
   checkHasStore().then((res) => {

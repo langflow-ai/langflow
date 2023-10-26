@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
@@ -64,6 +65,7 @@ const EditNodeModal = forwardRef(
     ref
   ) => {
     const [modalOpen, setModalOpen] = useState(open ?? false);
+    const updateNodeInternals = useUpdateNodeInternals();
 
     const myData = useRef(data);
 
@@ -83,11 +85,14 @@ const EditNodeModal = forwardRef(
     const handleOnNewValue = (newValue: any, name) => {
       myData.current.node!.template[name].value = newValue;
       setDataValue(newValue);
+      updateNodeInternals(data.id);
     };
 
     useEffect(() => {
-      myData.current = data; // reset data to what it is on node when opening modal
-      onClose!(modalOpen);
+      if (modalOpen) {
+        myData.current = data; // reset data to what it is on node when opening modal
+        onClose!(modalOpen);
+      }
     }, [modalOpen]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);

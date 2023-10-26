@@ -1,5 +1,5 @@
 import { Link, ToyBrick } from "lucide-react";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
@@ -10,6 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
+import { alertContext } from "../../../contexts/alertContext";
+import { StoreContext } from "../../../contexts/storeContext";
 import { TabsContext } from "../../../contexts/tabsContext";
 import { getComponent, saveFlowStore } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
@@ -17,12 +19,19 @@ import { FlowComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 
 export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
-  const [added, setAdded] = useState(false);
+  const { savedFlows } = useContext(StoreContext);
+  const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
+  const { setSuccessData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
 
+  useEffect(() => {
+    setAdded(savedFlows.has(data.id) ? true : false);
+  }, [savedFlows]);
+
   function handleAdd() {
+    setLoading(true);
     getComponent(data.id).then(
       (res) => {
         console.log(res);
@@ -45,7 +54,19 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
   }
 
   function handleInstall() {
-    addFlow(true, flowData.current!);
+    if (flowData.current) {
+      addFlow(true, flowData.current!).then(() => {
+        setSuccessData({ title: "Flow Installed" });
+      });
+    } else {
+      getComponent(data.id).then((res) => {
+        console.log(res);
+        const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
+        flowData.current = newFLow;
+        addFlow(true, newFLow);
+        setSuccessData({ title: "Flow Installed" });
+      });
+    }
   }
 
   function handleFork(flowId: string, is_component: boolean) {
@@ -145,7 +166,6 @@ export const MarketCardComponent = ({ data }: { data: FlowComponent }) => {
               size="sm"
               className="whitespace-nowrap "
               onClick={() => {
-                setLoading(true);
                 if (!added) {
                   handleAdd();
                 } else {

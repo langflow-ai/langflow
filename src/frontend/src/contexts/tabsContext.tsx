@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
@@ -40,7 +40,7 @@ import {
   updateTemplate,
 } from "../utils/reactflowUtils";
 import {
-  IncrementObjectKey,
+  createRandomKey,
   getRandomDescription,
   getRandomName,
   getSetFromObject,
@@ -80,7 +80,7 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
-  saveComponent: (component: NodeDataType) => {},
+  saveComponent: async (component: NodeDataType) => "",
   deleteComponent: (id: string, key: string) => {},
 };
 
@@ -154,8 +154,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (flow.data && flow.is_component) {
-          storeComponents[(flow.data.nodes[0].data as NodeDataType).type] =
-            _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+          (flow.data.nodes[0].data as NodeDataType).node!.display_name =
+            flow.name;
+          storeComponents[
+            createRandomKey(
+              (flow.data.nodes[0].data as NodeDataType).type,
+              uid()
+            )
+          ] = _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
           return;
         }
         if (!skipUpdate) processDataFromFlow(flow, false);
@@ -165,9 +171,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     setData((prev) => {
       let newData = _.cloneDeep(prev);
-      Object.keys(storeComponents).forEach((key) => {
-        newData["custom_components"][key] = storeComponents[key];
-      });
+
+      const customComponent = newData["custom_components"]["CustomComponent"];
+      newData["custom_components"] = cloneDeep(storeComponents);
+      newData["custom_components"]["CustomComponent"] = customComponent;
       return newData;
     });
   }
@@ -458,6 +465,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         id: source,
       });
       sourceHandleObject.id = source;
+
       edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
@@ -482,6 +490,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
+          data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className:
             targetHandleObject.type === "Text"
@@ -538,7 +547,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let data = flow?.data ? flow.data : null;
     if (data) {
       processFlowEdges(flow);
-      processFlowNodes(flow);
+      //prevent node update for now
+      // processFlowNodes(flow);
       //add animation to text type edges
       updateEdges(data.edges);
       // updateNodes(data.nodes, data.edges);
@@ -605,7 +615,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const addFlowToLocalState = (newFlow: FlowType) => {
     let newFlows: FlowType[] = [];
     setFlows((prevState) => {
-      newFlows.concat(prevState);
+      newFlows = newFlows.concat(prevState);
       newFlows.push(newFlow);
       return [...prevState, newFlow];
     });
@@ -671,12 +681,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     component.node!.official = false;
     let key = component.type;
     if (data["custom_components"][key] !== undefined) {
-      let { newKey, increment } = IncrementObjectKey(
-        data["custom_components"],
-        key
-      );
-      key = newKey;
-      component.type = newKey;
+      let increment: number;
+      component.type = createRandomKey(key, uid());
       let componentNodes: { [key: string]: APIClassType } = {};
       Object.keys(data["custom_components"]).forEach((key) => {
         componentNodes[key] = data["custom_components"][key];
@@ -697,7 +703,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           ` (${increment})`;
       }
     }
-    addFlow(true, createFlowComponent(component));
+    return addFlow(true, createFlowComponent(component));
   }
 
   function deleteComponent(id: string, key: string) {

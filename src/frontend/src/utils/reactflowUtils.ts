@@ -1009,7 +1009,8 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node!.template[field].show = show;
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-      gNodes[nodeIndex].selected = false;
+      // keep the nodes selected after ungrouping
+      // gNodes[nodeIndex].selected = false;
       if (proxy) {
         gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
       } else {
@@ -1096,3 +1097,8 @@ export function downloadNode(NodeFLow: FlowType) {
   element.download = `${NodeFLow.name}.json`;
   element.click();
 }
+
+export function updateComponentNameAndType(
+  data: any,
+  component: NodeDataType
+) {}
