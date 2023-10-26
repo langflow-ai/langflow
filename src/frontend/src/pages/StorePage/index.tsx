@@ -25,7 +25,7 @@ import {
   searchComponent,
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
-import { FlowComponent } from "../../types/store";
+import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
@@ -37,8 +37,8 @@ export default function StorePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const [data, setData] = useState<FlowComponent[]>([]);
-  const [dataSelect, setDataSelect] = useState<FlowComponent[]>([]);
+  const [data, setData] = useState<storeComponent[]>([]);
+  const [dataSelect, setDataSelect] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const [inputText, setInputText] = useState<string>("");
