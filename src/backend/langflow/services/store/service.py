@@ -199,8 +199,13 @@ class StoreService(Service):
                 self.components_url, headers=headers, json=component_dict
             )
             response.raise_for_status()
-            component = response.json()["data"]
-            return ComponentResponse(**component)
+            # ! If the user does not have permission to a certain field
+            # the request returns 204 and no data
+            try:
+                component = response.json()["data"]
+                return ComponentResponse(**component)
+            except json.JSONDecodeError:
+                return ComponentResponse(**component_dict)
         except HTTPError as exc:
             if response:
                 try:
