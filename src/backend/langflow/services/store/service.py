@@ -119,6 +119,25 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
+    def count_components(
+        self,
+        api_key: str,
+        filter_by_user: bool = False,
+    ) -> int:
+        params = {"aggregate": json.dumps({"count": "*"})}
+        if filter_by_user:
+            params["deep"] = json.dumps(
+                {
+                    "components": {
+                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
+                    }
+                }
+            )
+        else:
+            params["filter"] = json.dumps({"status": {"_in": ["public", "Public"]}})
+        results = self._get(self.components_url, api_key, params)
+        return results[0].get("count", 0)
+
     def query_components(
         self,
         api_key: str,
@@ -126,20 +145,14 @@ class StoreService(Service):
         limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
-        count: bool = False,
     ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
-        if count:
-            params["aggregate"] = json.dumps({"count": "*"})
-        else:
-            params["fields"] = (
-                ",".join(fields)
-                if fields
-                else ",".join(
-                    ["id", "name", "description", "count(likes)", "is_component"]
-                )
-            )
+        params["fields"] = (
+            ",".join(fields)
+            if fields
+            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
+        )
         # Only public components or the ones created by the user
         # check for "public" or "Public"
 
@@ -157,8 +170,6 @@ class StoreService(Service):
             )
 
         results = self._get(self.components_url, api_key, params)
-        if "count" in results[0]:
-            return results
         return [ListComponentResponse(**component) for component in results]
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
