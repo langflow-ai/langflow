@@ -66,10 +66,31 @@ def list_components(
 ):
     try:
         fields = ["id", "name", "description", "user_created.name", "is_component"]
-        result = store_service.list_components(
-            store_api_Key, page, limit, fields=fields, filter_by_user=filter_by_user
+        result = store_service.query_components(
+            store_api_Key,
+            page,
+            limit,
+            fields=fields,
+            filter_by_user=filter_by_user,
         )
         return result
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/components/count", response_model=dict)
+def count_components(
+    filter_by_user: bool = Query(False),
+    store_service: StoreService = Depends(get_store_service),
+    store_api_Key: str = Depends(get_optional_user_store_api_key),
+):
+    try:
+        result = store_service.query_components(
+            store_api_Key,
+            count=True,
+            filter_by_user=filter_by_user,
+        )
+        return {"count": result[0].get("count", 0)}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
