@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 from uuid import UUID
 from langflow.services.base import Service
-from typing import TYPE_CHECKING, List, Dict, Any, Optional
+from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
 
 from httpx import HTTPError
@@ -119,21 +119,27 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
-    def list_components(
+    def query_components(
         self,
         api_key: str,
         page: int = 1,
         limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
-    ) -> List[ListComponentResponse]:
+        count: bool = False,
+    ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
-        params["fields"] = (
-            ",".join(fields)
-            if fields
-            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
-        )
+        if count:
+            params["aggregate"] = json.dumps({"count": "*"})
+        else:
+            params["fields"] = (
+                ",".join(fields)
+                if fields
+                else ",".join(
+                    ["id", "name", "description", "count(likes)", "is_component"]
+                )
+            )
         # Only public components or the ones created by the user
         # check for "public" or "Public"
 
@@ -151,6 +157,8 @@ class StoreService(Service):
             )
 
         results = self._get(self.components_url, api_key, params)
+        if "count" in results[0]:
+            return results
         return [ListComponentResponse(**component) for component in results]
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
