@@ -70,7 +70,7 @@ class StoreService(Service):
         tags: Optional[List[str]] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
-        sort: Optional[List[str]] = ["-likes"],
+        sort: Optional[List[str]] = ["-count(liked_by)"],
         fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
     ) -> List[ComponentResponse]:
@@ -151,7 +151,9 @@ class StoreService(Service):
         params["fields"] = (
             ",".join(fields)
             if fields
-            else ",".join(["id", "name", "description", "count(likes)", "is_component"])
+            else ",".join(
+                ["id", "name", "description", "count(liked_by)", "is_component"]
+            )
         )
         # Only public components or the ones created by the user
         # check for "public" or "Public"
@@ -208,3 +210,9 @@ class StoreService(Service):
                 except UnboundLocalError:
                     pass
             raise ValueError(f"Upload failed: {exc}")
+
+    def get_tags(self, api_key: str) -> List[Dict[str, Any]]:
+        url = f"{self.base_url}/items/tags"
+        params = {"fields": ",".join(["id", "name"])}
+        tags = self._get(url, api_key, params)
+        return tags

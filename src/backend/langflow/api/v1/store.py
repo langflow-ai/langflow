@@ -11,6 +11,7 @@ from langflow.services.store.schema import (
     DownloadComponentResponse,
     ListComponentResponse,
     StoreComponentCreate,
+    TagResponse,
 )
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -44,6 +45,13 @@ def get_optional_user_store_api_key(
     return decrypted
 
 
+@router.get("/")
+def check_if_store_is_enabled(
+    settings_service=Depends(get_settings_service),
+):
+    return {"enabled": settings_service.settings.STORE}
+
+
 @router.post("/components/", response_model=ComponentResponse, status_code=201)
 def create_component(
     component: StoreComponentCreate,
@@ -65,7 +73,16 @@ def list_components(
     store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        fields = ["id", "name", "description", "user_created.name", "is_component"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "user_created.name",
+            "is_component",
+            "tags.tags_id.name",
+            "tags.tags_id.id",
+            "count(liked_by)",
+        ]
         result = store_service.query_components(
             store_api_Key,
             page,
@@ -141,5 +158,16 @@ async def search_endpoint(
             fields=fields,
             filter_by_user=filter_by_user,
         )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/tags", response_model=List[TagResponse])
+def get_tags(
+    store_service: StoreService = Depends(get_store_service),
+    store_api_Key: str = Depends(get_optional_user_store_api_key),
+):
+    try:
+        return store_service.get_tags(store_api_Key)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
