@@ -48,7 +48,7 @@ def test_search_components(mock_httpx: Mock, client):
             "filter[name][_like]": "test",
             "page": 1,
             "limit": 5,
-            "sort": "likes",
+            "sort": "count(liked_by)",
         },
     )
 
