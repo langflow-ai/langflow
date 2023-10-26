@@ -20,6 +20,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
+  getNumberOfComponents,
   getStoreComponents,
   getStoreSavedComponents,
   searchComponent,
@@ -58,14 +59,16 @@ export default function StorePage(): JSX.Element {
 
   useEffect(() => {
     getSavedComponents().then((_) => handleGetComponents());
+    getNumberOfComponents().then((res) => {
+      setTotalRowsCount(Number(res["count"]));
+    });
   }, []);
 
   const handleGetComponents = () => {
     setLoading(true);
-    getStoreComponents(index - 1, 10000)
+    getStoreComponents(index - 1, size)
       .then((res) => {
-        setSearchData(res.slice(0, size));
-        setTotalRowsCount(res.length);
+        setSearchData(res);
         setData(res);
         setLoading(false);
       })
@@ -102,7 +105,6 @@ export default function StorePage(): JSX.Element {
     setLoading(true);
     getStoreComponents(pageIndex, pageSize)
       .then((res) => {
-        setSearchData(res.slice(0, size));
         setData(res);
         setPageIndex(pageIndex);
         setPageSize(pageSize);
