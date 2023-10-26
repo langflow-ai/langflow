@@ -92,6 +92,7 @@ metal-sdk = "^2.2.0"
 markupsafe = "^2.1.3"
 numexpr = "^2.8.6"
 qianfan = "0.0.5"
+boto3 = "^1.28.63"
 
 
 [tool.poetry.group.dev.dependencies]
