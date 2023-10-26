@@ -78,21 +78,6 @@ def list_components(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/components/count", response_model=dict)
-def count_components(
-    filter_by_user: bool = Query(False),
-    store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
-):
-    try:
-        result = store_service.count_components(
-            api_key=store_api_Key, filter_by_user=filter_by_user
-        )
-        return {"count": result}
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
 def read_component(
     component_id: UUID,
