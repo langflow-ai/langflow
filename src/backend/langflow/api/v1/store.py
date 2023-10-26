@@ -83,6 +83,7 @@ def list_components(
             "tags.tags_id.name",
             "tags.tags_id.id",
             "count(liked_by)",
+            "metadata",
         ]
         result = store_service.query_components(
             store_api_Key,

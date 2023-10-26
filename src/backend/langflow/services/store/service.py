@@ -174,6 +174,7 @@ class StoreService(Service):
                 "tags.tags_id.name",
                 "tags.tags_id.id",
                 "count(liked_by)",
+                "metadata",
             ]
         else:
             params["filter"] = params["filter"] = json.dumps(
