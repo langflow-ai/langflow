@@ -77,7 +77,7 @@ def list_components(
             "id",
             "name",
             "description",
-            "user_created.name",
+            "user_created.first_name",
             "is_component",
             "tags.tags_id.name",
             "tags.tags_id.id",
@@ -171,3 +171,7 @@ def get_tags(
         return store_service.get_tags(store_api_Key)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# urlencodedstr = https://api.langflow.store/items/components?page=0&limit=10000&fields=id%2Cname%2Cdescription%2Cuser_created.name%2Cis_component%2Ctags.tags_id.name%2Ctags.tags_id.id%2Ccount%28liked_by%29&filter=%7B%22status%22%3A%20%7B%22_in%22%3A%20%5B%22public%22%2C%20%22Public%22%5D%7D%7D'
+# normalstr = https://api.langflow.store/items/components?page=0&limit=10000&fields=id,name,description,user_created.name,is_component,tags.tags_id.name,tags.tags_id.id,count(liked_by)&filter={"status": {"_in": ["public", "Public"]}}'
