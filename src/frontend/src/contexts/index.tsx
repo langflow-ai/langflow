@@ -8,7 +8,7 @@ import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
 import { DarkProvider } from "./darkContext";
 import { LocationProvider } from "./locationContext";
-import { TabsProvider } from "./tabsContext";
+import { TabsProvider } from "./flowsContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
 
