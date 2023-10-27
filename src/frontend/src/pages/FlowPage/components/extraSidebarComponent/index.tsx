@@ -60,7 +60,7 @@ export default function ExtraSidebar(): JSX.Element {
   useEffect(() => {
     //TODO: get tags from api
     setTags(["teste1", "teste2"]);
-  }, [setTags]);
+  }, []);
 
   function handleTagSelection(tag: string) {
     setSelectedTags((prev) => {
@@ -224,8 +224,8 @@ export default function ExtraSidebar(): JSX.Element {
             <div className="w-full pt-2">
               <span className="text-sm">Add some tags to your Flow</span>
               <TagsSelector
-                tags={["teste1", "teste2"]}
-                selectedTags={new Set()}
+                tags={tags}
+                selectedTags={selectedTags}
                 setSelectedTags={handleTagSelection}
               />
             </div>
@@ -238,7 +238,7 @@ export default function ExtraSidebar(): JSX.Element {
         </ConfirmationModal.Trigger>
       </ConfirmationModal>
     ),
-    [sharePublic]
+    [sharePublic, tags, selectedTags]
   );
 
   const ExportMemo = useMemo(
