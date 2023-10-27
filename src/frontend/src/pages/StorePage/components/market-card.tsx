@@ -1,6 +1,7 @@
 import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
+import ElementStack from "../../../components/stackedComponents";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import {
@@ -26,19 +27,23 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
   const tagsPopUp = useRef<HTMLDivElement & ReactNode>(null);
-
+  const testTags = ["teste", "teste2", "teste3"];
   useEffect(() => {
     //@ts-ignore
     tagsPopUp.current = (
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-bold">Tags</span>
-        <div className="flex flex-wrap gap-1">
-          {["teste"].map((tag) => (
-            <Badge size="sm" variant="outline">
+      <div className="flex flex-col flex-wrap gap-1">
+        {testTags.map((tag, index) => (
+          <div className="">
+            <Badge
+              key={index}
+              className="shadow-lg"
+              size="sm"
+              variant="outline"
+            >
               {tag}
             </Badge>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     );
   }, []);
@@ -141,10 +146,41 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex w-full flex-wrap items-end justify-between gap-2">
             <div className=" flex items-center gap-3">
-              <ShadTooltip side="top" content={tagsPopUp.current}>
-                <Badge size="md" variant="outline">
-                  {data.tags.length > 0 ? "teste" : "-"}
-                </Badge>
+              <ShadTooltip
+                styleClasses="bg-transparent border-none shadow-none"
+                side="top"
+                content={
+                  <div className="flex flex-wrap  gap-1">
+                    {testTags.map((tag, index) => (
+                      <div className="">
+                        <Badge
+                          key={index}
+                          className="bg-card shadow-md"
+                          size="sm"
+                          variant="outline"
+                        >
+                          {tag}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                }
+              >
+                <div>
+                  {data.tags.length > 0 ? (
+                    <ElementStack>
+                      {data.tags.map((tag, index) => (
+                        <Badge key={index} size="md" variant="outline">
+                          {"tag"}
+                        </Badge>
+                      ))}
+                    </ElementStack>
+                  ) : (
+                    <Badge size="md" variant="outline">
+                      -
+                    </Badge>
+                  )}
+                </div>
               </ShadTooltip>
               <ShadTooltip content="Components">
                 <span className="flex items-center gap-1.5 text-xs text-foreground">
