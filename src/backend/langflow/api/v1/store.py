@@ -72,7 +72,10 @@ def create_component(
         # and the value is the count this type appears in the nodes
         # e.g.
         # {
-        #   "SomeType": 1
+        #   "SomeType": {
+        #       "count": 2
+        #   },
+        #   "total": 2
         # }
         names = [node["id"].split("-")[0] for node in component.data["nodes"]]
         metadata = {name: {"count": names.count(name)} for name in names}
