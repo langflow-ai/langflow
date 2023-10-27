@@ -66,8 +66,17 @@ def create_component(
 ):
     try:
         # We need to add the metadata using the Component.data
-        #
-
+        # data is a dict that contains 'nodes' key.
+        # each node has an id like "SomeType-RANDOMSTRING"
+        # we need to create a metadata dict  with SomeType as key
+        # and the value is the count this type appears in the nodes
+        # e.g.
+        # {
+        #   "SomeType": 1
+        # }
+        names = [node["id"].split("-")[0] for node in component.data["nodes"]]
+        metadata = {name: names.count(name) for name in names}
+        component.metadata = metadata
         return store_service.upload(store_api_Key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
