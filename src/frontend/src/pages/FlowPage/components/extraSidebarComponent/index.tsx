@@ -173,7 +173,6 @@ export default function ExtraSidebar(): JSX.Element {
       <ConfirmationModal
         index={0}
         modalContentTitle="Are you sure you want to share this flow?"
-        modalContent="This flow will be available for everyone to use."
         title="Share Flow"
         confirmationText="Share"
         icon="Share2"
@@ -183,11 +182,14 @@ export default function ExtraSidebar(): JSX.Element {
         titleHeader=""
         cancelText="Cancel"
       >
-        <ShadTooltip content="Share" side="top">
+        <ConfirmationModal.Content>
+          <span>This flow will be available for everyone to use.</span>
+        </ConfirmationModal.Content>
+        <ConfirmationModal.Trigger tolltipContent="Share" side="top">
           <div className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="Share2" className="side-bar-button-size" />
           </div>
-        </ShadTooltip>
+        </ConfirmationModal.Trigger>
       </ConfirmationModal>
     ),
     []

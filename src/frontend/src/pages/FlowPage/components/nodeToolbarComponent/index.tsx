@@ -280,7 +280,6 @@ export default function NodeToolbarComponent({
               key={data.id}
               index={0}
               modalContentTitle="Are you sure you want to share this component?"
-              modalContent="This component will be available for everyone to use."
               title="Share Component"
               confirmationText="Share"
               icon="Share2"
@@ -294,7 +293,14 @@ export default function NodeToolbarComponent({
                 setShowconfirmShare(modal);
               }}
             >
-              <div></div>
+              <ConfirmationModal.Content>
+                <span>
+                  This component will be available for everyone to use.
+                </span>
+              </ConfirmationModal.Content>
+              <ConfirmationModal.Trigger>
+                <div></div>
+              </ConfirmationModal.Trigger>
             </ConfirmationModal>
           )}
         </span>
