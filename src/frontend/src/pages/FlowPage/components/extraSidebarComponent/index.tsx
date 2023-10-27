@@ -5,7 +5,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -22,7 +22,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
-    useContext(TabsContext);
+    useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");

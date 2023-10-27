@@ -17,7 +17,7 @@ import {
 } from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
-import { TabsContext } from "./contexts/tabsContext";
+import { FlowsContext } from "./contexts/flowsContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
@@ -30,7 +30,7 @@ export default function App() {
     setShowSideBar(true);
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-  const { hardReset } = useContext(TabsContext);
+  const { hardReset } = useContext(FlowsContext);
 
   const {
     errorData,

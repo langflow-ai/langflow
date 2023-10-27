@@ -5,13 +5,13 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow } = useContext(TabsContext);
+    const { flows, tabId, downloadFlow } = useContext(FlowsContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
     const flow = flows.find((f) => f.id === tabId);
