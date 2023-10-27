@@ -189,3 +189,15 @@ def get_list_of_components_liked_by_user(
         return store_service.get_user_likes(store_api_Key)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/users/likes/{component_id}", response_model=UsersLikesResponse)
+def like_component(
+    component_id: UUID,
+    store_service: StoreService = Depends(get_store_service),
+    store_api_Key: str = Depends(get_user_store_api_key),
+):
+    try:
+        return store_service.like_component(store_api_Key, component_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))

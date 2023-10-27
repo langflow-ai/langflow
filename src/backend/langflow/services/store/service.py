@@ -27,7 +27,8 @@ class StoreService(Service):
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
         self.base_url = self.settings_service.settings.STORE_URL
-        self.webhook_url = self.settings_service.settings.DOWNLOAD_WEBHOOK_URL
+        self.download_webhook_url = self.settings_service.settings.DOWNLOAD_WEBHOOK_URL
+        self.like_webhook_url = self.settings_service.settings.LIKE_WEBHOOK_URL
         self.components_url = f"{self.base_url}/items/components"
 
     def _get(
@@ -200,7 +201,7 @@ class StoreService(Service):
         }
 
         component = self._get(url, api_key, params)
-        self.call_webhook(api_key, self.webhook_url, component_id)
+        self.call_webhook(api_key, self.download_webhook_url, component_id)
 
         return DownloadComponentResponse(**component)
 
@@ -243,3 +244,21 @@ class StoreService(Service):
         }
         likes = self._get(url, api_key, params)
         return likes
+
+    def like_component(self, api_key: str, component_id: str) -> bool:
+        # if it returns a list with one id, it means the like was successful
+        # if it returns an int, it means the like was removed
+        headers = {"Authorization": f"Bearer {api_key}"}
+        response = httpx.post(
+            self.like_webhook_url, json={"component_id": component_id}, headers=headers
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+
+            if isinstance(result, list):
+                return True
+            elif isinstance(result, int):
+                return False
+            else:
+                raise ValueError(f"Unexpected result: {result}")
