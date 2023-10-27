@@ -46,6 +46,7 @@ install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
 run_frontend:
+	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
 run_cli:
@@ -72,6 +73,7 @@ install_backend:
 
 backend:
 	make install_backend
+	@-kill -9 `lsof -t -i:7860`
 ifeq ($(login),1)
 	@echo "Running backend without autologin";
 	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
