@@ -12,3 +12,12 @@ export default function cloneFLowWithParent(
   childFLow.is_component = is_component;
   return childFLow;
 }
+
+export function getTagsIds(
+  tags: string[],
+  tagListId: { current: { name: string; id: string }[] }
+) {
+  return tags
+    .map((tag) => tagListId.current.find((tagObj) => tagObj.name === tag))!
+    .map((tag) => tag!.id);
+}

@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -13,7 +13,7 @@ import {
 } from "../../../../components/ui/select-custom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { saveFlowStore } from "../../../../controllers/API";
+import { getStoreTags, saveFlowStore } from "../../../../controllers/API";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
@@ -23,6 +23,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
+import { getTagsIds } from "../../../../utils/storeUtils";
 import { classNames } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
@@ -72,10 +73,14 @@ export default function NodeToolbarComponent({
   const [sharePublic, setSharePublic] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const tagListId = useRef<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    //TODO: get tags from api
-    setTags(["teste1", "teste2"]);
+    getStoreTags().then((res) => {
+      tagListId.current = res;
+      let tags = res.map((tag) => tag.name);
+      setTags(tags);
+    });
   }, []);
 
   function handleTagSelection(tag: string) {
@@ -95,7 +100,7 @@ export default function NodeToolbarComponent({
     saveComponent(componentFlow).then(() => {
       saveFlowStore(
         createFlowComponent(componentFlow),
-        Array.from(selectedTags),
+        getTagsIds(Array.from(selectedTags), tagListId),
         sharePublic
       ).then(
         (_) => {
