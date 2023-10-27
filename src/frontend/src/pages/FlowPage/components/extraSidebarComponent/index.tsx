@@ -16,6 +16,7 @@ import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import ExportModal from "../../../../modals/exportModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { FlowType } from "../../../../types/flow";
+import { getTagsIds } from "../../../../utils/storeUtils";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -76,12 +77,6 @@ export default function ExtraSidebar(): JSX.Element {
       }
       return newSet;
     });
-  }
-
-  function getTagsIds(tags: string[]) {
-    return tags
-      .map((tag) => tagListId.current.find((tagObj) => tagObj.name === tag))!
-      .map((tag) => tag!.id);
   }
 
   // Handle showing components after use search input
@@ -151,7 +146,7 @@ export default function ExtraSidebar(): JSX.Element {
     };
     saveFlowStore(
       saveFlow,
-      getTagsIds(Array.from(selectedTags)),
+      getTagsIds(Array.from(selectedTags), tagListId),
       sharePublic
     ).then(
       () => {
