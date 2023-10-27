@@ -158,7 +158,6 @@ class StoreService(Service):
                     "name",
                     "description",
                     "user_created.first_name",
-                    "user_created.id",
                     "is_component",
                     "tags.tags_id.name",
                     "tags.tags_id.id",
