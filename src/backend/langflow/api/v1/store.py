@@ -92,23 +92,10 @@ def list_components(
     store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        fields = [
-            "id",
-            "name",
-            "description",
-            "user_created.first_name",
-            "is_component",
-            "tags.tags_id.name",
-            "tags.tags_id.id",
-            "count(liked_by)",
-            "count(downloads)",
-            "metadata",
-        ]
         result = store_service.query_components(
-            store_api_Key,
-            page,
-            limit,
-            fields=fields,
+            api_key=store_api_Key,
+            page=page,
+            limit=limit,
             filter_by_user=filter_by_user,
         )
 
