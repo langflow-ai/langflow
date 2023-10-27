@@ -7,7 +7,7 @@ interface ElementStackProps {
 const ElementStack: React.FC<ElementStackProps> = ({ children }) => {
   return (
     <div
-      className={`grid grid-cols-3`}
+      className={`grid grid-cols-1`}
       style={{ display: "grid", gridAutoFlow: "row" }}
     >
       {children.map((child, index) => (

@@ -97,7 +97,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   }
 
   return (
-    <Card className="group relative flex cursor-pointer flex-col justify-between overflow-hidden transition-all hover:shadow-md">
+    <Card className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
       <div>
         <CardHeader>
           {/*
@@ -166,7 +166,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                   </div>
                 }
               >
-                <div className="hover:blur-sm">
+                <div className="pr-2 hover:opacity-40">
                   {testTags.length > 0 ? (
                     <ElementStack>
                       {testTags.map((tag, index) => (
@@ -222,6 +222,9 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
               size="sm"
               className="whitespace-nowrap "
               onClick={() => {
+                if (loading) {
+                  return;
+                }
                 if (!added) {
                   handleAdd();
                 } else {
