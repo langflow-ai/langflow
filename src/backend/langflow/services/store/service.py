@@ -30,6 +30,18 @@ class StoreService(Service):
         self.download_webhook_url = self.settings_service.settings.DOWNLOAD_WEBHOOK_URL
         self.like_webhook_url = self.settings_service.settings.LIKE_WEBHOOK_URL
         self.components_url = f"{self.base_url}/items/components"
+        self.default_fields = [
+            "id",
+            "name",
+            "description",
+            "user_created.first_name",
+            "is_component",
+            "tags.tags_id.name",
+            "tags.tags_id.id",
+            "count(liked_by)",
+            "count(downloads)",
+            "metadata",
+        ]
 
     def _get(
         self, url: str, api_key: str, params: Dict[str, Any] = None
@@ -149,24 +161,8 @@ class StoreService(Service):
     ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
-        params["fields"] = (
-            ",".join(fields)
-            if fields
-            else ",".join(
-                [
-                    "id",
-                    "name",
-                    "description",
-                    "user_created.first_name",
-                    "is_component",
-                    "tags.tags_id.name",
-                    "tags.tags_id.id",
-                    "count(liked_by)",
-                    "count(downloads)",
-                    "metadata",
-                ]
-            )
-        )
+        params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
+
         # Only public components or the ones created by the user
         # check for "public" or "Public"
 
