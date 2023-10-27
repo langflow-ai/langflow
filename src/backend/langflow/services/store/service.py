@@ -188,9 +188,9 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         results_objects = [ListComponentResponse(**component) for component in results]
         # Flatten the tags
-        for component in results_objects:
-            if component.tags:
-                component.tags = [tags_id.tags_id for tags_id in component.tags]
+        # for component in results_objects:
+        #     if component.tags:
+        #         component.tags = [tags_id.tags_id for tags_id in component.tags]
         return results_objects
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:

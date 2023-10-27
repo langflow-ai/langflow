@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional, List
 from uuid import UUID
 
@@ -45,8 +45,20 @@ class ListComponentResponse(BaseModel):
     is_component: Optional[bool]
     metadata: Optional[dict]
     user_created: Optional[dict]
-    tags: Optional[List[TagsIdResponse]] = None
+    tags: Optional[List[TagResponse]] = None
     downloads_count: Optional[int]
+
+    # tags comes as a TagsIdResponse but we want to return a list of TagResponse
+    @validator("tags", pre=True)
+    def tags_to_list(cls, v):
+        # Check if all values are have id and name
+        # if so, return v else transform to TagResponse
+        if all(["id" in tag and "name" in tag for tag in v]):
+            return v
+        else:
+            return [
+                TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")
+            ]
 
 
 class DownloadComponentResponse(BaseModel):
