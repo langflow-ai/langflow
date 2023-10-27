@@ -32,7 +32,11 @@ export default function FlowManagerProvider({ children }) {
     }
 
     function addDataToFlowPool(data: any, nodeId: string) {
-        flowPool[nodeId] = data;
+        setFlowPool((oldFlowPool) => {
+            let newFlowPool = cloneDeep({ ...oldFlowPool });
+            newFlowPool[nodeId] = data;
+            return newFlowPool;
+        })
     }
 
     function checkInputandOutput(flow: FlowType): boolean {

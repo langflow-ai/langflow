@@ -45,7 +45,10 @@ export async function buildVertices({
         }
         // Update SSE data
         if (onBuildUpdate) {
-          onBuildUpdate({ [buildData.id]: buildData });
+          let data = {};
+          data[buildData.id] = buildData;
+          
+          onBuildUpdate({ data,id:buildData.id });
         }
         buildResults.push(buildData.valid);
       } catch (error) {

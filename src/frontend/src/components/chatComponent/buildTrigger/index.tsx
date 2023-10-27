@@ -11,6 +11,7 @@ import { buildVertices } from "../../../utils/buildUtils";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
+import { flowManagerContext } from "../../../contexts/flowManagerContext";
 
 export default function BuildTrigger({
   open,
@@ -26,10 +27,16 @@ export default function BuildTrigger({
   const { reactFlowInstance } = useContext(typesContext);
   const { setTabsState } = useContext(TabsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
+  const {addDataToFlowPool} = useContext(flowManagerContext)
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
+
+  function handleBuildUpdate(data: any) {
+    updateSSEData(data.data);
+    addDataToFlowPool(data, data.nodeId);
+  }
 
   async function handleBuild(flow: FlowType): Promise<void> {
     try {
