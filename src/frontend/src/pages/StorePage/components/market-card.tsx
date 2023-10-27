@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
@@ -25,6 +25,23 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { addFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
+  const tagsPopUp = useRef<HTMLDivElement & ReactNode>(null);
+
+  useEffect(() => {
+    //@ts-ignore
+    tagsPopUp.current = (
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-bold">Tags</span>
+        <div className="flex flex-wrap gap-1">
+          {["teste"].map((tag) => (
+            <Badge size="sm" variant="outline">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    );
+  }, []);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -124,9 +141,11 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex w-full flex-wrap items-end justify-between gap-2">
             <div className=" flex items-center gap-3">
-              <Badge size="md" variant="outline">
-                text
-              </Badge>
+              <ShadTooltip side="top" content={tagsPopUp.current}>
+                <Badge size="md" variant="outline">
+                  {data.tags.length > 0 ? "teste" : "-"}
+                </Badge>
+              </ShadTooltip>
               <ShadTooltip content="Components">
                 <span className="flex items-center gap-1.5 text-xs text-foreground">
                   <IconComponent name="ToyBrick" className="h-4 w-4" />
