@@ -93,7 +93,11 @@ export default function NodeToolbarComponent({
   function handleShareComponent() {
     const componentFlow = cloneDeep(data);
     saveComponent(componentFlow).then(() => {
-      saveFlowStore(createFlowComponent(componentFlow), []).then(
+      saveFlowStore(
+        createFlowComponent(componentFlow),
+        Array.from(selectedTags),
+        sharePublic
+      ).then(
         (_) => {
           setSuccessData({
             title: "Component shared successfully",
