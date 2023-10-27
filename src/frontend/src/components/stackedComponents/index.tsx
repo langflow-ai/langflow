@@ -6,14 +6,19 @@ interface ElementStackProps {
 
 const ElementStack: React.FC<ElementStackProps> = ({ children }) => {
   return (
-    <div className="relative flex">
+    <div
+      className={`grid grid-cols-3`}
+      style={{ display: "grid", gridAutoFlow: "row" }}
+    >
       {children.map((child, index) => (
         <div
           key={index}
-          className={` transform translate-x-${index * 4} -translate-y-${
-            index * 2
-          } scale-${100 - index * 3}`}
-          style={{ zIndex: children.length - index }}
+          style={{
+            gridColumn: 1,
+            gridRow: 1,
+            transform: `translateX(${index * 0.3}rem)`,
+            zIndex: children.length - index,
+          }}
         >
           {child}
         </div>

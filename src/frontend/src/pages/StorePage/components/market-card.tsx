@@ -167,10 +167,15 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 }
               >
                 <div>
-                  {data.tags.length > 0 ? (
+                  {testTags.length > 0 ? (
                     <ElementStack>
-                      {data.tags.map((tag, index) => (
-                        <Badge key={index} size="md" variant="outline">
+                      {testTags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          size="md"
+                          className="bg-card"
+                          variant="outline"
+                        >
                           {"tag"}
                         </Badge>
                       ))}
