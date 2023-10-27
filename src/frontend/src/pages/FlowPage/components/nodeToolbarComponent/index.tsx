@@ -1,8 +1,10 @@
 import { cloneDeep } from "lodash";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { TagsSelector } from "../../../../components/tagsSelectorComponent";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import {
   Select,
   SelectContent,
@@ -67,6 +69,26 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
+  const [sharePublic, setSharePublic] = useState(true);
+  const [tags, setTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    //TODO: get tags from api
+    setTags(["teste1", "teste2"]);
+  }, []);
+
+  function handleTagSelection(tag: string) {
+    setSelectedTags((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(tag)) {
+        newSet.delete(tag);
+      } else {
+        newSet.add(tag);
+      }
+      return newSet;
+    });
+  }
 
   function handleShareComponent() {
     const componentFlow = cloneDeep(data);
@@ -279,6 +301,7 @@ export default function NodeToolbarComponent({
             <ConfirmationModal
               key={data.id}
               index={0}
+              size="smaller"
               modalContentTitle="Are you sure you want to share this component?"
               title="Share Component"
               confirmationText="Share"
@@ -294,9 +317,31 @@ export default function NodeToolbarComponent({
               }}
             >
               <ConfirmationModal.Content>
-                <span>
-                  This component will be available for everyone to use.
-                </span>
+                <div className="flex h-full w-full flex-col gap-7">
+                  <div className="flex justify-start align-middle">
+                    <ToggleShadComponent
+                      disabled={false}
+                      size="medium"
+                      setEnabled={setSharePublic}
+                      enabled={sharePublic}
+                    />
+                    <div>
+                      {sharePublic
+                        ? "This component will be avaliable for everyone"
+                        : "This component will be avaliable just for you"}
+                    </div>
+                  </div>
+                  <div className="w-full pt-2">
+                    <span className="text-sm">
+                      Add some tags to your component
+                    </span>
+                    <TagsSelector
+                      tags={tags}
+                      selectedTags={selectedTags}
+                      setSelectedTags={handleTagSelection}
+                    />
+                  </div>
+                </div>{" "}
               </ConfirmationModal.Content>
               <ConfirmationModal.Trigger>
                 <div></div>
