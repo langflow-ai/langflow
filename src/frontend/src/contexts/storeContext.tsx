@@ -6,7 +6,7 @@ import { storeContextType } from "../types/contexts/store";
 const initialValue = {
   savedFlows: new Set<string>(),
   setSavedFlows: () => {},
-  hasStore: false,
+  hasStore: true,
   setHasStore: () => {},
 };
 
@@ -15,7 +15,7 @@ export const StoreContext = createContext<storeContextType>(initialValue);
 export function StoreProvider({ children }) {
   const [savedFlows, setSavedFlows] = useState<Set<string>>(new Set());
 
-  const [hasStore, setHasStore] = useState(false);
+  const [hasStore, setHasStore] = useState(true);
 
   checkHasStore().then((res) => {
     setHasStore(res["enabled"]);
