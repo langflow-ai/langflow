@@ -311,7 +311,6 @@ export default function AdminPage() {
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
-                              modalContent="Are you completely confident about the changes you are making to this user?"
                               cancelText="Cancel"
                               confirmationText="Confirm"
                               icon={"UserCog2"}
@@ -325,12 +324,20 @@ export default function AdminPage() {
                                 );
                               }}
                             >
-                              <div className="flex w-fit">
-                                <Checkbox
-                                  id="is_active"
-                                  checked={user.is_active}
-                                />
-                              </div>
+                              <ConfirmationModal.Content>
+                                <span>
+                                  Are you completely confident about the changes
+                                  you are making to this user?
+                                </span>
+                              </ConfirmationModal.Content>
+                              <ConfirmationModal.Trigger>
+                                <div className="flex w-fit">
+                                  <Checkbox
+                                    id="is_active"
+                                    checked={user.is_active}
+                                  />
+                                </div>
+                              </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
@@ -339,7 +346,6 @@ export default function AdminPage() {
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
-                              modalContent="Are you completely confident about the changes you are making to this user?"
                               cancelText="Cancel"
                               confirmationText="Confirm"
                               icon={"UserCog2"}
@@ -353,12 +359,20 @@ export default function AdminPage() {
                                 );
                               }}
                             >
-                              <div className="flex w-fit">
-                                <Checkbox
-                                  id="is_superuser"
-                                  checked={user.is_superuser}
-                                />
-                              </div>
+                              <ConfirmationModal.Content>
+                                <span>
+                                  Are you completely confident about the changes
+                                  you are making to this user?
+                                </span>
+                              </ConfirmationModal.Content>
+                              <ConfirmationModal.Trigger>
+                                <div className="flex w-fit">
+                                  <Checkbox
+                                    id="is_superuser"
+                                    checked={user.is_superuser}
+                                  />
+                                </div>
+                              </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
                           <TableCell className="truncate py-2 ">
@@ -401,7 +415,6 @@ export default function AdminPage() {
                                 title="Delete"
                                 titleHeader="Delete User"
                                 modalContentTitle="Attention!"
-                                modalContent="Are you sure you want to delete this user? This action cannot be undone."
                                 cancelText="Cancel"
                                 confirmationText="Delete"
                                 icon={"UserMinus2"}
@@ -411,12 +424,20 @@ export default function AdminPage() {
                                   handleDeleteUser(user);
                                 }}
                               >
-                                <ShadTooltip content="Delete" side="top">
-                                  <IconComponent
-                                    name="Trash2"
-                                    className="ml-2 h-4 w-4 cursor-pointer"
-                                  />
-                                </ShadTooltip>
+                                <ConfirmationModal.Content>
+                                  <span>
+                                    Are you sure you want to delete this user?
+                                    This action cannot be undone.
+                                  </span>
+                                </ConfirmationModal.Content>
+                                <ConfirmationModal.Trigger>
+                                  <ShadTooltip content="Delete" side="top">
+                                    <IconComponent
+                                      name="Trash2"
+                                      className="ml-2 h-4 w-4 cursor-pointer"
+                                    />
+                                  </ShadTooltip>
+                                </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             </div>
                           </TableCell>

@@ -1,14 +1,28 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { ConfirmationModalType } from "../../types/components";
+import { ConfirmationModalType, ContentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
-export default function ConfirmationModal({
+const Content: React.FC<ContentProps> = ({ children }) => {
+  return <div className="h-full w-full">{children}</div>;
+};
+const Trigger: React.FC<ContentProps> = ({
+  children,
+  tolltipContent,
+  side,
+}) => {
+  return (
+    <ShadTooltip side={side} content={tolltipContent}>
+      <div className="h-full w-full">{children}</div>
+    </ShadTooltip>
+  );
+};
+function ConfirmationModal({
   title,
   asChild,
   titleHeader,
-  modalContent,
   modalContentTitle,
   cancelText,
   confirmationText,
@@ -26,10 +40,16 @@ export default function ConfirmationModal({
   useEffect(() => {
     if (onClose) onClose!(modalOpen);
   }, [modalOpen]);
+  const triggerChild = React.Children.toArray(children).find(
+    (child) => (child as React.ReactElement).type === Trigger
+  );
+  const ContentChild = React.Children.toArray(children).find(
+    (child) => (child as React.ReactElement).type === Content
+  );
 
   return (
     <BaseModal size="x-small" open={modalOpen} setOpen={setModalOpen}>
-      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild={asChild}>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
         <Icon
@@ -45,7 +65,7 @@ export default function ConfirmationModal({
             <br></br>
           </>
         )}
-        <span>{modalContent}</span>
+        {ContentChild}
       </BaseModal.Content>
 
       <BaseModal.Footer>
@@ -71,3 +91,7 @@ export default function ConfirmationModal({
     </BaseModal>
   );
 }
+ConfirmationModal.Content = Content;
+ConfirmationModal.Trigger = Trigger;
+
+export default ConfirmationModal;
