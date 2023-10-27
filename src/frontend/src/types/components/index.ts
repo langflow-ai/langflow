@@ -298,6 +298,15 @@ export type ConfirmationModalType = {
   onConfirm: (index, data) => void;
   open?: boolean;
   onClose?: (close: boolean) => void;
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
 };
 
 export type UserManagementType = {

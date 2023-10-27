@@ -547,14 +547,18 @@ export async function addApiKeyStore(key: string) {
  * @returns {Promise<any>} The saved flow data.
  * @throws Will throw an error if saving fails.
  */
-export async function saveFlowStore(newFlow: {
-  name?: string;
-  data: ReactFlowJsonObject | null;
-  description?: string;
-  style?: FlowStyleType;
-  is_component?: boolean;
-  parent?: string;
-}): Promise<FlowType> {
+export async function saveFlowStore(
+  newFlow: {
+    name?: string;
+    data: ReactFlowJsonObject | null;
+    description?: string;
+    style?: FlowStyleType;
+    is_component?: boolean;
+    parent?: string;
+  },
+  tags: string[],
+  publicFlow = false
+): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}store/components/`, {
       name: newFlow.name,
@@ -562,6 +566,8 @@ export async function saveFlowStore(newFlow: {
       description: newFlow.description,
       is_component: newFlow.is_component,
       parent: newFlow.parent,
+      tags: tags,
+      public: publicFlow,
     });
 
     if (response.status !== 201) {

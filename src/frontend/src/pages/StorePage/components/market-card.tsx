@@ -38,7 +38,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
         flowData.current = newFLow;
         console.log(newFLow);
-        saveFlowStore(newFLow)
+        saveFlowStore(newFLow, data.tags)
           .then(() => {
             setAdded(true);
             setLoading(false);

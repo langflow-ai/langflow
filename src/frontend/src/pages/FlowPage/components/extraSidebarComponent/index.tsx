@@ -3,6 +3,8 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { TagsSelector } from "../../../../components/tagsSelectorComponent";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
@@ -35,6 +37,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
+  const [sharePublic, setSharePublic] = useState(true);
   const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
@@ -49,6 +52,26 @@ export default function ExtraSidebar(): JSX.Element {
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
+  }
+
+  const [tags, setTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    //TODO: get tags from api
+    setTags(["teste1", "teste2"]);
+  }, [setTags]);
+
+  function handleTagSelection(tag: string) {
+    setSelectedTags((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(tag)) {
+        newSet.delete(tag);
+      } else {
+        newSet.add(tag);
+      }
+      return newSet;
+    });
   }
 
   // Handle showing components after use search input
@@ -116,7 +139,7 @@ export default function ExtraSidebar(): JSX.Element {
       },
       is_component: false,
     };
-    saveFlowStore(saveFlow).then(
+    saveFlowStore(saveFlow, Array.from(selectedTags), sharePublic).then(
       () => {
         setSuccessData({
           title: "Flow shared successfully",
@@ -176,6 +199,7 @@ export default function ExtraSidebar(): JSX.Element {
         title="Share Flow"
         confirmationText="Share"
         icon="Share2"
+        size="smaller"
         onConfirm={() => {
           handleShareFlow();
         }}
@@ -183,7 +207,29 @@ export default function ExtraSidebar(): JSX.Element {
         cancelText="Cancel"
       >
         <ConfirmationModal.Content>
-          <span>This flow will be available for everyone to use.</span>
+          <div className="flex h-full w-full flex-col gap-7">
+            <div className="flex justify-start align-middle">
+              <ToggleShadComponent
+                disabled={false}
+                size="medium"
+                setEnabled={setSharePublic}
+                enabled={sharePublic}
+              />
+              <div>
+                {sharePublic
+                  ? "This flow will be avaliable for everyone"
+                  : "This flow will be avaliable just for you"}
+              </div>
+            </div>
+            <div className="w-full pt-2">
+              <span className="text-sm">Add some tags to your Flow</span>
+              <TagsSelector
+                tags={["teste1", "teste2"]}
+                selectedTags={new Set()}
+                setSelectedTags={handleTagSelection}
+              />
+            </div>
+          </div>
         </ConfirmationModal.Content>
         <ConfirmationModal.Trigger tolltipContent="Share" side="top">
           <div className={classNames("extra-side-bar-buttons")}>
@@ -192,7 +238,7 @@ export default function ExtraSidebar(): JSX.Element {
         </ConfirmationModal.Trigger>
       </ConfirmationModal>
     ),
-    []
+    [sharePublic]
   );
 
   const ExportMemo = useMemo(
