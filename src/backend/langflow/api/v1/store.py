@@ -79,7 +79,6 @@ def list_components(
             "name",
             "description",
             "user_created.first_name",
-            "user_created.id",
             "is_component",
             "tags.tags_id.name",
             "tags.tags_id.id",
@@ -94,8 +93,6 @@ def list_components(
             fields=fields,
             filter_by_user=filter_by_user,
         )
-        # tags comes as "tags" : [{"tags_id": {"name": "tag1", "id": 1}}]
-        # so we need to flatten it
 
         return result
     except Exception as exc:
