@@ -200,7 +200,7 @@ export const nodeIconsLucide: iconsType = {
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
-  BedrockEmbeddings: AWSIcon,
+  AmazonBedrockEmbeddings: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
