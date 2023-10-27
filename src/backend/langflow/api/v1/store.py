@@ -46,7 +46,7 @@ def get_optional_user_store_api_key(
     return decrypted
 
 
-@router.get("/")
+@router.get("/check")
 def check_if_store_is_enabled(
     settings_service=Depends(get_settings_service),
     api_key=Depends(get_optional_user_store_api_key),
