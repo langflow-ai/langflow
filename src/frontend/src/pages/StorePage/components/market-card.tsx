@@ -125,11 +125,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
           <div className="flex w-full flex-wrap items-end justify-between gap-2">
             <div className=" flex items-center gap-3">
               <Badge size="md" variant="outline">
-                chain
-                <IconComponent
-                  name="Link"
-                  className="ml-1.5 w-3 text-green-700"
-                />
+                text
               </Badge>
               <ShadTooltip content="Components">
                 <span className="flex items-center gap-1.5 text-xs text-foreground">
