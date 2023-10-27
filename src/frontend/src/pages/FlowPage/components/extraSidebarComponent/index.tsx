@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -10,7 +10,7 @@ import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
-import { saveFlowStore } from "../../../../controllers/API";
+import { getStoreTags, saveFlowStore } from "../../../../controllers/API";
 import ApiModal from "../../../../modals/ApiModal";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -56,10 +56,14 @@ export default function ExtraSidebar(): JSX.Element {
 
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const tagListId = useRef<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    //TODO: get tags from api
-    setTags(["teste1", "teste2"]);
+    getStoreTags().then((res) => {
+      tagListId.current = res;
+      let tags = res.map((tag) => tag.name);
+      setTags(tags);
+    });
   }, []);
 
   function handleTagSelection(tag: string) {
@@ -72,6 +76,12 @@ export default function ExtraSidebar(): JSX.Element {
       }
       return newSet;
     });
+  }
+
+  function getTagsIds(tags: string[]) {
+    return tags
+      .map((tag) => tagListId.current.find((tagObj) => tagObj.name === tag))!
+      .map((tag) => tag!.id);
   }
 
   // Handle showing components after use search input
@@ -139,7 +149,11 @@ export default function ExtraSidebar(): JSX.Element {
       },
       is_component: false,
     };
-    saveFlowStore(saveFlow, Array.from(selectedTags), sharePublic).then(
+    saveFlowStore(
+      saveFlow,
+      getTagsIds(Array.from(selectedTags)),
+      sharePublic
+    ).then(
       () => {
         setSuccessData({
           title: "Flow shared successfully",

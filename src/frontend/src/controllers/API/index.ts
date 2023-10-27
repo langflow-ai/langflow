@@ -706,3 +706,15 @@ export async function getNumberOfComponents() {
     throw error;
   }
 }
+
+export async function getStoreTags() {
+  try {
+    const res = await api.get(`${BASE_URL_API}store/tags`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
