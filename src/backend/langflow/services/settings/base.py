@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     STORE: Optional[bool] = True
     STORE_URL: Optional[str] = None
     DOWNLOAD_WEBHOOK_URL: Optional[str] = None
+    LIKE_WEBHOOK_URL: Optional[str] = None
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
