@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { Link, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -47,6 +47,7 @@ export default function StorePage(): JSX.Element {
   const [index, setPageIndex] = useState(1);
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setSavedFlows } = useContext(StoreContext);
+  const [tags, setTags] = useState<string[]>([]);
 
   async function getSavedComponents() {
     setLoading(true);
@@ -57,6 +58,11 @@ export default function StorePage(): JSX.Element {
     });
     setSavedFlows(savedIds);
   }
+
+  useEffect(() => {
+    //TODO get tags from API
+    setTags(["tag1", "tag2", "tag3"]);
+  }, []);
 
   useEffect(() => {
     getNumberOfComponents().then((res) => {
@@ -208,36 +214,33 @@ export default function StorePage(): JSX.Element {
           </div>
           <div className="flex h-2 items-center justify-center gap-4">
             {!loading &&
-              Array.from(new Set(searchData.map((i) => i.is_component))).map(
-                (i, idx) => (
-                  <Badge
-                    onClick={() => {
-                      filteredCategories.has(i)
-                        ? setFilteredCategories((old) => {
-                            let newFilteredCategories = cloneDeep(old);
-                            newFilteredCategories.delete(i);
-                            return newFilteredCategories;
-                          })
-                        : setFilteredCategories((old) => {
-                            let newFilteredCategories = cloneDeep(old);
-                            newFilteredCategories.add(i);
-                            return newFilteredCategories;
-                          });
-                    }}
-                    variant="gray"
-                    size="md"
-                    className={cn(
-                      "cursor-pointer border-none",
-                      filteredCategories.has(i)
-                        ? "bg-beta-foreground text-background hover:bg-beta-foreground"
-                        : ""
-                    )}
-                  >
-                    <Link className="mr-1.5 w-4" />
-                    {i}
-                  </Badge>
-                )
-              )}
+              tags.map((i, idx) => (
+                <Badge
+                  onClick={() => {
+                    filteredCategories.has(i)
+                      ? setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.delete(i);
+                          return newFilteredCategories;
+                        })
+                      : setFilteredCategories((old) => {
+                          let newFilteredCategories = cloneDeep(old);
+                          newFilteredCategories.add(i);
+                          return newFilteredCategories;
+                        });
+                  }}
+                  variant="gray"
+                  size="md"
+                  className={cn(
+                    "cursor-pointer border-none",
+                    filteredCategories.has(i)
+                      ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                      : ""
+                  )}
+                >
+                  {i}
+                </Badge>
+              ))}
           </div>
           <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? (
