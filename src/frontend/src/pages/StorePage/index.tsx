@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { Search } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
@@ -23,6 +23,7 @@ import {
   getNumberOfComponents,
   getStoreComponents,
   getStoreSavedComponents,
+  getStoreTags,
   searchComponent,
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -48,6 +49,15 @@ export default function StorePage(): JSX.Element {
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setSavedFlows } = useContext(StoreContext);
   const [tags, setTags] = useState<string[]>([]);
+  const tagListId = useRef<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    getStoreTags().then((res) => {
+      tagListId.current = res;
+      let tags = res.map((tag) => tag.name);
+      setTags(tags);
+    });
+  }, []);
 
   async function getSavedComponents() {
     setLoading(true);

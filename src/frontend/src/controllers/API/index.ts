@@ -685,7 +685,7 @@ export async function searchComponent(
 
 export async function checkHasStore() {
   try {
-    const res = await api.get(`${BASE_URL_API}store`);
+    const res = await api.get(`${BASE_URL_API}store/check/`);
     if (res.status === 200) {
       return res.data;
     }
