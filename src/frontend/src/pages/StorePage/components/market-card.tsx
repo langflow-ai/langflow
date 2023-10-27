@@ -148,9 +148,9 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
             <div className=" flex items-center gap-3">
               <ShadTooltip
                 styleClasses="bg-transparent border-none shadow-none"
-                side="top"
+                side="right"
                 content={
-                  <div className="flex flex-wrap  gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {testTags.map((tag, index) => (
                       <div className="">
                         <Badge
@@ -166,7 +166,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                   </div>
                 }
               >
-                <div>
+                <div className="hover:blur-sm">
                   {testTags.length > 0 ? (
                     <ElementStack>
                       {testTags.map((tag, index) => (
