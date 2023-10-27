@@ -75,7 +75,8 @@ def create_component(
         #   "SomeType": 1
         # }
         names = [node["id"].split("-")[0] for node in component.data["nodes"]]
-        metadata = {name: names.count(name) for name in names}
+        metadata = {name: {"count": names.count(name)} for name in names}
+        metadata["total"] = len(names)
         component.metadata = metadata
         return store_service.upload(store_api_Key, component)
     except Exception as exc:
