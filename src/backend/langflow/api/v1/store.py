@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+from langflow import api
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import (
@@ -49,8 +50,12 @@ def get_optional_user_store_api_key(
 @router.get("/")
 def check_if_store_is_enabled(
     settings_service=Depends(get_settings_service),
+    api_key=Depends(get_optional_user_store_api_key),
 ):
-    return {"enabled": settings_service.settings.STORE}
+    return {
+        "enabled": settings_service.settings.STORE,
+        "has_api_key": api_key is not None,
+    }
 
 
 @router.post("/components/", response_model=ComponentResponse, status_code=201)
@@ -60,6 +65,9 @@ def create_component(
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
+        # We need to add the metadata using the Component.data
+        #
+
         return store_service.upload(store_api_Key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
