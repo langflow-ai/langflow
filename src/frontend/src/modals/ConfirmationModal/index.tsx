@@ -13,10 +13,12 @@ const Trigger: React.FC<ContentProps> = ({
   tolltipContent,
   side,
 }) => {
-  return (
+  return tolltipContent ? (
     <ShadTooltip side={side} content={tolltipContent}>
       <div className="h-full w-full">{children}</div>
     </ShadTooltip>
+  ) : (
+    <div className="h-full w-full">{children}</div>
   );
 };
 function ConfirmationModal({
