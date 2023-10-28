@@ -93,6 +93,7 @@ export default function StorePage(): JSX.Element {
         setSearchData(res);
         setData(res);
         setLoading(false);
+        setErrorApiKey(true);
       })
       .catch((err) => {
         setSearchData([]);
