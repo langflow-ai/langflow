@@ -14,12 +14,12 @@ class AmazonKendraRetrieverComponent(CustomComponent):
             "region_name": {"display_name": "Region Name"},
             "credentials_profile_name": {"display_name": "Credentials Profile Name"},
             "attribute_filter": {
-                "attribute_filter": "Attribute Filter",
+                "display_name": "Attribute Filter",
                 "field_type": "code",
             },
             "top_k": {"display_name": "Top K", "field_type": "int"},
             "user_context": {
-                "attribute_filter": "User Context",
+                "display_name": "User Context",
                 "field_type": "code",
             },
             "code": {"show": False},
