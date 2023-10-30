@@ -205,15 +205,9 @@ export default function StorePage(): JSX.Element {
               </Button>
             </div>
             <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-              <Select
-                onValueChange={(value) => {
-                  const filter = value === "Flow" ? false : true;
-                  const search = data.filter((f) => f.is_component === filter);
-                  value === "" ? setSearchData(data) : setSearchData(search);
-                }}
-              >
+              <Select onValueChange={(value) => {}}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Flows" />
+                  <SelectValue placeholder="Both" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Flow">Flows</SelectItem>
