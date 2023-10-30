@@ -1,4 +1,5 @@
 import ast
+import json
 from typing import Any, Dict, List, Optional, Union
 
 from langflow.graph.vertex.base import Vertex
@@ -319,4 +320,7 @@ class CustomComponentVertex(Vertex):
             else:
                 return f"Task {self.task_id} is not running"
         if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+            result = self.artifacts["repr"] or super()._built_object_repr()
+            if isinstance(result, dict):
+                return json.dumps(result)
+            return result

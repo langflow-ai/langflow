@@ -171,6 +171,7 @@ async def stream_build(
                     else:
                         vertex.build()
                     params = vertex._built_object_repr()
+
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
                     logger.debug(
