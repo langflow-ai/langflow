@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
 import ElementStack from "../../../components/stackedComponents";
@@ -26,27 +26,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { addFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
-  const tagsPopUp = useRef<HTMLDivElement & ReactNode>(null);
-  const testTags = ["teste", "teste2", "teste3"];
-  useEffect(() => {
-    //@ts-ignore
-    tagsPopUp.current = (
-      <div className="flex flex-col flex-wrap gap-1">
-        {testTags.map((tag, index) => (
-          <div className="">
-            <Badge
-              key={index}
-              className="shadow-lg"
-              size="sm"
-              variant="outline"
-            >
-              {tag}
-            </Badge>
-          </div>
-        ))}
-      </div>
-    );
-  }, []);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -60,7 +39,10 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
         flowData.current = newFLow;
         console.log(newFLow);
-        saveFlowStore(newFLow, data.tags)
+        saveFlowStore(
+          newFLow,
+          data.tags.map((tag) => tag.id)
+        )
           .then(() => {
             setAdded(true);
             setLoading(false);
@@ -87,7 +69,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
       });
     } else {
       getComponent(data.id).then((res) => {
-        console.log(res);
         const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
         flowData.current = newFLow;
         addFlow(true, newFLow);
@@ -100,21 +81,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
     <Card className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
       <div>
         <CardHeader>
-          {/*
-          <div className="mb-2 flex flex-wrap gap-1">
-            {data.tags.map((tag) => (
-              <Badge
-                size="sm"
-                className={
-                  tagGradients[parseInt(tag, 35) % tagGradients.length] +
-                  " " +
-                  tagText[parseInt(tag, 35) % tagText.length]
-                }
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div> */}
           <div>
             <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
               <span className="flex w-full items-center gap-2 word-break-break-word">
@@ -124,17 +90,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 Free
               </Badge>
             </CardTitle>
-            {/* <span className="inline-flex items-center text-sm">
-              <img
-                className="mr-2 h-4 w-4 rounded-full"
-                src={data.image}
-              />
-              {data.creator.name}
-            </span>
-            <span className="flex text-xs items-center gap-2 text-ring">
-              <Download className="h-3 w-3" />
-              {nFormatter(data.downloads, 2)}
-            </span> */}
           </div>
           <CardDescription className="pb-2 pt-2">
             <div className="truncate-doubleline">{data.description}</div>
@@ -151,32 +106,34 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 side="right"
                 content={
                   <div className="flex flex-wrap gap-1">
-                    {testTags.map((tag, index) => (
-                      <div className="">
-                        <Badge
-                          key={index}
-                          className="bg-card shadow-md"
-                          size="sm"
-                          variant="outline"
-                        >
-                          {tag}
-                        </Badge>
-                      </div>
-                    ))}
+                    {data.tags
+                      .sort((a, b) => a.name.length - b.name.length)
+                      .map((tag, index) => (
+                        <div className="">
+                          <Badge
+                            key={index}
+                            className="bg-card shadow-md"
+                            size="sm"
+                            variant="outline"
+                          >
+                            {tag.name}
+                          </Badge>
+                        </div>
+                      ))}
                   </div>
                 }
               >
                 <div className="pr-2 hover:opacity-40">
-                  {testTags.length > 0 ? (
+                  {data.tags.length > 0 ? (
                     <ElementStack>
-                      {testTags.map((tag, index) => (
+                      {data.tags.map((tag, index) => (
                         <Badge
                           key={index}
                           size="md"
                           className="bg-card"
                           variant="outline"
                         >
-                          {"tag"}
+                          {tag.name}
                         </Badge>
                       ))}
                     </ElementStack>
@@ -206,17 +163,6 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 </span>
               </ShadTooltip>
             </div>
-            {/* {data.isChat ? (
-              <Button size="sm" variant="outline">
-                <Plus className="h-4 mr-2" />
-                Add
-              </Button>
-            ) : (
-              <Button size="sm" variant="success">
-                <Check className="h-4 mr-2" />
-                Added
-              </Button>
-            )} */}
             <Button
               variant="outline"
               size="sm"
