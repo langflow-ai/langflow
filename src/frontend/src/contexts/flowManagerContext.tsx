@@ -11,6 +11,8 @@ const initialValue: FlowManagerContextType = {
     checkInputandOutput: (flow: FlowType) => false,
     getInputTypes: (flow: FlowType) => [],
     getOutputTypes: (flow: FlowType) => [],
+    getInputIds: (flow: FlowType) => [],
+    getOutputIds: (flow: FlowType) => [],
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -40,7 +42,6 @@ export default function FlowManagerProvider({ children }) {
     }
 
     function checkInputandOutput(flow: FlowType): boolean {
-        console.log("rodou");
         let has_input = false;
         let has_output = false;
         flow.data?.nodes.forEach(node => {
@@ -108,7 +109,9 @@ export default function FlowManagerProvider({ children }) {
             updateFlowPoolNodes, 
             checkInputandOutput,
             getOutputTypes,
-            getInputTypes
+            getInputTypes,
+            getInputIds,
+            getOutputIds,
         }}>
             {children}
         </flowManagerContext.Provider>

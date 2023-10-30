@@ -21,7 +21,6 @@ export default function FlowPage(): JSX.Element {
       setVersion(data.version);
     });
   }, []);
-
   return (
     <>
       <Header />

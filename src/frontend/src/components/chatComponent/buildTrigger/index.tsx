@@ -35,7 +35,7 @@ export default function BuildTrigger({
 
   function handleBuildUpdate(data: any) {
     updateSSEData(data.data);
-    addDataToFlowPool(data, data.nodeId);
+    addDataToFlowPool(data.data[data.id], data.id);
   }
 
   async function handleBuild(flow: FlowType): Promise<void> {
@@ -61,8 +61,8 @@ export default function BuildTrigger({
       await buildVertices({
         flow,
         onProgressUpdate: setProgress,
-        onBuildUpdate: updateSSEData,
         onBuildComplete: handleBuildComplete,
+        onBuildUpdate: handleBuildUpdate,
         onBuildError: (title, list) => {
           setErrorData({ title, list });
         },

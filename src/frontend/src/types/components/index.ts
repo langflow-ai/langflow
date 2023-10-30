@@ -593,7 +593,6 @@ export type dropdownButtonPropsType = {
 };
 
 export type IOViewType = {
-  inputTypes:string[],
-  outputTypes:string[],
-  children: ReactNode;
+  inputNodeIds:string[],
+  outputNodeIds:string[],
 }

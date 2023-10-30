@@ -11,6 +11,7 @@ import { LocationProvider } from "./locationContext";
 import { TabsProvider } from "./tabsContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
+import FlowManagerProvider from "./flowManagerContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -27,7 +28,11 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                       <ApiInterceptor />
                       <SSEProvider>
                         <TabsProvider>
-                          <UndoRedoProvider>{children}</UndoRedoProvider>
+                          <UndoRedoProvider>
+                            <FlowManagerProvider>
+                              {children}
+                            </FlowManagerProvider>
+                          </UndoRedoProvider>
                         </TabsProvider>
                       </SSEProvider>
                     </LocationProvider>

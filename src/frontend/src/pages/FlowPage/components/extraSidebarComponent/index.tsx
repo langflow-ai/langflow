@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -74,7 +74,7 @@ export default function ExtraSidebar(): JSX.Element {
     if (errors.length > 0)
       setErrorData({ title: " Components with errors: ", list: errors });
   }, []);
-
+  
   function handleBlur() {
     if (!search && search === "") {
       setFilterData(data);
@@ -82,6 +82,7 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
+  useCallback(handleBlur, [search])
 
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
@@ -89,7 +90,7 @@ export default function ExtraSidebar(): JSX.Element {
       setFilterEdge([]);
       setSearch("");
     }
-  }, [getFilterEdge]);
+  }, [getFilterEdge,setFilterEdge]);
 
   useEffect(() => {
     if (getFilterEdge?.length > 0) {

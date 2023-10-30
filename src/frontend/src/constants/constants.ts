@@ -668,4 +668,4 @@ export const LAST_USED_SPAN_2 =
   "Accurate to within the hour from the most recent usage.";
 
   export const INPUT_TYPES = new Set(["ChatInput"])
-export const OUTPUT_TYPES = new Set(["ChatOutput"])
+export const OUTPUT_TYPES = new Set(["LLMChain"])

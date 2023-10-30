@@ -12,4 +12,6 @@ export type FlowManagerContextType = {
     checkInputandOutput: (flow:FlowType) => boolean,
     getInputTypes: (flow:FlowType) => string[],
     getOutputTypes: (flow:FlowType) => string[],
+    getInputIds: (flow: FlowType) => string[],
+    getOutputIds: (flow: FlowType) => string[],
 }

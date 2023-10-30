@@ -11,13 +11,14 @@ import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
 import IOView from "../IOview";
+import BaseModal from "../../modals/baseModal";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
-  const {checkInputandOutput,getInputTypes,getOutputTypes} = useContext(flowManagerContext)
-  const [validIO, setValidIO] = useState(false);
+  const { checkInputandOutput, getInputTypes, getOutputTypes, flowPool,getInputIds,getOutputIds } = useContext(flowManagerContext)
+  const [validIO, setValidIO] = useState(true);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -38,7 +39,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   useEffect(() => {
     // Define an async function within the useEffect hook
     const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id).catch((err) => {console.error(err)});
+      const response = await getBuildStatus(flow.id).catch((err) => { console.error(err) });
       setIsBuilt(!!response.built);
     };
 
@@ -69,39 +70,31 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     ) {
       setCanOpen(true);
     } else {
-      console.log(tabsState)
       setCanOpen(false);
     }
 
     prevNodesRef.current = currentNodes;
   }, [tabsState, flow.id]);
 
-  useEffect((  ) => {
-    setValidIO(checkInputandOutput(flow))
-  },[isBuilt, setValidIO])
-
   return (
     <>
-      <div>
+      <div onClick={()=>setValidIO(true)}>
         <BuildTrigger
           open={open}
           flow={flow}
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {isBuilt &&
-          tabsState[flow.id] &&
-          tabsState[flow.id].formKeysData &&
-          canOpen && (
-            <IOView inputTypes={getInputTypes(flow)} outputTypes={getOutputTypes(flow)}>
-              <FormModal
-              key={flow.id}
-              flow={flow}
-              open={open}
-              setOpen={setOpen}
-            />
-            </IOView>
-          )}
+        {Object.keys(flowPool).length>0 && (
+          <BaseModal open={validIO} setOpen={setValidIO}>
+            <BaseModal.Header description={"inputs and outputs from flow"}>
+              inputs & outputs
+            </BaseModal.Header>
+            <BaseModal.Content>
+              <IOView inputNodeIds={getInputIds(flow)} outputNodeIds={getOutputIds(flow)} />
+            </BaseModal.Content>
+          </BaseModal>
+        )}
         <ChatTrigger
           canOpen={canOpen}
           open={open}

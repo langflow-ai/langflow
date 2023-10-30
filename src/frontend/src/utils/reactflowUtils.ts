@@ -382,14 +382,10 @@ export function convertValuesToNumbers(arr) {
   });
 }
 
-export function isInputNode(nodeData: NodeDataType): boolean {
-  // TODO remove count and ramdom key from type before check
-
+export function isInputNode(nodeData: NodeDataType): boolean {  
   return INPUT_TYPES.has(nodeData.type);
 }
 
 export function isOutputNode(nodeData: NodeDataType): boolean {
-  // TODO remove count and ramdom key from type before check
-
   return OUTPUT_TYPES.has(nodeData.type);
 }
