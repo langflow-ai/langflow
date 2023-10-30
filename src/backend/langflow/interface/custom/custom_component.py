@@ -13,6 +13,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.database.models.flow import Flow
 from pydantic import Extra
 import yaml
+import pandas as pd
 
 
 class CustomComponent(Component, extra=Extra.allow):
@@ -23,17 +24,38 @@ class CustomComponent(Component, extra=Extra.allow):
     function: Optional[Callable] = None
     return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
+    repr_table: Optional[List[dict]] = []
     user_id: Optional[Union[UUID, str]] = None
 
     def __init__(self, **data):
         super().__init__(**data)
 
+    def display_table(self, data: pd.DataFrame):
+        # Return as a list of dicts
+        if isinstance(data, pd.DataFrame):
+            self.repr_table = data.to_dict(orient="records")
+        else:
+            self.repr_table = []
+
+    def display_text(self, data: Any):
+        self.repr_value = data
+
     def custom_repr(self):
         if isinstance(self.repr_value, dict):
-            return yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, str):
-            return self.repr_value
-        return str(self.repr_value)
+            text = yaml.dump(self.repr_value)
+        elif isinstance(self.repr_value, str):
+            text = self.repr_value
+        else:
+            text = ""
+        if isinstance(self.repr_table, list):
+            table = self.repr_table
+        else:
+            table = []
+
+        return {
+            "text": text,
+            "table": table,
+        }
 
     def build_config(self):
         return self.field_config
