@@ -57,6 +57,7 @@ import {
   MoreHorizontal,
   Paperclip,
   Pencil,
+  Play,
   Plus,
   Redo,
   Rocket,
@@ -65,6 +66,7 @@ import {
   Search,
   Settings2,
   Shield,
+  Sliders,
   Sparkles,
   Square,
   SunIcon,
@@ -196,6 +198,16 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Other",
 };
 
+export function selectIconNameBasedOninputs(inputs:string[]){
+  if(inputs.includes("ChatInput")){
+    return "MessagesSquare"
+  }
+  else
+  {
+    return "Sliders"
+  }
+}
+
 export const nodeIconsLucide: iconsType = {
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
@@ -322,4 +334,6 @@ export const nodeIconsLucide: iconsType = {
   Square,
   Minimize2,
   Maximize2,
+  Play,
+  Sliders
 };

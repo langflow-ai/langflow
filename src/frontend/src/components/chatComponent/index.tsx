@@ -17,7 +17,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(TabsContext);
-  const { checkInputandOutput, getInputTypes, getOutputTypes, flowPool,getInputIds,getOutputIds } = useContext(flowManagerContext)
+  const { flowPool,getInputIds,getOutputIds } = useContext(flowManagerContext)
   const [validIO, setValidIO] = useState(true);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
