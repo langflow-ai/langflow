@@ -80,6 +80,7 @@ class StoreService(Service):
         page: int = 1,
         limit: int = 10,
         status: Optional[str] = None,
+        is_component: Optional[bool] = None,
         tags: Optional[List[str]] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
@@ -102,6 +103,8 @@ class StoreService(Service):
 
         if status:
             params["filter[status]"] = status
+        if is_component:
+            params["filter[is_component][_eq]"] = is_component
 
         if tags:
             params["filter[tags][_in]"] = ",".join(tags)

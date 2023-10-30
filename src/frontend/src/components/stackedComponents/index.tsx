@@ -16,7 +16,7 @@ const ElementStack: React.FC<ElementStackProps> = ({ children }) => {
           style={{
             gridColumn: 1,
             gridRow: 1,
-            transform: `translateX(${index * 0.3}rem)`,
+            transform: `translateX(${index * 0.1}rem)`,
             zIndex: children.length - index,
           }}
         >
