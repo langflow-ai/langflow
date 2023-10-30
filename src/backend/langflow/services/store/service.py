@@ -176,9 +176,6 @@ class StoreService(Service):
                 f"{self.base_url}/users/me", api_key, params={"fields": "id"}
             )
             params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
-            # Get the
-            params.pop("page", None)
-            params.pop("limit", None)
 
             params["fields"] = ["id"]
         else:
