@@ -23,10 +23,10 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { TabsState } from "../../../../types/tabs";
+import { FlowsState } from "../../../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -63,7 +63,7 @@ export default function ParameterComponent({
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows } = useContext(TabsContext);
+  const { setTabsState, tabId, flows } = useContext(FlowsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 

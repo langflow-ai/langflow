@@ -15,7 +15,7 @@ import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
@@ -45,7 +45,7 @@ const ApiModal = forwardRef(
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
-    const { setTweak, getTweak, tabsState } = useContext(TabsContext);
+    const { setTweak, getTweak, tabsState } = useContext(FlowsContext);
     const pythonApiCode = getPythonApiCode(
       flow,
       autoLogin,
