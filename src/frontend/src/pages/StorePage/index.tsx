@@ -70,11 +70,6 @@ export default function StorePage(): JSX.Element {
   }
 
   useEffect(() => {
-    //TODO get tags from API
-    setTags(["tag1", "tag2", "tag3"]);
-  }, []);
-
-  useEffect(() => {
     getNumberOfComponents().then((res) => {
       setTotalRowsCount(Number(res["count"]));
     });
