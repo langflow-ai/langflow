@@ -53,6 +53,8 @@ class ListComponentResponse(BaseModel):
     def tags_to_list(cls, v):
         # Check if all values are have id and name
         # if so, return v else transform to TagResponse
+        if not v:
+            return v
         if all(["id" in tag and "name" in tag for tag in v]):
             return v
         else:

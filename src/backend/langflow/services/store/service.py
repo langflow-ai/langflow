@@ -168,8 +168,10 @@ class StoreService(Service):
 
         # Only public components or the ones created by the user
         # check for "public" or "Public"
+        if filter_by_user and not api_key:
+            raise ValueError("No API key provided")
 
-        if filter_by_user:
+        if filter_by_user and api_key:
             user_data = self._get(
                 f"{self.base_url}/users/me", api_key, params={"fields": "id"}
             )
