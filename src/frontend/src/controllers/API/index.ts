@@ -644,11 +644,11 @@ export async function getComponent(component_id: string) {
 }
 
 export async function searchComponent(
-  query: string,
-  page?: number,
-  limit?: number,
-  status?: string,
-  tags?: [string]
+  query: string | null,
+  page?: number | null,
+  limit?: number | null,
+  status?: string | null,
+  tags?: string[]
 ) {
   try {
     let url = `${BASE_URL_API}store/search/`;
