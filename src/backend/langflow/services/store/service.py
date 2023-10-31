@@ -12,6 +12,7 @@ from langflow.services.store.schema import (
     ListComponentResponse,
     StoreComponentCreate,
 )
+from langflow.services.store.utils import process_tags_for_post
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -209,6 +210,8 @@ class StoreService(Service):
         response = None
         if component_dict.get("parent"):
             component_dict["parent"] = str(component_dict["parent"])
+
+        component_dict = process_tags_for_post(component_dict)
         try:
             response = httpx.post(
                 self.components_url, headers=headers, json=component_dict
