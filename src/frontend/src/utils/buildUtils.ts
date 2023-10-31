@@ -47,8 +47,8 @@ export async function buildVertices({
         if (onBuildUpdate) {
           let data = {};
           data[buildData.id] = buildData;
-          
-          onBuildUpdate({ data,id:buildData.id });
+
+          onBuildUpdate({ data, id: buildData.id });
         }
         buildResults.push(buildData.valid);
       } catch (error) {

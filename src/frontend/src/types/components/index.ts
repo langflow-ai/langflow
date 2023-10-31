@@ -610,6 +610,6 @@ export type dropdownButtonPropsType = {
 };
 
 export type IOViewType = {
-  inputNodeIds:string[],
-  outputNodeIds:string[],
-}
+  inputNodeIds: string[];
+  outputNodeIds: string[];
+};

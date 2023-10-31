@@ -7,11 +7,11 @@ import { SSEProvider } from "./SSEContext";
 import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
 import { DarkProvider } from "./darkContext";
-import { LocationProvider } from "./locationContext";
+import FlowManagerProvider from "./flowManagerContext";
 import { FlowsProvider } from "./flowsContext";
+import { LocationProvider } from "./locationContext";
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
-import FlowManagerProvider from "./flowManagerContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context

@@ -200,13 +200,11 @@ export const nodeNames: { [char: string]: string } = {
   unknown: "Other",
 };
 
-export function selectIconNameBasedOninputs(inputs:string[]){
-  if(inputs.includes("ChatInput")){
-    return "MessagesSquare"
-  }
-  else
-  {
-    return "Sliders"
+export function selectIconNameBasedOninputs(inputs: string[]) {
+  if (inputs.includes("ChatInput")) {
+    return "MessagesSquare";
+  } else {
+    return "Sliders";
   }
 }
 
@@ -339,5 +337,5 @@ export const nodeIconsLucide: iconsType = {
   Minimize2,
   Maximize2,
   Play,
-  Sliders
+  Sliders,
 };

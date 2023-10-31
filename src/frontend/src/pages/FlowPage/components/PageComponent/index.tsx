@@ -1,4 +1,4 @@
-import _, { conforms } from "lodash";
+import _ from "lodash";
 import {
   MouseEvent,
   useCallback,
@@ -28,8 +28,9 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import { alertContext } from "../../../../contexts/alertContext";
-import { locationContext } from "../../../../contexts/locationContext";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
+import { locationContext } from "../../../../contexts/locationContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
@@ -46,7 +47,6 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -72,17 +72,9 @@ export default function Page({
     setTabsState,
     tabId,
   } = useContext(FlowsContext);
-  const {
-    types,
-    templates,
-    setFilterEdge,
-  } = useContext(typesContext);
-  const {
-    reactFlowInstance,
-    setReactFlowInstance,
-    deleteNode,
-    deleteEdge,
-  } = useContext(flowManagerContext);
+  const { types, templates, setFilterEdge } = useContext(typesContext);
+  const { reactFlowInstance, setReactFlowInstance, deleteNode, deleteEdge } =
+    useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);

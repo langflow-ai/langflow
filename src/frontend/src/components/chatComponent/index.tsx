@@ -5,19 +5,19 @@ import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
-import FormModal from "../../modals/formModal";
-import { NodeType } from "../../types/flow";
-import { flowManagerContext } from "../../contexts/flowManagerContext";
-import IOView from "../IOview";
 import BaseModal from "../../modals/baseModal";
+import { NodeType } from "../../types/flow";
+import IOView from "../IOview";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState, isBuilt, setIsBuilt } = useContext(FlowsContext);
-  const { flowPool,getInputIds,getOutputIds } = useContext(flowManagerContext)
+  const { flowPool, getInputIds, getOutputIds } =
+    useContext(flowManagerContext);
   const [validIO, setValidIO] = useState(true);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -39,7 +39,9 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   useEffect(() => {
     // Define an async function within the useEffect hook
     const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id).catch((err) => { console.error(err) });
+      const response = await getBuildStatus(flow.id).catch((err) => {
+        console.error(err);
+      });
       setIsBuilt(!!response.built);
     };
 
@@ -78,20 +80,23 @@ export default function Chat({ flow }: ChatType): JSX.Element {
 
   return (
     <>
-      <div onClick={()=>setValidIO(true)}>
+      <div onClick={() => setValidIO(true)}>
         <BuildTrigger
           open={open}
           flow={flow}
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {Object.keys(flowPool).length>0 && (
+        {Object.keys(flowPool).length > 0 && (
           <BaseModal open={validIO} setOpen={setValidIO}>
             <BaseModal.Header description={"inputs and outputs from flow"}>
               inputs & outputs
             </BaseModal.Header>
             <BaseModal.Content>
-              <IOView inputNodeIds={getInputIds(flow)} outputNodeIds={getOutputIds(flow)} />
+              <IOView
+                inputNodeIds={getInputIds(flow)}
+                outputNodeIds={getOutputIds(flow)}
+              />
             </BaseModal.Content>
           </BaseModal>
         )}

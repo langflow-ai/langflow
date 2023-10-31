@@ -74,7 +74,7 @@ export default function ExtraSidebar(): JSX.Element {
     if (errors.length > 0)
       setErrorData({ title: " Components with errors: ", list: errors });
   }, []);
-  
+
   function handleBlur() {
     if (!search && search === "") {
       setFilterData(data);
@@ -82,7 +82,7 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
-  useCallback(handleBlur, [search])
+  useCallback(handleBlur, [search]);
 
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
@@ -90,7 +90,7 @@ export default function ExtraSidebar(): JSX.Element {
       setFilterEdge([]);
       setSearch("");
     }
-  }, [getFilterEdge,setFilterEdge]);
+  }, [getFilterEdge, setFilterEdge]);
 
   useEffect(() => {
     if (getFilterEdge?.length > 0) {

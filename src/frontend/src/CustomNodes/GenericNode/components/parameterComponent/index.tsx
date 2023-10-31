@@ -23,10 +23,10 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { FlowsState } from "../../../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -40,7 +40,6 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
-import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 
 export default function ParameterComponent({
   left,
@@ -81,7 +80,7 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
-  const {reactFlowInstance} = useContext(flowManagerContext)
+  const { reactFlowInstance } = useContext(flowManagerContext);
   const { setFilterEdge } = useContext(typesContext);
   let disabled =
     reactFlowInstance

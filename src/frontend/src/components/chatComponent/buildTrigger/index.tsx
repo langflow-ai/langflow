@@ -3,15 +3,14 @@ import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
 import { alertContext } from "../../../contexts/alertContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { FlowType } from "../../../types/flow";
 
+import { flowManagerContext } from "../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
 import { buildVertices } from "../../../utils/buildUtils";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import { flowManagerContext } from "../../../contexts/flowManagerContext";
 
 export default function BuildTrigger({
   open,
@@ -26,7 +25,8 @@ export default function BuildTrigger({
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { setTabsState } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const {addDataToFlowPool,reactFlowInstance} = useContext(flowManagerContext)
+  const { addDataToFlowPool, reactFlowInstance } =
+    useContext(flowManagerContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
@@ -76,7 +76,7 @@ export default function BuildTrigger({
   }
 
   function handleBuildComplete(allNodesValid: boolean) {
-    console.log(allNodesValid)
+    console.log(allNodesValid);
     setIsBuilt(allNodesValid);
     if (!allNodesValid) {
       setErrorData({

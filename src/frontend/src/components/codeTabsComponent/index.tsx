@@ -28,7 +28,7 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { darkContext } from "../../contexts/darkContext";
-import { typesContext } from "../../contexts/typesContext";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -40,7 +40,6 @@ import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import KeypairListComponent from "../keypairListComponent";
-import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 export default function CodeTabsComponent({
   flow,

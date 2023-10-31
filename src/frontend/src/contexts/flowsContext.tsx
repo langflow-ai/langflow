@@ -41,8 +41,8 @@ import {
 import { getRandomDescription, getRandomName } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
-import { typesContext } from "./typesContext";
 import { flowManagerContext } from "./flowManagerContext";
+import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -92,7 +92,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
   const { templates } = useContext(typesContext);
-  const {reactFlowInstance} = useContext(flowManagerContext)
+  const { reactFlowInstance } = useContext(flowManagerContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;

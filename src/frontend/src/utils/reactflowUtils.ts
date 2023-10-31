@@ -451,7 +451,7 @@ export function convertValuesToNumbers(arr) {
   });
 }
 
-export function isInputNode(nodeData: NodeDataType): boolean {  
+export function isInputNode(nodeData: NodeDataType): boolean {
   return INPUT_TYPES.has(nodeData.type);
 }
 

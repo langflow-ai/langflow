@@ -33,8 +33,8 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { limitScrollFieldsModal } from "../../constants/constants";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
 import { TabsState } from "../../types/tabs";
 import {
@@ -44,7 +44,6 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 const EditNodeModal = forwardRef(
   (

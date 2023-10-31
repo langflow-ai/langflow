@@ -5,7 +5,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Edge, Node, ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
@@ -86,7 +85,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       });
     }
   }
-
 
   return (
     <typesContext.Provider
