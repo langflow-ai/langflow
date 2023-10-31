@@ -6,12 +6,14 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
+import { typesContext } from "../../contexts/typesContext";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
     const { flows, tabId, downloadFlow } = useContext(FlowsContext);
+    const { reactFlowInstance } = useContext(typesContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
     const flow = flows.find((f) => f.id === tabId);
@@ -66,7 +68,12 @@ const ExportModal = forwardRef(
             onClick={() => {
               if (checked) {
                 downloadFlow(
-                  flows.find((flow) => flow.id === tabId)!,
+                  {
+                    id: tabId,
+                    data: reactFlowInstance?.toObject()!,
+                    description,
+                    name,
+                  },
                   name!,
                   description
                 );
@@ -76,7 +83,12 @@ const ExportModal = forwardRef(
                 });
               } else
                 downloadFlow(
-                  removeApiKeys(flows.find((flow) => flow.id === tabId)!),
+                  removeApiKeys({
+                    id: tabId,
+                    data: reactFlowInstance?.toObject()!,
+                    description,
+                    name,
+                  }),
                   name!,
                   description
                 );
