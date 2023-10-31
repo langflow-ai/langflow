@@ -3,8 +3,13 @@ import { FlowType, NodeDataType, NodeType } from "../types/flow";
 import { FlowManagerContextType, FlowPoolType } from "../types/contexts/flowManager";
 import { cloneDeep, flow } from "lodash";
 import { isInputNode, isOutputNode } from "../utils/reactflowUtils";
+import { ReactFlowInstance, Node, Edge } from "reactflow";
 
 const initialValue: FlowManagerContextType = {
+    deleteEdge: () => { },
+    deleteNode: () => { },
+    reactFlowInstance: null,
+    setReactFlowInstance: (newState: ReactFlowInstance) => { },
     flowPool: {},
     updateFlowPoolNodes: (nodes: NodeType[]) => { },
     addDataToFlowPool: (data: any, nodeId: string) => { },
@@ -19,6 +24,8 @@ export const flowManagerContext = createContext(initialValue);
 
 export default function FlowManagerProvider({ children }) {
     const [flowPool, setFlowPool] = useState<FlowPoolType>({});
+    const [reactFlowInstance, setReactFlowInstance] =
+        useState<ReactFlowInstance | null>(null);
 
     function updateFlowPoolNodes(nodes: NodeType[]) {
         //this function will update the removing the old ones
@@ -102,11 +109,44 @@ export default function FlowManagerProvider({ children }) {
         return outputIds;
     }
 
+    function deleteNode(idx: string | Array<string>) {
+        reactFlowInstance!.setNodes(
+            reactFlowInstance!
+                .getNodes()
+                .filter((node: Node) =>
+                    typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
+                )
+        );
+        reactFlowInstance!.setEdges(
+            reactFlowInstance!
+                .getEdges()
+                .filter((edge) =>
+                    typeof idx === "string"
+                        ? edge.source !== idx && edge.target !== idx
+                        : !idx.includes(edge.source) && !idx.includes(edge.target)
+                )
+        );
+    }
+
+    function deleteEdge(idx: string | Array<string>) {
+        reactFlowInstance!.setEdges(
+            reactFlowInstance!
+                .getEdges()
+                .filter((edge: Edge) =>
+                    typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
+                )
+        );
+    }
+
     return (
         <flowManagerContext.Provider value={{
+            reactFlowInstance,
+            setReactFlowInstance,
+            deleteEdge,
+            deleteNode,
             flowPool,
-            addDataToFlowPool, 
-            updateFlowPoolNodes, 
+            addDataToFlowPool,
+            updateFlowPoolNodes,
             checkInputandOutput,
             getOutputTypes,
             getInputTypes,

@@ -28,6 +28,7 @@ import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 export default function FormModal({
   flow,
@@ -62,7 +63,7 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const template = useRef(tabsState[flow.id].formKeysData.template);
-  const { reactFlowInstance } = useContext(typesContext);
+  const { reactFlowInstance } = useContext(flowManagerContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);

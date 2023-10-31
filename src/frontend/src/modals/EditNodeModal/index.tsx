@@ -44,6 +44,7 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 const EditNodeModal = forwardRef(
   (
@@ -70,7 +71,7 @@ const EditNodeModal = forwardRef(
     const myData = useRef(data);
 
     const { setTabsState, tabId } = useContext(FlowsContext);
-    const { reactFlowInstance } = useContext(typesContext);
+    const { reactFlowInstance } = useContext(flowManagerContext);
     let disabled =
       reactFlowInstance
         ?.getEdges()

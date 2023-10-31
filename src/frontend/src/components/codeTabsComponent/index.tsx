@@ -40,6 +40,7 @@ import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import KeypairListComponent from "../keypairListComponent";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 export default function CodeTabsComponent({
   flow,
@@ -53,7 +54,7 @@ export default function CodeTabsComponent({
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const { dark } = useContext(darkContext);
-  const { reactFlowInstance } = useContext(typesContext);
+  const { reactFlowInstance } = useContext(flowManagerContext);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {

@@ -46,6 +46,7 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -73,13 +74,15 @@ export default function Page({
   } = useContext(FlowsContext);
   const {
     types,
-    reactFlowInstance,
-    setReactFlowInstance,
     templates,
     setFilterEdge,
+  } = useContext(typesContext);
+  const {
+    reactFlowInstance,
+    setReactFlowInstance,
     deleteNode,
     deleteEdge,
-  } = useContext(typesContext);
+  } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);

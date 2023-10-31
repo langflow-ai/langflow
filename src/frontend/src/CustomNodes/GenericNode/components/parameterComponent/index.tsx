@@ -40,6 +40,7 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 
 export default function ParameterComponent({
   left,
@@ -80,8 +81,8 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
-
-  const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
+  const {reactFlowInstance} = useContext(flowManagerContext)
+  const { setFilterEdge } = useContext(typesContext);
   let disabled =
     reactFlowInstance
       ?.getEdges()

@@ -22,6 +22,7 @@ import {
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, toTitleCase } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 
 export default function GenericNode({
   data: olddata,
@@ -38,8 +39,9 @@ export default function GenericNode({
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { updateFlow, saveFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
+  const { types, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
+  const {deleteNode,reactFlowInstance} = useContext(flowManagerContext)
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(true);
   const [nodeName, setNodeName] = useState(data.node!.display_name);

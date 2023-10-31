@@ -15,9 +15,6 @@ import { AuthContext } from "./authContext";
 //context to share types adn functions from nodes to flow
 
 const initialValue: typesContextType = {
-  reactFlowInstance: null,
-  setReactFlowInstance: (newState: ReactFlowInstance) => {},
-  deleteNode: () => {},
   types: {},
   setTypes: () => {},
   templates: {},
@@ -28,15 +25,12 @@ const initialValue: typesContextType = {
   fetchError: false,
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
-  deleteEdge: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
 
 export function TypesProvider({ children }: { children: ReactNode }) {
   const [types, setTypes] = useState({});
-  const [reactFlowInstance, setReactFlowInstance] =
-    useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
@@ -93,43 +87,12 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function deleteNode(idx: string | Array<string>) {
-    reactFlowInstance!.setNodes(
-      reactFlowInstance!
-        .getNodes()
-        .filter((node: Node) =>
-          typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
-        )
-    );
-    reactFlowInstance!.setEdges(
-      reactFlowInstance!
-        .getEdges()
-        .filter((edge) =>
-          typeof idx === "string"
-            ? edge.source !== idx && edge.target !== idx
-            : !idx.includes(edge.source) && !idx.includes(edge.target)
-        )
-    );
-  }
-  function deleteEdge(idx: string | Array<string>) {
-    reactFlowInstance!.setEdges(
-      reactFlowInstance!
-        .getEdges()
-        .filter((edge: Edge) =>
-          typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
-        )
-    );
-  }
 
   return (
     <typesContext.Provider
       value={{
-        deleteEdge,
         types,
         setTypes,
-        reactFlowInstance,
-        setReactFlowInstance,
-        deleteNode,
         setTemplates,
         templates,
         data,
