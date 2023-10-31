@@ -589,11 +589,29 @@ export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
   return await api.get(`${BASE_URL_API}store/`);
 }
 
-export async function getStoreComponents(page: number = 1, limit: number = 10) {
+export async function getStoreComponents(
+  page: number = 1,
+  limit: number = 10,
+  is_component?: boolean | null
+) {
   try {
-    const res = await api.get(
-      `${BASE_URL_API}store/components/?page=${page}&limit=${limit}`
-    );
+    let url = `${BASE_URL_API}store/components/`;
+    const queryParams: any = [];
+    if (page !== undefined) {
+      queryParams.push(`page=${page}`);
+    }
+    if (limit !== undefined) {
+      queryParams.push(`limit=${limit}`);
+    }
+    if (is_component !== null && is_component !== undefined) {
+      queryParams.push(`is_component=${is_component}`);
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
     if (res.status === 200) {
       return res.data;
     }
