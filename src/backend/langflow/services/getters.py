@@ -46,7 +46,3 @@ def get_session_service() -> "SessionService":
 
 def get_task_service() -> "TaskService":
     return service_manager.get(ServiceType.TASK_SERVICE)
-
-
-def get_chat_service() -> "ChatService":
-    return service_manager.get(ServiceType.CHAT_SERVICE)
