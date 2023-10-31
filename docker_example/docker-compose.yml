@@ -7,4 +7,4 @@ services:
       dockerfile: Dockerfile
     ports:
       - "7860:7860"
-    command: langflow --host 0.0.0.0
+    command: langflow run --host 0.0.0.0
