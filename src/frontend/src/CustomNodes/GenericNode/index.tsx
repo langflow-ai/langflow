@@ -7,7 +7,7 @@ import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
@@ -33,7 +33,7 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
-  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const { updateFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
