@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { Switch } from "../../components/ui/switch";
 import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
@@ -47,9 +46,12 @@ export default function StorePage(): JSX.Element {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
   const [errorApiKey, setErrorApiKey] = useState(false);
-  const { setSavedFlows } = useContext(StoreContext);
+  const { setSavedFlows, savedFlows } = useContext(StoreContext);
   const [tags, setTags] = useState<string[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
+  const [renderPagination, setRenderPagination] = useState(
+    searchData?.length > 0 && !loading && !search
+  );
 
   useEffect(() => {
     getStoreTags().then((res) => {
@@ -58,6 +60,10 @@ export default function StorePage(): JSX.Element {
       setTags(tags);
     });
   }, []);
+
+  useEffect(() => {
+    setRenderPagination(searchData?.length > 0 && !loading && !search);
+  }, [loading, search]);
 
   async function getSavedComponents() {
     setLoading(true);
@@ -110,8 +116,10 @@ export default function StorePage(): JSX.Element {
     setLoading(true);
     searchComponent(inputText).then(
       (res) => {
-        setLoading(false);
         setSearchData(res);
+        setData(res);
+        setRenderPagination(false);
+        setLoading(false);
       },
       (error) => {
         setLoading(false);
@@ -124,9 +132,11 @@ export default function StorePage(): JSX.Element {
     getStoreComponents(pageIndex, pageSize)
       .then((res) => {
         setData(res);
+        setSearchData(res);
         setPageIndex(pageIndex);
         setPageSize(pageSize);
         setLoading(false);
+        setRenderPagination(true);
       })
       .catch((err) => {
         setSearchData([]);
@@ -137,8 +147,6 @@ export default function StorePage(): JSX.Element {
         });
       });
   }
-
-  const renderPagination = searchData.length > 0 && !loading && !search;
 
   return (
     <>
@@ -171,9 +179,6 @@ export default function StorePage(): JSX.Element {
         </span>
         <div className="flex w-full flex-col gap-4 p-4">
           <div className="flex items-center justify-center gap-4">
-            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-              Added Only <Switch />
-            </div>
             <div className="relative h-12 w-[35%]">
               <Input
                 placeholder="Search Flows and Components"
@@ -200,7 +205,21 @@ export default function StorePage(): JSX.Element {
               </Button>
             </div>
             <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-              <Select onValueChange={(value) => {}}>
+              <Select
+                onValueChange={(value) => {
+                  setFilteredCategories(new Set());
+                  if (value === "Flow") {
+                    setSearchData(data.filter((f) => f.is_component === false));
+                    setRenderPagination(false);
+                  } else if (value === "Component") {
+                    setSearchData(data.filter((f) => f.is_component === true));
+                    setRenderPagination(false);
+                  } else {
+                    setSearchData(data);
+                    setRenderPagination(true);
+                  }
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Both" />
                 </SelectTrigger>
@@ -264,7 +283,7 @@ export default function StorePage(): JSX.Element {
         </div>
 
         {renderPagination && (
-          <div className="relative mt-3">
+          <div className="relative my-3">
             <PaginatorComponent
               storeComponent={true}
               pageIndex={index}

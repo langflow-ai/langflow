@@ -1,11 +1,13 @@
 import { useContext, useEffect, useState } from "react";
 
-import PaginatorComponent from "../../../../components/PaginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { alertContext } from "../../../../contexts/alertContext";
 import { AuthContext } from "../../../../contexts/authContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
-import { getStoreComponents } from "../../../../controllers/API";
+import {
+  getStoreComponents,
+  getStoreSavedComponents,
+} from "../../../../controllers/API";
 import { storeComponent } from "../../../../types/store";
 import { MarketCardComponent } from "../../../StorePage/components/market-card";
 
@@ -22,9 +24,6 @@ export default function SavedComponents(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [filteredCategories, setFilteredCategories] = useState(new Set());
   const { setErrorData } = useContext(alertContext);
-  const [totalRowsCount, setTotalRowsCount] = useState(0);
-  const [size, setPageSize] = useState(10);
-  const [index, setPageIndex] = useState(1);
 
   useEffect(() => {
     handleGetComponents();
@@ -32,11 +31,9 @@ export default function SavedComponents(): JSX.Element {
 
   const handleGetComponents = () => {
     setLoading(true);
-    getStoreComponents(index - 1, 10000)
+    getStoreComponents(0, 10000)
       .then((res) => {
-        setTotalRowsCount(res.length);
-        setData(res);
-        setLoading(false);
+        handleAddedOnly(res);
       })
       .catch((err) => {
         setLoading(false);
@@ -47,13 +44,12 @@ export default function SavedComponents(): JSX.Element {
       });
   };
 
-  function handleChangePagination(pageIndex: number, pageSize: number) {
-    setLoading(true);
-    getStoreComponents(pageIndex, pageSize)
+  function handleAddedOnly(components: storeComponent[]) {
+    getStoreSavedComponents()
       .then((res) => {
-        setData(res);
-        setPageIndex(pageIndex);
-        setPageSize(pageSize);
+        const idSet = new Set(res.map((item) => item.id));
+        const filteredArray = components.filter((item) => idSet.has(item.id));
+        setData(filteredArray);
         setLoading(false);
       })
       .catch((err) => {
@@ -64,8 +60,6 @@ export default function SavedComponents(): JSX.Element {
         });
       });
   }
-
-  const renderPagination = data.length > 0 && !loading;
 
   return (
     <>
@@ -90,20 +84,6 @@ export default function SavedComponents(): JSX.Element {
                 <MarketCardComponent key={idx} data={item} />
               ))}
           </div>
-        </div>
-      )}
-
-      {renderPagination && (
-        <div className="relative mt-3">
-          <PaginatorComponent
-            storeComponent={true}
-            pageIndex={index}
-            pageSize={size}
-            totalRowsCount={totalRowsCount}
-            paginate={(pageSize, pageIndex) => {
-              handleChangePagination(pageIndex, pageSize);
-            }}
-          ></PaginatorComponent>
         </div>
       )}
     </>
