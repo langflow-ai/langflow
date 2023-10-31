@@ -310,7 +310,6 @@ export default function Page({
           event.dataTransfer.getData("nodedata")
         );
 
-        // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
         // Calculate the position where the node should be created
         const position = reactFlowInstance!.project({
           x: event.clientX - reactflowBounds!.left,
