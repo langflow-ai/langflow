@@ -77,6 +77,10 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
     }
   }
 
+  const totalComponentsMetadata = () => {
+    return data?.metadata ? data.metadata["total"] : 0;
+  };
+
   return (
     <Card className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
       <div>
@@ -147,7 +151,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
               <ShadTooltip content="Components">
                 <span className="flex items-center gap-1.5 text-xs text-foreground">
                   <IconComponent name="ToyBrick" className="h-4 w-4" />
-                  123
+                  {totalComponentsMetadata()}
                 </span>
               </ShadTooltip>
               <ShadTooltip content="Favorites">
