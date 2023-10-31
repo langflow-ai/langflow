@@ -190,7 +190,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                   "main-page-nav-button" + (loading ? " animate-spin" : "")
                 }
               />
-              {added ? "Install Localy" : "Add to Account"}
+              {added ? "Install Locally" : "Add to Account"}
             </Button>
           </div>
         </div>
