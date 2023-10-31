@@ -49,6 +49,7 @@ export default function StorePage(): JSX.Element {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
   const [renderPagination, setRenderPagination] = useState(false);
+  const filterComponent = useRef<boolean | null>(null);
 
   useEffect(() => {
     getStoreTags().then((res) => {
@@ -82,7 +83,8 @@ export default function StorePage(): JSX.Element {
   const handleGetComponents = () => {
     setLoading(true);
     setRenderPagination(true);
-    getStoreComponents(index - 1, size)
+
+    getStoreComponents(index - 1, size, filterComponent.current)
       .then((res) => {
         setSearchData(res);
         setData(res);
@@ -121,7 +123,7 @@ export default function StorePage(): JSX.Element {
   function handleChangePagination(pageIndex: number, pageSize: number) {
     setLoading(true);
     setRenderPagination(true);
-    getStoreComponents(pageIndex, pageSize)
+    getStoreComponents(pageIndex, pageSize, filterComponent.current)
       .then((res) => {
         setData(res);
         setSearchData(res);
@@ -218,15 +220,15 @@ export default function StorePage(): JSX.Element {
               <Select
                 onValueChange={(value) => {
                   if (value === "Flow") {
-                    setSearchData(data.filter((f) => f.is_component === false));
-                    setRenderPagination(false);
+                    filterComponent.current = false;
                   } else if (value === "Component") {
-                    setSearchData(data.filter((f) => f.is_component === true));
-                    setRenderPagination(false);
+                    filterComponent.current = true;
                   } else {
-                    setSearchData(data);
-                    setRenderPagination(true);
+                    filterComponent.current = null;
                   }
+                  setPageIndex(1);
+                  setPageSize(10);
+                  handleGetComponents();
                 }}
               >
                 <SelectTrigger className="w-[180px]">
