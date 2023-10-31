@@ -28,8 +28,8 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import { alertContext } from "../../../../contexts/alertContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
@@ -70,7 +70,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
-  } = useContext(TabsContext);
+  } = useContext(FlowsContext);
   const {
     types,
     reactFlowInstance,
