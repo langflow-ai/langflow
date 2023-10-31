@@ -28,7 +28,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowsContextType, TabsState } from "../types/tabs";
+import { FlowsContextType, FlowsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -65,7 +65,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
-  setTabsState: (state: TabsState) => {},
+  setTabsState: (state: FlowsState) => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -79,7 +79,7 @@ export const FlowsContext = createContext<FlowsContextType>(
   FlowsContextInitialValue
 );
 
-export function TabsProvider({ children }: { children: ReactNode }) {
+export function FlowsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
@@ -95,7 +95,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     nodes: any;
     edges: any;
   } | null>(null);
-  const [tabsState, setTabsState] = useState<TabsState>({});
+  const [tabsState, setTabsState] = useState<FlowsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
 
   useEffect(() => {
