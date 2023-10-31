@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
@@ -28,7 +28,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { TabsContextType, TabsState } from "../types/tabs";
+import { FlowsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -45,7 +45,7 @@ import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
 
-const TabsContextInitialValue: TabsContextType = {
+const FlowsContextInitialValue: FlowsContextType = {
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
@@ -75,8 +75,8 @@ const TabsContextInitialValue: TabsContextType = {
   ) => {},
 };
 
-export const TabsContext = createContext<TabsContextType>(
-  TabsContextInitialValue
+export const FlowsContext = createContext<FlowsContextType>(
+  FlowsContextInitialValue
 );
 
 export function TabsProvider({ children }: { children: ReactNode }) {
@@ -428,6 +428,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         id: source,
       });
       sourceHandleObject.id = source;
+
       edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
@@ -452,6 +453,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
+          data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className:
             targetHandleObject.type === "Text"
@@ -508,7 +510,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     let data = flow?.data ? flow.data : null;
     if (data) {
       processFlowEdges(flow);
-      processFlowNodes(flow);
+      //prevent node update for now
+      // processFlowNodes(flow);
       //add animation to text type edges
       updateEdges(data.edges);
       // updateNodes(data.nodes, data.edges);
@@ -635,7 +638,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [isBuilt, setIsBuilt] = useState(false);
 
   return (
-    <TabsContext.Provider
+    <FlowsContext.Provider
       value={{
         saveFlow,
         isBuilt,
@@ -664,6 +667,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </TabsContext.Provider>
+    </FlowsContext.Provider>
   );
 }
