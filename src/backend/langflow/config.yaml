@@ -265,8 +265,8 @@ retrievers:
   # ZepRetriever:
   #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
 vectorstores:
-  Chroma:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
+  # Chroma:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
   Qdrant:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
   Weaviate:
