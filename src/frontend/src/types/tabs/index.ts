@@ -28,10 +28,6 @@ export type FlowsContextType = {
   getNodeId: (nodeType: string) => string;
   tabsState: FlowsState;
   setTabsState: (state: FlowsState) => void;
-  paste: (
-    selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;

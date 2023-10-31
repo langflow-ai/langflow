@@ -21,4 +21,8 @@ export type FlowManagerContextType = {
   getOutputTypes: (flow: FlowType) => string[];
   getInputIds: (flow: FlowType) => string[];
   getOutputIds: (flow: FlowType) => string[];
+  paste: (
+    selection: { nodes: any; edges: any },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) => void;
 };

@@ -1,12 +1,24 @@
 import { cloneDeep } from "lodash";
-import { createContext, useState } from "react";
-import { Edge, Node, ReactFlowInstance } from "reactflow";
+import { createContext, useContext, useState } from "react";
+import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import {
   FlowManagerContextType,
   FlowPoolType,
 } from "../types/contexts/flowManager";
-import { FlowType, NodeDataType, NodeType } from "../types/flow";
-import { isInputNode, isOutputNode } from "../utils/reactflowUtils";
+import {
+  FlowType,
+  NodeDataType,
+  NodeType,
+  sourceHandleType,
+  targetHandleType,
+} from "../types/flow";
+import {
+  isInputNode,
+  isOutputNode,
+  scapeJSONParse,
+  scapedJSONStringfy,
+} from "../utils/reactflowUtils";
+import { FlowsContext } from "./flowsContext";
 
 const initialValue: FlowManagerContextType = {
   deleteEdge: () => {},
@@ -23,6 +35,10 @@ const initialValue: FlowManagerContextType = {
   getOutputIds: (flow: FlowType) => [],
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
+  paste: (
+    selection: { nodes: any; edges: any },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) => {},
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -32,6 +48,7 @@ export default function FlowManagerProvider({ children }) {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
+  const { getNodeId } = useContext(FlowsContext);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
     //this function will update the removing the old ones
@@ -134,6 +151,109 @@ export default function FlowManagerProvider({ children }) {
     );
   }
 
+  /**
+   * Add a new flow to the list of flows.
+   * @param flow Optional flow to add.
+   */
+  function paste(
+    selectionInstance: { nodes: Node[]; edges: Edge[] },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) {
+    let minimumX = Infinity;
+    let minimumY = Infinity;
+    let idsMap = {};
+    let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
+    let edges = reactFlowInstance!.getEdges();
+    selectionInstance.nodes.forEach((node: Node) => {
+      if (node.position.y < minimumY) {
+        minimumY = node.position.y;
+      }
+      if (node.position.x < minimumX) {
+        minimumX = node.position.x;
+      }
+    });
+
+    const insidePosition = position.paneX
+      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
+      : reactFlowInstance!.project({ x: position.x, y: position.y });
+
+    selectionInstance.nodes.forEach((node: NodeType) => {
+      // Generate a unique node ID
+      let newId = getNodeId(node.data.type);
+      idsMap[node.id] = newId;
+
+      // Create a new node object
+      const newNode: NodeType = {
+        id: newId,
+        type: "genericNode",
+        position: {
+          x: insidePosition.x + node.position!.x - minimumX,
+          y: insidePosition.y + node.position!.y - minimumY,
+        },
+        data: {
+          ...cloneDeep(node.data),
+          id: newId,
+        },
+      };
+
+      // Add the new node to the list of nodes in state
+      nodes = nodes
+        .map((node) => ({ ...node, selected: false }))
+        .concat({ ...newNode, selected: false });
+    });
+    reactFlowInstance!.setNodes(nodes);
+
+    selectionInstance.edges.forEach((edge: Edge) => {
+      let source = idsMap[edge.source];
+      let target = idsMap[edge.target];
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      let sourceHandle = scapedJSONStringfy({
+        ...sourceHandleObject,
+        id: source,
+      });
+      sourceHandleObject.id = source;
+
+      edge.data.sourceHandle = sourceHandleObject;
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      let targetHandle = scapedJSONStringfy({
+        ...targetHandleObject,
+        id: target,
+      });
+      targetHandleObject.id = target;
+      edge.data.targetHandle = targetHandleObject;
+      let id =
+        "reactflow__edge-" +
+        source +
+        sourceHandle +
+        "-" +
+        target +
+        targetHandle;
+      edges = addEdge(
+        {
+          source,
+          target,
+          sourceHandle,
+          targetHandle,
+          id,
+          data: cloneDeep(edge.data),
+          style: { stroke: "#555" },
+          className:
+            targetHandleObject.type === "Text"
+              ? "stroke-gray-800 "
+              : "stroke-gray-900 ",
+          animated: targetHandleObject.type === "Text",
+          selected: false,
+        },
+        edges.map((edge) => ({ ...edge, selected: false }))
+      );
+    });
+    reactFlowInstance!.setEdges(edges);
+  }
+
   function deleteEdge(idx: string | Array<string>) {
     reactFlowInstance!.setEdges(
       reactFlowInstance!
@@ -147,6 +267,7 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        paste,
         reactFlowInstance,
         setReactFlowInstance,
         deleteEdge,

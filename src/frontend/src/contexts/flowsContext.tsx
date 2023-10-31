@@ -1,5 +1,4 @@
 import { AxiosError } from "axios";
-import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
@@ -8,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
+import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import { skipNodeUpdate } from "../constants/constants";
 import {
@@ -23,7 +22,6 @@ import { APIClassType, APITemplateType } from "../types/api";
 import { tweakType } from "../types/components";
 import {
   FlowType,
-  NodeDataType,
   NodeType,
   sourceHandleType,
   targetHandleType,
@@ -70,10 +68,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
-  paste: (
-    selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => {},
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -367,109 +361,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       });
     }
   }
-  /**
-   * Add a new flow to the list of flows.
-   * @param flow Optional flow to add.
-   */
-  function paste(
-    selectionInstance: { nodes: Node[]; edges: Edge[] },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) {
-    let minimumX = Infinity;
-    let minimumY = Infinity;
-    let idsMap = {};
-    let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
-    let edges = reactFlowInstance!.getEdges();
-    selectionInstance.nodes.forEach((node: Node) => {
-      if (node.position.y < minimumY) {
-        minimumY = node.position.y;
-      }
-      if (node.position.x < minimumX) {
-        minimumX = node.position.x;
-      }
-    });
-
-    const insidePosition = position.paneX
-      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
-      : reactFlowInstance!.project({ x: position.x, y: position.y });
-
-    selectionInstance.nodes.forEach((node: NodeType) => {
-      // Generate a unique node ID
-      let newId = getNodeId(node.data.type);
-      idsMap[node.id] = newId;
-
-      // Create a new node object
-      const newNode: NodeType = {
-        id: newId,
-        type: "genericNode",
-        position: {
-          x: insidePosition.x + node.position!.x - minimumX,
-          y: insidePosition.y + node.position!.y - minimumY,
-        },
-        data: {
-          ..._.cloneDeep(node.data),
-          id: newId,
-        },
-      };
-
-      // Add the new node to the list of nodes in state
-      nodes = nodes
-        .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
-    });
-    reactFlowInstance!.setNodes(nodes);
-
-    selectionInstance.edges.forEach((edge: Edge) => {
-      let source = idsMap[edge.source];
-      let target = idsMap[edge.target];
-      const sourceHandleObject: sourceHandleType = scapeJSONParse(
-        edge.sourceHandle!
-      );
-      let sourceHandle = scapedJSONStringfy({
-        ...sourceHandleObject,
-        id: source,
-      });
-      sourceHandleObject.id = source;
-
-      edge.data.sourceHandle = sourceHandleObject;
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!
-      );
-      let targetHandle = scapedJSONStringfy({
-        ...targetHandleObject,
-        id: target,
-      });
-      targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
-      let id =
-        "reactflow__edge-" +
-        source +
-        sourceHandle +
-        "-" +
-        target +
-        targetHandle;
-      edges = addEdge(
-        {
-          source,
-          target,
-          sourceHandle,
-          targetHandle,
-          id,
-          data: cloneDeep(edge.data),
-          style: { stroke: "#555" },
-          className:
-            targetHandleObject.type === "Text"
-              ? "stroke-gray-800 "
-              : "stroke-gray-900 ",
-          animated: targetHandleObject.type === "Text",
-          selected: false,
-        },
-        edges.map((edge) => ({ ...edge, selected: false }))
-      );
-    });
-    reactFlowInstance!.setEdges(edges);
-  }
-
   const addFlow = async (
     newProject: Boolean,
     flow?: FlowType
@@ -662,7 +553,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         getNodeId,
         tabsState,
         setTabsState,
-        paste,
         getTweak,
         setTweak,
         isLoading,
