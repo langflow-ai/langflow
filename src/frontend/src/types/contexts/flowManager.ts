@@ -7,6 +7,8 @@ export type FlowPoolType = {
 };
 
 export type FlowManagerContextType = {
+  setFilterEdge: (newState) => void;
+  getFilterEdge: any[];
   deleteEdge: (idx: string | Array<string>) => void;
   deleteNode: (idx: string | Array<string>) => void;
   reactFlowInstance: ReactFlowInstance | null;

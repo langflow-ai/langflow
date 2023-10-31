@@ -5,6 +5,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
@@ -19,8 +20,8 @@ import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates, getFilterEdge, setFilterEdge } =
-    useContext(typesContext);
+  const { data, templates } = useContext(typesContext);
+  const { getFilterEdge, setFilterEdge } = useContext(flowManagerContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
     useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);

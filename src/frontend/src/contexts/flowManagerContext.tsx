@@ -21,6 +21,8 @@ const initialValue: FlowManagerContextType = {
   getOutputTypes: (flow: FlowType) => [],
   getInputIds: (flow: FlowType) => [],
   getOutputIds: (flow: FlowType) => [],
+  setFilterEdge: (filter) => {},
+  getFilterEdge: [],
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -29,6 +31,7 @@ export default function FlowManagerProvider({ children }) {
   const [flowPool, setFlowPool] = useState<FlowPoolType>({});
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
+  const [getFilterEdge, setFilterEdge] = useState([]);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
     //this function will update the removing the old ones
@@ -156,6 +159,8 @@ export default function FlowManagerProvider({ children }) {
         getInputTypes,
         getInputIds,
         getOutputIds,
+        getFilterEdge,
+        setFilterEdge,
       }}
     >
       {children}

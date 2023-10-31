@@ -72,9 +72,14 @@ export default function Page({
     setTabsState,
     tabId,
   } = useContext(FlowsContext);
-  const { types, templates, setFilterEdge } = useContext(typesContext);
-  const { reactFlowInstance, setReactFlowInstance, deleteNode, deleteEdge } =
-    useContext(flowManagerContext);
+  const { types, templates } = useContext(typesContext);
+  const {
+    reactFlowInstance,
+    setReactFlowInstance,
+    deleteNode,
+    deleteEdge,
+    setFilterEdge,
+  } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);

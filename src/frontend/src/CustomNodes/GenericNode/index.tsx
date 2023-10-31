@@ -39,7 +39,7 @@ export default function GenericNode({
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { updateFlow, saveFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const { types, setFilterEdge, getFilterEdge } = useContext(typesContext);
+  const { types } = useContext(typesContext);
   const { deleteNode, reactFlowInstance } = useContext(flowManagerContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(true);

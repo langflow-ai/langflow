@@ -80,8 +80,7 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
-  const { reactFlowInstance } = useContext(flowManagerContext);
-  const { setFilterEdge } = useContext(typesContext);
+  const { reactFlowInstance, setFilterEdge } = useContext(flowManagerContext);
   let disabled =
     reactFlowInstance
       ?.getEdges()
