@@ -26,10 +26,7 @@ class AmazonBedrockComponent(CustomComponent):
                 ],
             },
             "credentials_profile_name": {"display_name": "Credentials Profile Name"},
-            "streaming": {
-                "display_name": "Streaming",
-                "field_type": "bool"
-            },
+            "streaming": {"display_name": "Streaming", "field_type": "bool"},
             "code": {"show": False},
         }
 
