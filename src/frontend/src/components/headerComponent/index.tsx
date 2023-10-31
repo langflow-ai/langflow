@@ -22,7 +22,7 @@ import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
 export default function Header(): JSX.Element {
-  const { flows, tabId } = useContext(FlowsContext);
+  const { flows, selectedFlowId } = useContext(FlowsContext);
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
@@ -37,9 +37,10 @@ export default function Header(): JSX.Element {
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
 
-        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
-          <MenuBar flows={flows} tabId={tabId} />
-        )}
+        {flows.findIndex((f) => selectedFlowId === f.id) !== -1 &&
+          selectedFlowId !== "" && (
+            <MenuBar flows={flows} selectedFlow={selectedFlowId} />
+          )}
       </div>
       <div className="round-button-div">
         <Link to="/">

@@ -12,11 +12,11 @@ import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId } = useContext(FlowsContext);
+    const { flows, selectedFlowId } = useContext(FlowsContext);
     const { reactFlowInstance, downloadFlow } = useContext(flowManagerContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
-    const flow = flows.find((f) => f.id === tabId);
+    const flow = flows.find((f) => f.id === selectedFlowId);
     useEffect(() => {
       setName(flow!.name);
       setDescription(flow!.description);
@@ -40,8 +40,6 @@ const ExportModal = forwardRef(
           <EditFlowSettings
             name={name}
             description={description}
-            flows={flows}
-            tabId={tabId}
             setName={setName}
             setDescription={setDescription}
           />
@@ -69,7 +67,7 @@ const ExportModal = forwardRef(
               if (checked) {
                 downloadFlow(
                   {
-                    id: tabId,
+                    id: selectedFlowId,
                     data: reactFlowInstance?.toObject()!,
                     description,
                     name,
@@ -84,7 +82,7 @@ const ExportModal = forwardRef(
               } else
                 downloadFlow(
                   removeApiKeys({
-                    id: tabId,
+                    id: selectedFlowId,
                     data: reactFlowInstance?.toObject()!,
                     description,
                     name,

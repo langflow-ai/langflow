@@ -29,12 +29,12 @@ const defaultOptions: UseUndoRedoOptions = {
 export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
 
 export function UndoRedoProvider({ children }) {
-  const { tabId, flows } = useContext(FlowsContext);
+  const { selectedFlowId, flows } = useContext(FlowsContext);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
   const [tabIndex, setTabIndex] = useState(
-    flows.findIndex((flow) => flow.id === tabId)
+    flows.findIndex((flow) => flow.id === selectedFlowId)
   );
 
   useEffect(() => {
@@ -45,8 +45,8 @@ export function UndoRedoProvider({ children }) {
     setFuture((old) =>
       flows.map((flow, index) => (old[index] ? old[index] : []))
     );
-    setTabIndex(flows.findIndex((flow) => flow.id === tabId));
-  }, [flows, tabId]);
+    setTabIndex(flows.findIndex((flow) => flow.id === selectedFlowId));
+  }, [flows, selectedFlowId]);
 
   const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
 
@@ -68,7 +68,16 @@ export function UndoRedoProvider({ children }) {
       newFuture[tabIndex] = [];
       return newFuture;
     });
-  }, [getNodes, getEdges, past, future, flows, tabId, setPast, setFuture]);
+  }, [
+    getNodes,
+    getEdges,
+    past,
+    future,
+    flows,
+    selectedFlowId,
+    setPast,
+    setFuture,
+  ]);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to

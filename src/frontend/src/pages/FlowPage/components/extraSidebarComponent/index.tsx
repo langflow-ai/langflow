@@ -23,12 +23,12 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { getFilterEdge, setFilterEdge, isBuilt } =
     useContext(flowManagerContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
+  const { flows, selectedFlowId, uploadFlow, tabsState, saveFlow } =
     useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-  const isPending = tabsState[tabId]?.isPending;
+  const isPending = tabsState[selectedFlowId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
@@ -64,7 +64,7 @@ export default function ExtraSidebar(): JSX.Element {
       return ret;
     });
   }
-  const flow = flows.find((flow) => flow.id === tabId);
+  const flow = flows.find((flow) => flow.id === selectedFlowId);
   useEffect(() => {
     // show components with error on load
     let errors: string[] = [];

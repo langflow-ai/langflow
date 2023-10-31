@@ -11,8 +11,8 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { flows, tabId, updateFlow, saveFlow } = useContext(FlowsContext);
-  const flow = flows.find((f) => f.id === tabId);
+  const { flows, selectedFlowId, saveFlow } = useContext(FlowsContext);
+  const flow = flows.find((f) => f.id === selectedFlowId);
   useEffect(() => {
     setName(flow!.name);
     setDescription(flow!.description);
@@ -22,7 +22,7 @@ export default function FlowSettingsModal({
   const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
-    let savedFlow = flows.find((flow) => flow.id === tabId);
+    let savedFlow = flows.find((flow) => flow.id === selectedFlowId);
     savedFlow!.name = name;
     savedFlow!.description = description;
     saveFlow(savedFlow!);
@@ -40,8 +40,6 @@ export default function FlowSettingsModal({
           setInvalidName={setInvalidName}
           name={name}
           description={description}
-          flows={flows}
-          tabId={tabId}
           setName={setName}
           setDescription={setDescription}
         />

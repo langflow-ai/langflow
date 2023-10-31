@@ -69,7 +69,7 @@ const EditNodeModal = forwardRef(
 
     const myData = useRef(data);
 
-    const { setTabsState, tabId } = useContext(FlowsContext);
+    const { setTabsState, selectedFlowId } = useContext(FlowsContext);
     const { reactFlowInstance } = useContext(flowManagerContext);
     let disabled =
       reactFlowInstance
@@ -545,8 +545,8 @@ const EditNodeModal = forwardRef(
               setTabsState((prev: TabsState) => {
                 return {
                   ...prev,
-                  [tabId]: {
-                    ...prev[tabId],
+                  [selectedFlowId]: {
+                    ...prev[selectedFlowId],
                     isPending: true,
                   },
                 };

@@ -44,8 +44,8 @@ import { typesContext } from "./typesContext";
 const uid = new ShortUniqueId({ length: 5 });
 
 const FlowsContextInitialValue: FlowsContextType = {
-  tabId: "",
-  setTabId: (index: string) => {},
+  selectedFlowId: "",
+  setFlowId: (index: string) => {},
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
@@ -72,7 +72,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
-  const [tabId, setTabId] = useState("");
+  const [selectedFlowId, setFlowId] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -218,7 +218,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   function hardReset() {
     newNodeId.current = uid();
-    setTabId("");
+    setFlowId("");
     setFlows([]);
     setIsLoading(true);
     setId(uid());
@@ -465,22 +465,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         if (!silent) {
           setSuccessData({ title: "Changes saved successfully" });
         }
-        setFlows((prevState) => {
-          const newFlows = [...prevState];
-          const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
-          if (index !== -1) {
-            newFlows[index].description = newFlow.description ?? "";
-            newFlows[index].data = newFlow.data;
-            newFlows[index].name = newFlow.name;
-          }
-          return newFlows;
-        });
+        updateFlow(newFlow);
         //update tabs state
         setTabsState((prev) => {
           return {
             ...prev,
-            [tabId]: {
-              ...prev[tabId],
+            [selectedFlowId]: {
+              ...prev[selectedFlowId],
               isPending: false,
             },
           };
@@ -501,8 +492,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         lastCopiedSelection,
         setLastCopiedSelection,
         hardReset,
-        tabId,
-        setTabId,
+        selectedFlowId,
+        setFlowId,
         flows,
         removeFlow,
         addFlow,

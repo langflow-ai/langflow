@@ -6,12 +6,12 @@ import { getVersion } from "../../controllers/API";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {
-  const { flows, tabId, setTabId } = useContext(FlowsContext);
+  const { flows, selectedFlowId, setFlowId } = useContext(FlowsContext);
   const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {
-    setTabId(id!);
+    setFlowId(id!);
   }, [id]);
 
   // Initialize state variable for the version
@@ -26,9 +26,9 @@ export default function FlowPage(): JSX.Element {
       <Header />
       <div className="flow-page-positioning">
         {flows.length > 0 &&
-          tabId !== "" &&
-          flows.findIndex((flow) => flow.id === tabId) !== -1 && (
-            <Page flow={flows.find((flow) => flow.id === tabId)!} />
+          selectedFlowId !== "" &&
+          flows.findIndex((flow) => flow.id === selectedFlowId) !== -1 && (
+            <Page flow={flows.find((flow) => flow.id === selectedFlowId)!} />
           )}
         <a
           target={"_blank"}

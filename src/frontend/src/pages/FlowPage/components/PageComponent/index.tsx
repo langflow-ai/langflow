@@ -69,7 +69,7 @@ export default function Page({
     tabsState,
     saveFlow,
     setTabsState,
-    tabId,
+    selectedFlowId,
   } = useContext(FlowsContext);
   const { types, templates } = useContext(typesContext);
   const {
@@ -211,14 +211,14 @@ export default function Page({
       setTabsState((prev: TabsState) => {
         return {
           ...prev,
-          [tabId]: {
-            ...prev[tabId],
+          [selectedFlowId]: {
+            ...prev[selectedFlowId],
             isPending: true,
           },
         };
       });
     },
-    [onEdgesChange, setNodes, setTabsState, tabId]
+    [onEdgesChange, setNodes, setTabsState, selectedFlowId]
   );
 
   const onNodesChangeMod = useCallback(
@@ -228,14 +228,14 @@ export default function Page({
       setTabsState((prev: TabsState) => {
         return {
           ...prev,
-          [tabId]: {
-            ...prev[tabId],
+          [selectedFlowId]: {
+            ...prev[selectedFlowId],
             isPending: true,
           },
         };
       });
     },
-    [onNodesChange, setTabsState, tabId]
+    [onNodesChange, setTabsState, selectedFlowId]
   );
 
   const onConnect = useCallback(

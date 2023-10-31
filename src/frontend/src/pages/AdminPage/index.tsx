@@ -44,11 +44,11 @@ export default function AdminPage() {
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
 
-  const { setTabId } = useContext(FlowsContext);
+  const { setFlowId } = useContext(FlowsContext);
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setFlowId("");
   }, []);
 
   const userList = useRef([]);

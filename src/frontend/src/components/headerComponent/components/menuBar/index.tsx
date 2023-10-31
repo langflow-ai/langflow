@@ -16,7 +16,10 @@ import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
+export const MenuBar = ({
+  flows,
+  selectedFlow,
+}: menuBarPropsType): JSX.Element => {
   const { addFlow } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
   const { undo, redo } = useContext(undoRedoContext);
@@ -34,7 +37,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
-  let current_flow = flows.find((flow) => flow.id === tabId);
+  let current_flow = flows.find((flow) => flow.id === selectedFlow);
 
   return (
     <div className="round-button-div">

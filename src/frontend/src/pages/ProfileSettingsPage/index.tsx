@@ -17,7 +17,7 @@ import {
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 export default function ProfileSettingsPage(): JSX.Element {
-  const { setTabId } = useContext(FlowsContext);
+  const { setFlowId } = useContext(FlowsContext);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE
@@ -25,7 +25,7 @@ export default function ProfileSettingsPage(): JSX.Element {
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setFlowId("");
   }, []);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData, setUserData } = useContext(AuthContext);

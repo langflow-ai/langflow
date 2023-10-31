@@ -2,9 +2,9 @@ import { FlowType } from "../flow";
 
 export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
-  tabId: string;
+  selectedFlowId: string;
   isLoading: boolean;
-  setTabId: (index: string) => void;
+  setFlowId: (index: string) => void;
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (

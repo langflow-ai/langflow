@@ -12,7 +12,7 @@ import { FlowsContext } from "../../contexts/flowsContext";
 export default function HomePage(): JSX.Element {
   const {
     flows,
-    setTabId,
+    setFlowId,
     downloadFlows,
     uploadFlows,
     addFlow,
@@ -33,7 +33,7 @@ export default function HomePage(): JSX.Element {
 
   // Set a null id
   useEffect(() => {
-    setTabId("");
+    setFlowId("");
   }, []);
   const navigate = useNavigate();
 

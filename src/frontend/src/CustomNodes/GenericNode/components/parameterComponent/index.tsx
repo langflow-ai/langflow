@@ -63,9 +63,10 @@ export default function ParameterComponent({
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows } = useContext(FlowsContext);
+  const { setTabsState, selectedFlowId, flows } = useContext(FlowsContext);
 
-  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
+  const flow =
+    flows.find((flow) => flow.id === selectedFlowId)?.data?.nodes ?? null;
 
   // Update component position
   useEffect(() => {
@@ -97,15 +98,15 @@ export default function ParameterComponent({
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
-      if (!prev[tabId]) {
+      if (!prev[selectedFlowId]) {
         return prev;
       }
       return {
         ...prev,
-        [tabId]: {
-          ...prev[tabId],
+        [selectedFlowId]: {
+          ...prev[selectedFlowId],
           isPending: true,
-          formKeysData: prev[tabId].formKeysData,
+          formKeysData: prev[selectedFlowId].formKeysData,
         },
       };
     });

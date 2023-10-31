@@ -11,12 +11,12 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 export default function CommunityPage(): JSX.Element {
-  const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
+  const { flows, setFlowId, downloadFlows, uploadFlows, addFlow } =
     useContext(FlowsContext);
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setFlowId("");
   }, []);
   const { setErrorData } = useContext(alertContext);
   const [loadingExamples, setLoadingExamples] = useState(false);

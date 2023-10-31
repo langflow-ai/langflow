@@ -222,8 +222,6 @@ export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string; description: string }>;
-  tabId: string;
   invalidName?: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
@@ -398,7 +396,7 @@ export type headerFlowsType = {
 
 export type menuBarPropsType = {
   flows: Array<headerFlowsType>;
-  tabId: string;
+  selectedFlow: string;
 };
 
 export type chatInputType = {

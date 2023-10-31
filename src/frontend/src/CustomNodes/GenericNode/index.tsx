@@ -37,7 +37,8 @@ export default function GenericNode({
 }): JSX.Element {
   const [data, setData] = useState(olddata);
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { updateFlow, saveFlow, flows, tabId } = useContext(FlowsContext);
+  const { updateFlow, saveFlow, flows, selectedFlowId } =
+    useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types } = useContext(typesContext);
   const { deleteNode, reactFlowInstance } = useContext(flowManagerContext);
@@ -97,7 +98,7 @@ export default function GenericNode({
   // State for outline color
   useEffect(() => {
     olddata.node = data.node;
-    let myFlow = flows.find((flow) => flow.id === tabId);
+    let myFlow = flows.find((flow) => flow.id === selectedFlowId);
     if (reactFlowInstance && myFlow) {
       let flow = cloneDeep(myFlow);
       flow.data = reactFlowInstance.toObject();
@@ -136,7 +137,7 @@ export default function GenericNode({
 
   async function buildVertex(): Promise<void> {
     setValidationStatus(null);
-    let flow = flows.find((flow) => flow.id === tabId);
+    let flow = flows.find((flow) => flow.id === selectedFlowId);
     // get order first and then build
 
     if (flow) {
