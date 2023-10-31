@@ -45,23 +45,34 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
 
-from langchain.llms.base import BaseLLM
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.schema import Document
+from langflow.field_typing import (
+    Tool,
+    PromptTemplate,
+    Chain,
+    BaseChatMemory,
+    BaseLLM,
+    BaseLoader,
+    BaseMemory,
+    BaseOutputParser,
+    BaseRetriever,
+    VectorStore,
+    Embeddings,
+    TextSplitter,
+    Document,
+    AgentExecutor,
+    NestedDict,
+    Data,
+)
 
-import requests
 
-class YourComponent(CustomComponent):
+class Component(CustomComponent):
     display_name: str = "Custom Component"
     description: str = "Create any custom component you want!"
 
     def build_config(self):
-        return { "url": { "multiline": True, "required": True } }
+        return {"param": {"display_name": "Parameter"}}
 
-    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:
-        response = requests.get(url)
-        chain = LLMChain(llm=llm, prompt=prompt)
-        result = chain.run(response.text[:300])
-        return Document(page_content=str(result))
+    def build(self, param: Data) -> Data:
+        return param
+
 """

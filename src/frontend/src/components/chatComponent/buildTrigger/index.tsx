@@ -6,7 +6,7 @@ import { alertContext } from "../../../contexts/alertContext";
 import { typesContext } from "../../../contexts/typesContext";
 import { FlowType } from "../../../types/flow";
 
-import { TabsContext } from "../../../contexts/tabsContext";
+import { FlowsContext } from "../../../contexts/flowsContext";
 import { buildVertices } from "../../../utils/buildUtils";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
@@ -25,7 +25,7 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState } = useContext(TabsContext);
+  const { setTabsState } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const {addDataToFlowPool} = useContext(flowManagerContext)
   const [isIconTouched, setIsIconTouched] = useState(false);

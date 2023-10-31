@@ -22,6 +22,13 @@ tests:
 	@make install_backend
 	poetry run pytest tests
 
+tests_frontend:
+ifeq ($(UI), true)
+		cd src/frontend && ./run-tests.sh --ui
+else
+		cd src/frontend && ./run-tests.sh
+endif
+
 format:
 	poetry run black src/backend/langflow
 	poetry run ruff src/backend/langflow --fix
