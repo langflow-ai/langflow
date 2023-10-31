@@ -26,7 +26,6 @@ import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { FlowsState } from "../../../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,

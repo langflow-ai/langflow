@@ -16,8 +16,8 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
-import { locationContext } from "./contexts/locationContext";
 import { FlowsContext } from "./contexts/flowsContext";
+import { locationContext } from "./contexts/locationContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 

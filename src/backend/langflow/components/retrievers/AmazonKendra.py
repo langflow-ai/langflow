@@ -41,7 +41,8 @@ class AmazonKendraRetrieverComponent(CustomComponent):
                 region_name=region_name,
                 credentials_profile_name=credentials_profile_name,
                 attribute_filter=attribute_filter,
-                user_context=user_context)  # type: ignore
+                user_context=user_context,
+            )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonKendra API.") from e
         return output
