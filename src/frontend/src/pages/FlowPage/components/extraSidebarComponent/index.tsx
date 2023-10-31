@@ -21,8 +21,9 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
-  const { getFilterEdge, setFilterEdge } = useContext(flowManagerContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
+  const { getFilterEdge, setFilterEdge, isBuilt } =
+    useContext(flowManagerContext);
+  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);

@@ -15,8 +15,8 @@ import IOView from "../IOview";
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const { tabsState, isBuilt, setIsBuilt } = useContext(FlowsContext);
-  const { flowPool, getInputIds, getOutputIds } =
+  const { tabsState } = useContext(FlowsContext);
+  const { flowPool, getInputIds, getOutputIds, isBuilt, setIsBuilt } =
     useContext(flowManagerContext);
   const [validIO, setValidIO] = useState(true);
   useEffect(() => {

@@ -33,4 +33,6 @@ export type FlowManagerContextType = {
   ) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
+  isBuilt: boolean;
+  setIsBuilt: (state: boolean) => void;
 };

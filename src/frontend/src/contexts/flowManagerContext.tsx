@@ -43,6 +43,8 @@ const initialValue: FlowManagerContextType = {
   ) => {},
   setTweak: (tweak: any) => {},
   getTweak: [],
+  isBuilt: false,
+  setIsBuilt: (state: boolean) => {},
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -54,6 +56,7 @@ export default function FlowManagerProvider({ children }) {
   const [getFilterEdge, setFilterEdge] = useState([]);
   const [getTweak, setTweak] = useState<tweakType>([]);
   const { getNodeId } = useContext(FlowsContext);
+  const [isBuilt, setIsBuilt] = useState(false);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
     //this function will update the removing the old ones
@@ -294,6 +297,8 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        isBuilt,
+        setIsBuilt,
         downloadFlow,
         paste,
         reactFlowInstance,

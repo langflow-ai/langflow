@@ -54,8 +54,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   downloadFlows: () => {},
   uploadFlows: () => {},
   uploadFlow: async () => "",
-  isBuilt: false,
-  setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
   saveFlow: async (flow: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
@@ -496,14 +494,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const [isBuilt, setIsBuilt] = useState(false);
-
   return (
     <FlowsContext.Provider
       value={{
         saveFlow,
-        isBuilt,
-        setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
         hardReset,

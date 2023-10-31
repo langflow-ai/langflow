@@ -14,8 +14,6 @@ export type FlowsContextType = {
   updateFlow: (newFlow: FlowType) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
-  isBuilt: boolean;
-  setIsBuilt: (state: boolean) => void;
   uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
