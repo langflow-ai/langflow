@@ -64,7 +64,6 @@ export default function Page({
     uploadFlow,
     addFlow,
     getNodeId,
-    paste,
     lastCopiedSelection,
     setLastCopiedSelection,
     tabsState,
@@ -79,6 +78,7 @@ export default function Page({
     deleteNode,
     deleteEdge,
     setFilterEdge,
+    paste,
   } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 

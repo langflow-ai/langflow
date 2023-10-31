@@ -1,4 +1,5 @@
 import { ReactFlowInstance } from "reactflow";
+import { tweakType } from "../components";
 import { FlowType, NodeType } from "../flow";
 
 export type FlowPoolType = {
@@ -25,4 +26,11 @@ export type FlowManagerContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
+  downloadFlow: (
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) => void;
+  setTweak: (tweak: tweakType) => tweakType | void;
+  getTweak: tweakType;
 };

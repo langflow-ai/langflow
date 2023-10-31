@@ -1,4 +1,3 @@
-import { tweakType } from "../components";
 import { FlowType } from "../flow";
 
 export type FlowsContextType = {
@@ -13,12 +12,6 @@ export type FlowsContextType = {
     flow?: FlowType
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
-  incrementNodeId: () => string;
-  downloadFlow: (
-    flow: FlowType,
-    flowName: string,
-    flowDescription?: string
-  ) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
   isBuilt: boolean;
@@ -30,8 +23,6 @@ export type FlowsContextType = {
   setTabsState: (state: FlowsState) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
-  setTweak: (tweak: tweakType) => tweakType | void;
-  getTweak: tweakType;
 };
 
 export type FlowsState = {

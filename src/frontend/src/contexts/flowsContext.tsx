@@ -19,7 +19,6 @@ import {
   uploadFlowsToDatabase,
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
-import { tweakType } from "../types/components";
 import {
   FlowType,
   NodeType,
@@ -52,8 +51,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   removeFlow: (id: string) => {},
   addFlow: async (newProject: boolean, flowData?: FlowType) => "",
   updateFlow: (newFlow: FlowType) => {},
-  incrementNodeId: () => uid(),
-  downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
   uploadFlow: async () => "",
@@ -66,8 +63,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   tabsState: {},
   setTabsState: (state: FlowsState) => {},
   getNodeId: (nodeType: string) => "",
-  setTweak: (tweak: any) => {},
-  getTweak: [],
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -92,7 +87,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     edges: any;
   } | null>(null);
   const [tabsState, setTabsState] = useState<FlowsState>({});
-  const [getTweak, setTweak] = useState<tweakType>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -230,32 +224,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     setFlows([]);
     setIsLoading(true);
     setId(uid());
-  }
-
-  /**
-   * Downloads the current flow as a JSON file
-   */
-  function downloadFlow(
-    flow: FlowType,
-    flowName: string,
-    flowDescription?: string
-  ) {
-    // create a data URI with the current flow data
-    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
-    )}`;
-
-    // create a link element and set its properties
-    const link = document.createElement("a");
-    link.href = jsonString;
-    link.download = `${
-      flowName && flowName != ""
-        ? flowName
-        : flows.find((f) => f.id === tabId)!.name
-    }.json`;
-
-    // simulate a click on the link element to trigger the download
-    link.click();
   }
 
   function downloadFlows() {
@@ -542,19 +510,15 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         tabId,
         setTabId,
         flows,
-        incrementNodeId,
         removeFlow,
         addFlow,
         updateFlow,
-        downloadFlow,
         downloadFlows,
         uploadFlows,
         uploadFlow,
         getNodeId,
         tabsState,
         setTabsState,
-        getTweak,
-        setTweak,
         isLoading,
       }}
     >

@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { createContext, useContext, useState } from "react";
 import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
+import { tweakType } from "../types/components";
 import {
   FlowManagerContextType,
   FlowPoolType,
@@ -21,6 +22,7 @@ import {
 import { FlowsContext } from "./flowsContext";
 
 const initialValue: FlowManagerContextType = {
+  downloadFlow: (flow: FlowType) => {},
   deleteEdge: () => {},
   deleteNode: () => {},
   reactFlowInstance: null,
@@ -39,6 +41,8 @@ const initialValue: FlowManagerContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
+  setTweak: (tweak: any) => {},
+  getTweak: [],
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -48,6 +52,7 @@ export default function FlowManagerProvider({ children }) {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
+  const [getTweak, setTweak] = useState<tweakType>([]);
   const { getNodeId } = useContext(FlowsContext);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
@@ -264,9 +269,32 @@ export default function FlowManagerProvider({ children }) {
     );
   }
 
+  /**
+   * Downloads the current flow as a JSON file
+   */
+  function downloadFlow(
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string
+  ) {
+    // create a data URI with the current flow data
+    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
+    )}`;
+
+    // create a link element and set its properties
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `${flowName && flowName != "" ? flowName : "flow"}.json`;
+
+    // simulate a click on the link element to trigger the download
+    link.click();
+  }
+
   return (
     <flowManagerContext.Provider
       value={{
+        downloadFlow,
         paste,
         reactFlowInstance,
         setReactFlowInstance,
@@ -282,6 +310,8 @@ export default function FlowManagerProvider({ children }) {
         getOutputIds,
         getFilterEdge,
         setFilterEdge,
+        getTweak,
+        setTweak,
       }}
     >
       {children}

@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { FlowsContext } from "../../../../contexts/flowsContext";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import {
@@ -54,10 +54,10 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste } = useContext(FlowsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
+  const { paste } = useContext(flowManagerContext);
 
   const handleSelectChange = (event) => {
     setSelectedValue(event);
