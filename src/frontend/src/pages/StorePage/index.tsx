@@ -37,8 +37,7 @@ export default function StorePage(): JSX.Element {
   }, []);
   const [data, setData] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState(false);
-  const [filteredCategories, setFilteredCategories] = useState(new Set());
+  const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState(data);
   const { setErrorData } = useContext(alertContext);
@@ -47,23 +46,16 @@ export default function StorePage(): JSX.Element {
   const [index, setPageIndex] = useState(1);
   const [errorApiKey, setErrorApiKey] = useState(false);
   const { setSavedFlows, savedFlows } = useContext(StoreContext);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
-  const [renderPagination, setRenderPagination] = useState(
-    searchData?.length > 0 && !loading && !search
-  );
+  const [renderPagination, setRenderPagination] = useState(false);
 
   useEffect(() => {
     getStoreTags().then((res) => {
       tagListId.current = res;
-      let tags = res.map((tag) => tag.name);
-      setTags(tags);
+      setTags(res);
     });
   }, []);
-
-  useEffect(() => {
-    setRenderPagination(searchData?.length > 0 && !loading && !search);
-  }, [loading, search]);
 
   async function getSavedComponents() {
     setLoading(true);
@@ -89,6 +81,7 @@ export default function StorePage(): JSX.Element {
 
   const handleGetComponents = () => {
     setLoading(true);
+    setRenderPagination(true);
     getStoreComponents(index - 1, size)
       .then((res) => {
         setSearchData(res);
@@ -109,17 +102,15 @@ export default function StorePage(): JSX.Element {
   const handleSearch = (inputText: string) => {
     if (inputText === "") {
       handleGetComponents();
-      setSearch(false);
       return;
     }
-    setSearch(true);
     setLoading(true);
     searchComponent(inputText).then(
       (res) => {
         setSearchData(res);
         setData(res);
-        setRenderPagination(false);
         setLoading(false);
+        setRenderPagination(false);
       },
       (error) => {
         setLoading(false);
@@ -129,6 +120,7 @@ export default function StorePage(): JSX.Element {
 
   function handleChangePagination(pageIndex: number, pageSize: number) {
     setLoading(true);
+    setRenderPagination(true);
     getStoreComponents(pageIndex, pageSize)
       .then((res) => {
         setData(res);
@@ -136,7 +128,6 @@ export default function StorePage(): JSX.Element {
         setPageIndex(pageIndex);
         setPageSize(pageSize);
         setLoading(false);
-        setRenderPagination(true);
       })
       .catch((err) => {
         setSearchData([]);
@@ -146,6 +137,25 @@ export default function StorePage(): JSX.Element {
           list: [err["response"]["data"]["detail"]],
         });
       });
+  }
+
+  function handleFilterByTags(filterArray) {
+    if (filterArray.length === 0) {
+      handleGetComponents();
+      return;
+    }
+    setRenderPagination(false);
+    searchComponent(null, 1, 10000, null, filterArray).then(
+      (res) => {
+        setSearchData(res);
+        setData(res);
+        setLoading(false);
+      },
+      (error) => {
+        setLoading(false);
+        setSearchData([]);
+      }
+    );
   }
 
   return (
@@ -207,7 +217,6 @@ export default function StorePage(): JSX.Element {
             <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
               <Select
                 onValueChange={(value) => {
-                  setFilteredCategories(new Set());
                   if (value === "Flow") {
                     setSearchData(data.filter((f) => f.is_component === false));
                     setRenderPagination(false);
@@ -224,9 +233,9 @@ export default function StorePage(): JSX.Element {
                   <SelectValue placeholder="Both" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Both</SelectItem>
                   <SelectItem value="Flow">Flows</SelectItem>
                   <SelectItem value="Component">Components</SelectItem>
-                  <SelectItem value="">Both</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -236,28 +245,26 @@ export default function StorePage(): JSX.Element {
               tags.map((i, idx) => (
                 <Badge
                   onClick={() => {
-                    filteredCategories.has(i)
-                      ? setFilteredCategories((old) => {
-                          let newFilteredCategories = cloneDeep(old);
-                          newFilteredCategories.delete(i);
-                          return newFilteredCategories;
-                        })
-                      : setFilteredCategories((old) => {
-                          let newFilteredCategories = cloneDeep(old);
-                          newFilteredCategories.add(i);
-                          return newFilteredCategories;
-                        });
+                    const index = filteredCategories?.indexOf(i.id);
+                    const copyFilterArray = cloneDeep(filteredCategories);
+                    if (index === -1) {
+                      copyFilterArray.push(i.id);
+                    } else {
+                      copyFilterArray.splice(index, 1);
+                    }
+                    setFilterCategories(copyFilterArray);
+                    handleFilterByTags(copyFilterArray);
                   }}
                   variant="gray"
                   size="md"
                   className={cn(
                     "cursor-pointer border-none",
-                    filteredCategories.has(i)
+                    filteredCategories.some((category) => category === i.id)
                       ? "bg-beta-foreground text-background hover:bg-beta-foreground"
                       : ""
                   )}
                 >
-                  {i}
+                  {i.name}
                 </Badge>
               ))}
           </div>
@@ -272,8 +279,10 @@ export default function StorePage(): JSX.Element {
               searchData
                 .filter(
                   (f) =>
-                    Array.from(filteredCategories).length === 0 ||
-                    filteredCategories.has(f.is_component)
+                    filteredCategories?.length === 0 ||
+                    filteredCategories.some(
+                      (category) => category === f.is_component
+                    )
                 )
                 .map((item, idx) => (
                   <MarketCardComponent key={idx} data={item} />
@@ -282,7 +291,7 @@ export default function StorePage(): JSX.Element {
           </div>
         </div>
 
-        {renderPagination && (
+        {!loading && renderPagination && (
           <div className="relative my-3">
             <PaginatorComponent
               storeComponent={true}
