@@ -367,8 +367,8 @@ export function convertValuesToNumbers(arr) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         let value = obj[key];
-        if (/\s/g.test(value)) {
-          value = value.trim();
+        if (/^\d+$/.test(value)) {
+          value = value?.toString().trim();
         }
         newObj[key] =
           value === "" || isNaN(value) ? value.toString() : Number(value);
