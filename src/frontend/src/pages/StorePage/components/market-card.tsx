@@ -14,10 +14,15 @@ import {
 import { alertContext } from "../../../contexts/alertContext";
 import { StoreContext } from "../../../contexts/storeContext";
 import { TabsContext } from "../../../contexts/tabsContext";
-import { getComponent, saveFlowStore } from "../../../controllers/API";
+import {
+  getComponent,
+  postLikeComponent,
+  saveFlowStore,
+} from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
+import { classNames } from "../../../utils/utils";
 
 export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { savedFlows } = useContext(StoreContext);
@@ -26,6 +31,8 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { addFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
+  const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
+  const [likes_count, setLikes_count] = useState(data.liked_by_count);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -60,6 +67,26 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
         console.log(error);
       }
     );
+  }
+
+  function handleLike() {
+    if (liked_by_user !== undefined || liked_by_user !== null) {
+      const temp = liked_by_user;
+      setLiked_by_user((prev) => !prev);
+      console.log(data.id);
+      postLikeComponent(data.id)
+        .catch((error) => {
+          console.error(error);
+          setLiked_by_user(temp);
+          setErrorData({
+            title: "Error on liking component",
+            list: [error["response"]["data"]["detail"]],
+          });
+        })
+        .then((count) => {
+          setLikes_count(count);
+        });
+    }
   }
 
   function handleInstall() {
@@ -155,10 +182,19 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 </span>
               </ShadTooltip>
               <ShadTooltip content="Favorites">
-                <span className="flex items-center gap-1.5 text-xs text-foreground">
-                  <IconComponent name="Heart" className="h-4 w-4" />
-                  {data.liked_by_count ?? 0}
-                </span>
+                <button
+                  onClick={handleLike}
+                  className="flex items-center gap-1.5 text-xs text-foreground"
+                >
+                  <IconComponent
+                    name="Heart"
+                    className={classNames(
+                      "h-4 w-4 ",
+                      liked_by_user ? "fill-destructive stroke-destructive" : ""
+                    )}
+                  />
+                  {likes_count ?? 0}
+                </button>
               </ShadTooltip>
               <ShadTooltip content="Downloads">
                 <span className="flex items-center gap-1.5 text-xs text-foreground">

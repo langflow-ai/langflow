@@ -66,6 +66,7 @@ export default function StorePage(): JSX.Element {
       savedIds.add(flow.id);
     });
     setSavedFlows(savedIds);
+    setErrorApiKey(false);
   }
 
   useEffect(() => {
