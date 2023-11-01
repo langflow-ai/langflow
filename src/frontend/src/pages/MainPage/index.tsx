@@ -8,7 +8,7 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 export default function HomePage(): JSX.Element {
   const {
     flows,
@@ -19,7 +19,7 @@ export default function HomePage(): JSX.Element {
     removeFlow,
     uploadFlow,
     isLoading,
-  } = useContext(TabsContext);
+  } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
   const dropdownOptions = [
     {
@@ -104,7 +104,7 @@ export default function HomePage(): JSX.Element {
             <DropdownButton
               firstButtonName="New Project"
               onFirstBtnClick={() => {
-                addFlow(null!, true).then((id) => {
+                addFlow(true).then((id) => {
                   navigate("/flow/" + id);
                 });
               }}

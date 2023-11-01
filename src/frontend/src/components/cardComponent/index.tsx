@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { cardComponentPropsType } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
@@ -17,7 +17,7 @@ export const CardComponent = ({
   onDelete,
   button,
 }: cardComponentPropsType): JSX.Element => {
-  const { removeFlow } = useContext(TabsContext);
+  const { removeFlow } = useContext(FlowsContext);
 
   return (
     <Card className="group">
