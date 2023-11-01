@@ -31,6 +31,7 @@ class ComponentResponse(BaseModel):
     downloads_count: Optional[int]
     parent: Optional[UUID]
     metadata: Optional[dict]
+    last_tested_version: Optional[str]
 
 
 class TagsIdResponse(BaseModel):
@@ -49,6 +50,7 @@ class ListComponentResponse(BaseModel):
     user_created: Optional[dict]
     tags: Optional[List[TagResponse]] = None
     downloads_count: Optional[int]
+    last_tested_version: Optional[str]
 
     # tags comes as a TagsIdResponse but we want to return a list of TagResponse
     @validator("tags", pre=True)
@@ -83,3 +85,4 @@ class StoreComponentCreate(BaseModel):
     parent: Optional[UUID]
     is_component: Optional[bool]
     metadata: Optional[dict]
+    last_tested_version: Optional[str]

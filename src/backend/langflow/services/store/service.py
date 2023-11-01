@@ -63,6 +63,7 @@ class StoreService(Service):
             "count(liked_by)",
             "count(downloads)",
             "metadata",
+            "last_tested_version",
         ]
 
     # Create a context manager that will use the api key to
