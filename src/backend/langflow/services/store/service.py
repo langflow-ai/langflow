@@ -218,7 +218,7 @@ class StoreService(Service):
         return results_objects
 
     def get_liked_by_user_components(
-        self, component_ids: List[UUID], api_key: str, user_data: Dict[str, Any]
+        self, component_ids: List[UUID], api_key: str
     ) -> List[UUID]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
@@ -256,7 +256,6 @@ class StoreService(Service):
         }
         results = self._get(self.components_url, api_key, params)
         return [result["id"] for result in results]
-
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"

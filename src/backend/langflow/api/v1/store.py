@@ -87,12 +87,14 @@ def list_components(
                 filter_by_user=filter_by_user,
             )
 
-        if not store_api_Key:
-            return result
+            if not store_api_Key:
+                return result
 
-        # Now, from the result, we need to get the components
-        # the user likes and set the liked_by_user to True
-        result = update_components_with_user_data(result, store_service, store_api_Key)
+            # Now, from the result, we need to get the components
+            # the user likes and set the liked_by_user to True
+            result = update_components_with_user_data(
+                result, store_service, store_api_Key
+            )
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
