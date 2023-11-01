@@ -43,6 +43,7 @@ class Vertex:
         self.params = params or {}
         self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.parent_is_top_level = False
+        self.layer = None
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -118,6 +119,7 @@ class Vertex:
         self.task_id: Optional[str] = None
         self.parent_node_id = state["parent_node_id"]
         self.parent_is_top_level = state["parent_is_top_level"]
+        self.layer = state["layer"]
 
     def set_top_level(self, top_level_nodes: List[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_nodes

@@ -166,6 +166,32 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
+    def layered_topological_sort(self) -> List[List[Vertex]]:
+        state = {node: 0 for node in self.nodes}
+        layers = []
+
+        def dfs(node, current_layer):
+            if state[node] == 1:
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
+            if state[node] == 0:
+                state[node] = 1
+                for edge in node.edges:
+                    if edge.source == node:
+                        dfs(edge.target, current_layer + 1)
+                state[node] = 2
+                while len(layers) <= current_layer:
+                    layers.append([])
+                layers[current_layer].append(node)
+                node.layer = current_layer
+
+        for node in self.nodes:
+            if state[node] == 0:
+                dfs(node, 0)
+
+        return layers
+
     def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
