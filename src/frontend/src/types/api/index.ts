@@ -47,6 +47,8 @@ export type TemplateVariableType = {
   dynamic?: boolean;
   proxy?: { id: string; field: string };
   input_types?: Array<string>;
+  display_name?: string;
+  name?: string;
   [key: string]: any;
 };
 export type sendAllProps = {
