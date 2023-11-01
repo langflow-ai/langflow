@@ -21,6 +21,7 @@ export default function DropdownButton({
       <DropdownMenu open={showOptions}>
         <DropdownMenuTrigger asChild>
           <Button
+            id="new-project-btn"
             variant="primary"
             className="relative pr-10"
             onClick={(event) => {

@@ -4,10 +4,18 @@ on:
   push:
     branches:
       - dev
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
   pull_request:
     branches:
       - dev
       - main
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
 
 jobs:
   build-and-test:

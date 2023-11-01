@@ -1,7 +1,11 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  APIDataType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   IVarHighlightType,
   groupedObjType,
@@ -449,6 +453,29 @@ chat_input_field: Input key that you want the chat to send the user message with
 ></langflow-chat>`;
 }
 
+export function truncateLongId(id: string): string {
+  let [componentName, newId] = id.split("-");
+  if (componentName.length > 15) {
+    componentName = componentName.slice(0, 15);
+    componentName += "...";
+    return componentName + "-" + newId;
+  }
+  return id;
+}
+
+export function extractIdFromLongId(id: string): string {
+  let [_, newId] = id.split("-");
+  return newId;
+}
+
+export function truncateDisplayName(name: string): string {
+  if (name.length > 15) {
+    name = name.slice(0, 15);
+    name += "...";
+  }
+  return name;
+}
+
 export function tabsArray(codes: string[], method: number) {
   if (!method) return;
   if (method === 0) {
@@ -526,4 +553,15 @@ export function tabsArray(codes: string[], method: number) {
       code: codes[4],
     },
   ];
+}
+
+export function getFieldTitle(
+  template: APITemplateType,
+  templateField: string
+): string {
+  return template[templateField].display_name
+    ? template[templateField].display_name!
+    : template[templateField].name
+    ? toTitleCase(template[templateField].name!)
+    : toTitleCase(templateField);
 }

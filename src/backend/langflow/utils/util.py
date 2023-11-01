@@ -191,7 +191,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
