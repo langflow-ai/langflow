@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
 
 from httpx import HTTPError
+from langflow.services.database.models import user
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
@@ -17,6 +18,27 @@ from langflow.services.store.utils import process_tags_for_post
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+from contextlib import contextmanager
+from contextvars import ContextVar
+
+user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "user_data", default=None
+)
+
+
+@contextmanager
+def user_data_context(api_key: str, store_service: "StoreService"):
+    # Fetch and set user data to the context variable
+    if api_key:
+        user_data = store_service._get(
+            f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
+        )
+        user_data_var.set(user_data)
+    try:
+        yield
+    finally:
+        # Clear the user data from the context variable
+        user_data_var.set(None)
 
 
 class StoreService(Service):
@@ -44,6 +66,11 @@ class StoreService(Service):
             "count(downloads)",
             "metadata",
         ]
+
+    # Create a context manager that will use the api key to
+    # get the user data and all requests inside the context manager
+    # will make a property return that data
+    # Without making the request multiple times
 
     def _get(
         self, url: str, api_key: str, params: Dict[str, Any] = None
@@ -175,9 +202,7 @@ class StoreService(Service):
             raise ValueError("No API key provided")
 
         if filter_by_user and api_key:
-            user_data = self._get(
-                f"{self.base_url}/users/me", api_key, params={"fields": "id"}
-            )
+            user_data = user_data_var.get()
             params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
         else:
             params["filter"] = params["filter"] = json.dumps(
@@ -193,14 +218,12 @@ class StoreService(Service):
         return results_objects
 
     def get_liked_by_user_components(
-        self, component_ids: List[UUID], api_key: str
+        self, component_ids: List[UUID], api_key: str, user_data: Dict[str, Any]
     ) -> List[UUID]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
-        user_data = self._get(
-            f"{self.base_url}/users/me", api_key, params={"fields": "id"}
-        )
+        user_data = user_data_var.get()
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -214,6 +237,26 @@ class StoreService(Service):
         }
         results = self._get(self.components_url, api_key, params)
         return [result["id"] for result in results]
+
+    # Which of the components is parent of the user's components
+    def get_components_in_users_collection(
+        self, component_ids: List[UUID], api_key: str
+    ):
+        user_data = user_data_var.get()
+        params = {
+            "fields": "id",
+            "filter": json.dumps(
+                {
+                    "_and": [
+                        {"user_created": {"_eq": user_data["id"]}},
+                        {"parent": {"_in": component_ids}},
+                    ]
+                }
+            ),
+        }
+        results = self._get(self.components_url, api_key, params)
+        return [result["id"] for result in results]
+
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
