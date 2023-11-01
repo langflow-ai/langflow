@@ -7,4 +7,5 @@ export type storeComponent = {
   name: string;
   description: string;
   liked_by_count: number;
+  liked_by_user?: boolean;
 };
