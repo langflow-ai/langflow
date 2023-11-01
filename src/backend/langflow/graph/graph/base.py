@@ -230,9 +230,9 @@ class Graph:
             node_data = node["data"]
             node_type: str = node_data["type"]  # type: ignore
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
-            node["id"]
+            node_id = node["id"]
 
-            VertexClass = self._get_vertex_class(node_type, node_lc_type)
+            VertexClass = self._get_vertex_class(node_type, node_lc_type, node_id)
             vertex = VertexClass(node)
             vertex.set_top_level(self.top_level_nodes)
             nodes.append(vertex)
