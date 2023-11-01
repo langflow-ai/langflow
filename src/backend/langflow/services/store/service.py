@@ -335,6 +335,7 @@ class StoreService(Service):
             headers=headers,
         )
 
+        response.raise_for_status()
         if response.status_code == 200:
             result = response.json()
 
