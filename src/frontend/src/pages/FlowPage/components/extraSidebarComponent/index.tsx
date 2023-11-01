@@ -122,7 +122,7 @@ export default function ExtraSidebar(): JSX.Element {
             }
           }
         });
-        setSearch("search");
+        setSearch("");
         return ret;
       });
     }
@@ -227,8 +227,12 @@ export default function ExtraSidebar(): JSX.Element {
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
-                openDisc={search.length == 0 ? false : true}
-                key={index}
+                openDisc={
+                  getFilterEdge.length !== 0 || search.length !== 0
+                    ? true
+                    : false
+                }
+                key={index + search + JSON.stringify(getFilterEdge)}
                 button={{
                   title: nodeNames[SBSectionName] ?? nodeNames.unknown,
                   Icon:
