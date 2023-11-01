@@ -79,6 +79,10 @@ export default function Page({
     deleteEdge,
     setFilterEdge,
     paste,
+    getInputTypes,
+    getOutputTypes,
+    getInputIds,
+    getOutputIds,
   } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -224,6 +228,10 @@ export default function Page({
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
       onNodesChange(change);
+      getOutputTypes();
+      getInputTypes();
+      getOutputIds();
+      getInputTypes();
       //@ts-ignore
       setTabsState((prev: TabsState) => {
         return {

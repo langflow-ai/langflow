@@ -606,8 +606,3 @@ export type dropdownButtonPropsType = {
   onFirstBtnClick: () => void;
   options: Array<{ name: string; onBtnClick: () => void }>;
 };
-
-export type IOViewType = {
-  inputNodeIds: string[];
-  outputNodeIds: string[];
-};

@@ -93,10 +93,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
               inputs & outputs
             </BaseModal.Header>
             <BaseModal.Content>
-              <IOView
-                inputNodeIds={getInputIds(flow)}
-                outputNodeIds={getOutputIds(flow)}
-              />
+              <IOView />
             </BaseModal.Content>
           </BaseModal>
         )}

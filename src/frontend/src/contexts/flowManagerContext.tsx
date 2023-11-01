@@ -31,10 +31,10 @@ const initialValue: FlowManagerContextType = {
   updateFlowPoolNodes: (nodes: NodeType[]) => {},
   addDataToFlowPool: (data: any, nodeId: string) => {},
   checkInputandOutput: (flow: FlowType) => false,
-  getInputTypes: (flow: FlowType) => [],
-  getOutputTypes: (flow: FlowType) => [],
-  getInputIds: (flow: FlowType) => [],
-  getOutputIds: (flow: FlowType) => [],
+  getInputTypes: (flow?: FlowType) => [],
+  getOutputTypes: (flow?: FlowType) => [],
+  getInputIds: (flow?: FlowType) => [],
+  getOutputIds: (flow?: FlowType) => [],
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
   paste: (
@@ -45,6 +45,10 @@ const initialValue: FlowManagerContextType = {
   getTweak: [],
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
+  inputTypes: [],
+  outputTypes: [],
+  inputIds: [],
+  outputIds: [],
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -57,6 +61,10 @@ export default function FlowManagerProvider({ children }) {
   const [getTweak, setTweak] = useState<tweakType>([]);
   const { getNodeId } = useContext(FlowsContext);
   const [isBuilt, setIsBuilt] = useState(false);
+  const [outputTypes, setOutputTypes] = useState<string[]>([]);
+  const [inputTypes, setInputTypes] = useState<string[]>([]);
+  const [inputIds, setInputIds] = useState<string[]>([]);
+  const [outputIds, setOutputIds] = useState<string[]>([]);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
     //this function will update the removing the old ones
@@ -98,33 +106,54 @@ export default function FlowManagerProvider({ children }) {
     return has_input && has_output;
   }
 
-  function getInputTypes(flow: FlowType) {
+  function getInputTypes(flow?: FlowType) {
     let inputType: string[] = [];
-    flow.data?.nodes.forEach((node) => {
+    if (!flow || !reactFlowInstance) {
+      return [];
+    }
+    const nodes = flow?.data?.nodes
+      ? flow.data.nodes
+      : reactFlowInstance!.getNodes();
+    nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isInputNode(nodeData)) {
         // TODO remove count and ramdom key from type before pushing
         inputType.push(nodeData.type);
       }
     });
+    setInputTypes(inputType);
     return inputType;
   }
 
-  function getOutputTypes(flow: FlowType) {
+  function getOutputTypes(flow?: FlowType) {
     let outputType: string[] = [];
-    flow.data?.nodes.forEach((node) => {
+    if (!flow || !reactFlowInstance) {
+      return [];
+    }
+    const nodes = flow?.data?.nodes
+      ? flow.data.nodes
+      : reactFlowInstance!.getNodes();
+    nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isOutputNode(nodeData)) {
         // TODO remove count and ramdom key from type before pushing
         outputType.push(nodeData.type);
       }
     });
+    setOutputTypes(outputType);
     return outputType;
   }
 
-  function getInputIds(flow: FlowType) {
+  function getInputIds(flow?: FlowType) {
     let inputIds: string[] = [];
-    flow.data?.nodes.forEach((node) => {
+    if (!flow || !reactFlowInstance) {
+      return [];
+    }
+    const nodes = flow?.data?.nodes
+      ? flow.data.nodes
+      : reactFlowInstance!.getNodes();
+
+    nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isInputNode(nodeData)) {
         inputIds.push(nodeData.id);
@@ -133,9 +162,16 @@ export default function FlowManagerProvider({ children }) {
     return inputIds;
   }
 
-  function getOutputIds(flow: FlowType) {
+  function getOutputIds(flow?: FlowType) {
     let outputIds: string[] = [];
-    flow.data?.nodes.forEach((node) => {
+    if (!flow || !reactFlowInstance) {
+      return [];
+    }
+    const nodes = flow?.data?.nodes
+      ? flow.data.nodes
+      : reactFlowInstance!.getNodes();
+
+    nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isOutputNode(nodeData)) {
         outputIds.push(nodeData.id);
@@ -301,6 +337,10 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        inputIds,
+        outputIds,
+        outputTypes,
+        inputTypes,
         isBuilt,
         setIsBuilt,
         downloadFlow,

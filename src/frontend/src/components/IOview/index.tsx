@@ -1,19 +1,15 @@
 import { useContext } from "react";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
-import { IOViewType } from "../../types/components";
 import TextInputComponent from "../textInputComponent";
 import TextOutputComponent from "../textOutputComponent";
 
-export default function IOView({
-  inputNodeIds,
-  outputNodeIds,
-}: IOViewType): JSX.Element {
-  const { flowPool } = useContext(flowManagerContext);
+export default function IOView(): JSX.Element {
+  const { flowPool, inputIds, outputIds } = useContext(flowManagerContext);
   return (
     <div className="flex w-full justify-around">
       <div className="flex flex-col gap-4">
         <strong>Inputs:</strong>
-        {inputNodeIds.map((inputType, index) => {
+        {inputIds.map((inputType, index) => {
           let params = "";
           if (flowPool[inputType] && flowPool[inputType].length > 0)
             params = flowPool[inputType][flowPool[inputType].length - 1]
@@ -30,7 +26,7 @@ export default function IOView({
       </div>
       <div className="flex flex-col gap-4">
         <strong>Outputs:</strong>
-        {outputNodeIds.map((outputType, index) => {
+        {outputIds.map((outputType, index) => {
           let text = "";
           if (flowPool[outputType] && flowPool[outputType].length > 0)
             text = flowPool[outputType][flowPool[outputType].length - 1].results

@@ -18,10 +18,10 @@ export type FlowManagerContextType = {
   updateFlowPoolNodes: (nodes: NodeType[]) => void;
   addDataToFlowPool: (data: any, nodeId: string) => void;
   checkInputandOutput: (flow: FlowType) => boolean;
-  getInputTypes: (flow: FlowType) => string[];
-  getOutputTypes: (flow: FlowType) => string[];
-  getInputIds: (flow: FlowType) => string[];
-  getOutputIds: (flow: FlowType) => string[];
+  getInputTypes: (flow?: FlowType) => string[];
+  getOutputTypes: (flow?: FlowType) => string[];
+  getInputIds: (flow?: FlowType) => string[];
+  getOutputIds: (flow?: FlowType) => string[];
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -35,4 +35,8 @@ export type FlowManagerContextType = {
   getTweak: tweakType;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
+  inputTypes: string[];
+  outputTypes: string[];
+  inputIds: string[];
+  outputIds: string[];
 };
