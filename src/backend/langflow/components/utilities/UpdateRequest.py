@@ -2,7 +2,7 @@ from typing import List, Optional
 import requests
 from langflow import CustomComponent
 from langchain.schema import Document
-from langflow.database.models.base import orjson_dumps
+from langflow.services.database.models.base import orjson_dumps
 
 
 class UpdateRequest(CustomComponent):
@@ -15,7 +15,7 @@ class UpdateRequest(CustomComponent):
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "headers": {
             "display_name": "Headers",
-            "field_type": "code",
+            "field_type": "NestedDict",
             "info": "The headers to send with the request.",
         },
         "code": {"show": False},

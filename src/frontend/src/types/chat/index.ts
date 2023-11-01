@@ -8,5 +8,6 @@ export type ChatMessageType = {
   isSend: boolean;
   thought?: string;
   files?: Array<{ data: string; type: string; data_type: string }>;
+  prompt?: string;
   chatKey: string;
 };

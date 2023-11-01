@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -16,8 +16,8 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
+import { FlowsContext } from "./contexts/flowsContext";
 import { locationContext } from "./contexts/locationContext";
-import { TabsContext } from "./contexts/tabsContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
 
@@ -30,7 +30,7 @@ export default function App() {
     setShowSideBar(true);
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-  const { hardReset } = useContext(TabsContext);
+  const { hardReset } = useContext(FlowsContext);
 
   const {
     errorData,
@@ -42,8 +42,11 @@ export default function App() {
     successData,
     successOpen,
     setSuccessOpen,
+    setErrorData,
     loading,
+    setLoading,
   } = useContext(alertContext);
+  const navigate = useNavigate();
   const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts

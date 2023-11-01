@@ -12,6 +12,8 @@ export default function CodeAreaComponent({
   nodeClass,
   dynamic,
   setNodeClass,
+  id = "",
+  readonly = false,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
@@ -30,17 +32,19 @@ export default function CodeAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <CodeAreaModal
+        readonly={readonly}
         dynamic={dynamic}
         value={myValue}
         nodeClass={nodeClass}
-        setNodeClass={setNodeClass}
-        setValue={(t: string) => {
-          setMyValue(t);
-          onChange(t);
+        setNodeClass={setNodeClass!}
+        setValue={(value: string) => {
+          setMyValue(value);
+          onChange(value);
         }}
       >
         <div className="flex w-full items-center">
           <span
+            id={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"

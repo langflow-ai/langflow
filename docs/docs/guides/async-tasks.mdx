@@ -1,0 +1,44 @@
+import Admonition from "@theme/Admonition";
+
+# Async API
+
+## Introduction
+
+<Admonition type="info" caption="In development">
+  This implementation is still in development. Contributions are welcome!
+</Admonition>
+
+The Async API is an implementation of the Langflow API that uses [Celery](https://docs.celeryproject.org/en/stable/)
+to run the tasks asynchronously, using a message broker to send and receive messages, a result backend to store the results and a cache to store the task states and session data.
+
+### Configuration
+
+The folder _`./deploy`_ in the [Github repository](https://github.com/logspace-ai/langflow) contains a _`.env.example`_ file that can be used to configure a Langflow deployment.
+The file contains the variables required to configure a Celery worker queue, Redis cache and result backend and a RabbitMQ message broker.
+
+To set it up locally you can copy the file to _`.env`_ and run the following command:
+
+```bash
+docker compose up -d
+```
+
+This will set up the following containers:
+
+- Langflow API
+- Celery worker
+- RabbitMQ message broker
+- Redis cache
+- PostgreSQL database
+- PGAdmin
+- Flower
+- Traefik
+- Grafana
+- Prometheus
+
+### Testing
+
+To run the tests for the Async API, you can run the following command:
+
+```bash
+docker compose -f docker-compose.with_tests.yml up --exit-code-from tests tests result_backend broker celeryworker db --build
+```

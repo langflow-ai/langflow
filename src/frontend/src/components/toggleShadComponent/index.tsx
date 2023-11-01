@@ -6,7 +6,8 @@ export default function ToggleShadComponent({
   setEnabled,
   disabled,
   size,
-}: ToggleComponentType) {
+  id = "",
+}: ToggleComponentType): JSX.Element {
   let scaleX, scaleY;
   switch (size) {
     case "small":
@@ -29,14 +30,15 @@ export default function ToggleShadComponent({
   return (
     <div className={disabled ? "pointer-events-none cursor-not-allowed " : ""}>
       <Switch
+        id={id}
         style={{
           transform: `scaleX(${scaleX}) scaleY(${scaleY})`,
         }}
         disabled={disabled}
         className=""
         checked={enabled}
-        onCheckedChange={(x: boolean) => {
-          setEnabled(x);
+        onCheckedChange={(isEnabled: boolean) => {
+          setEnabled(isEnabled);
         }}
       ></Switch>
     </div>

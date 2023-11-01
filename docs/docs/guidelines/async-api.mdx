@@ -1,0 +1,73 @@
+import Admonition from "@theme/Admonition";
+
+# Asynchronous Processing
+
+## Introduction
+
+Starting from version 0.5, Langflow introduces a new feature to its API: the _`sync`_ flag. This flag allows users to opt for asynchronous processing of their flows, freeing up resources and enabling better control over long-running tasks.
+This feature supports running tasks in a Celery worker queue and AnyIO task groups for now.
+
+<Admonition type="warning" caption="Experimental Feature">
+  This is an experimental feature. The default behavior of the API is still
+  synchronous processing. The API may change in the future.
+</Admonition>
+
+## The _`sync`_ Flag
+
+The _`sync`_ flag can be included in the payload of your POST request to the _`/api/v1/process/<your_flow_id>`_ endpoint.
+When set to _`false`_, the API will initiate an asynchronous task instead of processing the flow synchronously.
+
+### API Request with _`sync`_ flag
+
+```bash
+curl -X POST \
+  http://localhost:3000/api/v1/process/<your_flow_id> \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <your_api_key>' \
+  -d '{"inputs": {"text": ""}, "tweaks": {}, "sync": false}'
+```
+
+Response:
+
+```json
+{
+  "result": {
+    "output": "..."
+  },
+  "task": {
+    "id": "...",
+    "href": "api/v1/task/<task_id>"
+  },
+  "session_id": "...",
+  "backend": "..." // celery or anyio
+}
+```
+
+## Checking Task Status
+
+You can check the status of an asynchronous task by making a GET request to the `/task/{task_id}` endpoint.
+
+```bash
+curl -X GET \
+  http://localhost:3000/api/v1/task/<task_id> \
+  -H 'x-api-key: <your_api_key>'
+```
+
+### Response
+
+The endpoint will return the current status of the task and, if completed, the result of the task. Possible statuses include:
+
+- _`PENDING`_: The task is waiting for execution.
+- _`SUCCESS`_: The task has completed successfully.
+- _`FAILURE`_: The task has failed.
+
+Example response for a completed task:
+
+```json
+{
+  "status": "SUCCESS",
+  "result": {
+    "output": "..."
+  }
+}
+```

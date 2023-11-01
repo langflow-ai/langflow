@@ -5,7 +5,7 @@ export default function Tooltip({
   children,
   title,
   placement,
-}: TooltipComponentType) {
+}: TooltipComponentType): JSX.Element {
   return (
     <LightTooltip placement={placement} title={title} arrow>
       {children}

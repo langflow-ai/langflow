@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +12,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({ flows, tabId }) => {
-  const { addFlow } = useContext(TabsContext);
+export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
+  const { addFlow } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
   const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
@@ -25,12 +26,12 @@ export const MenuBar = ({ flows, tabId }) => {
 
   function handleAddFlow() {
     try {
-      addFlow(null, true).then((id) => {
+      addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();
     } catch (err) {
-      setErrorData(err);
+      setErrorData(err as { title: string; list?: Array<string> });
     }
   }
   let current_flow = flows.find((flow) => flow.id === tabId);
@@ -45,7 +46,9 @@ export const MenuBar = ({ flows, tabId }) => {
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{current_flow.name}</div>
+                <div className="header-menu-flow-name">
+                  {current_flow!.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>

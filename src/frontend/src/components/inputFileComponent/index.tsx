@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { uploadFile } from "../../controllers/API";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -13,11 +13,11 @@ export default function InputFileComponent({
   fileTypes,
   onFileChange,
   editNode = false,
-}: FileComponentType) {
+}: FileComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);
-  const { tabId } = useContext(TabsContext);
+  const { tabId } = useContext(FlowsContext);
 
   // Clear component state
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function InputFileComponent({
     setMyValue(value);
   }, [value]);
 
-  const handleButtonClick = () => {
+  const handleButtonClick = (): void => {
     // Create a file input element
     const input = document.createElement("input");
     input.type = "file";
@@ -49,11 +49,11 @@ export default function InputFileComponent({
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 
-    input.onchange = (e: Event) => {
+    input.onchange = (event: Event): void => {
       setLoading(true);
 
       // Get the selected file
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {

@@ -1,10 +1,10 @@
 import ast
 import contextlib
 from typing import Any, List
-from langflow.api.utils import merge_nested_dicts_with_renaming
+from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
@@ -30,7 +30,7 @@ from langflow.template.frontend_node.custom_components import (
 from langflow.interface.retrievers.base import retriever_creator
 
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import get_base_classes
 
 import re
@@ -288,6 +288,24 @@ def add_base_classes(frontend_node, return_types: List[str]):
                 frontend_node.get("base_classes").append(base_class)
 
 
+def add_output_types(frontend_node, return_types: List[str]):
+    """Add output types to the frontend node"""
+    for return_type in return_types:
+        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": (
+                        "Invalid return type should be one of: "
+                        f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
+                    ),
+                    "traceback": traceback.format_exc(),
+                },
+            )
+
+        frontend_node.get("output_types").append(return_type)
+
+
 def build_langchain_template_custom_component(custom_component: CustomComponent):
     """Build a custom component template for the langchain"""
     try:
@@ -303,9 +321,9 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         logger.debug("Updated attributes")
         field_config = build_field_config(custom_component)
         logger.debug("Built field config")
-        add_extra_fields(
-            frontend_node, field_config, custom_component.get_function_entrypoint_args
-        )
+        entrypoint_args = custom_component.get_function_entrypoint_args
+
+        add_extra_fields(frontend_node, field_config, entrypoint_args)
         logger.debug("Added extra fields")
         frontend_node = add_code_field(
             frontend_node, custom_component.code, field_config.get("code", {})
@@ -314,9 +332,14 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
         add_base_classes(
             frontend_node, custom_component.get_function_entrypoint_return_type
         )
+        add_output_types(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
         logger.debug("Added base classes")
         return frontend_node
     except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise exc
         raise HTTPException(
             status_code=400,
             detail={
@@ -433,6 +456,24 @@ def build_invalid_menu(invalid_components):
     return invalid_menu
 
 
+def merge_nested_dicts_with_renaming(dict1, dict2):
+    for key, value in dict2.items():
+        if (
+            key in dict1
+            and isinstance(value, dict)
+            and isinstance(dict1.get(key), dict)
+        ):
+            for sub_key, sub_value in value.items():
+                if sub_key in dict1[key]:
+                    new_key = get_new_key(dict1[key], sub_key)
+                    dict1[key][new_key] = sub_value
+                else:
+                    dict1[key][sub_key] = sub_value
+        else:
+            dict1[key] = value
+    return dict1
+
+
 def build_langchain_custom_component_list_from_path(path: str):
     """Build a list of custom components for the langchain from a given path"""
     file_list = load_files_from_path(path)
@@ -446,3 +487,51 @@ def build_langchain_custom_component_list_from_path(path: str):
     invalid_menu = build_invalid_menu(invalid_components)
 
     return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
+
+
+def get_all_types_dict(settings_service):
+    native_components = build_langchain_types_dict()
+    # custom_components is a list of dicts
+    # need to merge all the keys into one dict
+    custom_components_from_file: dict[str, Any] = {}
+    if settings_service.settings.COMPONENTS_PATH:
+        logger.info(
+            f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
+        )
+
+        custom_component_dicts = []
+        processed_paths = []
+        for path in settings_service.settings.COMPONENTS_PATH:
+            if str(path) in processed_paths:
+                continue
+            custom_component_dict = build_langchain_custom_component_list_from_path(
+                str(path)
+            )
+            custom_component_dicts.append(custom_component_dict)
+            processed_paths.append(str(path))
+
+        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
+        for custom_component_dict in custom_component_dicts:
+            # custom_component_dict is a dict of dicts
+            if not custom_component_dict:
+                continue
+            category = list(custom_component_dict.keys())[0]
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
+            custom_components_from_file = merge_nested_dicts_with_renaming(
+                custom_components_from_file, custom_component_dict
+            )
+
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
+
+
+def merge_nested_dicts(dict1, dict2):
+    for key, value in dict2.items():
+        if isinstance(value, dict) and isinstance(dict1.get(key), dict):
+            dict1[key] = merge_nested_dicts(dict1[key], value)
+        else:
+            dict1[key] = value
+    return dict1
