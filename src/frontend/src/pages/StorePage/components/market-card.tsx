@@ -72,19 +72,25 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   function handleLike() {
     if (liked_by_user !== undefined || liked_by_user !== null) {
       const temp = liked_by_user;
+      const tempNum = likes_count;
       setLiked_by_user((prev) => !prev);
+      if (!temp) {
+        setLikes_count((prev) => prev + 1);
+      } else {
+        setLikes_count((prev) => prev - 1);
+      }
       console.log(data.id);
       postLikeComponent(data.id)
         .catch((error) => {
           console.error(error);
           setLiked_by_user(temp);
+          setLikes_count(tempNum);
           setErrorData({
             title: "Error on liking component",
             list: [error["response"]["data"]["detail"]],
           });
         })
         .then((response) => {
-          console.log(response);
           setLikes_count(response.likes_count);
           setLiked_by_user(response.liked_by_user);
         });
