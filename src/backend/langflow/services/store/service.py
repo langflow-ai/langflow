@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
 
 from httpx import HTTPError
-from langflow.services.database.models import user
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
