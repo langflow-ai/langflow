@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from uuid import UUID
+from fastapi import params
 from langflow.services.base import Service
 from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
 import httpx
@@ -169,6 +170,7 @@ class StoreService(Service):
 
         # Only public components or the ones created by the user
         # check for "public" or "Public"
+
         if filter_by_user and not api_key:
             raise ValueError("No API key provided")
 
@@ -189,6 +191,29 @@ class StoreService(Service):
         #     if component.tags:
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
         return results_objects
+
+    def get_liked_by_user_components(
+        self, component_ids: List[UUID], api_key: str
+    ) -> List[UUID]:
+        # Get fields id
+        # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
+        # return the ids
+        user_data = self._get(
+            f"{self.base_url}/users/me", api_key, params={"fields": "id"}
+        )
+        params = {
+            "fields": "id",
+            "filter": json.dumps(
+                {
+                    "_and": [
+                        {"id": {"_in": component_ids}},
+                        {"liked_by": {"directus_users_id": {"_eq": user_data["id"]}}},
+                    ]
+                }
+            ),
+        }
+        results = self._get(self.components_url, api_key, params)
+        return [result["id"] for result in results]
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"

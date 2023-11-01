@@ -75,7 +75,7 @@ def list_components(
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
+    store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
         result = store_service.query_components(
@@ -84,6 +84,19 @@ def list_components(
             limit=limit,
             filter_by_user=filter_by_user,
         )
+
+        if not store_api_Key:
+            return result
+
+        # Now, from the result, we need to get the components
+        # the user likes and set the liked_by_user to True
+        liked_by_user_ids = store_service.get_liked_by_user_components(
+            component_ids=[str(component.id) for component in result],
+            api_key=store_api_Key,
+        )
+        # Now we need to set the liked_by_user attribute
+        for component in result:
+            component.liked_by_user = str(component.id) in liked_by_user_ids
 
         return result
     except Exception as exc:
