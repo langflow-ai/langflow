@@ -1,3 +1,4 @@
+from typing import List
 from langflow import CustomComponent
 from langchain.document_loaders import AZLyricsLoader
 from langchain.document_loaders import CollegeConfidentialLoader
@@ -39,21 +40,21 @@ class UrlLoaderComponent(CustomComponent):
             "code": {"show": False},
         }
 
-    def build(self, web_path: str, loader: str) -> Document:
+    def build(self, web_path: str, loader: str) -> List[Document]:
         if loader == "AZLyricsLoader":
-            loader_instance = AZLyricsLoader(web_path=web_path)
+            loader_instance = AZLyricsLoader(web_path=web_path)  # type: ignore
         elif loader == "CollegeConfidentialLoader":
-            loader_instance = CollegeConfidentialLoader(web_path=web_path)
+            loader_instance = CollegeConfidentialLoader(web_path=web_path)  # type: ignore
         elif loader == "GitbookLoader":
-            loader_instance = GitbookLoader(web_path=web_path)
+            loader_instance = GitbookLoader(web_page=web_path)  # type: ignore
         elif loader == "HNLoader":
-            loader_instance = HNLoader(web_path=web_path)
+            loader_instance = HNLoader(web_path=web_path)  # type: ignore
         elif loader == "IFixitLoader":
-            loader_instance = IFixitLoader(web_path=web_path)
+            loader_instance = IFixitLoader(web_path=web_path)  # type: ignore
         elif loader == "IMSDbLoader":
-            loader_instance = IMSDbLoader(web_path=web_path)
+            loader_instance = IMSDbLoader(web_path=web_path)  # type: ignore
         elif loader == "WebBaseLoader":
-            loader_instance = WebBaseLoader(web_path=web_path)
+            loader_instance = WebBaseLoader(web_path=web_path)  # type: ignore
 
         if loader_instance is None:
             raise ValueError(f"No loader found for: {web_path}")

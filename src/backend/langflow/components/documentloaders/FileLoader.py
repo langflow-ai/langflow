@@ -1,7 +1,8 @@
 from langflow import CustomComponent
 from langchain.schema import Document
+from typing import Any, Dict, List
 
-loaders_info = [
+loaders_info: List[Dict[str, Any]] = [
     {
         "loader": "AirbyteJSONLoader",
         "name": "Airbyte JSON (.jsonl)",
@@ -210,8 +211,12 @@ class FileLoaderComponent(CustomComponent):
                 raise ValueError(f"No default loader found for file type: {file_type}")
 
             selected_loader_info = default_loader_info
-
-        loader_import = selected_loader_info["import"]
+        if isinstance(selected_loader_info, dict):
+            loader_import: str = selected_loader_info["import"]
+        else:
+            raise ValueError(
+                f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}"
+            )
         module_name, class_name = loader_import.rsplit(".", 1)
 
         try:
