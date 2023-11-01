@@ -75,7 +75,7 @@ def list_components(
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
+    store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
         result = store_service.query_components(
