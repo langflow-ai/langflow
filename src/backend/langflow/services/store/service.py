@@ -309,6 +309,14 @@ class StoreService(Service):
         likes = self._get(url, api_key, params)
         return likes
 
+    def get_component_likes_count(self, api_key: str, component_id: str) -> int:
+        url = f"{self.components_url}/{component_id}"
+        params = {
+            "fields": ",".join(["id", "count(liked_by)"]),
+        }
+        likes = self._get(url, api_key, params)
+        return likes
+
     def like_component(self, api_key: str, component_id: str) -> bool:
         # if it returns a list with one id, it means the like was successful
         # if it returns an int, it means the like was removed
