@@ -106,9 +106,9 @@ class CSVAgent(CustomAgentExecutor):
             tools,
             prefix=PANDAS_PREFIX,
             suffix=PANDAS_SUFFIX,
-            input_variables=["df", "input", "agent_scratchpad"],
+            input_variables=["df_head", "input", "agent_scratchpad"],
         )
-        partial_prompt = prompt.partial(df=str(df.head()))
+        partial_prompt = prompt.partial(df_head=str(df.head()))
         llm_chain = LLMChain(
             llm=llm,
             prompt=partial_prompt,

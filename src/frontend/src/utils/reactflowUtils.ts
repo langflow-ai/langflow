@@ -25,8 +25,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase } from "./utils";
-const uid = new ShortUniqueId({ length: 5 });
+import { getFieldTitle } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -240,11 +239,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
             node.id
       )
     ) {
-      errors.push(
-        `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
-        }.`
-      );
+      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
@@ -255,15 +250,14 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) contains duplicate keys with the same values.`
+          `${type} (${getFieldTitle(
+            template,
+            t
+          )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) field must not be empty.`
+          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
         );
     }
     return errors;
@@ -981,7 +975,8 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node!.template[field].show = show;
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-      gNodes[nodeIndex].selected = false;
+      // keep the nodes selected after ungrouping
+      // gNodes[nodeIndex].selected = false;
       if (proxy) {
         gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
       } else {
