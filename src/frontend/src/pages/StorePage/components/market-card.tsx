@@ -32,7 +32,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const flowData = useRef<FlowType>();
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
-  const [likes_count, setLikes_count] = useState(data.liked_by_count);
+  const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
