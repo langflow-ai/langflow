@@ -14,6 +14,7 @@
 #     "BaseMemory": BaseMemory,
 #     "BaseChatMemory": BaseChatMemory,
 # }
+from typing import Text
 from .constants import (
     Tool,
     PromptTemplate,
@@ -50,4 +51,5 @@ __all__ = [
     "TextSplitter",
     "Document",
     "AgentExecutor",
+    "Text",
 ]
