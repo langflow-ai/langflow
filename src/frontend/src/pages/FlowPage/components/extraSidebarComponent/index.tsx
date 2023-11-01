@@ -1,10 +1,11 @@
+import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -17,10 +18,11 @@ import {
 import { classNames } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 
-export default function ExtraSidebar() {
-  const { data, templates } = useContext(typesContext);
+export default function ExtraSidebar(): JSX.Element {
+  const { data, templates, getFilterEdge, setFilterEdge } =
+    useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
-    useContext(TabsContext);
+    useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -28,7 +30,7 @@ export default function ExtraSidebar() {
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
-  ) {
+  ): void {
     //start drag event
     var crt = event.currentTarget.cloneNode(true);
     crt.style.position = "absolute";
@@ -42,6 +44,10 @@ export default function ExtraSidebar() {
 
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
+    if (e === "") {
+      setFilterData(data);
+      return;
+    }
     setFilterData((_) => {
       let ret = {};
       Object.keys(data).forEach((d: keyof APIObjectType, i) => {
@@ -56,10 +62,10 @@ export default function ExtraSidebar() {
       return ret;
     });
   }
-  const flow = flows.find((f) => f.id === tabId);
+  const flow = flows.find((flow) => flow.id === tabId);
   useEffect(() => {
     // show components with error on load
-    let errors = [];
+    let errors: string[] = [];
     Object.keys(templates).forEach((component) => {
       if (templates[component].error) {
         errors.push(component);
@@ -69,6 +75,59 @@ export default function ExtraSidebar() {
       setErrorData({ title: " Components with errors: ", list: errors });
   }, []);
 
+  function handleBlur() {
+    if (!search && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
+  }
+
+  useEffect(() => {
+    if (getFilterEdge.length === 0 && search === "") {
+      setFilterData(data);
+      setFilterEdge([]);
+      setSearch("");
+    }
+  }, [getFilterEdge]);
+
+  useEffect(() => {
+    if (getFilterEdge?.length > 0) {
+      setFilterData((_) => {
+        let dataClone = cloneDeep(data);
+        let ret = {};
+        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
+          ret[d] = {};
+          if (getFilterEdge.some((x) => x.family === d)) {
+            ret[d] = dataClone[d];
+
+            const filtered = getFilterEdge
+              .filter((x) => x.family === d)
+              .pop()
+              .type.split(",");
+
+            for (let i = 0; i < filtered.length; i++) {
+              filtered[i] = filtered[i].trimStart();
+            }
+
+            if (filtered.some((x) => x !== "")) {
+              let keys = Object.keys(dataClone[d]).filter((nd) =>
+                filtered.includes(nd)
+              );
+              Object.keys(dataClone[d]).forEach((element) => {
+                if (!keys.includes(element)) {
+                  delete ret[d][element];
+                }
+              });
+            }
+          }
+        });
+        setSearch("search");
+        return ret;
+      });
+    }
+  }, [getFilterEdge]);
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
@@ -77,7 +136,7 @@ export default function ExtraSidebar() {
             <button
               className="extra-side-bar-buttons"
               onClick={() => {
-                uploadFlow();
+                uploadFlow(false);
               }}
             >
               <IconComponent name="FileUp" className="side-bar-button-size " />
@@ -99,16 +158,20 @@ export default function ExtraSidebar() {
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
-              <ApiModal flow={flow} disable={!isBuilt}>
-                <div className={classNames("extra-side-bar-buttons")}>
-                  <IconComponent
-                    name="Code2"
-                    className={
-                      "side-bar-button-size" +
-                      (isBuilt ? " " : " extra-side-bar-save-disable")
-                    }
-                  />
-                </div>
+              <ApiModal flow={flow}>
+                <button
+                  className={"w-full " + (!isBuilt ? "button-disable" : "")}
+                >
+                  <div className={classNames("extra-side-bar-buttons")}>
+                    <IconComponent
+                      name="Code2"
+                      className={
+                        "side-bar-button-size" +
+                        (isBuilt ? " " : " extra-side-bar-save-disable")
+                      }
+                    />
+                  </div>
+                </button>
               </ApiModal>
             )}
           </div>
@@ -120,8 +183,7 @@ export default function ExtraSidebar() {
                 "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
               }
               onClick={(event) => {
-                saveFlow(flow);
-                setSuccessData({ title: "Changes saved successfully" });
+                saveFlow(flow!);
               }}
             >
               <IconComponent
@@ -138,15 +200,16 @@ export default function ExtraSidebar() {
       <Separator />
       <div className="side-bar-search-div-placement">
         <Input
+          onFocusCapture={() => handleBlur()}
           type="text"
           name="search"
           id="search"
           placeholder="Search"
-          className="nopan nodrag noundo nocopy input-search"
-          onChange={(e) => {
-            handleSearchInput(e.target.value);
+          className="nopan nodelete nodrag noundo nocopy input-search"
+          onChange={(event) => {
+            handleSearchInput(event.target.value);
             // Set search input state
-            setSearch(e.target.value);
+            setSearch(event.target.value);
           }}
         />
         <div className="search-icon">
@@ -161,42 +224,43 @@ export default function ExtraSidebar() {
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort()
-          .map((d: keyof APIObjectType, i) =>
-            Object.keys(dataFilter[d]).length > 0 ? (
+          .map((SBSectionName: keyof APIObjectType, index) =>
+            Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
                 openDisc={search.length == 0 ? false : true}
-                key={i}
+                key={index}
                 button={{
-                  title: nodeNames[d] ?? nodeNames.unknown,
-                  Icon: nodeIconsLucide[d] ?? nodeIconsLucide.unknown,
+                  title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                  Icon:
+                    nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
                 }}
               >
                 <div className="side-bar-components-gap">
-                  {Object.keys(dataFilter[d])
+                  {Object.keys(dataFilter[SBSectionName])
                     .sort()
-                    .map((t: string, k) => (
+                    .map((SBItemName: string, index) => (
                       <ShadTooltip
-                        content={data[d][t].display_name}
+                        content={data[SBSectionName][SBItemName].display_name}
                         side="right"
-                        key={k}
+                        key={index}
                       >
-                        <div key={k} data-tooltip-id={t}>
+                        <div key={index} data-tooltip-id={SBItemName}>
                           <div
-                            draggable={!data[d][t].error}
+                            draggable={!data[SBSectionName][SBItemName].error}
                             className={
                               "side-bar-components-border bg-background" +
-                              (data[d][t].error
+                              (data[SBSectionName][SBItemName].error
                                 ? " cursor-not-allowed select-none"
                                 : "")
                             }
                             style={{
                               borderLeftColor:
-                                nodeColors[d] ?? nodeColors.unknown,
+                                nodeColors[SBSectionName] ?? nodeColors.unknown,
                             }}
                             onDragStart={(event) =>
                               onDragStart(event, {
-                                type: t,
-                                node: data[d][t],
+                                type: SBItemName,
+                                node: data[SBSectionName][SBItemName],
                               })
                             }
                             onDragEnd={() => {
@@ -207,9 +271,15 @@ export default function ExtraSidebar() {
                               );
                             }}
                           >
-                            <div className="side-bar-components-div-form">
+                            <div
+                              className="side-bar-components-div-form"
+                              id={
+                                "side" +
+                                data[SBSectionName][SBItemName].display_name
+                              }
+                            >
                               <span className="side-bar-components-text">
-                                {data[d][t].display_name}
+                                {data[SBSectionName][SBItemName].display_name}
                               </span>
                               <IconComponent
                                 name="Menu"
@@ -223,7 +293,7 @@ export default function ExtraSidebar() {
                 </div>
               </DisclosureComponent>
             ) : (
-              <div key={i}></div>
+              <div key={index}></div>
             )
           )}
       </div>

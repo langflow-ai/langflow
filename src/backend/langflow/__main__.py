@@ -1,23 +1,69 @@
+import platform
+import socket
 import sys
 import time
-import httpx
-from langflow.utils.util import get_number_of_workers
-from multiprocess import Process  # type: ignore
-import platform
+import webbrowser
 from pathlib import Path
 from typing import Optional
-import socket
-from rich.panel import Panel
+
+import httpx
+import typer
+from dotenv import load_dotenv
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.getters import get_db_service, get_settings_service
+from langflow.services.utils import initialize_services, initialize_settings_service
+from langflow.utils.logger import configure, logger
+from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
-import typer
-from langflow.main import setup_app
-from langflow.settings import settings
-from langflow.utils.logger import configure, logger
-import webbrowser
-from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
-app = typer.Typer()
+console = Console()
+
+app = typer.Typer(no_args_is_help=True)
+
+
+def get_number_of_workers(workers=None):
+    if workers == -1 or workers is None:
+        workers = (cpu_count() * 2) + 1
+    logger.debug(f"Number of workers: {workers}")
+    return workers
+
+
+def display_results(results):
+    """
+    Display the results of the migration.
+    """
+    for table_results in results:
+        table = Table(title=f"Migration {table_results.table_name}")
+        table.add_column("Name")
+        table.add_column("Type")
+        table.add_column("Status")
+
+        for result in table_results.results:
+            status = "Success" if result.success else "Failure"
+            color = "green" if result.success else "red"
+            table.add_row(result.name, result.type, f"[{color}]{status}[/{color}]")
+
+        console.print(table)
+        console.print()  # Print a new line
+
+
+def set_var_for_macos_issue():
+    # OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+    # we need to set this var is we are running on MacOS
+    # otherwise we get an error when running gunicorn
+
+    if platform.system() in ["Darwin"]:
+        import os
+
+        os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
+        os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
+        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 def update_settings(
@@ -30,74 +76,29 @@ def update_settings(
     """Update the settings from a config file."""
 
     # Check for database_url in the environment variables
-
+    initialize_settings_service()
+    settings_service = get_settings_service()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings.update_from_yaml(config, dev=dev)
+        settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_service.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings.update_settings(CACHE=cache)
+        settings_service.settings.update_settings(CACHE=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings.update_settings(COMPONENTS_PATH=components_path)
-
-
-def serve_on_jcloud():
-    """
-    Deploy Langflow server on Jina AI Cloud
-    """
-    import asyncio
-    from importlib.metadata import version as mod_version
-
-    import click
-
-    try:
-        from lcserve.__main__ import serve_on_jcloud  # type: ignore
-    except ImportError:
-        click.secho(
-            "🚨 Please install langchain-serve to deploy Langflow server on Jina AI Cloud "
-            "using `pip install langchain-serve`",
-            fg="red",
-        )
-        return
-
-    app_name = "langflow.lcserve:app"
-    app_dir = str(Path(__file__).parent)
-    version = mod_version("langflow")
-    base_image = "jinaai+docker://deepankarm/langflow"
-
-    click.echo("🚀 Deploying Langflow server on Jina AI Cloud")
-    app_id = asyncio.run(
-        serve_on_jcloud(
-            fastapi_app_str=app_name,
-            app_dir=app_dir,
-            uses=f"{base_image}:{version}",
-            name="langflow",
-        )
-    )
-    click.secho(
-        "🎉 Langflow server successfully deployed on Jina AI Cloud 🎉", fg="green"
-    )
-    click.secho(
-        "🔗 Click on the link to open the server (please allow ~1-2 minutes for the server to startup): ",
-        nl=False,
-        fg="green",
-    )
-    click.secho(f"https://{app_id}.wolf.jina.ai/", fg="blue")
-    click.secho("📖 Read more about managing the server: ", nl=False, fg="green")
-    click.secho("https://github.com/jina-ai/langchain-serve", fg="blue")
+        settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
 
 
 @app.command()
-def serve(
+def run(
     host: str = typer.Option(
         "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
     ),
     workers: int = typer.Option(
-        2, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
     ),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
@@ -106,7 +107,9 @@ def serve(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option("config.yaml", help="Path to the configuration file."),
+    config: str = typer.Option(
+        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
+    ),
     # .env file param
     env_file: Path = typer.Option(
         None, help="Path to the .env file containing environment variables."
@@ -122,7 +125,6 @@ def serve(
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default=None,
     ),
-    jcloud: bool = typer.Option(False, help="Deploy on Jina AI Cloud"),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
     # This variable does not work but is set by the .env file
     # and works with Pydantic
@@ -146,16 +148,21 @@ def serve(
         help="Remove API keys from the projects saved in the database.",
         envvar="LANGFLOW_REMOVE_API_KEYS",
     ),
+    backend_only: bool = typer.Option(
+        False,
+        help="Run only the backend server without the frontend.",
+        envvar="LANGFLOW_BACKEND_ONLY",
+    ),
 ):
     """
-    Run the Langflow server.
+    Run the Langflow.
     """
+
+    set_var_for_macos_issue()
     # override env variables with .env file
+
     if env_file:
         load_dotenv(env_file, override=True)
-
-    if jcloud:
-        return serve_on_jcloud()
 
     configure(log_level=log_level, log_file=log_file)
     update_settings(
@@ -167,7 +174,7 @@ def serve(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
-    app = setup_app(static_files_dir=static_files_dir)
+    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
@@ -175,9 +182,12 @@ def serve(
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
-        "worker_class": "uvicorn.workers.UvicornWorker",
         "timeout": timeout,
     }
+
+    # Define an env variable to know if we are just testing the server
+    if "pytest" in sys.modules:
+        return
 
     if platform.system() in ["Windows"]:
         # Run using uvicorn on MacOS and Windows
@@ -297,6 +307,53 @@ def run_langflow(host, port, log_level, options, app):
     except Exception as e:
         logger.exception(e)
         sys.exit(1)
+
+
+@app.command()
+def superuser(
+    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
+):
+    """
+    Create a superuser.
+    """
+    configure(log_level=log_level)
+    initialize_services()
+    db_service = get_db_service()
+    with session_getter(db_service) as session:
+        from langflow.services.auth.utils import create_super_user
+
+        if create_super_user(db=session, username=username, password=password):
+            # Verify that the superuser was created
+            from langflow.services.database.models.user.user import User
+
+            user: User = session.query(User).filter(User.username == username).first()
+            if user is None or not user.is_superuser:
+                typer.echo("Superuser creation failed.")
+                return
+
+            typer.echo("Superuser created successfully.")
+
+        else:
+            typer.echo("Superuser creation failed.")
+
+
+@app.command()
+def migration(test: bool = typer.Option(True, help="Run migrations in test mode.")):
+    """
+    Run or test migrations.
+    """
+    initialize_services()
+    db_service = get_db_service()
+    if not test:
+        db_service.run_migrations()
+    results = db_service.run_migrations_test()
+    display_results(results)
 
 
 def main():

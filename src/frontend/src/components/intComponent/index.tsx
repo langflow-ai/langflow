@@ -8,7 +8,8 @@ export default function IntComponent({
   onChange,
   disabled,
   editNode = false,
-}: FloatComponentType) {
+  id = "",
+}: FloatComponentType): JSX.Element {
   const min = 0;
 
   // Clear component state
@@ -21,6 +22,7 @@ export default function IntComponent({
   return (
     <div className="w-full">
       <Input
+        id={id}
         onKeyDown={(event) => {
           if (
             event.key !== "Backspace" &&
@@ -43,17 +45,17 @@ export default function IntComponent({
         type="number"
         step="1"
         min={min}
-        onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
-          if (e.target.value < min.toString()) {
-            e.target.value = min.toString();
+        onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
+          if (Number(event.target.value) < min) {
+            event.target.value = min.toString();
           }
         }}
         value={value ?? ""}
         className={editNode ? "input-edit-node" : ""}
         disabled={disabled}
         placeholder={editNode ? "Integer number" : "Type an integer number"}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
     </div>

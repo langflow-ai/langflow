@@ -10,7 +10,8 @@ export default function TextAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: TextAreaComponentType) {
+  id = "",
+}: TextAreaComponentType): JSX.Element {
   // Clear text area
   useEffect(() => {
     if (disabled) {
@@ -21,12 +22,13 @@ export default function TextAreaComponent({
   return (
     <div className="flex w-full items-center">
       <Input
+        id={id}
         value={value}
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
         placeholder={"Type something..."}
-        onChange={(e) => {
-          onChange(e.target.value);
+        onChange={(event) => {
+          onChange(event.target.value);
         }}
       />
       <div>
@@ -35,8 +37,8 @@ export default function TextAreaComponent({
           buttonText="Finishing Editing"
           modalTitle="Edit Text"
           value={value}
-          setValue={(t: string) => {
-            onChange(t);
+          setValue={(value: string) => {
+            onChange(value);
           }}
         >
           {!editNode && (

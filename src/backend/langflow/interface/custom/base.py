@@ -8,7 +8,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
-from langflow.utils.logger import logger
+from loguru import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 

@@ -1,7 +1,8 @@
 from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
-from langflow.graph.graph.constants import VERTEX_TYPE_MAP
+from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     FileToolVertex,
@@ -10,7 +11,7 @@ from langflow.graph.vertex.types import (
 )
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
-from langflow.utils.logger import logger
+from loguru import logger
 from langchain.chains.base import Chain
 
 
@@ -19,12 +20,28 @@ class Graph:
 
     def __init__(
         self,
-        nodes: List[Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]],
+        nodes: List[Dict],
         edges: List[Dict[str, str]],
     ) -> None:
         self._nodes = nodes
         self._edges = edges
+        self.raw_graph_data = {"nodes": nodes, "edges": edges}
+
+        self.top_level_nodes = []
+        for node in self._nodes:
+            if node_id := node.get("id"):
+                self.top_level_nodes.append(node_id)
+
+        self._graph_data = process_flow(self.raw_graph_data)
+        self._nodes = self._graph_data["nodes"]
+        self._edges = self._graph_data["edges"]
         self._build_graph()
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        for edge in self.edges:
+            edge.reset()
+            edge.validate_edge()
 
     @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
@@ -44,9 +61,15 @@ class Graph:
             edges = payload["edges"]
             return cls(nodes, edges)
         except KeyError as exc:
+            logger.exception(exc)
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Graph):
+            return False
+        return self.__repr__() == other.__repr__()
 
     def _build_graph(self) -> None:
         """Builds the graph from the nodes and edges."""
@@ -144,10 +167,10 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def generator_build(self) -> Generator:
+    def generator_build(self) -> Generator[Vertex, None, None]:
         """Builds each vertex in the graph and yields it."""
         sorted_vertices = self.topological_sort()
-        logger.debug("Sorted vertices: %s", sorted_vertices)
+        logger.debug("There are %s vertices in the graph", len(sorted_vertices))
         yield from sorted_vertices
 
     def get_node_neighbors(self, node: Vertex) -> Dict[Vertex, int]:
@@ -187,10 +210,12 @@ class Graph:
         """Returns the node class based on the node type."""
         if node_type in FILE_TOOLS:
             return FileToolVertex
-        if node_type in VERTEX_TYPE_MAP:
-            return VERTEX_TYPE_MAP[node_type]
+        if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (
-            VERTEX_TYPE_MAP[node_lc_type] if node_lc_type in VERTEX_TYPE_MAP else Vertex
+            lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_lc_type]
+            if node_lc_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
+            else Vertex
         )
 
     def _build_vertices(self) -> List[Vertex]:
@@ -202,7 +227,9 @@ class Graph:
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
             VertexClass = self._get_vertex_class(node_type, node_lc_type)
-            nodes.append(VertexClass(node))
+            vertex = VertexClass(node)
+            vertex.set_top_level(self.top_level_nodes)
+            nodes.append(vertex)
 
         return nodes
 

@@ -201,6 +201,12 @@ module.exports = {
         ".dark .theme-attribution .react-flow__attribution a": {
           color: "black",
         },
+        ".text-align-last-left": {
+          "text-align-last": "left",
+        },
+        ".text-align-last-right": {
+          "text-align-last": "right",
+        },
       });
     }),
     require("@tailwindcss/typography"),

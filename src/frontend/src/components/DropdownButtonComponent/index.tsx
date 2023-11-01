@@ -1,0 +1,66 @@
+import { useState } from "react";
+import { dropdownButtonPropsType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+
+export default function DropdownButton({
+  firstButtonName,
+  onFirstBtnClick,
+  options,
+}: dropdownButtonPropsType): JSX.Element {
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+
+  return (
+    <div>
+      <DropdownMenu open={showOptions}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            id="new-project-btn"
+            variant="primary"
+            className="relative pr-10"
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onFirstBtnClick();
+            }}
+          >
+            {firstButtonName}
+            <div
+              className="absolute right-2 items-center text-muted-foreground"
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                setShowOptions(!showOptions);
+              }}
+            >
+              {!showOptions ? (
+                <IconComponent name="ChevronDown" />
+              ) : (
+                <IconComponent name="ChevronUp" />
+              )}
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          onPointerDownOutside={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            setShowOptions(!showOptions);
+          }}
+        >
+          {options.map(({ name, onBtnClick }, index) => (
+            <DropdownMenuItem onClick={onBtnClick} key={index}>
+              {name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

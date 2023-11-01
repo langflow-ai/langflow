@@ -1,9 +1,9 @@
 from typing import Dict, List, Optional
 
-from langchain import requests, sql_database
+from langchain.utilities import requests, sql_database
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.logger import logger
+from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 
 

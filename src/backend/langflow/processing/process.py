@@ -2,16 +2,19 @@ import json
 from pathlib import Path
 from langchain.schema import AgentAction
 from langflow.interface.run import (
-    build_sorted_vertices_with_caching,
+    build_sorted_vertices,
     get_memory_key,
     update_memory_keys,
 )
-from langflow.utils.logger import logger
+from langflow.services.getters import get_session_service
+from loguru import logger
 from langflow.graph import Graph
 from langchain.chains.base import Chain
 from langchain.vectorstores.base import VectorStore
 from typing import Any, Dict, List, Optional, Tuple, Union
 from langchain.schema import Document
+
+from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -65,7 +68,7 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
             langchain_object.verbose = True
 
         if hasattr(langchain_object, "return_intermediate_steps"):
-            langchain_object.return_intermediate_steps = True
+            langchain_object.return_intermediate_steps = False
 
         fix_memory_inputs(langchain_object)
 
@@ -86,44 +89,54 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
-def process_graph_cached(
-    data_graph: Dict[str, Any], inputs: Optional[dict] = None, clear_cache=False
-):
-    """
-    Process graph by extracting input variables and replacing ZeroShotPrompt
-    with PromptTemplate,then run the graph and return the result and thought.
-    """
-    # Load langchain object
-    if clear_cache:
-        build_sorted_vertices_with_caching.clear_cache()
-        logger.debug("Cleared cache")
-    langchain_object, artifacts = build_sorted_vertices_with_caching(data_graph)
-    logger.debug("Loaded LangChain object")
-    if inputs is None:
-        inputs = {}
+def get_build_result(data_graph, session_id):
+    # If session_id is provided, load the langchain_object from the session
+    # using build_sorted_vertices_with_caching.get_result_by_session_id
+    # if it returns something different than None, return it
+    # otherwise, build the graph and return the result
+    if session_id:
+        logger.debug(f"Loading LangChain object from session {session_id}")
+        result = build_sorted_vertices(data_graph=data_graph)
+        if result is not None:
+            logger.debug("Loaded LangChain object")
+            return result
 
-    # Add artifacts to inputs
-    # artifacts can be documents loaded when building
-    # the flow
-    for (
-        key,
-        value,
-    ) in artifacts.items():
-        if key not in inputs or not inputs[key]:
-            inputs[key] = value
+    logger.debug("Building langchain object")
+    return build_sorted_vertices(data_graph)
+
+
+def load_langchain_object(
+    data_graph: Dict[str, Any], session_id: str
+) -> Tuple[Union[Chain, VectorStore], Dict[str, Any], str]:
+    langchain_object, artifacts = get_build_result(data_graph, session_id)
+    logger.debug("Loaded LangChain object")
 
     if langchain_object is None:
-        # Raise user facing error
         raise ValueError(
             "There was an error loading the langchain_object. Please, check all the nodes and try again."
         )
 
-    # Generate result and thought
+    return langchain_object, artifacts, session_id
+
+
+def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
+    if inputs is None:
+        inputs = {}
+
+    for key, value in artifacts.items():
+        if key not in inputs or not inputs[key]:
+            inputs[key] = value
+
+    return inputs
+
+
+def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     if isinstance(langchain_object, Chain):
         if inputs is None:
             raise ValueError("Inputs must be provided for a Chain")
         logger.debug("Generating result and thought")
         result = get_result_and_thought(langchain_object, inputs)
+
         logger.debug("Generated result and thought")
     elif isinstance(langchain_object, VectorStore):
         result = langchain_object.search(**inputs)
@@ -134,6 +147,36 @@ def process_graph_cached(
         result = langchain_object
 
     return result
+
+
+class Result(BaseModel):
+    result: Any
+    session_id: str
+
+
+async def process_graph_cached(
+    data_graph: Dict[str, Any],
+    inputs: Optional[dict] = None,
+    clear_cache=False,
+    session_id=None,
+) -> Result:
+    session_service = get_session_service()
+    if clear_cache:
+        session_service.clear_session(session_id)
+    if session_id is None:
+        session_id = session_service.generate_key(
+            session_id=session_id, data_graph=data_graph
+        )
+    # Load the graph using SessionService
+    graph, artifacts = session_service.load_session(session_id, data_graph)
+    built_object = graph.build()
+    processed_inputs = process_inputs(inputs, artifacts)
+    result = generate_result(built_object, processed_inputs)
+    # langchain_object is now updated with the new memory
+    # we need to update the cache with the updated langchain_object
+    session_service.update_session(session_id, (graph, artifacts))
+
+    return Result(result=result, session_id=session_id)
 
 
 def load_flow_from_json(

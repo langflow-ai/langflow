@@ -1,17 +1,18 @@
 import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 
 import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
+import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-export default function CommunityPage() {
+export default function CommunityPage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
-    useContext(TabsContext);
+    useContext(FlowsContext);
 
   // set null id
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function CommunityPage() {
   const [examples, setExamples] = useState<FlowType[]>([]);
 
   // Show community examples on screen
-  function handleExamples() {
+  function handleExamples(): void {
     setLoadingExamples(true);
     getExamples()
       .then((result) => {
@@ -74,7 +75,14 @@ export default function CommunityPage() {
           new and powerful features.
         </span>
         <div className="community-pages-flows-panel">
-          {!loadingExamples &&
+          {loadingExamples ? (
+            <>
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+              <SkeletonCardComponent />
+            </>
+          ) : (
             examples.map((flow, idx) => (
               <CardComponent
                 key={idx}
@@ -86,7 +94,7 @@ export default function CommunityPage() {
                     size="sm"
                     className="whitespace-nowrap "
                     onClick={() => {
-                      addFlow(flow, true).then((id) => {
+                      addFlow(true, flow).then((id) => {
                         navigate("/flow/" + id);
                       });
                     }}
@@ -99,7 +107,8 @@ export default function CommunityPage() {
                   </Button>
                 }
               />
-            ))}
+            ))
+          )}
         </div>
       </div>
     </>

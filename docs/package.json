@@ -34,7 +34,7 @@
     "medium-zoom": "^1.0.8",
     "node-fetch": "^3.3.1",
     "path-browserify": "^1.0.1",
-    "postcss": "^8.4.24",
+    "postcss": "^8.4.31",
     "prism-react-renderer": "^1.3.5",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

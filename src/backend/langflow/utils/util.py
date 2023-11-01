@@ -4,13 +4,15 @@ import importlib
 from functools import wraps
 from typing import List, Optional, Dict, Any, Union
 
-from docstring_parser import parse  # type: ignore
+from docstring_parser import parse
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langflow.utils.logger import logger
-from multiprocess import cpu_count  # type: ignore
 from langchain.schema import Document
+
+
+def remove_ansi_escape_codes(text):
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
 def build_template_from_function(
@@ -189,7 +191,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
@@ -266,6 +270,9 @@ def format_dict(
 
         _type: Union[str, type] = get_type(value)
 
+        if "BaseModel" in str(_type):
+            continue
+
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
@@ -274,8 +281,6 @@ def format_dict(
         value["show"] = should_show_field(value, key)
         value["password"] = is_password_field(key)
         value["multiline"] = is_multiline_field(key)
-
-        replace_dict_type_with_code(value)
 
         if key == "dict_":
             set_dict_file_attributes(value)
@@ -406,14 +411,6 @@ def is_multiline_field(key: str) -> bool:
     }
 
 
-def replace_dict_type_with_code(value: Dict[str, Any]) -> None:
-    """
-    Replaces the type value with 'code' if the type is a dict.
-    """
-    if "dict" in value["type"].lower():
-        value["type"] = "code"
-
-
 def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     """
     Sets the file attributes for the 'dict_' key.
@@ -436,7 +433,7 @@ def set_headers_value(value: Dict[str, Any]) -> None:
     """
     Sets the value for the 'headers' key.
     """
-    value["value"] = """{'Authorization': 'Bearer <token>'}"""
+    value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
 def add_options_to_field(
@@ -456,13 +453,6 @@ def add_options_to_field(
         value["options"] = options_map[class_name]
         value["list"] = True
         value["value"] = options_map[class_name][0]
-
-
-def get_number_of_workers(workers=None):
-    if workers == -1 or workers is None:
-        workers = (cpu_count() * 2) + 1
-    logger.debug(f"Number of workers: {workers}")
-    return workers
 
 
 def build_loader_repr_from_documents(documents: List[Document]) -> str:

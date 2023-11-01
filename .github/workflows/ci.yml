@@ -1,0 +1,52 @@
+name: "Async API tests"
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
+  pull_request:
+    branches:
+      - dev
+      - main
+    paths:
+      - "tests/**"
+      - "src/backend/**"
+      - "pyproject.toml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Set up Docker
+        run: docker --version && docker-compose --version
+
+      - name: "Create env file"
+        working-directory: ./deploy
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Build and start services
+
+        working-directory: ./deploy
+        run: docker compose up --exit-code-from tests tests result_backend broker celeryworker db --build
+        continue-on-error: true
+
+      - name: Stop services
+        run: docker compose down

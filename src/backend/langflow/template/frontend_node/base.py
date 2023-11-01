@@ -44,7 +44,7 @@ class FieldFormatters(BaseModel):
 
 class FrontendNode(BaseModel):
     template: Template
-    description: str
+    description: Optional[str] = None
     base_classes: List[str]
     name: str = ""
     display_name: str = ""
@@ -140,13 +140,16 @@ class FrontendNode(BaseModel):
     @staticmethod
     def handle_dict_type(field: TemplateField, _type: str) -> str:
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
-        if "dict" in _type.lower():
-            if field.name == "dict_":
-                field.field_type = "file"
-                field.suffixes = [".json", ".yaml", ".yml"]
-                field.file_types = ["json", "yaml", "yml"]
-            else:
-                field.field_type = "code"
+        if "dict" in _type.lower() and field.name == "dict_":
+            field.field_type = "file"
+            field.suffixes = [".json", ".yaml", ".yml"]
+            field.file_types = ["json", "yaml", "yml"]
+        elif (
+            _type.startswith("Dict")
+            or _type.startswith("Mapping")
+            or _type.startswith("dict")
+        ):
+            field.field_type = "dict"
         return _type
 
     @staticmethod
@@ -161,7 +164,7 @@ class FrontendNode(BaseModel):
     ) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
-            field.value = """{'Authorization': 'Bearer <token>'}"""
+            field.value = """{"Authorization": "Bearer <token>"}"""
         FrontendNode._handle_model_specific_field_values(field, key, name)
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
@@ -241,23 +244,9 @@ class FrontendNode(BaseModel):
         }
 
     @staticmethod
-    def replace_dict_with_code_or_file(
-        field: TemplateField, _type: str, key: str
-    ) -> str:
-        """Replaces 'dict' type with 'code' or 'file'."""
-        if "dict" in _type.lower():
-            if key == "dict_":
-                field.field_type = "file"
-                field.suffixes = [".json", ".yaml", ".yml"]
-                field.file_types = ["json", "yaml", "yml"]
-            else:
-                field.field_type = "code"
-        return field.field_type
-
-    @staticmethod
     def set_field_default_value(field: TemplateField, value: dict, key: str) -> None:
         """Sets the field value with the default value if present."""
         if "default" in value:
             field.value = value["default"]
         if key == "headers":
-            field.value = """{'Authorization': 'Bearer <token>'}"""
+            field.value = """{"Authorization": "Bearer <token>"}"""

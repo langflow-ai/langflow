@@ -4,16 +4,17 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
-import { APIClassType } from "../../types/api";
+import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function CodeAreaModal({
@@ -23,30 +24,23 @@ export default function CodeAreaModal({
   setNodeClass,
   children,
   dynamic,
-}: {
-  setValue: (value: string) => void;
-  value: string;
-  nodeClass?: APIClassType;
-  children: ReactNode;
-  setNodeClass?: (Class: APIClassType) => void;
-  dynamic?: boolean;
-}) {
+  readonly = false,
+}: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
   const { reactFlowInstance } = useContext(typesContext);
-  const [height, setHeight] = useState(null);
+  const [height, setHeight] = useState<string | null>(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
-    detail: { error: string; traceback: string };
-  }>(null);
+    detail: { error: string | undefined; traceback: string | undefined };
+  } | null>(null);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
     // do not run handleClick
-    if (dynamic && Object.keys(nodeClass.template).length > 2) {
+    if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
-    processCode();
   }, []);
 
   function processNonDynamicField() {
@@ -90,7 +84,7 @@ export default function CodeAreaModal({
   }
 
   function processDynamicField() {
-    postCustomComponent(code, nodeClass)
+    postCustomComponent(code, nodeClass!)
       .then((apiReturn) => {
         const { data } = apiReturn;
         if (data) {
@@ -151,9 +145,15 @@ export default function CodeAreaModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
+        <Input
+          value={code}
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
+              readOnly={readonly}
               value={code}
               mode="python"
               height={height ?? "100%"}
@@ -188,7 +188,13 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            <Button className="mt-3" onClick={handleClick} type="submit">
+            <Button
+              className="mt-3"
+              onClick={handleClick}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
+            >
               Check & Save
             </Button>
           </div>
