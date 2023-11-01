@@ -83,8 +83,10 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
             list: [error["response"]["data"]["detail"]],
           });
         })
-        .then((count) => {
-          setLikes_count(count);
+        .then((response) => {
+          console.log(response);
+          setLikes_count(response.likes_count);
+          setLiked_by_user(response.liked_by_user);
         });
     }
   }
