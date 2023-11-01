@@ -22,7 +22,7 @@ export async function buildVertices({
     // Step 1: Get vertices order
     console.log(flow);
     let orderResponse = await getVerticesOrder(flow.id);
-    let verticesOrder = orderResponse.data.ids;
+    let verticesOrder = orderResponse.data.ids.flatMap((id) => id);
     // Determine the range of vertices to build
     let vertexIndex: number | null = null;
     if (nodeId !== null) {
