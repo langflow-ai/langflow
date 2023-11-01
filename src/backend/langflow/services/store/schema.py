@@ -10,8 +10,8 @@ class TagResponse(BaseModel):
 
 
 class UsersLikesResponse(BaseModel):
-    id: UUID
-    likes: Optional[List[UUID]]
+    likes_count: Optional[int]
+    liked_by_user: Optional[bool]
 
 
 class ComponentResponse(BaseModel):

@@ -198,6 +198,10 @@ def like_component(
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
-        return store_service.like_component(store_api_Key, component_id)
+        result = store_service.like_component(store_api_Key, component_id)
+        likes_count = store_service.get_component_likes_count(
+            store_api_Key, component_id
+        )
+        return {"likes": likes_count, "liked_by_user": result}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
