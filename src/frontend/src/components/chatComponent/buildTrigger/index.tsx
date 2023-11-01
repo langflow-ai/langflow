@@ -7,7 +7,7 @@ import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
-import { TabsContext } from "../../../contexts/tabsContext";
+import { FlowsContext } from "../../../contexts/flowsContext";
 import { parsedDataType } from "../../../types/components";
 import { TabsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
@@ -26,7 +26,7 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState } = useContext(TabsContext);
+  const { setTabsState } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
