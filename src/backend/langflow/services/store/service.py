@@ -317,7 +317,13 @@ class StoreService(Service):
         result = self._get(url, api_key, params)
         if len(result) == 0:
             raise ValueError("Component not found")
-        likes = result[0]["liked_by_count"]
+        likes = result["liked_by_count"]
+        # likes_by_count is a string
+        # try to convert it to int
+        try:
+            likes = int(likes)
+        except ValueError:
+            raise ValueError(f"Unexpected value for likes count: {likes}")
         return likes
 
     def like_component(self, api_key: str, component_id: str) -> bool:
@@ -325,7 +331,9 @@ class StoreService(Service):
         # if it returns an int, it means the like was removed
         headers = {"Authorization": f"Bearer {api_key}"}
         response = httpx.post(
-            self.like_webhook_url, json={"component_id": component_id}, headers=headers
+            self.like_webhook_url,
+            json={"component_id": str(component_id)},
+            headers=headers,
         )
 
         if response.status_code == 200:

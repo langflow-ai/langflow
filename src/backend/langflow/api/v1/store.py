@@ -202,6 +202,7 @@ def like_component(
         likes_count = store_service.get_component_likes_count(
             store_api_Key, component_id
         )
+
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
