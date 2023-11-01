@@ -314,7 +314,10 @@ class StoreService(Service):
         params = {
             "fields": ",".join(["id", "count(liked_by)"]),
         }
-        likes = self._get(url, api_key, params)
+        result = self._get(url, api_key, params)
+        if len(result) == 0:
+            raise ValueError("Component not found")
+        likes = result[0]["liked_by_count"]
         return likes
 
     def like_component(self, api_key: str, component_id: str) -> bool:
