@@ -21,7 +21,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
     template = prompt["template"]
     assert template["input_variables"] == {
         "required": True,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -35,7 +35,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["output_parser"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -49,7 +49,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["partial_variables"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -63,7 +63,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["template"] == {
         "required": True,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": True,
         "multiline": True,
@@ -75,13 +75,28 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "info": "",
     }
 
-    assert template["validate_template"] == {
+    assert template["template_format"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
-        "value": False,
+        "value": "f-string",
+        "password": False,
+        "name": "template_format",
+        "type": "str",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+
+    assert template["validate_template"] == {
+        "required": False,
+        "dynamic": True,
+        "placeholder": "",
+        "show": False,
+        "multiline": False,
+        "value": True,
         "password": False,
         "name": "validate_template",
         "type": "bool",

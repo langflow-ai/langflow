@@ -22,13 +22,19 @@ tests:
 	@make install_backend
 	poetry run pytest tests
 
+tests_frontend:
+ifeq ($(UI), true)
+		cd src/frontend && ./run-tests.sh --ui
+else
+		cd src/frontend && ./run-tests.sh
+endif
+
 format:
 	poetry run black .
 	poetry run ruff . --fix
 	cd src/frontend && npm run format
 
 lint:
-	make install_backend
 	poetry run mypy src/backend/langflow
 	poetry run black . --check
 	poetry run ruff . --fix
@@ -43,19 +49,20 @@ run_frontend:
 	cd src/frontend && npm start
 
 run_cli:
-	poetry run langflow run --path src/frontend/build
+	poetry run langflow --path src/frontend/build
 
 run_cli_debug:
-	poetry run langflow run --path src/frontend/build --log-level debug
+	poetry run langflow --path src/frontend/build --log-level debug
 
 setup_devcontainer:
 	make init
 	make build_frontend
-	poetry run langflow --path src/frontend/build
+	@echo 'Run Cli'
+	make run_cli
 
 frontend:
-	make install_frontend
-	make run_frontend
+	@-make install_frontend || (echo "An error occurred while installing frontend dependencies. Attempting to fix." && make install_frontendc)
+	@make run_frontend
 
 frontendc:
 	make install_frontendc
@@ -66,7 +73,13 @@ install_backend:
 
 backend:
 	make install_backend
-	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
+ifeq ($(login),1)
+	@echo "Running backend without autologin";
+	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+else
+	@echo "Running backend with autologin";
+	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser
+endif
 
 build_and_run:
 	echo 'Removing dist folder'

@@ -4,30 +4,46 @@ import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import InputComponent from "../../components/inputComponent";
+import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import { cleanEdges } from "../../utils/reactflowUtils";
+import {
+  cleanEdges,
+  handleKeyDown,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, toTitleCase } from "../../utils/utils";
+import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data: olddata,
+  xPos,
+  yPos,
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
+  xPos: number;
+  yPos: number;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
-  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const { updateFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
+  const [inputName, setInputName] = useState(true);
+  const [nodeName, setNodeName] = useState(data.node!.display_name);
+  const [inputDescription, setInputDescription] = useState(false);
+  const [nodeDescription, setNodeDescription] = useState(
+    data.node?.description!
+  );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [showNode, setShowNode] = useState<boolean>(true);
@@ -111,6 +127,7 @@ export default function GenericNode({
     <>
       <NodeToolbar>
         <NodeToolbarComponent
+          position={{ x: xPos, y: yPos }}
           data={data}
           setData={setData}
           deleteNode={deleteNode}
@@ -151,7 +168,7 @@ export default function GenericNode({
               }
             >
               <IconComponent
-                name={name}
+                name={data.node?.flow ? "Ungroup" : name}
                 className={
                   "generic-node-icon " +
                   (!showNode && "absolute inset-x-6 h-12 w-12")
@@ -160,11 +177,35 @@ export default function GenericNode({
               />
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  <ShadTooltip content={data.node?.display_name}>
-                    <div className="generic-node-tooltip-div text-primary">
-                      {data.node?.display_name}
+                  {data.node?.flow && inputName ? (
+                    <div>
+                      <InputComponent
+                        autoFocus
+                        onBlur={() => {
+                          setInputName(false);
+                          if (nodeName.trim() !== "") {
+                            setNodeName(nodeName);
+                            data.node!.display_name = nodeName;
+                          } else {
+                            setNodeName(data.node!.display_name);
+                          }
+                        }}
+                        value={nodeName}
+                        onChange={setNodeName}
+                        password={false}
+                        blurOnEnter={true}
+                      />
                     </div>
-                  </ShadTooltip>
+                  ) : (
+                    <ShadTooltip content={data.node?.display_name}>
+                      <div
+                        className="generic-node-tooltip-div text-primary"
+                        onDoubleClick={() => setInputName(true)}
+                      >
+                        {data.node?.display_name}
+                      </div>
+                    </ShadTooltip>
+                  )}
                 </div>
               )}
             </div>
@@ -178,16 +219,15 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
-                            key={
-                              (data.node!.template[
-                                templateField
-                              ].input_types?.join(";") ??
-                                data.node!.template[templateField].type) +
-                              "|" +
-                              templateField +
-                              "|" +
-                              data.id
-                            }
+                            index={idx.toString()}
+                            key={scapedJSONStringfy({
+                              inputTypes:
+                                data.node!.template[templateField].input_types,
+                              type: data.node!.template[templateField].type,
+                              id: data.id,
+                              fieldName: templateField,
+                              proxy: data.node!.template[templateField].proxy,
+                            })}
                             data={data}
                             setData={setData}
                             color={
@@ -199,15 +239,10 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                             }
-                            title={
-                              data.node?.template[templateField].display_name
-                                ? data.node.template[templateField].display_name
-                                : data.node?.template[templateField].name
-                                ? toTitleCase(
-                                    data.node.template[templateField].name
-                                  )
-                                : toTitleCase(templateField)
-                            }
+                            title={getFieldTitle(
+                              data.node?.template!,
+                              templateField
+                            )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
                             tooltipTitle={
@@ -217,31 +252,31 @@ export default function GenericNode({
                               data.node?.template[templateField].type
                             }
                             required={
-                              data.node?.template[templateField].required
+                              data.node!.template[templateField].required
                             }
-                            id={
-                              (data.node?.template[
-                                templateField
-                              ].input_types?.join(";") ??
-                                data.node?.template[templateField].type) +
-                              "|" +
-                              templateField +
-                              "|" +
-                              data.id
-                            }
+                            id={{
+                              inputTypes:
+                                data.node!.template[templateField].input_types,
+                              type: data.node!.template[templateField].type,
+                              id: data.id,
+                              fieldName: templateField,
+                            }}
                             left={true}
                             type={data.node?.template[templateField].type}
                             optionalHandle={
                               data.node?.template[templateField].input_types
                             }
+                            proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
                         )
                     )}
                   <ParameterComponent
-                    key={[data.type, data.id, ...data.node!.base_classes].join(
-                      "|"
-                    )}
+                    key={scapedJSONStringfy({
+                      baseClasses: data.node!.base_classes,
+                      id: data.id,
+                      dataType: data.type,
+                    })}
                     data={data}
                     setData={setData}
                     color={nodeColors[types[data.type]] ?? nodeColors.unknown}
@@ -252,9 +287,11 @@ export default function GenericNode({
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
-                    id={[data.type, data.id, ...data.node!.base_classes].join(
-                      "|"
-                    )}
+                    id={{
+                      baseClasses: data.node!.base_classes,
+                      id: data.id,
+                      dataType: data.type,
+                    }}
                     type={data.node?.base_classes.join("|")}
                     left={false}
                     showNode={showNode}
@@ -330,33 +367,71 @@ export default function GenericNode({
             className={
               showNode
                 ? "generic-node-desc " +
-                  (data.node?.description !== "" && showNode ? "py-5" : "pb-5")
+                  (data.node?.description !== "" ? "py-5" : "pb-5")
                 : ""
             }
           >
-            {data.node?.description !== "" && showNode && (
-              <div className="generic-node-desc-text">
+            {data.node?.description !== "" &&
+            showNode &&
+            data.node?.flow &&
+            inputDescription ? (
+              <Textarea
+                autoFocus
+                onBlur={() => {
+                  setInputDescription(false);
+                  if (nodeDescription.trim() !== "") {
+                    setNodeDescription(nodeDescription);
+                    data.node!.description = nodeDescription;
+                  } else {
+                    setNodeDescription(data.node!.description);
+                  }
+                }}
+                value={nodeDescription}
+                onChange={(e) => setNodeDescription(e.target.value)}
+                onKeyDown={(e) => {
+                  handleKeyDown(e, nodeDescription, "");
+                  if (
+                    e.key === "Enter" &&
+                    e.shiftKey === false &&
+                    e.ctrlKey === false &&
+                    e.altKey === false
+                  ) {
+                    setInputDescription(false);
+                    if (nodeDescription.trim() !== "") {
+                      setNodeDescription(nodeDescription);
+                      data.node!.description = nodeDescription;
+                    } else {
+                      setNodeDescription(data.node!.description);
+                    }
+                  }
+                }}
+              />
+            ) : (
+              <div
+                className="generic-node-desc-text"
+                onDoubleClick={() => setInputDescription(true)}
+              >
                 {data.node?.description}
               </div>
             )}
-
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
+                .sort()
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
-                        key={
-                          (data.node!.template[templateField].input_types?.join(
-                            ";"
-                          ) ?? data.node!.template[templateField].type) +
-                          "|" +
-                          templateField +
-                          "|" +
-                          data.id
-                        }
+                        index={idx.toString()}
+                        key={scapedJSONStringfy({
+                          inputTypes:
+                            data.node!.template[templateField].input_types,
+                          type: data.node!.template[templateField].type,
+                          id: data.id,
+                          fieldName: templateField,
+                          proxy: data.node!.template[templateField].proxy,
+                        })}
                         data={data}
                         setData={setData}
                         color={
@@ -368,15 +443,10 @@ export default function GenericNode({
                           ] ??
                           nodeColors.unknown
                         }
-                        title={
-                          data.node?.template[templateField].display_name
-                            ? data.node.template[templateField].display_name
-                            : data.node?.template[templateField].name
-                            ? toTitleCase(
-                                data.node.template[templateField].name
-                              )
-                            : toTitleCase(templateField)
-                        }
+                        title={getFieldTitle(
+                          data.node?.template!,
+                          templateField
+                        )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
@@ -384,21 +454,20 @@ export default function GenericNode({
                             "\n"
                           ) ?? data.node?.template[templateField].type
                         }
-                        required={data.node?.template[templateField].required}
-                        id={
-                          (data.node?.template[templateField].input_types?.join(
-                            ";"
-                          ) ?? data.node?.template[templateField].type) +
-                          "|" +
-                          templateField +
-                          "|" +
-                          data.id
-                        }
+                        required={data.node!.template[templateField].required}
+                        id={{
+                          inputTypes:
+                            data.node!.template[templateField].input_types,
+                          type: data.node!.template[templateField].type,
+                          id: data.id,
+                          fieldName: templateField,
+                        }}
                         left={true}
                         type={data.node?.template[templateField].type}
                         optionalHandle={
                           data.node?.template[templateField].input_types
                         }
+                        proxy={data.node?.template[templateField].proxy}
                         showNode={showNode}
                       />
                     ) : (
@@ -415,7 +484,11 @@ export default function GenericNode({
                 {" "}
               </div>
               <ParameterComponent
-                key={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                key={scapedJSONStringfy({
+                  baseClasses: data.node!.base_classes,
+                  id: data.id,
+                  dataType: data.type,
+                })}
                 data={data}
                 setData={setData}
                 color={nodeColors[types[data.type]] ?? nodeColors.unknown}
@@ -425,7 +498,11 @@ export default function GenericNode({
                     : data.type
                 }
                 tooltipTitle={data.node?.base_classes.join("\n")}
-                id={[data.type, data.id, ...data.node!.base_classes].join("|")}
+                id={{
+                  baseClasses: data.node!.base_classes,
+                  id: data.id,
+                  dataType: data.type,
+                }}
                 type={data.node?.base_classes.join("|")}
                 left={false}
                 showNode={showNode}
