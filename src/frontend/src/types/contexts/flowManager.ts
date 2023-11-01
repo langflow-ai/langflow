@@ -4,7 +4,7 @@ import { FlowType, NodeType } from "../flow";
 
 export type FlowPoolType = {
   //TODO improve the flowPool type
-  [key: string]: any;
+  [key: string]: Array<any>;
 };
 
 export type FlowManagerContextType = {

@@ -20,6 +20,7 @@ export async function buildVertices({
 }: BuildVerticesParams) {
   try {
     // Step 1: Get vertices order
+    console.log(flow);
     let orderResponse = await getVerticesOrder(flow.id);
     let verticesOrder = orderResponse.data.ids;
     // Determine the range of vertices to build

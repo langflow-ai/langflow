@@ -65,16 +65,20 @@ export default function FlowManagerProvider({ children }) {
       let newFlowPool = cloneDeep({ ...oldFlowPool });
       Object.keys(newFlowPool).forEach((nodeId) => {
         if (!nodeIdsSet.has(nodeId)) {
-          delete flowPool[nodeId];
+          delete newFlowPool[nodeId];
         }
       });
+      return newFlowPool;
     });
   }
 
   function addDataToFlowPool(data: any, nodeId: string) {
     setFlowPool((oldFlowPool) => {
       let newFlowPool = cloneDeep({ ...oldFlowPool });
-      newFlowPool[nodeId] = data;
+      if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
+      else {
+        newFlowPool[nodeId].push(data);
+      }
       return newFlowPool;
     });
   }

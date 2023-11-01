@@ -14,7 +14,10 @@ export default function IOView({
       <div className="flex flex-col gap-4">
         <strong>Inputs:</strong>
         {inputNodeIds.map((inputType, index) => {
-          const params = flowPool[inputType]?.params as string;
+          let params = "";
+          if (flowPool[inputType] && flowPool[inputType].length > 0)
+            params = flowPool[inputType][flowPool[inputType].length - 1]
+              .params as string;
           return (
             <div key={index}>
               <TextInputComponent
@@ -28,8 +31,10 @@ export default function IOView({
       <div className="flex flex-col gap-4">
         <strong>Outputs:</strong>
         {outputNodeIds.map((outputType, index) => {
-          const text = flowPool[outputType]?.results?.result as string;
-
+          let text = "";
+          if (flowPool[outputType] && flowPool[outputType].length > 0)
+            text = flowPool[outputType][flowPool[outputType].length - 1].results
+              ?.result as string;
           return (
             <div key={index}>
               <TextOutputComponent

@@ -31,7 +31,6 @@ export default function BuildTrigger({
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-
   function handleBuildUpdate(data: any) {
     updateSSEData(data.data);
     addDataToFlowPool(data.data[data.id], data.id);
@@ -56,7 +55,6 @@ export default function BuildTrigger({
       const minimumLoadingTime = 200; // in milliseconds
       const startTime = Date.now();
       setIsBuilding(true);
-
       await buildVertices({
         flow,
         onProgressUpdate: setProgress,
