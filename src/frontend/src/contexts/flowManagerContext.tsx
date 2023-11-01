@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { tweakType } from "../types/components";
 import {
@@ -30,7 +30,7 @@ const initialValue: FlowManagerContextType = {
   flowPool: {},
   updateFlowPoolNodes: (nodes: NodeType[]) => {},
   addDataToFlowPool: (data: any, nodeId: string) => {},
-  checkInputandOutput: (flow: FlowType) => false,
+  checkInputandOutput: (flow?: FlowType) => false,
   getInputTypes: (flow?: FlowType) => [],
   getOutputTypes: (flow?: FlowType) => [],
   getInputIds: (flow?: FlowType) => [],
@@ -49,6 +49,7 @@ const initialValue: FlowManagerContextType = {
   outputTypes: [],
   inputIds: [],
   outputIds: [],
+  showPanel: false,
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -65,6 +66,14 @@ export default function FlowManagerProvider({ children }) {
   const [inputTypes, setInputTypes] = useState<string[]>([]);
   const [inputIds, setInputIds] = useState<string[]>([]);
   const [outputIds, setOutputIds] = useState<string[]>([]);
+  const [showPanel, setShowPanel] = useState(false);
+
+  useEffect(() => {
+    console.log("inputIds", inputIds);
+    if (checkInputandOutput()) {
+      setShowPanel(true);
+    }
+  }, [inputIds, outputIds, setShowPanel]);
 
   function updateFlowPoolNodes(nodes: NodeType[]) {
     //this function will update the removing the old ones
@@ -91,10 +100,16 @@ export default function FlowManagerProvider({ children }) {
     });
   }
 
-  function checkInputandOutput(flow: FlowType): boolean {
+  function checkInputandOutput(flow?: FlowType): boolean {
     let has_input = false;
     let has_output = false;
-    flow.data?.nodes.forEach((node) => {
+    if (!flow && !reactFlowInstance) {
+      return false;
+    }
+    const nodes = flow?.data?.nodes
+      ? flow.data.nodes
+      : reactFlowInstance!.getNodes();
+    nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isInputNode(nodeData)) {
         has_input = true;
@@ -108,7 +123,7 @@ export default function FlowManagerProvider({ children }) {
 
   function getInputTypes(flow?: FlowType) {
     let inputType: string[] = [];
-    if (!flow || !reactFlowInstance) {
+    if (!flow && !reactFlowInstance) {
       return [];
     }
     const nodes = flow?.data?.nodes
@@ -127,7 +142,7 @@ export default function FlowManagerProvider({ children }) {
 
   function getOutputTypes(flow?: FlowType) {
     let outputType: string[] = [];
-    if (!flow || !reactFlowInstance) {
+    if (!flow && !reactFlowInstance) {
       return [];
     }
     const nodes = flow?.data?.nodes
@@ -146,25 +161,25 @@ export default function FlowManagerProvider({ children }) {
 
   function getInputIds(flow?: FlowType) {
     let inputIds: string[] = [];
-    if (!flow || !reactFlowInstance) {
+    if (!flow && !reactFlowInstance) {
       return [];
     }
     const nodes = flow?.data?.nodes
       ? flow.data.nodes
       : reactFlowInstance!.getNodes();
-
     nodes.forEach((node) => {
       const nodeData: NodeDataType = node.data as NodeDataType;
       if (isInputNode(nodeData)) {
         inputIds.push(nodeData.id);
       }
     });
+    setInputIds(inputIds);
     return inputIds;
   }
 
   function getOutputIds(flow?: FlowType) {
     let outputIds: string[] = [];
-    if (!flow || !reactFlowInstance) {
+    if (!flow && !reactFlowInstance) {
       return [];
     }
     const nodes = flow?.data?.nodes
@@ -177,6 +192,7 @@ export default function FlowManagerProvider({ children }) {
         outputIds.push(nodeData.id);
       }
     });
+    setOutputIds(outputIds);
     return outputIds;
   }
 
@@ -337,6 +353,7 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        showPanel,
         inputIds,
         outputIds,
         outputTypes,

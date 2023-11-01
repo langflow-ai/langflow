@@ -9,6 +9,7 @@ import { flowManagerContext } from "../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
 import { buildVertices } from "../../../utils/buildUtils";
 import { validateNodes } from "../../../utils/reactflowUtils";
+import { classNames } from "../../../utils/utils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
 
@@ -25,7 +26,7 @@ export default function BuildTrigger({
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { setTabsState } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { addDataToFlowPool, reactFlowInstance } =
+  const { addDataToFlowPool, reactFlowInstance, showPanel } =
     useContext(flowManagerContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -122,7 +123,12 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className="fixed bottom-20 right-4">
+      <div
+        className={classNames(
+          "fixed right-4",
+          showPanel ? "bottom-20" : "bottom-5"
+        )}
+      >
         <div
           className={`${eventClick} round-button-form`}
           onClick={() => {

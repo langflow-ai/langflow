@@ -167,7 +167,7 @@ export default function Page({
       updateFlow(flow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges]);
+  }, [edges, nodes]);
   //update flow when tabs change
   useEffect(() => {
     setNodes(flow?.data?.nodes ?? []);
@@ -204,6 +204,17 @@ export default function Page({
     };
   }, []);
 
+  function updateInputsOutputs(flow?: FlowType) {
+    getOutputTypes(flow);
+    getInputTypes(flow);
+    getOutputIds(flow);
+    getInputIds(flow);
+  }
+
+  useEffect(() => {
+    updateInputsOutputs(flow);
+  }, []);
+
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
       onEdgesChange(change);
@@ -228,10 +239,7 @@ export default function Page({
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
       onNodesChange(change);
-      getOutputTypes();
-      getInputTypes();
-      getOutputIds();
-      getInputTypes();
+      updateInputsOutputs();
       //@ts-ignore
       setTabsState((prev: TabsState) => {
         return {

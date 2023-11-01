@@ -16,7 +16,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState } = useContext(FlowsContext);
-  const { flowPool, getInputIds, getOutputIds, isBuilt, setIsBuilt } =
+  const { flowPool, showPanel, isBuilt, setIsBuilt } =
     useContext(flowManagerContext);
   const [validIO, setValidIO] = useState(true);
   useEffect(() => {
@@ -97,12 +97,14 @@ export default function Chat({ flow }: ChatType): JSX.Element {
             </BaseModal.Content>
           </BaseModal>
         )}
-        <ChatTrigger
-          canOpen={canOpen}
-          open={open}
-          setOpen={setOpen}
-          isBuilt={isBuilt}
-        />
+        {showPanel && (
+          <ChatTrigger
+            canOpen={canOpen}
+            open={open}
+            setOpen={setOpen}
+            isBuilt={isBuilt}
+          />
+        )}
       </div>
     </>
   );

@@ -8,6 +8,7 @@ import {
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants/constants";
 import { alertContext } from "../../../contexts/alertContext";
+import { flowManagerContext } from "../../../contexts/flowManagerContext";
 import { chatTriggerPropType } from "../../../types/components";
 import IconComponent from "../../genericIconComponent";
 
@@ -18,6 +19,7 @@ export default function ChatTrigger({
   canOpen,
 }: chatTriggerPropType): JSX.Element {
   const { setErrorData } = useContext(alertContext);
+  const { inputTypes } = useContext(flowManagerContext);
 
   function handleClick(): void {
     if (isBuilt) {
@@ -50,20 +52,14 @@ export default function ChatTrigger({
     >
       <button
         onClick={handleClick}
-        className={
-          "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button " +
-          (!isBuilt || !canOpen ? "cursor-not-allowed" : "cursor-pointer")
-        }
+        className="shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button cursor-pointer"
       >
         <div className="flex gap-3">
           <IconComponent
-            name="MessagesSquare"
-            className={
-              "h-6 w-6 transition-all " +
-              (isBuilt && canOpen
-                ? "message-button-icon"
-                : "disabled-message-button-icon")
+            name={
+              inputTypes.includes("ChatInput") ? "MessagesSquare" : "Sliders"
             }
+            className="message-button-icon h-6 w-6 transition-all"
           />
         </div>
       </button>
