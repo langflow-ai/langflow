@@ -18,7 +18,8 @@ from langflow.services.store.schema import (
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime
 
-from langflow.services.store.service import StoreService
+from langflow.services.store.service import StoreService, user_data_context
+from langflow.services.store.utils import update_components_with_user_data
 
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
@@ -78,26 +79,20 @@ def list_components(
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
-        result = store_service.query_components(
-            api_key=store_api_Key,
-            page=page,
-            limit=limit,
-            filter_by_user=filter_by_user,
-        )
+        with user_data_context(store_api_Key, store_service):
+            result = store_service.query_components(
+                api_key=store_api_Key,
+                page=page,
+                limit=limit,
+                filter_by_user=filter_by_user,
+            )
 
         if not store_api_Key:
             return result
 
         # Now, from the result, we need to get the components
         # the user likes and set the liked_by_user to True
-        liked_by_user_ids = store_service.get_liked_by_user_components(
-            component_ids=[str(component.id) for component in result],
-            api_key=store_api_Key,
-        )
-        # Now we need to set the liked_by_user attribute
-        for component in result:
-            component.liked_by_user = str(component.id) in liked_by_user_ids
-
+        result = update_components_with_user_data(result, store_service, store_api_Key)
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
