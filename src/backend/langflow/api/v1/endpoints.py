@@ -40,7 +40,7 @@ except ImportError:
 from sqlmodel import Session
 
 
-from langflow.services.task.manager import TaskService
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
