@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -7,20 +7,11 @@ import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 export default function HomePage(): JSX.Element {
-  const {
-    flows,
-    setTabId,
-    downloadFlows,
-    uploadFlows,
-    addFlow,
-    uploadFlow,
-    isLoading,
-  } = useContext(TabsContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
+    useContext(TabsContext);
   const { hasStore } = useContext(StoreContext);
   const dropdownOptions = [
     {
@@ -44,8 +35,8 @@ export default function HomePage(): JSX.Element {
 
   if (hasStore) {
     sidebarNavItems.push({
-      title: "Saved Components",
-      href: "/saved-components",
+      title: "Added Components",
+      href: "/added-components",
     });
   }
 
@@ -54,41 +45,6 @@ export default function HomePage(): JSX.Element {
     setTabId("");
   }, []);
   const navigate = useNavigate();
-
-  const [isDragging, setIsDragging] = useState(false);
-
-  const dragOver = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.some((types) => types === "Files")) {
-      setIsDragging(true);
-    }
-  };
-
-  const dragEnter = (e) => {
-    if (e.dataTransfer.types.some((types) => types === "Files")) {
-      setIsDragging(true);
-    }
-    e.preventDefault();
-  };
-
-  const dragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const fileDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.types.some((types) => types === "Files")) {
-      if (e.dataTransfer.files.item(0).type === "application/json") {
-        uploadFlow(true, e.dataTransfer.files.item(0)!);
-      } else {
-        setErrorData({
-          title: "Invalid file type",
-          list: ["Please upload a JSON file"],
-        });
-      }
-    }
-  };
 
   // Personal flows display
   return (
