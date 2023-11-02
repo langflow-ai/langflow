@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import { Search } from "lucide-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
@@ -161,6 +162,8 @@ export default function StorePage(): JSX.Element {
     );
   }
 
+  const [tabActive, setTabActive] = useState("Flows");
+
   return (
     <>
       <Header />
@@ -191,8 +194,8 @@ export default function StorePage(): JSX.Element {
           Search flows and components from the community.
         </span>
         <div className="flex w-full flex-col gap-4 p-4">
-          <div className="flex items-center justify-center gap-4">
-            <div className="relative h-12 w-[35%]">
+          <div className="flex items-end gap-4">
+            <div className="relative h-12 w-[40%]">
               <Input
                 placeholder="Search Flows and Components"
                 className="absolute h-12 px-5"
@@ -208,42 +211,64 @@ export default function StorePage(): JSX.Element {
               />
               <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
             </div>
-            <div className="flex items-center justify-center text-sm">
-              <Button
+            <div className="ml-4 flex w-full gap-2 border-b border-border">
+              <button
                 onClick={() => {
-                  handleSearch(inputText);
+                  setTabActive("Flows");
                 }}
+                className={
+                  tabActive === "Flows"
+                    ? "border-b-2 border-primary p-3"
+                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                }
               >
-                Search
-              </Button>
-            </div>
-            <div className="flex w-[13%] items-center justify-center gap-3 text-sm">
-              <Select
-                onValueChange={(value) => {
-                  if (value === "Flow") {
-                    filterComponent.current = false;
-                  } else if (value === "Component") {
-                    filterComponent.current = true;
-                  } else {
-                    filterComponent.current = null;
-                  }
-                  setPageIndex(1);
-                  setPageSize(10);
-                  handleGetComponents();
+                Flows
+              </button>
+              <button
+                onClick={() => {
+                  setTabActive("Components");
                 }}
+                className={
+                  tabActive === "Components"
+                    ? "border-b-2 border-primary p-3"
+                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                }
               >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Both" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Both</SelectItem>
-                  <SelectItem value="Flow">Flows</SelectItem>
-                  <SelectItem value="Component">Components</SelectItem>
-                </SelectContent>
-              </Select>
+                Components
+              </button>
+              <ShadTooltip content="Coming Soon">
+                <button className="cursor-not-allowed p-3 text-muted-foreground">
+                  Bundles
+                </button>
+              </ShadTooltip>
             </div>
           </div>
-          <div className="flex h-2 items-center justify-center gap-4">
+          <div className="flex items-center gap-3 text-sm">
+            <Select
+              onValueChange={(value) => {
+                if (value === "Flow") {
+                  filterComponent.current = false;
+                } else if (value === "Component") {
+                  filterComponent.current = true;
+                } else {
+                  filterComponent.current = null;
+                }
+                setPageIndex(1);
+                setPageSize(10);
+                handleGetComponents();
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Both" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Both</SelectItem>
+                <SelectItem value="Flow">Flows</SelectItem>
+                <SelectItem value="Component">Components</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
             {!loading &&
               tags.map((i, idx) => (
                 <Badge
@@ -258,10 +283,10 @@ export default function StorePage(): JSX.Element {
                     setFilterCategories(copyFilterArray);
                     handleFilterByTags(copyFilterArray);
                   }}
-                  variant="gray"
-                  size="md"
+                  variant="outline"
+                  size="sq"
                   className={cn(
-                    "cursor-pointer border-none",
+                    "cursor-pointer",
                     filteredCategories.some((category) => category === i.id)
                       ? "bg-beta-foreground text-background hover:bg-beta-foreground"
                       : ""
@@ -271,6 +296,7 @@ export default function StorePage(): JSX.Element {
                 </Badge>
               ))}
           </div>
+
           <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? (
               <>
