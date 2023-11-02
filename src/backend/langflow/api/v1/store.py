@@ -107,10 +107,13 @@ def count_components(
     filter_by_user: bool = Query(False),
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_optional_user_store_api_key),
+    is_component: Optional[bool] = Query(None),
 ):
     try:
         result = store_service.count_components(
-            api_key=store_api_Key, filter_by_user=filter_by_user
+            api_key=store_api_Key,
+            filter_by_user=filter_by_user,
+            is_component=is_component,
         )
         return {"count": result}
     except Exception as exc:
