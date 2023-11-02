@@ -4,6 +4,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from typing import Annotated, Coroutine, Optional, Union
 from uuid import UUID
+from starlette.requests import Request
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.user import User
@@ -69,6 +70,25 @@ async def api_key_security(
 
 
 async def get_current_user(
+    request: Request,
+    query_param: str = Security(api_key_query),
+    header_param: str = Security(api_key_header),
+    db: Session = Depends(get_session),
+) -> User:
+    try:
+        token = oauth2_login(request)
+        return await get_current_user_by_jwt(token, db)
+    except HTTPException:
+        user = await api_key_security(query_param, header_param, db)
+        if user:
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API key",
+        )
+
+
+async def get_current_user_by_jwt(
     token: Annotated[str, Depends(oauth2_login)],
     db: Session = Depends(get_session),
 ) -> User:
