@@ -207,7 +207,7 @@ class VerticesOrderResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: str
     valid: bool
-    params: str
+    params: Optional[str]
     """JSON string of the params."""
     results: dict
     """Mapping of vertex ids to result dict containing the param name and result value."""
