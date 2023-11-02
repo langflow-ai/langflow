@@ -245,7 +245,7 @@
   }
 
   .community-page-nav-arrangement {
-    @apply flex-max-width justify-between px-6 py-8 pb-2;
+    @apply flex-max-width justify-between py-8 pb-2;
   }
 
   .community-page-nav-title {
@@ -257,7 +257,7 @@
   }
 
   .community-page-description-text {
-    @apply flex w-[70%] px-6 pb-8 text-muted-foreground;
+    @apply flex w-[70%] pb-8 text-muted-foreground;
   }
 
   .community-pages-flows-panel {

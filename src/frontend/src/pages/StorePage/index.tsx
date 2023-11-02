@@ -171,7 +171,7 @@ export default function StorePage(): JSX.Element {
       <div className="community-page-arrangement">
         <div className="community-page-nav-arrangement">
           <span className="community-page-nav-title">
-            <IconComponent name="Users2" className="w-6" />
+            <IconComponent name="Store" className="w-6" />
             Langflow Store
           </span>
           <div className="community-page-nav-button">
@@ -353,7 +353,7 @@ export default function StorePage(): JSX.Element {
               </SelectContent>
             </Select>
           </div> */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-2">
             {!loading &&
               tags.map((i, idx) => (
                 <Badge
@@ -400,7 +400,7 @@ export default function StorePage(): JSX.Element {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Order by" />
+                <SelectValue placeholder="Sort By" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Most Popular</SelectItem>
