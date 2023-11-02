@@ -22,7 +22,7 @@ from typer.testing import CliRunner
 import tempfile
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
+    from langflow.services.database.service import DatabaseService
 
 
 def pytest_configure():
