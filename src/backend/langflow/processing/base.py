@@ -27,11 +27,11 @@ def setup_callbacks(sync, trace_id, **kwargs):
 
 
 def get_langfuse_callback(trace_id):
-    from langflow.services.plugins.langfuse import LangfuseInstance
+    from langflow.services.getters import get_plugins_service
     from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
-    if langfuse := LangfuseInstance.get():
+    if langfuse := get_plugins_service().get("langfuse"):
         logger.debug("Langfuse credentials found")
         try:
             trace = langfuse.trace(
