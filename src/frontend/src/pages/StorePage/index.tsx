@@ -20,7 +20,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
-  getNumberOfComponents,
+  getCountComponents,
   getStoreComponents,
   getStoreSavedComponents,
   getStoreTags,
@@ -32,31 +32,40 @@ import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
   const { setTabId } = useContext(TabsContext);
-  // set null id
   useEffect(() => {
     setTabId("");
   }, []);
-  const [data, setData] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
-  const [searchData, setSearchData] = useState(data);
+  const [searchData, setSearchData] = useState<storeComponent[]>([]);
   const { setErrorData } = useContext(alertContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
   const [errorApiKey, setErrorApiKey] = useState(false);
-  const { setSavedFlows, savedFlows } = useContext(StoreContext);
+  const { setSavedFlows, savedFlows, hasApiKey } = useContext(StoreContext);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
   const [renderPagination, setRenderPagination] = useState(false);
   const filterComponent = useRef<boolean | null>(null);
+  const [tabActive, setTabActive] = useState("Flows");
 
   useEffect(() => {
     getStoreTags().then((res) => {
       tagListId.current = res;
       setTags(res);
     });
+  }, []);
+
+  useEffect(() => {
+    filterComponent.current = false;
+    getSavedComponents()
+      .finally(() => handleGetComponents())
+      .catch((err) => {
+        setErrorApiKey(true);
+        console.error(err);
+      });
   }, []);
 
   async function getSavedComponents() {
@@ -70,17 +79,12 @@ export default function StorePage(): JSX.Element {
     setErrorApiKey(false);
   }
 
-  useEffect(() => {
-    getNumberOfComponents().then((res) => {
+  async function getNumberSavedComponents() {
+    getCountComponents(filterComponent.current).then((res) => {
       setTotalRowsCount(Number(res["count"]));
+      setLoading(false);
     });
-    getSavedComponents()
-      .finally(() => handleGetComponents())
-      .catch((err) => {
-        setErrorApiKey(true);
-        console.error(err);
-      });
-  }, []);
+  }
 
   const handleGetComponents = () => {
     setLoading(true);
@@ -89,8 +93,7 @@ export default function StorePage(): JSX.Element {
     getStoreComponents(index - 1, size, filterComponent.current)
       .then((res) => {
         setSearchData(res);
-        setData(res);
-        setLoading(false);
+        getNumberSavedComponents();
         setErrorApiKey(true);
       })
       .catch((err) => {
@@ -112,9 +115,9 @@ export default function StorePage(): JSX.Element {
     searchComponent(inputText).then(
       (res) => {
         setSearchData(res);
-        setData(res);
         setLoading(false);
         setRenderPagination(false);
+        setTotalRowsCount(res.length);
       },
       (error) => {
         setLoading(false);
@@ -127,7 +130,6 @@ export default function StorePage(): JSX.Element {
     setRenderPagination(true);
     getStoreComponents(pageIndex, pageSize, filterComponent.current)
       .then((res) => {
-        setData(res);
         setSearchData(res);
         setPageIndex(pageIndex);
         setPageSize(pageSize);
@@ -152,8 +154,8 @@ export default function StorePage(): JSX.Element {
     searchComponent(null, 1, 10000, null, filterArray).then(
       (res) => {
         setSearchData(res);
-        setData(res);
         setLoading(false);
+        setTotalRowsCount(res.length);
       },
       (error) => {
         setLoading(false);
@@ -162,7 +164,32 @@ export default function StorePage(): JSX.Element {
     );
   }
 
-  const [tabActive, setTabActive] = useState("Flows");
+  function handleChangeTab(tab: string) {
+    if (tab === "All") {
+      filterComponent.current = null;
+    } else if (tab === "Flows") {
+      filterComponent.current = false;
+    } else if (tab === "Components") {
+      filterComponent.current = true;
+    }
+    setPageIndex(1);
+    setPageSize(10);
+    handleGetComponents();
+  }
+
+  const handleOrderPage = (e) => {
+    let sortedData = cloneDeep(searchData);
+
+    if (e === "Popular") {
+      sortedData = sortedData.sort(
+        (a, b) => Number(b.liked_by_count) - Number(a.liked_by_count)
+      );
+    } else if (e === "Alphabetical") {
+      sortedData = sortedData.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    setSearchData([...sortedData]);
+  };
 
   return (
     <>
@@ -181,7 +208,9 @@ export default function StorePage(): JSX.Element {
               }}
             >
               <Button
-                className={`${errorApiKey ? "animate-pulse border-error" : ""}`}
+                className={`${
+                  errorApiKey && !hasApiKey ? "animate-pulse border-error" : ""
+                }`}
                 variant="primary"
               >
                 <IconComponent name="Key" className="main-page-nav-button" />
@@ -209,12 +238,18 @@ export default function StorePage(): JSX.Element {
                 }}
                 value={inputText}
               />
-              <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
+              <Search
+                onClick={() => {
+                  handleSearch(inputText);
+                }}
+                className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
+              />
             </div>
             <div className="ml-4 flex w-full gap-2 border-b border-border">
               <button
                 onClick={() => {
                   setTabActive("All");
+                  handleChangeTab("All");
                 }}
                 className={
                   tabActive === "All"
@@ -227,6 +262,7 @@ export default function StorePage(): JSX.Element {
               <button
                 onClick={() => {
                   setTabActive("Flows");
+                  handleChangeTab("Flows");
                 }}
                 className={
                   tabActive === "Flows"
@@ -239,6 +275,7 @@ export default function StorePage(): JSX.Element {
               <button
                 onClick={() => {
                   setTabActive("Components");
+                  handleChangeTab("Components");
                 }}
                 className={
                   tabActive === "Components"
@@ -255,104 +292,7 @@ export default function StorePage(): JSX.Element {
               </ShadTooltip>
             </div>
           </div>
-          {/* <div className="flex items-center gap-3 text-sm">
-            <button className="flex h-8 items-center justify-between rounded-md border border-ring/60 px-4 py-2 text-sm text-primary hover:bg-muted">
-              <IconComponent name="CheckCircle2" className="mr-2 h-4 w-4 " />
-              Installed Locally
-            </button>
-            <Select
-              onValueChange={(value) => {
-                if (value === "Flow") {
-                  filterComponent.current = false;
-                } else if (value === "Component") {
-                  filterComponent.current = true;
-                } else {
-                  filterComponent.current = null;
-                }
-                setPageIndex(1);
-                setPageSize(10);
-                handleGetComponents();
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Component Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Both</SelectItem>
-                <SelectItem value="Flow">Flows</SelectItem>
-                <SelectItem value="Component">Components</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value) => {
-                if (value === "Flow") {
-                  filterComponent.current = false;
-                } else if (value === "Component") {
-                  filterComponent.current = true;
-                } else {
-                  filterComponent.current = null;
-                }
-                setPageIndex(1);
-                setPageSize(10);
-                handleGetComponents();
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Use Cases" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Both</SelectItem>
-                <SelectItem value="Flow">Flows</SelectItem>
-                <SelectItem value="Component">Components</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value) => {
-                if (value === "Flow") {
-                  filterComponent.current = false;
-                } else if (value === "Component") {
-                  filterComponent.current = true;
-                } else {
-                  filterComponent.current = null;
-                }
-                setPageIndex(1);
-                setPageSize(10);
-                handleGetComponents();
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Models" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Both</SelectItem>
-                <SelectItem value="Flow">Flows</SelectItem>
-                <SelectItem value="Component">Components</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value) => {
-                if (value === "Flow") {
-                  filterComponent.current = false;
-                } else if (value === "Component") {
-                  filterComponent.current = true;
-                } else {
-                  filterComponent.current = null;
-                }
-                setPageIndex(1);
-                setPageSize(10);
-                handleGetComponents();
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Payment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Both</SelectItem>
-                <SelectItem value="Flow">Flows</SelectItem>
-                <SelectItem value="Component">Components</SelectItem>
-              </SelectContent>
-            </Select>
-          </div> */}
+
           <div className="flex items-center gap-2 px-2">
             {!loading &&
               tags.map((i, idx) => (
@@ -383,29 +323,25 @@ export default function StorePage(): JSX.Element {
           </div>
           <div className="flex items-end justify-between">
             <span className="px-0.5 text-sm text-muted-foreground">
-              2,117 results
+              {!loading && (
+                <>
+                  {totalRowsCount} {totalRowsCount > 0 ? "results" : "result"}
+                </>
+              )}
             </span>
+
             <Select
-              onValueChange={(value) => {
-                if (value === "Flow") {
-                  filterComponent.current = false;
-                } else if (value === "Component") {
-                  filterComponent.current = true;
-                } else {
-                  filterComponent.current = null;
-                }
-                setPageIndex(1);
-                setPageSize(10);
-                handleGetComponents();
+              onValueChange={(e) => {
+                handleOrderPage(e);
               }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sort By" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Most Popular</SelectItem>
-                <SelectItem value="Flow">Most Recent</SelectItem>
-                <SelectItem value="Component">Alphabetical</SelectItem>
+                <SelectItem value="Popular">Most Popular</SelectItem>
+                {/* <SelectItem value="Recent">Most Recent</SelectItem> */}
+                <SelectItem value="Alphabetical">Alphabetical</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -418,17 +354,15 @@ export default function StorePage(): JSX.Element {
                 <SkeletonCardComponent />
               </>
             ) : (
-              searchData
-                .filter(
-                  (f) =>
-                    filteredCategories?.length === 0 ||
-                    filteredCategories.some(
-                      (category) => category === f.is_component
-                    )
-                )
-                .map((item, idx) => (
-                  <MarketCardComponent key={idx} data={item} />
-                ))
+              searchData.map((item, idx) => {
+                console.log(item);
+
+                return (
+                  <>
+                    <MarketCardComponent key={idx} data={item} />
+                  </>
+                );
+              })
             )}
           </div>
         </div>

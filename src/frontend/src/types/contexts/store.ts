@@ -3,4 +3,6 @@ export type storeContextType = {
   setSavedFlows: (newState: Set<string>) => void;
   setHasStore: (store: boolean) => void;
   hasStore: boolean;
+  setHasApiKey: (key: boolean) => void;
+  hasApiKey: boolean;
 };

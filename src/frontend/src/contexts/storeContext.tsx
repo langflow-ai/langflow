@@ -8,6 +8,8 @@ const initialValue = {
   setSavedFlows: () => {},
   hasStore: true,
   setHasStore: () => {},
+  hasApiKey: true,
+  setHasApiKey: () => {},
 };
 
 export const StoreContext = createContext<storeContextType>(initialValue);
@@ -16,14 +18,23 @@ export function StoreProvider({ children }) {
   const [savedFlows, setSavedFlows] = useState<Set<string>>(new Set());
 
   const [hasStore, setHasStore] = useState(true);
+  const [hasApiKey, setHasApiKey] = useState(true);
 
   checkHasStore().then((res) => {
     setHasStore(res["enabled"]);
+    setHasApiKey(res["has_api_key"]);
   });
 
   return (
     <StoreContext.Provider
-      value={{ savedFlows, setSavedFlows, hasStore, setHasStore }}
+      value={{
+        savedFlows,
+        setSavedFlows,
+        hasStore,
+        setHasStore,
+        hasApiKey,
+        setHasApiKey,
+      }}
     >
       {children}
     </StoreContext.Provider>

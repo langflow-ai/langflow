@@ -713,9 +713,20 @@ export async function checkHasStore() {
   }
 }
 
-export async function getNumberOfComponents() {
+export async function getCountComponents(is_component?: boolean | null) {
   try {
-    const res = await api.get(`${BASE_URL_API}store/components/count`);
+    let url = `${BASE_URL_API}store/components/count`;
+    const queryParams: any = [];
+    if (is_component !== undefined) {
+      queryParams.push(`is_component=${is_component}`);
+    }
+
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
     if (res.status === 200) {
       return res.data;
     }
