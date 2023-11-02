@@ -205,15 +205,15 @@
   }
 
   .loading-page-panel {
-    @apply flex h-full w-full items-center justify-center bg-muted;
+    @apply flex h-full w-full items-center justify-center bg-background;
   }
 
   .main-page-panel {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
   }
 
   .admin-page-panel {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
   }
 
   .main-page-nav-arrangement {
@@ -241,7 +241,7 @@
   }
 
   .community-page-arrangement {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
   }
 
   .community-page-nav-arrangement {
