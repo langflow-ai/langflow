@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING, Generator
 
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
-    from langflow.services.settings.manager import SettingsService
-    from langflow.services.cache.manager import BaseCacheService
-    from langflow.services.session.manager import SessionService
-    from langflow.services.task.manager import TaskService
-    from langflow.services.chat.manager import ChatService
+    from langflow.services.database.service import DatabaseService
+    from langflow.services.settings.service import SettingsService
+    from langflow.services.cache.service import BaseCacheService
+    from langflow.services.session.service import SessionService
+    from langflow.services.task.service import TaskService
+    from langflow.services.chat.service import ChatService
     from sqlmodel import Session
 
 

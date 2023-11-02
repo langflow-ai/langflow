@@ -17,8 +17,8 @@ from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
 from sqlmodel import Session
-from langflow.services.chat.manager import ChatService
-from langflow.services.cache.manager import BaseCacheService
+from langflow.services.chat.service import ChatService
+from langflow.services.cache.service import BaseCacheService
 
 
 router = APIRouter(tags=["Chat"])
