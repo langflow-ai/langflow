@@ -75,6 +75,7 @@ def list_components(
     filter_by_user: bool = Query(False),
     page: int = 1,
     limit: int = 10,
+    is_component: Optional[bool] = Query(None),
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
@@ -85,6 +86,7 @@ def list_components(
                 page=page,
                 limit=limit,
                 filter_by_user=filter_by_user,
+                is_component=is_component,
             )
 
             if not store_api_Key:
