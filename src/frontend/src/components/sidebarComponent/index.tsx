@@ -7,11 +7,16 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
     href: string;
     title: string;
   }[];
+  secondaryItems?: {
+    href: string;
+    title: string;
+  }[];
 }
 
 export default function SidebarNav({
   className,
   items,
+  secondaryItems,
   ...props
 }: SidebarNavProps) {
   const location = useLocation();
@@ -40,6 +45,19 @@ export default function SidebarNav({
           {item.title}
         </Link>
       ))}
+      {/* {secondaryItems && (
+        <>
+          <div className="py-2">
+            <Separator />
+          </div>
+          <div className="flex justify-center">
+            <button className="flex h-8 w-fit items-center justify-between rounded-md border border-ring/60 px-4 py-2 text-sm text-primary hover:bg-muted">
+              <IconComponent name="FolderPlus" className="mr-2 h-4 w-4 " />
+              New Folder
+            </button>
+          </div>
+        </>
+      )} */}
     </nav>
   );
 }

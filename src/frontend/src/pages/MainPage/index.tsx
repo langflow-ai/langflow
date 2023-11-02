@@ -93,7 +93,10 @@ export default function HomePage(): JSX.Element {
         <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
           <aside className="space-y-6 lg:w-1/5">
             {/* <Input placeholder="Search" onChange={(e) => {}} /> */}
-            <SidebarNav items={sidebarNavItems} />
+            <SidebarNav
+              items={sidebarNavItems}
+              secondaryItems={sidebarNavItems}
+            />
           </aside>
           <div className="w-full flex-1">
             <Outlet />
