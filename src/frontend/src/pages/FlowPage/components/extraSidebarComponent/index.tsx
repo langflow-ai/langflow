@@ -264,15 +264,10 @@ export default function ExtraSidebar(): JSX.Element {
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
-        <ShadTooltip content="Import" side="top">
-          <button
-            className="extra-side-bar-buttons"
-            onClick={() => {
-              uploadFlow(false);
-            }}
-          >
-            <IconComponent name="FileDown" className="side-bar-button-size " />
-          </button>
+        <ShadTooltip content="Export" side="top">
+          <div className={classNames("extra-side-bar-buttons")}>
+            <IconComponent name="FileDown" className="side-bar-button-size" />
+          </div>
         </ShadTooltip>
       </ExportModal>
     ),
@@ -283,12 +278,15 @@ export default function ExtraSidebar(): JSX.Element {
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
         <div className="side-bar-button">
-          <ShadTooltip content="Export" side="top">
-            <div
-              className={classNames("extra-side-bar-buttons cursor-pointer")}
+          <ShadTooltip content="Import" side="top">
+            <button
+              className="extra-side-bar-buttons"
+              onClick={() => {
+                uploadFlow(false);
+              }}
             >
-              <IconComponent name="FileUp" className="side-bar-button-size" />
-            </div>
+              <IconComponent name="FileUp" className="side-bar-button-size " />
+            </button>
           </ShadTooltip>
         </div>
         <div className="side-bar-button">{ExportMemo}</div>
