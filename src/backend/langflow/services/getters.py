@@ -9,7 +9,12 @@ if TYPE_CHECKING:
     from langflow.services.session.service import SessionService
     from langflow.services.task.service import TaskService
     from langflow.services.chat.service import ChatService
+    from langflow.services.plugins.service import PluginService
     from sqlmodel import Session
+
+
+def get_plugins_service() -> "PluginService":
+    return service_manager.get(ServiceType.PLUGIN_SERVICE)
 
 
 def get_settings_service() -> "SettingsService":
