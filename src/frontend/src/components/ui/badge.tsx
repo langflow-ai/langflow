@@ -20,8 +20,8 @@ const badgeVariants = cva(
         sm: "h-4 text-xs",
         md: "h-5 text-sm",
         lg: "h-6 text-base",
-        sq: "h-6 text-sm font-medium rounded-md",
-        xq: "h-5 text-xs font-medium rounded-md",
+        sq: "h-6 text-sm font-normal rounded-md",
+        xq: "h-5 text-xs font-normal rounded-md",
       },
     },
     defaultVariants: {

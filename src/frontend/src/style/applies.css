@@ -217,7 +217,7 @@
   }
 
   .main-page-nav-arrangement {
-    @apply flex-max-width justify-between px-6 py-12 pb-2;
+    @apply flex-max-width justify-between px-6 py-8 pb-2;
   }
 
   .main-page-nav-title {
@@ -245,7 +245,7 @@
   }
 
   .community-page-nav-arrangement {
-    @apply flex-max-width justify-between px-6 py-12 pb-2;
+    @apply flex-max-width justify-between px-6 py-8 pb-2;
   }
 
   .community-page-nav-title {
