@@ -70,13 +70,12 @@ async def api_key_security(
 
 
 async def get_current_user(
-    request: Request,
+    token: str = Security(oauth2_login),
     query_param: str = Security(api_key_query),
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
 ) -> User:
     try:
-        token = oauth2_login(request)
         return await get_current_user_by_jwt(token, db)
     except HTTPException:
         user = await api_key_security(query_param, header_param, db)
