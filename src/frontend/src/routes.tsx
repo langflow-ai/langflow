@@ -10,9 +10,9 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
+import AddedComponents from "./pages/MainPage/components/added-components";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import FlowsComponent from "./pages/MainPage/components/flows";
-import SavedComponents from "./pages/MainPage/components/saved-components";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
@@ -41,10 +41,10 @@ const Router = () => {
         <Route path="flows" element={<FlowsComponent />} />
         <Route path="components" element={<ComponentsComponent />} />
         <Route
-          path="saved-components"
+          path="added-components"
           element={
             <StoreGuard>
-              <SavedComponents />
+              <AddedComponents />
             </StoreGuard>
           }
         />
