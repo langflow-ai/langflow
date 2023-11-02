@@ -188,15 +188,18 @@ class StoreService(Service):
         page: int = 1,
         limit: int = 15,
         fields: Optional[List[str]] = None,
+        is_component: Optional[bool] = None,
         filter_by_user: bool = False,
     ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
 
+        if is_component:
+            params["filter[is_component][_eq]"] = is_component
+
         # Only public components or the ones created by the user
         # check for "public" or "Public"
-
         if filter_by_user and not api_key:
             raise ValueError("No API key provided")
 
