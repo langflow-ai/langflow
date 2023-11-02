@@ -193,7 +193,7 @@ export default function StorePage(): JSX.Element {
         <span className="community-page-description-text">
           Search flows and components from the community.
         </span>
-        <div className="flex w-full flex-col gap-4 p-4">
+        <div className="flex w-full flex-col gap-4 p-0">
           <div className="flex items-end gap-4">
             <div className="relative h-12 w-[40%]">
               <Input
@@ -212,6 +212,18 @@ export default function StorePage(): JSX.Element {
               <Search className="absolute bottom-0 right-4 top-0 my-auto h-6 stroke-1 text-muted-foreground " />
             </div>
             <div className="ml-4 flex w-full gap-2 border-b border-border">
+              <button
+                onClick={() => {
+                  setTabActive("All");
+                }}
+                className={
+                  tabActive === "All"
+                    ? "border-b-2 border-primary p-3"
+                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                }
+              >
+                All
+              </button>
               <button
                 onClick={() => {
                   setTabActive("Flows");
@@ -244,6 +256,10 @@ export default function StorePage(): JSX.Element {
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            <button className="flex h-8 items-center justify-between rounded-md border border-ring/60 px-4 py-2 text-sm text-primary hover:bg-muted">
+              <IconComponent name="CheckCircle2" className="mr-2 h-4 w-4" />
+              Installed Locally
+            </button>
             <Select
               onValueChange={(value) => {
                 if (value === "Flow") {
@@ -258,8 +274,77 @@ export default function StorePage(): JSX.Element {
                 handleGetComponents();
               }}
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Both" />
+              <SelectTrigger>
+                <SelectValue placeholder="Component Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Both</SelectItem>
+                <SelectItem value="Flow">Flows</SelectItem>
+                <SelectItem value="Component">Components</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => {
+                if (value === "Flow") {
+                  filterComponent.current = false;
+                } else if (value === "Component") {
+                  filterComponent.current = true;
+                } else {
+                  filterComponent.current = null;
+                }
+                setPageIndex(1);
+                setPageSize(10);
+                handleGetComponents();
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Use Cases" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Both</SelectItem>
+                <SelectItem value="Flow">Flows</SelectItem>
+                <SelectItem value="Component">Components</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => {
+                if (value === "Flow") {
+                  filterComponent.current = false;
+                } else if (value === "Component") {
+                  filterComponent.current = true;
+                } else {
+                  filterComponent.current = null;
+                }
+                setPageIndex(1);
+                setPageSize(10);
+                handleGetComponents();
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Models" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Both</SelectItem>
+                <SelectItem value="Flow">Flows</SelectItem>
+                <SelectItem value="Component">Components</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => {
+                if (value === "Flow") {
+                  filterComponent.current = false;
+                } else if (value === "Component") {
+                  filterComponent.current = true;
+                } else {
+                  filterComponent.current = null;
+                }
+                setPageIndex(1);
+                setPageSize(10);
+                handleGetComponents();
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Payment" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Both</SelectItem>
@@ -297,7 +382,7 @@ export default function StorePage(): JSX.Element {
               ))}
           </div>
 
-          <div className="mt-6 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-2 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? (
               <>
                 <SkeletonCardComponent />
