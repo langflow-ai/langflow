@@ -1,7 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
-import ElementStack from "../../../components/stackedComponents";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import {
@@ -125,9 +124,29 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
               <span className="flex w-full items-center gap-2 word-break-break-word">
                 {data.name}
               </span>
-              <Badge size="sm" variant="gray">
-                Free
-              </Badge>
+              <div className="flex gap-3">
+                <ShadTooltip content="Components">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <IconComponent name="ToyBrick" className="h-4 w-4" />
+                    {totalComponentsMetadata()}
+                  </span>
+                </ShadTooltip>
+                <ShadTooltip content="Likes">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <IconComponent
+                      name="Heart"
+                      className={classNames("h-4 w-4 ")}
+                    />
+                    {likes_count ?? 0}
+                  </span>
+                </ShadTooltip>
+                <ShadTooltip content="Downloads">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <IconComponent name="DownloadCloud" className="h-4 w-4" />
+                    {data.downloads_count}
+                  </span>
+                </ShadTooltip>
+              </div>
             </CardTitle>
           </div>
           <CardDescription className="pb-2 pt-2">
@@ -139,103 +158,63 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
       <CardFooter>
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex w-full flex-wrap items-end justify-between gap-2">
-            <div className=" flex items-center gap-3">
-              <ShadTooltip
-                styleClasses="bg-transparent border-none shadow-none"
-                side="right"
-                content={
-                  <div className="flex flex-wrap gap-1">
-                    {data.tags
-                      .sort((a, b) => a.name.length - b.name.length)
-                      .map((tag, index) => (
-                        <div className="">
-                          <Badge
-                            key={index}
-                            className="bg-card shadow-md"
-                            size="sm"
-                            variant="outline"
-                          >
-                            {tag.name}
-                          </Badge>
-                        </div>
-                      ))}
-                  </div>
-                }
-              >
-                <div className="pr-2 hover:opacity-40">
-                  {data.tags.length > 0 ? (
-                    <ElementStack>
-                      {data.tags.map((tag, index) => (
-                        <Badge
-                          key={index}
-                          size="md"
-                          className="bg-card"
-                          variant="outline"
-                        >
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </ElementStack>
-                  ) : (
-                    <Badge size="md" variant="outline">
-                      -
-                    </Badge>
-                  )}
-                </div>
-              </ShadTooltip>
-              <ShadTooltip content="Components">
-                <span className="flex items-center gap-1.5 text-xs text-foreground">
-                  <IconComponent name="ToyBrick" className="h-4 w-4" />
-                  {totalComponentsMetadata()}
-                </span>
-              </ShadTooltip>
-              <ShadTooltip content="Favorites">
-                <button
-                  onClick={handleLike}
-                  className="flex items-center gap-1.5 text-xs text-foreground"
+            <div className="flex w-full flex-1 flex-wrap gap-2">
+              {data.tags.length > 0 &&
+                data.tags.map((tag, index) => (
+                  <Badge
+                    key={index}
+                    size="md"
+                    className="bg-card"
+                    variant="outline"
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+            </div>
+            <div className="flex gap-0.5">
+              <ShadTooltip content="Like">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="whitespace-nowrap"
+                  onClick={() => {
+                    handleLike();
+                  }}
                 >
                   <IconComponent
                     name="Heart"
                     className={classNames(
-                      "h-4 w-4 ",
+                      "h-6 w-6 p-0.5",
                       liked_by_user ? "fill-destructive stroke-destructive" : ""
                     )}
                   />
-                  {likes_count ?? 0}
-                </button>
+                </Button>
               </ShadTooltip>
-              <ShadTooltip content="Downloads">
-                <span className="flex items-center gap-1.5 text-xs text-foreground">
-                  <IconComponent name="DownloadCloud" className="h-4 w-4" />
-                  {data.downloads_count}
-                </span>
+              <ShadTooltip content="Add to Account">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="whitespace-nowrap"
+                  onClick={() => {
+                    if (loading) {
+                      return;
+                    }
+                    if (!added) {
+                      handleAdd();
+                    } else {
+                      handleInstall();
+                    }
+                  }}
+                >
+                  <IconComponent
+                    name={
+                      loading ? "Loader2" : added ? "GitBranchPlus" : "Plus"
+                    }
+                    className={"h-6 w-6" + (loading ? " animate-spin" : "")}
+                  />
+                </Button>
               </ShadTooltip>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap "
-              onClick={() => {
-                if (loading) {
-                  return;
-                }
-                if (!added) {
-                  handleAdd();
-                } else {
-                  handleInstall();
-                }
-              }}
-            >
-              <IconComponent
-                name={
-                  loading ? "Loader2" : added ? "GitBranchPlus" : "BookmarkPlus"
-                }
-                className={
-                  "main-page-nav-button" + (loading ? " animate-spin" : "")
-                }
-              />
-              {added ? "Use Template" : "Add to Account"}
-            </Button>
           </div>
         </div>
       </CardFooter>
