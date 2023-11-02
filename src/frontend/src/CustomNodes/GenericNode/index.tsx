@@ -351,61 +351,39 @@ export default function GenericNode({
             )}
             {showNode && (
               <div className="round-button-div" onClick={buildVertex}>
-                <div>
-                  <Tooltip
-                    title={
-                      isBuilding ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Zap"
-                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                          />{" "}
-                          flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? validationStatus.params
-                                .split("\n")
-                                .map((line: string, index: number) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : ""}
-                        </div>
-                      )
-                    }
-                  >
-                    <div className="generic-node-status-position">
-                      <div
-                        className={classNames(
-                          validationStatus && validationStatus.valid
-                            ? "green-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          validationStatus && !validationStatus.valid
-                            ? "red-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                    </div>
-                  </Tooltip>
-                </div>
+                <Tooltip
+                  title={
+                    isBuilding ? (
+                      <span>Building...</span>
+                    ) : !validationStatus ? (
+                      <span className="flex">
+                        Build{" "}
+                        <IconComponent
+                          name="Zap"
+                          className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                        />{" "}
+                        flow to validate status.
+                      </span>
+                    ) : (
+                      <div className="max-h-96 overflow-auto">
+                        {typeof validationStatus.params === "string"
+                          ? validationStatus.params
+                              .split("\n")
+                              .map((line: string, index: number) => (
+                                <div key={index}>{line}</div>
+                              ))
+                          : ""}
+                      </div>
+                    )
+                  }
+                >
+                  <div className="generic-node-status-position">
+                    <IconComponent
+                      name={isBuilding ? "PauseCircle" : "PlayCircle"}
+                      className=" h-5 stroke-build-trigger stroke-1"
+                    />
+                  </div>
+                </Tooltip>
               </div>
             )}
           </div>
