@@ -208,7 +208,7 @@ export default function ExtraSidebar(): JSX.Element {
         title="Share Flow"
         confirmationText="Share"
         icon="Share2"
-        size="smaller"
+        size="small-h-full"
         onConfirm={() => {
           handleShareFlow();
         }}
@@ -216,18 +216,29 @@ export default function ExtraSidebar(): JSX.Element {
         cancelText="Cancel"
       >
         <ConfirmationModal.Content>
-          <div className="flex h-full w-full flex-col gap-7">
-            <div className="flex justify-start align-middle">
+          <div className="flex h-full w-full flex-col gap-3">
+            <div className="flex justify-start pt-4 align-middle">
               <ToggleShadComponent
                 disabled={false}
                 size="medium"
                 setEnabled={setSharePublic}
                 enabled={sharePublic}
               />
-              <div>
-                {sharePublic
-                  ? "This flow will be avaliable for everyone"
-                  : "This flow will be avaliable just for you"}
+              <div
+                className="cursor-pointer pl-1"
+                onClick={() => {
+                  setSharePublic(!sharePublic);
+                }}
+              >
+                {sharePublic ? (
+                  <span>
+                    This flow will be avaliable <b>for everyone</b>
+                  </span>
+                ) : (
+                  <span>
+                    This flow will be avaliable <b>just for you</b>
+                  </span>
+                )}
               </div>
             </div>
             <div className="w-full pt-2">
@@ -253,10 +264,15 @@ export default function ExtraSidebar(): JSX.Element {
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
-        <ShadTooltip content="Export" side="top">
-          <div className={classNames("extra-side-bar-buttons")}>
-            <IconComponent name="FileUp" className="side-bar-button-size" />
-          </div>
+        <ShadTooltip content="Import" side="top">
+          <button
+            className="extra-side-bar-buttons"
+            onClick={() => {
+              uploadFlow(false);
+            }}
+          >
+            <IconComponent name="FileDown" className="side-bar-button-size " />
+          </button>
         </ShadTooltip>
       </ExportModal>
     ),
@@ -267,18 +283,12 @@ export default function ExtraSidebar(): JSX.Element {
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
         <div className="side-bar-button">
-          <ShadTooltip content="Import" side="top">
-            <button
-              className="extra-side-bar-buttons"
-              onClick={() => {
-                uploadFlow(false);
-              }}
+          <ShadTooltip content="Export" side="top">
+            <div
+              className={classNames("extra-side-bar-buttons cursor-pointer")}
             >
-              <IconComponent
-                name="FileDown"
-                className="side-bar-button-size "
-              />
-            </button>
+              <IconComponent name="FileUp" className="side-bar-button-size" />
+            </div>
           </ShadTooltip>
         </div>
         <div className="side-bar-button">{ExportMemo}</div>
@@ -305,22 +315,25 @@ export default function ExtraSidebar(): JSX.Element {
         </ShadTooltip>
         <div className="side-bar-button">
           <ShadTooltip content="Save" side="top">
-            <button
-              className={
-                "extra-side-bar-buttons " + (isPending ? "" : "button-disable")
-              }
-              onClick={(event) => {
-                saveFlow(flow!);
-              }}
-            >
-              <IconComponent
-                name="Save"
+            <div>
+              <button
                 className={
-                  "side-bar-button-size" +
-                  (isPending ? " " : " extra-side-bar-save-disable")
+                  "extra-side-bar-buttons " +
+                  (isPending ? "" : "button-disable")
                 }
-              />
-            </button>
+                onClick={(event) => {
+                  saveFlow(flow!);
+                }}
+              >
+                <IconComponent
+                  name="Save"
+                  className={
+                    "side-bar-button-size" +
+                    (isPending ? " " : " extra-side-bar-save-disable")
+                  }
+                />
+              </button>
+            </div>
           </ShadTooltip>
         </div>
 
