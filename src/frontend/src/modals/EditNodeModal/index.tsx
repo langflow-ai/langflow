@@ -36,7 +36,7 @@ import { limitScrollFieldsModal } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { TabsState } from "../../types/tabs";
+import { FlowsState } from "../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -542,7 +542,7 @@ const EditNodeModal = forwardRef(
               const newData = cloneDeep(myData.current);
               myData.current = newData;
               //@ts-ignore
-              setTabsState((prev: TabsState) => {
+              setTabsState((prev: FlowsState) => {
                 return {
                   ...prev,
                   [tabId]: {
