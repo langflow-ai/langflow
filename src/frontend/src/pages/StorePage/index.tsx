@@ -255,9 +255,9 @@ export default function StorePage(): JSX.Element {
               </ShadTooltip>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-sm">
+          {/* <div className="flex items-center gap-3 text-sm">
             <button className="flex h-8 items-center justify-between rounded-md border border-ring/60 px-4 py-2 text-sm text-primary hover:bg-muted">
-              <IconComponent name="CheckCircle2" className="mr-2 h-4 w-4" />
+              <IconComponent name="CheckCircle2" className="mr-2 h-4 w-4 " />
               Installed Locally
             </button>
             <Select
@@ -352,7 +352,7 @@ export default function StorePage(): JSX.Element {
                 <SelectItem value="Component">Components</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
           <div className="flex items-center gap-2">
             {!loading &&
               tags.map((i, idx) => (
@@ -381,8 +381,36 @@ export default function StorePage(): JSX.Element {
                 </Badge>
               ))}
           </div>
+          <div className="flex items-end justify-between">
+            <span className="px-0.5 text-sm text-muted-foreground">
+              2,117 results
+            </span>
+            <Select
+              onValueChange={(value) => {
+                if (value === "Flow") {
+                  filterComponent.current = false;
+                } else if (value === "Component") {
+                  filterComponent.current = true;
+                } else {
+                  filterComponent.current = null;
+                }
+                setPageIndex(1);
+                setPageSize(10);
+                handleGetComponents();
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Order by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Most Popular</SelectItem>
+                <SelectItem value="Flow">Most Recent</SelectItem>
+                <SelectItem value="Component">Alphabetical</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <div className="mt-2 grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? (
               <>
                 <SkeletonCardComponent />
