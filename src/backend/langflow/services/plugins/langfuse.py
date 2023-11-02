@@ -1,4 +1,5 @@
 from langflow.services.getters import get_settings_service
+from langflow.services.plugins.base import BasePlugin
 from langflow.utils.logger import logger
 
 ### Temporary implementation
@@ -52,3 +53,14 @@ class LangfuseInstance:
         if cls._instance is not None:
             cls._instance.flush()
         cls._instance = None
+
+
+class LangfusePlugin(BasePlugin):
+    def initialize(self):
+        LangfuseInstance.create()
+
+    def teardown(self):
+        LangfuseInstance.teardown()
+
+    def get(self):
+        return LangfuseInstance.get()
