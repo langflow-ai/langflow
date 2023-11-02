@@ -35,7 +35,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
-import { TabsState } from "../../../../types/tabs";
+import { FlowsState } from "../../../../types/tabs";
 import {
   generateFlow,
   generateNodeFromFlow,
@@ -226,7 +226,7 @@ export default function Page({
         return newX;
       });
       //@ts-ignore
-      setTabsState((prev: TabsState) => {
+      setTabsState((prev: FlowsState) => {
         return {
           ...prev,
           [selectedFlowId]: {
@@ -244,7 +244,7 @@ export default function Page({
       onNodesChange(change);
       updateInputsOutputs(flow);
       //@ts-ignore
-      setTabsState((prev: TabsState) => {
+      setTabsState((prev: FlowsState) => {
         return {
           ...prev,
           [selectedFlowId]: {
