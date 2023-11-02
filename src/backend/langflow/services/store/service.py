@@ -167,6 +167,7 @@ class StoreService(Service):
         self,
         api_key: Optional[str] = None,
         filter_by_user: bool = False,
+        is_component: Optional[bool] = None,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
         if filter_by_user:
@@ -179,6 +180,9 @@ class StoreService(Service):
             )
         else:
             params["filter"] = json.dumps({"status": {"_in": ["public", "Public"]}})
+
+        if is_component:
+            params["filter[is_component][_eq]"] = is_component
         results = self._get(self.components_url, api_key, params)
         return results[0].get("count", 0)
 
