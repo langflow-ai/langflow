@@ -343,24 +343,10 @@ export default function GenericNode({
                 className="round-button-div"
                 onClick={() => setIsPinned(!isPinned)}
               >
-                <div className="generic-node-status-position">
-                  <div
-                    className={classNames(
-                      data.node?.pinned
-                        ? "green-status"
-                        : "status-build-animation",
-                      "status-div"
-                    )}
-                  ></div>
-                  <div
-                    className={classNames(
-                      !data.node?.pinned
-                        ? "red-status"
-                        : "status-build-animation",
-                      "status-div"
-                    )}
-                  ></div>
-                </div>
+                <IconComponent
+                  name={isPinned ? "Pin" : "PinOff"}
+                  className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                />
               </div>
             )}
             {showNode && (

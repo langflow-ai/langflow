@@ -58,6 +58,8 @@ import {
   MoreHorizontal,
   Paperclip,
   Pencil,
+  Pin,
+  PinOff,
   Play,
   Plus,
   Redo,
@@ -338,4 +340,6 @@ export const nodeIconsLucide: iconsType = {
   Maximize2,
   Play,
   Sliders,
+  Pin,
+  PinOff,
 };
