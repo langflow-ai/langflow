@@ -1,14 +1,18 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  APIDataType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   IVarHighlightType,
   groupedObjType,
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { TabsState } from "../types/tabs";
+import { FlowsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -53,7 +57,8 @@ export function normalCaseToSnakeCase(str: string): string {
     .join("_");
 }
 
-export function toTitleCase(str: string): string {
+export function toTitleCase(str: string | undefined): string {
+  if (!str) return "";
   let result = str
     .split("_")
     .map((word, index) => {
@@ -195,7 +200,7 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(tabsState: TabsState, id: string): string {
+export function buildInputs(tabsState: FlowsState, id: string): string {
   return tabsState &&
     tabsState[id] &&
     tabsState[id].formKeysData &&
@@ -273,10 +278,10 @@ export function buildTweakObject(tweak: tweakType) {
 /**
  * Function to get Chat Input Field
  * @param {FlowType} flow - The current flow.
- * @param {TabsState} tabsState - The current tabs state.
+ * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+export function getChatInputField(flow: FlowType, tabsState?: FlowsState) {
   let chat_input_field = "text";
 
   if (
@@ -301,7 +306,7 @@ export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: TabsState
+  tabsState?: FlowsState
 ): string {
   const flowId = flow.id;
 
@@ -365,7 +370,7 @@ export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: TabsState
+  tabsState?: FlowsState
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
@@ -393,7 +398,7 @@ export function getCurlCode(
 export function getPythonCode(
   flow: FlowType,
   tweak?: any[],
-  tabsState?: TabsState
+  tabsState?: FlowsState
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
@@ -418,7 +423,7 @@ flow(inputs)`;
 export function getWidgetCode(
   flow: FlowType,
   isAuth: boolean,
-  tabsState?: TabsState
+  tabsState?: FlowsState
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
@@ -549,4 +554,15 @@ export function tabsArray(codes: string[], method: number) {
       code: codes[4],
     },
   ];
+}
+
+export function getFieldTitle(
+  template: APITemplateType,
+  templateField: string
+): string {
+  return template[templateField].display_name
+    ? template[templateField].display_name!
+    : template[templateField].name
+    ? toTitleCase(template[templateField].name!)
+    : toTitleCase(templateField);
 }

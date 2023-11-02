@@ -33,10 +33,10 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import { limitScrollFieldsModal } from "../../constants/constants";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { TabsState } from "../../types/tabs";
+import { FlowsState } from "../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -69,7 +69,7 @@ const EditNodeModal = forwardRef(
 
     const myData = useRef(data);
 
-    const { setTabsState, tabId } = useContext(TabsContext);
+    const { setTabsState, tabId } = useContext(FlowsContext);
     const { reactFlowInstance } = useContext(typesContext);
     let disabled =
       reactFlowInstance
@@ -542,7 +542,7 @@ const EditNodeModal = forwardRef(
               const newData = cloneDeep(myData.current);
               myData.current = newData;
               //@ts-ignore
-              setTabsState((prev: TabsState) => {
+              setTabsState((prev: FlowsState) => {
                 return {
                   ...prev,
                   [tabId]: {

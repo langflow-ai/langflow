@@ -87,6 +87,7 @@ import {
   Zap,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
+import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
@@ -199,6 +200,7 @@ export const nodeIconsLucide: iconsType = {
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
+  AmazonBedrockEmbeddings: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
