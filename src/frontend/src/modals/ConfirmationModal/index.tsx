@@ -73,7 +73,7 @@ function ConfirmationModal({
 
       <BaseModal.Footer>
         <Button
-          className="ml-3"
+          className="ml-3 mt-5"
           onClick={() => {
             setModalOpen(false);
             onConfirm(index, data);
@@ -83,6 +83,7 @@ function ConfirmationModal({
         </Button>
 
         <Button
+          className="mt-5"
           variant="outline"
           onClick={() => {
             setModalOpen(false);

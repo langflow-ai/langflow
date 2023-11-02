@@ -10,7 +10,7 @@ export function TagsSelector({
   setSelectedTags: (tag: string) => void;
 }) {
   return (
-    <div className=" flex h-full w-full flex-row flex-wrap gap-3 align-middle">
+    <div className=" flex h-full w-full flex-row flex-wrap gap-1 align-middle">
       {tags.map((tag, index) => {
         return (
           <TagComponent

@@ -355,8 +355,6 @@ export default function StorePage(): JSX.Element {
               </>
             ) : (
               searchData.map((item, idx) => {
-                console.log(item);
-
                 return (
                   <>
                     <MarketCardComponent key={idx} data={item} />
