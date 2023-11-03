@@ -5,7 +5,7 @@ from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.services.getters import get_db_service
-from langflow.interface.custom.utils import extract_inner_type
+from langflow.interface.custom.utils import extract_inner_type, extract_union_types
 
 from langflow.utils import validate
 
@@ -152,9 +152,7 @@ class CustomComponent(Component):
             return [return_type] if return_type in self.return_type_valid_list else []
 
         # If the return type is a Union, then we need to parse it
-        return_type = return_type.replace("Union", "").replace("[", "").replace("]", "")
-        return_type = return_type.split(",")
-        return_type = [item.strip() for item in return_type]
+        return_type = extract_union_types(return_type)
         return [item for item in return_type if item in self.return_type_valid_list]
 
     @property

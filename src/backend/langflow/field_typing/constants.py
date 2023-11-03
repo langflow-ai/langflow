@@ -3,7 +3,7 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.llms.base import BaseLLM, BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.schema import BaseOutputParser, BaseRetriever, Document
 from langchain.schema.embeddings import Embeddings
 from langchain.schema.memory import BaseMemory
@@ -27,6 +27,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseLLM": BaseLLM,
     "BaseLanguageModel": BaseLanguageModel,
     "PromptTemplate": PromptTemplate,
+    "ChatPromptTemplate": ChatPromptTemplate,
     "BaseLoader": BaseLoader,
     "Document": Document,
     "TextSplitter": TextSplitter,
