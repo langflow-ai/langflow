@@ -1,7 +1,7 @@
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
-from langchain.llms.base import BaseLLM
+from langchain.llms.base import BaseLLM, BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseOutputParser, BaseRetriever, Document
@@ -25,6 +25,7 @@ LANGCHAIN_BASE_TYPES = {
     "AgentExecutor": AgentExecutor,
     "Tool": Tool,
     "BaseLLM": BaseLLM,
+    "BaseLanguageModel": BaseLanguageModel,
     "PromptTemplate": PromptTemplate,
     "BaseLoader": BaseLoader,
     "Document": Document,
