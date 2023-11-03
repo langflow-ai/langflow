@@ -287,7 +287,10 @@ def flow(client, json_flow: str, active_user):
 
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(
-        name="test_flow", data=loaded_json.get("data"), user_id=active_user.id
+        name="test_flow",
+        data=loaded_json.get("data"),
+        user_id=active_user.id,
+        description="description",
     )
     flow = Flow(**flow_data.dict())
     with session_getter(get_db_service()) as session:
