@@ -1,5 +1,5 @@
 import ast
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Optional
 from pydantic import BaseModel
 from fastapi import HTTPException
 
@@ -16,9 +16,9 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 
 class Component(BaseModel):
-    ERROR_CODE_NULL: ClassVar[Dict] = "Python code must be provided."
+    ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[
-        Dict
+        str
     ] = "The name of the entrypoint function must be provided."
 
     code: Optional[str] = None

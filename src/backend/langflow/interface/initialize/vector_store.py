@@ -196,7 +196,7 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
         params.pop("documents", None)
         params.pop("texts", None)
         params["embedding_function"] = params.pop("embedding")
-        chromadb = class_object(**params)
+        chromadb_instance = class_object(**params)
     else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
@@ -211,10 +211,10 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
                 if value is None:
                     doc.metadata[key] = ""
 
-        chromadb = class_object.from_documents(**params)
+        chromadb_instance = class_object.from_documents(**params)
     if persist:
-        chromadb.persist()
-    return chromadb
+        chromadb_instance.persist()
+    return chromadb_instance
 
 
 def initialize_qdrant(class_object: Type[Qdrant], params: dict):

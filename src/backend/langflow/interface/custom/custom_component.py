@@ -1,4 +1,4 @@
-from typing import Any, Callable, ClassVar, List, Optional, Union, Dict
+from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 from fastapi import HTTPException
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -19,8 +19,8 @@ class CustomComponent(Component, extra="allow"):
     description = "Custom Component"
     code: Optional[str] = None
     field_config: dict = {}
-    code_class_base_inheritance: ClassVar[Dict] = "CustomComponent"
-    function_entrypoint_name: ClassVar[Dict] = "build"
+    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     return_type_valid_list: List[str] = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""

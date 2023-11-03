@@ -5,7 +5,7 @@ from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import root_validator, validator
+from pydantic import validator, model_validator
 from pydantic_settings import BaseSettings
 from langflow.utils.logger import logger
 
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
         extra = "ignore"
         env_prefix = "LANGFLOW_"
 
-    @root_validator(allow_reuse=True)
+    @model_validator(mode="after")
     def validate_lists(cls, values):
         for key, value in values.items():
             if key != "dev" and not value:

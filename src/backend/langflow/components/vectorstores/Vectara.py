@@ -13,7 +13,7 @@ class VectaraComponent(CustomComponent):
     documentation = (
         "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     )
-    beta: str = True
+    beta: bool = True
     # api key should be password = True
     field_config = {
         "vectara_customer_id": {"display_name": "Vectara Customer ID"},
