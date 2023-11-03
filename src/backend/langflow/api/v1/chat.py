@@ -127,7 +127,6 @@ async def stream_build(
     flow_id: str,
     chat_service: "ChatService" = Depends(get_chat_service),
     cache_service: "BaseCacheService" = Depends(get_cache_service),
-    user=Depends(get_current_active_user),
 ):
     """Stream the build process based on stored flow data."""
 
@@ -161,6 +160,11 @@ async def stream_build(
             number_of_nodes = len(graph.nodes)
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
+            try:
+                user_id = cache_service[flow_id]["user_id"]
+            except KeyError:
+                logger.debug("No user_id found in cache_service")
+                user_id = None
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
                     log_dict = {
@@ -168,9 +172,9 @@ async def stream_build(
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     if vertex.is_task:
-                        vertex = try_running_celery_task(vertex, user.id)
+                        vertex = try_running_celery_task(vertex, user_id)
                     else:
-                        vertex.build(user_id=user.id)
+                        vertex.build(user_id=user_id)
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
