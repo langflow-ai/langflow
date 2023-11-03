@@ -69,7 +69,7 @@ def test_build_template_from_function():
         "ExampleClass1", type_to_loader_dict, add_function=True
     )
     assert result_with_function is not None
-    assert "function" in result_with_function["base_classes"]
+    assert "Callable" in result_with_function["base_classes"]
 
     # Test with invalid name
     with pytest.raises(ValueError, match=r".* not found"):

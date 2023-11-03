@@ -35,7 +35,7 @@ class ToolNode(FrontendNode):
             ),
             TemplateField(
                 name="func",
-                field_type="function",
+                field_type="Callable",
                 required=True,
                 is_list=False,
                 show=True,
@@ -135,7 +135,7 @@ class PythonFunctionNode(FrontendNode):
         ],
     )
     description: str = "Python function to be executed."
-    base_classes: list[str] = ["function"]
+    base_classes: list[str] = ["Callable"]
 
     def to_dict(self):
         return super().to_dict()

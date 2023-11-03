@@ -22,7 +22,7 @@ def test_conversation_chain(client: TestClient, logged_in_headers):
         "ConversationChain",
         "LLMChain",
         "Chain",
-        "function",
+        "Callable",
     }
 
     template = chain["template"]
@@ -111,7 +111,7 @@ def test_llm_chain(client: TestClient, logged_in_headers):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "function",
+        "Callable",
         "LLMChain",
         "Chain",
     }
@@ -182,7 +182,7 @@ def test_llm_checker_chain(client: TestClient, logged_in_headers):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "function",
+        "Callable",
         "LLMCheckerChain",
         "Chain",
     }
@@ -216,7 +216,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
     chain = chains["LLMMathChain"]
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "function",
+        "Callable",
         "LLMMathChain",
         "Chain",
     }
@@ -309,7 +309,7 @@ def test_series_character_chain(client: TestClient, logged_in_headers):
 
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
     assert set(chain["base_classes"]) == {
-        "function",
+        "Callable",
         "LLMChain",
         "BaseCustomChain",
         "Chain",
