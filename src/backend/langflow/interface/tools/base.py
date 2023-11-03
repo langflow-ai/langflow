@@ -36,7 +36,7 @@ TOOL_INPUTS = {
         field_type="BaseLanguageModel", required=True, is_list=False, show=True
     ),
     "func": TemplateField(
-        field_type="function",
+        field_type="Callable",
         required=True,
         is_list=False,
         show=True,
@@ -126,7 +126,7 @@ class ToolCreator(LangChainTypeCreator):
         elif tool_type in CUSTOM_TOOLS:
             # Get custom tool params
             params = self.type_to_loader_dict[name]["params"]  # type: ignore
-            base_classes = ["function"]
+            base_classes = ["Callable"]
             if node := customs.get_custom_nodes("tools").get(tool_type):
                 return node
         elif tool_type in FILE_TOOLS:

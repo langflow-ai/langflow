@@ -60,7 +60,7 @@ def build_template_from_function(
             # the output to be a function
             base_classes = get_base_classes(_class)
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, name),
@@ -114,7 +114,7 @@ def build_template_from_class(
             # Adding function to base classes to allow
             # the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
             return {
                 "template": format_dict(variables, name),
                 "description": docs.short_description or "",
@@ -178,7 +178,7 @@ def build_template_from_method(
 
             # Adding function to base classes to allow the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, class_name),
