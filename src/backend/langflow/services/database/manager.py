@@ -94,7 +94,7 @@ class DatabaseService(Service):
         legacy_tables = ["flowstyle"]
 
         for table, model in model_mapping.items():
-            expected_columns = list(model.__fields__.keys())
+            expected_columns = list(model.model_fields.keys())
 
             try:
                 available_columns = [
