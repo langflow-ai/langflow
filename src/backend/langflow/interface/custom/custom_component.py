@@ -15,8 +15,8 @@ import yaml
 
 
 class CustomComponent(Component, extra="allow"):
-    display_name = "Custom Component"
-    description = "Custom Component"
+    display_name: Optional[str] = "Custom Component"
+    description: Optional[str] = "Custom Component"
     code: Optional[str] = None
     field_config: dict = {}
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
