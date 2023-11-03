@@ -32,6 +32,7 @@ from .constants import (
     NestedDict,
     Data,
     BaseLanguageModel,
+    Callable,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     "TextSplitter",
     "Document",
     "AgentExecutor",
+    "Callable",
 ]
