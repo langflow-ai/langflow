@@ -14,8 +14,8 @@ agents:
   SQLAgent:
     documentation: ""
 chains:
-  LLMChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
+  # LLMChain:
+  #   documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
   LLMMathChain:
     documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_math"
   LLMCheckerChain:
