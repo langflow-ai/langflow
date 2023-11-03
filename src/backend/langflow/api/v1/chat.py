@@ -3,6 +3,7 @@ from fastapi import (
     Body,
     Depends,
     HTTPException,
+    Query,
     WebSocket,
     WebSocketException,
     status,
@@ -19,7 +20,6 @@ from langflow.api.v1.schemas import (
     StreamData,
 )
 
-from langflow.services.database.models.user.user import User
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
@@ -27,6 +27,10 @@ from langflow.processing.process import process_tweaks_on_graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user
 from langflow.services.database.models.flow.flow import Flow
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import (
+    get_current_active_user,
+    get_current_user_by_jwt,
+)
 from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
@@ -42,12 +46,13 @@ router = APIRouter(tags=["Chat"])
 async def chat(
     client_id: str,
     websocket: WebSocket,
+    token: str = Query(...),
     db: Session = Depends(get_session),
     chat_service: "ChatService" = Depends(get_chat_service),
-    user: User = Depends(get_current_active_user),
 ):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user_by_jwt(token, db)
         await websocket.accept()
         if not user:
             await websocket.close(
