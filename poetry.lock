@@ -7813,13 +7813,13 @@ files = [
 
 [[package]]
 name = "types-redis"
-version = "4.6.0.8"
+version = "4.6.0.9"
 description = "Typing stubs for redis"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "types-redis-4.6.0.8.tar.gz", hash = "sha256:1abb2859bbf9b171a22ef69d1ece0e35ef93e642fba97538497add884ad75b5e"},
-    {file = "types_redis-4.6.0.8-py3-none-any.whl", hash = "sha256:4839923b4cce77bbf987290ca83710f8218529eebe1d2c3a0f067416c86847f5"},
+    {file = "types-redis-4.6.0.9.tar.gz", hash = "sha256:06ac31ed7b23aae2d230a62e4bf7d0037aee10ab9f68eee261ac8be8402daf92"},
+    {file = "types_redis-4.6.0.9-py3-none-any.whl", hash = "sha256:12fb29ff019b62998b17bb086cff260e625477db1a17bfca6bae0f43ab3447a5"},
 ]
 
 [package.dependencies]
@@ -8633,4 +8633,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "fbab7534805dabfdd85b51d1bd42012128761ddae4e4b546992ee5325e72faf5"
+content-hash = "66a2df0a0068bb092515a1abe2ebf9b5a182cda5739c05b3a946541440507687"
