@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class FlowBase(SQLModelSerializable):
     name: str = Field(index=True)
-    description: Optional[str] = Field(index=True)
+    description: Optional[str] = Field(index=True, nullable=True, default=None)
     data: Optional[Dict] = Field(default=None, nullable=True)
 
     @validator("data")
