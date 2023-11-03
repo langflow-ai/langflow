@@ -31,6 +31,7 @@ from .constants import (
     AgentExecutor,
     NestedDict,
     Data,
+    BaseLanguageModel,
 )
 
 __all__ = [
@@ -41,6 +42,7 @@ __all__ = [
     "Chain",
     "BaseChatMemory",
     "BaseLLM",
+    "BaseLanguageModel",
     "BaseLoader",
     "BaseMemory",
     "BaseOutputParser",
