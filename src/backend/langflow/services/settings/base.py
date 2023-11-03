@@ -55,14 +55,14 @@ class Settings(BaseSettings):
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
         if not value:
-            import appdirs
+            from platformdirs import user_cache_dir
 
             # Define the app name and author
             app_name = "langflow"
             app_author = "logspace"
 
             # Get the cache directory for the application
-            cache_dir = appdirs.user_cache_dir(app_name, app_author)
+            cache_dir = user_cache_dir(app_name, app_author)
 
             # Create a .langflow directory inside the cache directory
             value = Path(cache_dir)
