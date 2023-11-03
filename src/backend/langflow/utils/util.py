@@ -276,6 +276,7 @@ def format_dict(
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
+        _type = get_type_from_union_literal(_type)
 
         value["type"] = get_formatted_type(key, _type)
         value["show"] = should_show_field(value, key)
@@ -293,6 +294,15 @@ def format_dict(
         add_options_to_field(value, class_name, key)
 
     return dictionary
+
+
+# "Union[Literal['f-string'], Literal['jinja2']]" -> "str"
+def get_type_from_union_literal(union_literal: str) -> str:
+    # if types are literal strings
+    # the type is a string
+    if "Literal" in union_literal:
+        return "str"
+    return union_literal
 
 
 def get_type(value: Any) -> Union[str, type]:
