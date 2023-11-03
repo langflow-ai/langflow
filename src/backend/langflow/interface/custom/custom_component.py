@@ -11,11 +11,12 @@ from langflow.utils import validate
 
 from langflow.services.database.utils import session_getter
 from langflow.services.database.models.flow import Flow
-from pydantic import Extra
 import yaml
 
 
-class CustomComponent(Component, extra=Extra.allow):
+class CustomComponent(Component, extra="allow"):
+    display_name: ClassVar[str] = "Custom Component"
+    description: ClassVar[str] = "Custom Component"
     code: Optional[str] = None
     field_config: dict = {}
     code_class_base_inheritance: ClassVar[Dict] = "CustomComponent"
