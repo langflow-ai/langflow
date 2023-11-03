@@ -15,7 +15,7 @@ from langflow.services.database.models.user.crud import (
 from langflow.services.getters import get_session, get_settings_service
 from sqlmodel import Session
 
-oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login")
+oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
@@ -74,22 +74,21 @@ async def get_current_user(
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
 ) -> User:
-    try:
+    if token:
         return await get_current_user_by_jwt(token, db)
-    except HTTPException as exc:
+    else:
         if not query_param and not header_param:
-            raise exc
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="An API key must be passed as query or header",
+            )
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing API key",
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {exc}",
         )
 
 
