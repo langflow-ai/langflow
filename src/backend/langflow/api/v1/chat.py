@@ -127,6 +127,7 @@ async def stream_build(
     flow_id: str,
     chat_service: "ChatService" = Depends(get_chat_service),
     cache_service: "BaseCacheService" = Depends(get_cache_service),
+    user=Depends(get_current_active_user),
 ):
     """Stream the build process based on stored flow data."""
 
@@ -167,9 +168,9 @@ async def stream_build(
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     if vertex.is_task:
-                        vertex = try_running_celery_task(vertex)
+                        vertex = try_running_celery_task(vertex, user.id)
                     else:
-                        vertex.build()
+                        vertex.build(user_id=user.id)
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
@@ -233,7 +234,7 @@ async def stream_build(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-def try_running_celery_task(vertex):
+def try_running_celery_task(vertex, user_id):
     # Try running the task in celery
     # and set the task_id to the local vertex
     # if it fails, run the task locally
@@ -245,5 +246,5 @@ def try_running_celery_task(vertex):
     except Exception as exc:
         logger.debug(f"Error running task in celery: {exc}")
         vertex.task_id = None
-        vertex.build()
+        vertex.build(user_id=user_id)
     return vertex
