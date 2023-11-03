@@ -214,10 +214,10 @@ def test_patch_user_wrong_id(client, active_user, logged_in_headers):
             {
                 "type": "uuid_parsing",
                 "loc": ["path", "user_id"],
-                "msg": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1",
+                "msg": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1",  # noqa
                 "input": "wrong_id",
                 "ctx": {
-                    "error": "invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1"
+                    "error": "invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1"  # noqa
                 },
                 "url": "https://errors.pydantic.dev/2.4/v/uuid_parsing",
             }
@@ -241,10 +241,10 @@ def test_delete_user_wrong_id(client, test_user, super_user_headers):
             {
                 "type": "uuid_parsing",
                 "loc": ["path", "user_id"],
-                "msg": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1",
+                "msg": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1",  # noqa
                 "input": "wrong_id",
                 "ctx": {
-                    "error": "invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1"
+                    "error": "invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `w` at 1"  # noqa
                 },
                 "url": "https://errors.pydantic.dev/2.4/v/uuid_parsing",
             }
