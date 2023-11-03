@@ -17,6 +17,8 @@
 from .constants import (
     Tool,
     PromptTemplate,
+    ChatPromptTemplate,
+    BasePromptTemplate,
     Chain,
     BaseChatMemory,
     BaseLLM,
@@ -54,4 +56,6 @@ __all__ = [
     "Document",
     "AgentExecutor",
     "Callable",
+    "BasePromptTemplate",
+    "ChatPromptTemplate",
 ]
