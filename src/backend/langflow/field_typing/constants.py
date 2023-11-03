@@ -10,7 +10,7 @@ from langchain.schema.memory import BaseMemory
 from langchain.text_splitter import TextSplitter
 from langchain.tools import Tool
 from langchain.vectorstores.base import VectorStore
-from typing import Union, Dict
+from typing import Union, Dict, Callable
 
 # Type alias for more complex dicts
 NestedDict = Dict[str, Union[str, Dict]]
@@ -48,4 +48,5 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "dict": dict,
     "NestedDict": NestedDict,
     "Data": Data,
+    "Callable": Callable,
 }
