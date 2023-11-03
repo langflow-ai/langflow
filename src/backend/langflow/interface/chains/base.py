@@ -9,6 +9,7 @@ from langflow.template.frontend_node.chains import ChainFrontendNode
 from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
 from langchain import chains
+from langchain_experimental.sql import SQLDatabaseChain
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 
@@ -37,7 +38,7 @@ class ChainCreator(LangChainTypeCreator):
             }
             from langflow.interface.chains.custom import CUSTOM_CHAINS
 
-            # self.type_dict["SQLDatabaseChain"] = SQLDatabaseChain
+            self.type_dict["SQLDatabaseChain"] = SQLDatabaseChain
 
             self.type_dict.update(CUSTOM_CHAINS)
             # Filter according to settings.chains
