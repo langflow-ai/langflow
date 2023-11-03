@@ -96,7 +96,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "placeholder": "",
         "show": False,
         "multiline": False,
-        "value": True,
+        "value": False,
         "password": False,
         "name": "validate_template",
         "type": "bool",
