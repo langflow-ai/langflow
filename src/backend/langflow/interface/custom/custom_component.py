@@ -14,7 +14,7 @@ from langflow.services.database.models.flow import Flow
 import yaml
 
 
-class CustomComponent(Component, extra="allow"):
+class CustomComponent(Component):
     display_name: Optional[str] = "Custom Component"
     description: Optional[str] = "Custom Component"
     code: Optional[str] = None
@@ -203,7 +203,7 @@ class CustomComponent(Component, extra="allow"):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices(graph_data)
+        return build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self.user_id:

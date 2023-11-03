@@ -1,6 +1,5 @@
 import ast
 from typing import Any, ClassVar, Optional
-from pydantic import BaseModel
 from fastapi import HTTPException
 
 from langflow.utils import validate
@@ -15,7 +14,7 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
     pass
 
 
-class Component(BaseModel):
+class Component:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[
         str
@@ -26,7 +25,8 @@ class Component(BaseModel):
     field_config: dict = {}
 
     def __init__(self, **data):
-        super().__init__(**data)
+        for key, value in data.items():
+            setattr(self, key, value)
 
     def get_code_tree(self, code: str):
         parser = CodeParser(code)

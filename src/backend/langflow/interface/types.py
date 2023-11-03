@@ -208,7 +208,7 @@ def update_attributes(frontend_node, template_config):
             frontend_node[attribute] = template_config[attribute]
 
 
-def build_field_config(custom_component: CustomComponent):
+def build_field_config(custom_component: CustomComponent, user_id: str = None):
     """Build the field configuration for a custom component"""
 
     try:
@@ -218,7 +218,7 @@ def build_field_config(custom_component: CustomComponent):
         return {}
 
     try:
-        return custom_class().build_config()
+        return custom_class(user_id=user_id).build_config()
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
         return {}
@@ -306,7 +306,9 @@ def add_output_types(frontend_node, return_types: List[str]):
         frontend_node.get("output_types").append(return_type)
 
 
-def build_langchain_template_custom_component(custom_component: CustomComponent):
+def build_langchain_template_custom_component(
+    custom_component: CustomComponent, user_id: str = None
+):
     """Build a custom component template for the langchain"""
     try:
         logger.debug("Building custom component template")
@@ -319,7 +321,7 @@ def build_langchain_template_custom_component(custom_component: CustomComponent)
 
         update_attributes(frontend_node, template_config)
         logger.debug("Updated attributes")
-        field_config = build_field_config(custom_component)
+        field_config = build_field_config(custom_component, user_id=user_id)
         logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
