@@ -12,7 +12,10 @@ class ConversationChainComponent(CustomComponent):
         return {
             "prompt": {"display_name": "Prompt"},
             "llm": {"display_name": "LLM"},
-            "memory": {"display_name": "Memory"},
+            "memory": {
+                "display_name": "Memory",
+                "info": "Memory to load context from. If none is provided, a ConversationBufferMemory will be used.",
+            },
             "code": {"show": False},
         }
 
@@ -21,4 +24,6 @@ class ConversationChainComponent(CustomComponent):
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
     ) -> Union[Chain, Callable]:
+        if memory is None:
+            return ConversationChain(llm=llm)
         return ConversationChain(llm=llm, memory=memory)
