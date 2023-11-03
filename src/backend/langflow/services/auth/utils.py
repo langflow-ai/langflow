@@ -4,7 +4,6 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from typing import Annotated, Coroutine, Optional, Union
 from uuid import UUID
-from starlette.requests import Request
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.user import User
@@ -77,13 +76,20 @@ async def get_current_user(
 ) -> User:
     try:
         return await get_current_user_by_jwt(token, db)
-    except HTTPException:
+    except HTTPException as exc:
+        if not query_param and not header_param:
+            raise exc
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing API key",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {exc}",
         )
 
 
