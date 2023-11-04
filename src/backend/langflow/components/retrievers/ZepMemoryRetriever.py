@@ -17,13 +17,14 @@ class ZepMemoryComponent(CustomComponent):
         return {
             "session_id": {
                 "display_name": "Session ID",
+                "required": True,
             },
             "url": {
                 "display_name": "Server URL",
+                "required": True,
             },
             "api_key": {
                 "display_name": "API Key",
-                "optional": True,
                 "password": True,
             },
             "top_k": {
@@ -31,10 +32,13 @@ class ZepMemoryComponent(CustomComponent):
             },
             "search_scope": {
                 "display_name": "Search Scope",
+                "options": ["summary", "messages"],
+                "field_type": "str",
             },
             "search_type": {
                 "display_name": "Search Type",
-                "optional": True,
+                "options": ["mmr", "similarity"],
+                "field_type": "str",
             },
             "mmr_lambda": {
                 "display_name": "MMR Lambda",
