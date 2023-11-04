@@ -12,7 +12,10 @@ from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.auth.utils import (
+    get_current_active_user,
+    get_current_user_by_jwt,
+)
 from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
@@ -34,8 +37,8 @@ async def chat(
 ):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user_by_jwt(token, db)
         await websocket.accept()
-        user = await get_current_user(token, db)
         if not user:
             await websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
