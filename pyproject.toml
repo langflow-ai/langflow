@@ -75,7 +75,7 @@ google-cloud-aiplatform = "^1.26.1"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
-langchain-experimental = "^0.0.8"
+langchain-experimental = "^0.0.37"
 celery = { extras = ["redis"], version = "^5.3.1", optional = true }
 redis = { version = "^4.6.0", optional = true }
 flower = { version = "^2.0.0", optional = true }

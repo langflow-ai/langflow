@@ -3514,17 +3514,20 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langchain-experimental"
-version = "0.0.8"
+version = "0.0.37"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain_experimental-0.0.8-py3-none-any.whl", hash = "sha256:34cf202ba29fdef178c5d68772cf2fa08dd2a0fad588ca3ef324ae71e596cc21"},
-    {file = "langchain_experimental-0.0.8.tar.gz", hash = "sha256:35d198f8e70a053ccd84273198ff08b4b700ac03ec5f43ba9b7ef797dd42ad14"},
+    {file = "langchain_experimental-0.0.37-py3-none-any.whl", hash = "sha256:5cf5b26f142766596a1e313cabbfceb9cbd5cd2cf46f4a21e92c66ed11466dac"},
+    {file = "langchain_experimental-0.0.37.tar.gz", hash = "sha256:c30fae03702ab071b7040ff6a0fdedd4b4d1028c6c2d8481db0921d7a216e078"},
 ]
 
 [package.dependencies]
-langchain = ">=0.0.239"
+langchain = ">=0.0.308"
+
+[package.extras]
+extended-testing = ["faker (>=19.3.1,<20.0.0)", "presidio-analyzer (>=2.2.33,<3.0.0)", "presidio-anonymizer (>=2.2.33,<3.0.0)", "sentence-transformers (>=2,<3)", "vowpal-wabbit-next (==0.6.0)"]
 
 [[package]]
 name = "langdetect"
@@ -8740,4 +8743,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "ba07832f1da8fd8750c888ef745d61160206dab20b030437ba388fa2ae73f5f6"
+content-hash = "bd5e592ffef67e8790a87c50d8bd880a69cb455be873977a4d0a93a6ee883e94"
