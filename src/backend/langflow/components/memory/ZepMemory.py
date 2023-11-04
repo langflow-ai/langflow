@@ -77,5 +77,5 @@ class ZepMemoryComponent(CustomComponent):
                 memory_key=memory_key,
             )  # type: ignore
         except Exception as e:
-            raise ValueError("Could not connect to AmazonKendra API.") from e
+            raise ValueError("Could not connect to Zep API.") from e
         return memory
