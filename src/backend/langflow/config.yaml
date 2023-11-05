@@ -137,8 +137,6 @@ llms:
   ###
 memories:
   # https://github.com/supabase-community/supabase-py/issues/482
-  # ZepChatMessageHistory:
-  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/zep_memory"
   ConversationEntityMemory:
     documentation: "https://python.langchain.com/docs/modules/memory/integrations/entity_memory_with_sqlite"
   # https://github.com/hwchase17/langchain/issues/6091
@@ -265,8 +263,6 @@ retrievers:
   MultiQueryRetriever:
     documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
   # https://github.com/supabase-community/supabase-py/issues/482
-  # ZepRetriever:
-  #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
 vectorstores:
   # Chroma:
   #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
