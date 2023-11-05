@@ -82,7 +82,6 @@ export default function newChatView(): JSX.Element {
         newData.node!.template["message"].value = chatValue;
         chatInput.data = { ...newData };
         updateNodeFlowData(chatInputId!, newData);
-        console.log("rodou");
         buildFlow()
           .then(() => {
             setLockChat(false);
@@ -110,22 +109,6 @@ export default function newChatView(): JSX.Element {
 
   return (
     <div className="form-modal-iv-box ">
-      <div className="form-modal-iv-size">
-        <div className="file-component-arrangement">
-          <IconComponent name="Variable" className=" file-component-variable" />
-          <span className="file-component-variables-span text-md">
-            Input Variables
-          </span>
-        </div>
-        <div className="file-component-variables-title">
-          <div className="file-component-variables-div">
-            <span className="text-sm font-medium text-primary">Name</span>
-          </div>
-          <div className="file-component-variables-div">
-            <span className="text-sm font-medium text-primary">Chat Input</span>
-          </div>
-        </div>
-      </div>
       <div className="eraser-column-arrangement">
         <div className="eraser-size">
           <div className="eraser-position">
