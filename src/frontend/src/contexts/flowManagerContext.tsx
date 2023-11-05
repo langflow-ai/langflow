@@ -50,6 +50,7 @@ const initialValue: FlowManagerContextType = {
   inputIds: [],
   outputIds: [],
   showPanel: false,
+  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => {},
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -98,6 +99,15 @@ export default function FlowManagerProvider({ children }) {
       }
       return newFlowPool;
     });
+  }
+
+  function updateNodeFlowData(nodeId: string, newData: NodeDataType) {
+    let oldNodes = reactFlowInstance?.getNodes();
+    let targetNode = oldNodes?.find((node) => node.id === nodeId);
+    if (targetNode) {
+      targetNode.data = cloneDeep(newData);
+      reactFlowInstance?.setNodes([...oldNodes!]);
+    }
   }
 
   function checkInputandOutput(flow?: FlowType): boolean {
@@ -378,6 +388,7 @@ export default function FlowManagerProvider({ children }) {
         setFilterEdge,
         getTweak,
         setTweak,
+        updateNodeFlowData,
       }}
     >
       {children}

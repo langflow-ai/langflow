@@ -239,7 +239,8 @@ export default function Page({
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
       onNodesChange(change);
-      updateInputsOutputs();
+      updateInputsOutputs(flow);
+      console.log("change", change);
       //@ts-ignore
       setTabsState((prev: TabsState) => {
         return {

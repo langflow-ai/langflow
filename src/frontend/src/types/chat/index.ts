@@ -9,5 +9,5 @@ export type ChatMessageType = {
   thought?: string;
   files?: Array<{ data: string; type: string; data_type: string }>;
   prompt?: string;
-  chatKey: string;
+  chatKey?: string;
 };

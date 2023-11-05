@@ -1,10 +1,17 @@
 import { useContext } from "react";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
+import NewChatView from "../newChatView";
 import TextInputComponent from "../textInputComponent";
 import TextOutputComponent from "../textOutputComponent";
 
 export default function IOView(): JSX.Element {
-  const { flowPool, inputIds, outputIds } = useContext(flowManagerContext);
+  const { flowPool, inputIds, outputIds, inputTypes, outputTypes } =
+    useContext(flowManagerContext);
+
+  if (inputTypes.includes("ChatInput") && outputTypes.includes("ChatOutput")) {
+    return <NewChatView />;
+  }
+
   return (
     <div className="flex w-full justify-around">
       <div className="flex flex-col gap-4">

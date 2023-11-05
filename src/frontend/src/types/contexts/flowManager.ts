@@ -1,6 +1,6 @@
 import { ReactFlowInstance } from "reactflow";
 import { tweakType } from "../components";
-import { FlowType, NodeType } from "../flow";
+import { FlowType, NodeDataType, NodeType } from "../flow";
 
 export type FlowPoolType = {
   //TODO improve the flowPool type
@@ -40,4 +40,5 @@ export type FlowManagerContextType = {
   inputIds: string[];
   outputIds: string[];
   showPanel: boolean;
+  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => void;
 };

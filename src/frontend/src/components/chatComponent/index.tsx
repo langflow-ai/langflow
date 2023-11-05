@@ -5,9 +5,9 @@ import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
+import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { getBuildStatus } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import { NodeType } from "../../types/flow";
 import IOView from "../IOview";
@@ -16,9 +16,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const { tabsState } = useContext(FlowsContext);
-  const { flowPool, showPanel, isBuilt, setIsBuilt } =
-    useContext(flowManagerContext);
-  const [validIO, setValidIO] = useState(true);
+  const { showPanel, isBuilt, setIsBuilt } = useContext(flowManagerContext);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -36,18 +34,18 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     };
   }, [isBuilt]);
 
-  useEffect(() => {
-    // Define an async function within the useEffect hook
-    const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id).catch((err) => {
-        console.error(err);
-      });
-      setIsBuilt(!!response.built);
-    };
+  // useEffect(() => {
+  //   // Define an async function within the useEffect hook
+  //   const fetchBuildStatus = async () => {
+  //     const response = await getBuildStatus(flow.id).catch((err) => {
+  //       console.error(err);
+  //     });
+  //     setIsBuilt(!!response.built);
+  //   };
 
-    // Call the async function
-    fetchBuildStatus();
-  }, [flow]);
+  //   // Call the async function
+  //   fetchBuildStatus();
+  // }, [flow]);
 
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes: NodeType[] = useNodes();
@@ -80,30 +78,31 @@ export default function Chat({ flow }: ChatType): JSX.Element {
 
   return (
     <>
-      <div onClick={() => setValidIO(true)}>
+      <div className="flex flex-col">
         <BuildTrigger
           open={open}
           flow={flow}
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {Object.keys(flowPool).length > 0 && (
-          <BaseModal open={validIO} setOpen={setValidIO}>
-            <BaseModal.Header description={"inputs and outputs from flow"}>
-              inputs & outputs
+        {showPanel && (
+          <BaseModal open={open} setOpen={setOpen}>
+            <BaseModal.Trigger>
+              <ChatTrigger
+                canOpen={canOpen}
+                open={open}
+                setOpen={setOpen}
+                isBuilt={isBuilt}
+              />
+            </BaseModal.Trigger>
+            {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
+            <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
+              Chat
             </BaseModal.Header>
             <BaseModal.Content>
               <IOView />
             </BaseModal.Content>
           </BaseModal>
-        )}
-        {showPanel && (
-          <ChatTrigger
-            canOpen={canOpen}
-            open={open}
-            setOpen={setOpen}
-            isBuilt={isBuilt}
-          />
         )}
       </div>
     </>

@@ -57,6 +57,10 @@ export default function GenericNode({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   let numberOfInputs: boolean[] = [];
 
+  useEffect(() => {
+    if (JSON.stringify(olddata) !== JSON.stringify(data)) setData(olddata);
+  }, [olddata]);
+
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)
       .filter((templateField) => templateField.charAt(0) !== "_")
