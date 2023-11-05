@@ -204,6 +204,8 @@ class ChainVertex(StatelessVertex):
     def _custom_build(self, *args, **kwargs):
         force = kwargs.get("force", False)
         user_id = kwargs.get("user_id", None)
+        # Remove this once LLMChain is CustomComponent
+        self.params.pop("code", None)
         for key, value in self.params.items():
             if isinstance(value, PromptVertex):
                 # Build the PromptVertex, passing the tools if available
