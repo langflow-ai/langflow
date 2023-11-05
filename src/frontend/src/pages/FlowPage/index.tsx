@@ -1,17 +1,20 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../components/headerComponent";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getVersion } from "../../controllers/API";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {
+  const { setFlow } = useContext(flowManagerContext);
   const { flows, selectedFlowId, setFlowId } = useContext(FlowsContext);
   const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {
     setFlowId(id!);
+    setFlow(flows.find((flow) => flow.id === id!)!);
   }, [id]);
 
   // Initialize state variable for the version

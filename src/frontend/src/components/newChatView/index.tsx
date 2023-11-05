@@ -22,6 +22,7 @@ export default function newChatView(): JSX.Element {
     outputIds,
     inputIds,
     updateNodeFlowData,
+    buildFlow,
   } = useContext(flowManagerContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
@@ -81,8 +82,16 @@ export default function newChatView(): JSX.Element {
         newData.node!.template["message"].value = chatValue;
         chatInput.data = { ...newData };
         updateNodeFlowData(chatInputId!, newData);
+        console.log("rodou");
+        buildFlow()
+          .then(() => {
+            setLockChat(false);
+          })
+          .catch((err) => {
+            console.error(err);
+            setLockChat(false);
+          });
       }
-
       //set chat message in the flow and run build
       //@ts-ignore
     } else {

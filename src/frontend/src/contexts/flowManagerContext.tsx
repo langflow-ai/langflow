@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { tweakType } from "../types/components";
 import {
@@ -13,6 +13,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
+import { buildVertices } from "../utils/buildUtils";
 import {
   isInputNode,
   isOutputNode,
@@ -51,6 +52,8 @@ const initialValue: FlowManagerContextType = {
   outputIds: [],
   showPanel: false,
   updateNodeFlowData: (nodeId: string, newData: NodeDataType) => {},
+  buildFlow: () => new Promise(() => {}),
+  setFlow: (flow: FlowType) => {},
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -61,13 +64,14 @@ export default function FlowManagerProvider({ children }) {
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
   const [getTweak, setTweak] = useState<tweakType>([]);
-  const { getNodeId } = useContext(FlowsContext);
+  const { getNodeId, flows, selectedFlowId } = useContext(FlowsContext);
   const [isBuilt, setIsBuilt] = useState(false);
   const [outputTypes, setOutputTypes] = useState<string[]>([]);
   const [inputTypes, setInputTypes] = useState<string[]>([]);
   const [inputIds, setInputIds] = useState<string[]>([]);
   const [outputIds, setOutputIds] = useState<string[]>([]);
   const [showPanel, setShowPanel] = useState(false);
+  const actualFlow = useRef<FlowType | null>(null);
 
   useEffect(() => {
     console.log("inputIds", inputIds);
@@ -204,6 +208,20 @@ export default function FlowManagerProvider({ children }) {
     });
     setOutputIds(outputIds);
     return outputIds;
+  }
+
+  function setFlow(flow: FlowType) {
+    actualFlow.current = flow;
+  }
+
+  async function buildFlow() {
+    function handleBuildUpdate(data: any) {
+      addDataToFlowPool(data.data[data.id], data.id);
+    }
+    return buildVertices({
+      flow: actualFlow.current!,
+      onBuildUpdate: handleBuildUpdate,
+    });
   }
 
   function deleteNode(idx: string | Array<string>) {
@@ -363,6 +381,8 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        setFlow,
+        buildFlow,
         showPanel,
         inputIds,
         outputIds,

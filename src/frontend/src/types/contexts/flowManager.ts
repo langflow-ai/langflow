@@ -41,4 +41,6 @@ export type FlowManagerContextType = {
   outputIds: string[];
   showPanel: boolean;
   updateNodeFlowData: (nodeId: string, newData: NodeDataType) => void;
+  buildFlow: () => Promise<void>;
+  setFlow: (flow: FlowType) => void;
 };
