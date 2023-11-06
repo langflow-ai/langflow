@@ -4,6 +4,7 @@ from langflow.services.getters import get_chat_service
 from langflow import CustomComponent
 from anyio.from_thread import start_blocking_portal
 from loguru import logger
+from langflow.field_typing import Text
 
 
 class ChatOutput(CustomComponent):

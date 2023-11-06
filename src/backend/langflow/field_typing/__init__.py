@@ -18,6 +18,7 @@ from typing import Text
 from .constants import (
     Tool,
     PromptTemplate,
+    BasePromptTemplate,
     Chain,
     BaseChatMemory,
     BaseLLM,
@@ -39,6 +40,7 @@ __all__ = [
     "Data",
     "Tool",
     "PromptTemplate",
+    "BasePromptTemplate",
     "Chain",
     "BaseChatMemory",
     "BaseLLM",
