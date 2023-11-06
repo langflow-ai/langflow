@@ -11,7 +11,10 @@ import { cloneDeep } from "lodash";
 import IconComponent from "../../components/genericIconComponent";
 import { AuthContext } from "../../contexts/authContext";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
-import { ChatOutputType } from "../../types/contexts/flowManager";
+import {
+  ChatOutputType,
+  FlowPoolObjectType,
+} from "../../types/contexts/flowManager";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function newChatView(): JSX.Element {
@@ -33,16 +36,19 @@ export default function newChatView(): JSX.Element {
   //build chat history
   useEffect(() => {
     outputIds.forEach((outputId) => {
+      const chatOutputResponses: FlowPoolObjectType[] = [];
       if (outputId.includes("ChatOutput")) {
-        if (!flowPool[outputId] || flowPool[outputId].length === 0) return;
-        const { is_ai, message } = flowPool[outputId][
-          flowPool[outputId].length - 1
-        ].data.results as ChatOutputType;
-        setChatHistory((prevState) => [
-          ...prevState,
-          { isSend: !is_ai, message },
-        ]);
+        if (flowPool[outputId] && flowPool[outputId].length > 0) {
+          chatOutputResponses.push(...flowPool[outputId]);
+        }
       }
+      const chatMessages: ChatMessageType[] = chatOutputResponses
+        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+        .map((output) => {
+          const { is_ai, message } = output.data.results as ChatOutputType;
+          return { isSend: !is_ai, message };
+        });
+      setChatHistory(chatMessages);
     });
   }, [flowPool, outputIds]);
   useEffect(() => {
