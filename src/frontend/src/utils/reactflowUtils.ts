@@ -618,6 +618,19 @@ export function validateSelection(
     errorsArray.push("Please select more than one node");
   }
 
+  //check IO components inside reactflowComponents
+  if (
+    selection.nodes.some(
+      (n) =>
+        isInputNode(n.data as NodeDataType) ||
+        isOutputNode(n.data as NodeDataType)
+    )
+  ) {
+    errorsArray.push(
+      "Please select only nodes that are not input or output nodes"
+    );
+  }
+
   //check if there are two or more nodes with free outputs
   if (
     selection.nodes.filter(
