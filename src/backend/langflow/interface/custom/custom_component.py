@@ -42,7 +42,7 @@ class CustomComponent(Component, extra=Extra.allow):
         return self.field_config
 
     def _class_template_validation(self, code: str):
-        TYPE_HINT_LIST = ["Optional", "Prompt", "PromptTemplate", "LLMChain"]
+        TYPE_HINT_LIST = ["Optional" "PromptTemplate", "LLMChain"]
 
         if not code:
             raise HTTPException(

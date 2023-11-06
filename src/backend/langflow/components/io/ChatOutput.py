@@ -2,6 +2,7 @@ from typing import Optional
 from langflow import CustomComponent
 
 from langflow.field_typing import Text
+from langflow.utils.schemas import ChatOutputResponse
 
 
 class ChatOutput(CustomComponent):
@@ -19,4 +20,4 @@ class ChatOutput(CustomComponent):
 
     def build(self, is_ai: bool = True, message: Optional[Text] = "") -> Text:
         self.repr_value = message
-        return {"message": message, "is_ai": is_ai}
+        return ChatOutputResponse(message=message, is_ai=is_ai).dict()
