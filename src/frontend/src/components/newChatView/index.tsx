@@ -11,6 +11,7 @@ import { cloneDeep } from "lodash";
 import IconComponent from "../../components/genericIconComponent";
 import { AuthContext } from "../../contexts/authContext";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
+import { ChatOutputType } from "../../types/contexts/flowManager";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function newChatView(): JSX.Element {
@@ -34,11 +35,12 @@ export default function newChatView(): JSX.Element {
     outputIds.forEach((outputId) => {
       if (outputId.includes("ChatOutput")) {
         if (!flowPool[outputId] || flowPool[outputId].length === 0) return;
-        let chatOutput =
-          flowPool[outputId][flowPool[outputId].length - 1].params;
+        const { is_ai, message } = flowPool[outputId][
+          flowPool[outputId].length - 1
+        ].data.results as ChatOutputType;
         setChatHistory((prevState) => [
           ...prevState,
-          { isSend: false, message: chatOutput },
+          { isSend: !is_ai, message },
         ]);
       }
     });

@@ -2,16 +2,16 @@ import { ReactFlowInstance } from "reactflow";
 import { tweakType } from "../components";
 import { FlowType, NodeDataType, NodeType } from "../flow";
 
-type chatInputType = {
+export type chatInputType = {
   result: string;
 };
 
-type ChatOutputType = {
+export type ChatOutputType = {
   message: string;
   is_ai: boolean;
 };
 
-type FlowPoolObjectType = {
+export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
   params: any;
