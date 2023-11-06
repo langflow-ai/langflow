@@ -16,7 +16,6 @@ from typing import Any, Callable, Dict, List, Optional
 from typing import TYPE_CHECKING
 
 
-
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
 
