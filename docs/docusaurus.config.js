@@ -112,8 +112,10 @@ module.exports = {
       },
       colorMode: {
         defaultMode: "light",
-        disableSwitch: true,
-        respectPrefersColorScheme: false,
+        /* Allow users to chose light or dark mode. */
+        disableSwitch: false,
+        /* Respect user preferences, such as low light mode in the evening */
+        respectPrefersColorScheme: true,
       },
       announcementBar: {
         content:
