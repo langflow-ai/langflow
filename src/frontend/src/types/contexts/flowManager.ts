@@ -2,9 +2,25 @@ import { ReactFlowInstance } from "reactflow";
 import { tweakType } from "../components";
 import { FlowType, NodeDataType, NodeType } from "../flow";
 
+type chatInputType = {
+  result: string;
+};
+
+type ChatOutputType = {
+  message: string;
+  is_ai: boolean;
+};
+
+type FlowPoolObjectType = {
+  timestamp: string;
+  valid: boolean;
+  params: any;
+  data: { artifacts: any; results: any | ChatOutputType | chatInputType };
+  id: string;
+};
+
 export type FlowPoolType = {
-  //TODO improve the flowPool type
-  [key: string]: Array<any>;
+  [key: string]: Array<FlowPoolObjectType>;
 };
 
 export type FlowManagerContextType = {

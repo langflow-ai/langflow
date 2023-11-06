@@ -36,8 +36,8 @@ export default function IOView(): JSX.Element {
         {outputIds.map((outputType, index) => {
           let text = "";
           if (flowPool[outputType] && flowPool[outputType].length > 0)
-            text = flowPool[outputType][flowPool[outputType].length - 1].results
-              ?.result as string;
+            text = flowPool[outputType][flowPool[outputType].length - 1].data
+              .results?.result as string;
           return (
             <div key={index}>
               <TextOutputComponent
