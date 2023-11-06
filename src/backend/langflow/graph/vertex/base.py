@@ -1,4 +1,5 @@
 import ast
+from enum import Enum
 import pickle
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import is_basic_type
@@ -15,8 +16,16 @@ from typing import Any, Callable, Dict, List, Optional
 from typing import TYPE_CHECKING
 
 
+
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
+
+
+class PowerComponentTypes(Enum):
+    # ChatInput and ChatOutput are the only ones that are
+    # power components
+    ChatInput = "ChatInput"
+    ChatOutput = "ChatOutput"
 
 
 class Vertex:
@@ -60,6 +69,16 @@ class Vertex:
         return edge_results
 
     def get_built_result(self):
+        # If the Vertex.type is a power component
+        # then we need to return the built object
+        # instead of the result dict
+
+        try:
+            if PowerComponentTypes(self.vertex_type):
+                self._built_result = self._built_object
+        except ValueError:
+            pass
+
         if isinstance(self._built_result, UnbuiltResult):
             return {}
         return {"result": self._built_result}

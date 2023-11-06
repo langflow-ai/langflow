@@ -14,6 +14,7 @@ from langflow.api.v1.schemas import (
     BuildStatus,
     BuiltResponse,
     InitResponse,
+    ResultDict,
     VertexBuildResponse,
     VerticesOrderResponse,
     StreamData,
@@ -297,10 +298,11 @@ def build_vertex(
             # to the frontend
             vertex.set_artifacts()
             artifacts = vertex.artifacts
+            result_dict = ResultDict(result=result_dict, artifacts=artifacts)
         except Exception as exc:
             params = str(exc)
             valid = False
-            result_dict = {}
+            result_dict = ResultDict(result={})
             artifacts = {}
         chat_service.set_cache(flow_id, graph)
 
@@ -308,8 +310,7 @@ def build_vertex(
             valid=valid,
             params=params,
             id=vertex.id,
-            results=result_dict,
-            artifacts=artifacts,
+            data=result_dict,
         )
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
