@@ -208,6 +208,7 @@ class VerticesOrderResponse(BaseModel):
 class ResultDict(BaseModel):
     result: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
+    """Outputs of the vertex build process."""
 
 
 class VertexBuildResponse(BaseModel):
@@ -217,8 +218,6 @@ class VertexBuildResponse(BaseModel):
     """JSON string of the params."""
     data: ResultDict
     """Mapping of vertex ids to result dict containing the param name and result value."""
-    artifacts: dict
-    """Outputs of the vertex build process."""
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
     """Timestamp of the build."""
 
