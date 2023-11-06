@@ -80,7 +80,11 @@ class Vertex:
 
         if isinstance(self._built_result, UnbuiltResult):
             return {}
-        return {"result": self._built_result}
+        return (
+            self._built_result
+            if isinstance(self._built_result, dict)
+            else {"result": self._built_result}
+        )
 
     def set_artifacts(self) -> None:
         pass
