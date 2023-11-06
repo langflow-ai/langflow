@@ -31,7 +31,7 @@ module.exports = {
             [
               remarkCodeHike,
               {
-                theme: "github-light",
+                theme: "github-dark",
                 showCopyButton: true,
                 lineNumbers: true,
               },
