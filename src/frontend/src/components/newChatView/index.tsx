@@ -35,8 +35,7 @@ export default function newChatView(): JSX.Element {
       if (outputId.includes("ChatOutput")) {
         if (!flowPool[outputId] || flowPool[outputId].length === 0) return;
         let chatOutput =
-          flowPool[outputId][flowPool[outputId].length - 1].results?.result ??
-          "error";
+          flowPool[outputId][flowPool[outputId].length - 1].params;
         setChatHistory((prevState) => [
           ...prevState,
           { isSend: false, message: chatOutput },

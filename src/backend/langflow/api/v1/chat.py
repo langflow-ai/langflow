@@ -298,11 +298,11 @@ def build_vertex(
             # to the frontend
             vertex.set_artifacts()
             artifacts = vertex.artifacts
-            result_dict = ResultDict(result=result_dict, artifacts=artifacts)
+            result_dict = ResultDict(results=result_dict, artifacts=artifacts)
         except Exception as exc:
             params = str(exc)
             valid = False
-            result_dict = ResultDict(result={})
+            result_dict = ResultDict(results={})
             artifacts = {}
         chat_service.set_cache(flow_id, graph)
 
