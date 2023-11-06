@@ -35,21 +35,21 @@ export default function newChatView(): JSX.Element {
 
   //build chat history
   useEffect(() => {
+    const chatOutputResponses: FlowPoolObjectType[] = [];
     outputIds.forEach((outputId) => {
-      const chatOutputResponses: FlowPoolObjectType[] = [];
       if (outputId.includes("ChatOutput")) {
         if (flowPool[outputId] && flowPool[outputId].length > 0) {
           chatOutputResponses.push(...flowPool[outputId]);
         }
       }
-      const chatMessages: ChatMessageType[] = chatOutputResponses
-        .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-        .map((output) => {
-          const { is_ai, message } = output.data.results as ChatOutputType;
-          return { isSend: !is_ai, message };
-        });
-      setChatHistory(chatMessages);
     });
+    const chatMessages: ChatMessageType[] = chatOutputResponses
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+      .map((output) => {
+        const { is_ai, message } = output.data.results as ChatOutputType;
+        return { isSend: !is_ai, message };
+      });
+    setChatHistory(chatMessages);
   }, [flowPool, outputIds]);
   useEffect(() => {
     if (messagesRef.current) {
