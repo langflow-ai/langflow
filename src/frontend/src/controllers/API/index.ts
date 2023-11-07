@@ -13,6 +13,7 @@ import {
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { StoreComponentResponse } from "../../types/store";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -621,7 +622,9 @@ export async function getStoreComponents(
   }
 }
 
-export async function getStoreSavedComponents() {
+export async function getStoreSavedComponents(): Promise<
+  StoreComponentResponse | undefined
+> {
   try {
     const res = await api.get(
       `${BASE_URL_API}store/components/?filter_by_user=true`

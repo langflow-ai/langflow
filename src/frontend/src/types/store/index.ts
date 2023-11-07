@@ -9,3 +9,9 @@ export type storeComponent = {
   liked_by_count: number;
   liked_by_user?: boolean;
 };
+
+export type StoreComponentResponse = {
+  count: number;
+  authorized: boolean;
+  results: storeComponent[];
+};
