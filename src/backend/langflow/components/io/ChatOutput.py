@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Optional, Union
 from langflow import CustomComponent
 
-from langflow.field_typing import Text
+from langflow.field_typing import Text, Data
 
 
 class ChatOutput(CustomComponent):
@@ -17,6 +17,8 @@ class ChatOutput(CustomComponent):
     def build_config(self):
         return {"message": {"input_types": ["Text"]}}
 
-    def build(self, is_ai: bool = True, message: Optional[Text] = "") -> Text:
+    def build(
+        self, is_ai: bool = True, message: Optional[Text] = ""
+    ) -> Union[Text, Data]:
         self.repr_value = message
         return message
