@@ -129,19 +129,25 @@ class StoreService(Service):
             "limit": limit,
         }
 
+        filter_conditions = []
+
         if status:
-            params["filter[status]"] = status
-        if is_component:
-            params["filter[is_component][_eq]"] = is_component
+            filter_conditions.append({"status": {"_eq": status}})
+        if is_component is not None:
+            # params["filter[is_component][_eq]"] = is_component
+            filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if tags:
-            params["filter[tags][_in]"] = ",".join(tags)
+            # params["filter[tags][_in]"] = ",".join(tags)
+            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
 
         if date_from:
-            params["filter[date_updated][_gte]"] = date_from.isoformat()
+            # params["filter[date_updated][_gte]"] = date_from.isoformat()
+            filter_conditions.append({"date_updated": {"_gte": date_from.isoformat()}})
 
         if date_to:
-            params["filter[date_updated][_lte]"] = date_to.isoformat()
+            # params["filter[date_updated][_lte]"] = date_to.isoformat()
+            filter_conditions.append({"date_updated": {"_lte": date_to.isoformat()}})
 
         if sort:
             params["sort"] = ",".join(sort)
@@ -158,7 +164,11 @@ class StoreService(Service):
                 }
             )
         else:
-            params["filter"] = json.dumps({"status": {"_eq": "public"}})
+            # params["filter"] = json.dumps({"status": {"_eq": "public"}})
+            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
+
+        if filter_conditions:
+            params["filter"] = json.dumps({"_and": filter_conditions})
 
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
@@ -170,6 +180,7 @@ class StoreService(Service):
         is_component: Optional[bool] = None,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
+        filter_conditions = []
         if filter_by_user:
             params["deep"] = json.dumps(
                 {
@@ -179,10 +190,14 @@ class StoreService(Service):
                 }
             )
         else:
-            params["filter"] = json.dumps({"status": {"_in": ["public", "Public"]}})
+            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
 
-        if is_component:
-            params["filter[is_component][_eq]"] = is_component
+        if is_component is not None:
+            filter_conditions.append({"is_component": {"_eq": is_component}})
+
+        if filter_conditions:
+            params["filter"] = json.dumps({"_and": filter_conditions})
+
         results = self._get(self.components_url, api_key, params)
         return results[0].get("count", 0)
 
@@ -198,9 +213,10 @@ class StoreService(Service):
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
+        filter_conditions = []
 
-        if is_component:
-            params["filter[is_component][_eq]"] = is_component
+        if is_component is not None:
+            filter_conditions.append({"is_component": {"_eq": is_component}})
 
         # Only public components or the ones created by the user
         # check for "public" or "Public"
@@ -209,11 +225,13 @@ class StoreService(Service):
 
         if filter_by_user and api_key:
             user_data = user_data_var.get()
-            params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+            # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+            filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         else:
-            params["filter"] = params["filter"] = json.dumps(
-                {"status": {"_in": ["public", "Public"]}}
-            )
+            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
+
+        if filter_conditions:
+            params["filter"] = json.dumps({"_and": filter_conditions})
 
         results = self._get(self.components_url, api_key, params)
         results_objects = [ListComponentResponse(**component) for component in results]
@@ -318,6 +336,7 @@ class StoreService(Service):
 
     def get_component_likes_count(self, api_key: str, component_id: str) -> int:
         url = f"{self.components_url}/{component_id}"
+
         params = {
             "fields": ",".join(["id", "count(liked_by)"]),
         }
