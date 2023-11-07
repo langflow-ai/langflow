@@ -56,6 +56,7 @@ const initialValue: FlowManagerContextType = {
   buildFlow: () => new Promise(() => { }),
   setFlow: (flow: FlowType) => { },
   pasteFileOnFLow: (file?: File) => new Promise(() => { }),
+  CleanFlowPool: () => { },
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -431,6 +432,10 @@ export default function FlowManagerProvider({ children }) {
     }
   }
 
+  function CleanFlowPool(){
+    setFlowPool({})
+  }
+
   return (
     <flowManagerContext.Provider
       value={{
@@ -463,6 +468,7 @@ export default function FlowManagerProvider({ children }) {
         getTweak,
         setTweak,
         updateNodeFlowData,
+        CleanFlowPool,
       }}
     >
       {children}

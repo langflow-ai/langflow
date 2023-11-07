@@ -23,7 +23,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
   const { getFilterEdge, setFilterEdge, isBuilt,pasteFileOnFLow } =
     useContext(flowManagerContext);
-  const { flows, selectedFlowId, uploadFlow, tabsState, saveFlow } =
+  const { flows, selectedFlowId, tabsState, saveFlow } =
     useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);

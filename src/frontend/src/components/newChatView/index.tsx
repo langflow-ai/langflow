@@ -27,6 +27,7 @@ export default function newChatView(): JSX.Element {
     inputIds,
     updateNodeFlowData,
     buildFlow,
+    CleanFlowPool
   } = useContext(flowManagerContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
@@ -109,8 +110,8 @@ export default function newChatView(): JSX.Element {
   }
   function clearChat(): void {
     setChatHistory([]);
+    CleanFlowPool();
     //TODO tell backend to clear chat session
-    //TODO clear chat ui
     if (lockChat) setLockChat(false);
   }
 
