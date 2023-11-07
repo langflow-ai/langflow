@@ -255,5 +255,3 @@ langflow.db
 /tmp/*
 src/backend/langflow/frontend/
 .docker
-
-.idea

@@ -63,7 +63,7 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    if (tweaks && data) {
+    if (tweaks) {
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {
@@ -604,14 +604,6 @@ export default function CodeTabsComponent({
                                               ].type === "prompt" ? (
                                               <div className="mx-auto">
                                                 <PromptAreaComponent
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
                                                   editNode={true}
                                                   disabled={false}
                                                   value={
@@ -654,14 +646,6 @@ export default function CodeTabsComponent({
                                                 <CodeAreaComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
                                                   value={
                                                     !node.data.node.template[
                                                       templateField

@@ -13,7 +13,7 @@ import {
   undoRedoContextType,
 } from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
-import { FlowsContext } from "./flowsContext";
+import { TabsContext } from "./tabsContext";
 
 const initialValue = {
   undo: () => {},
@@ -29,7 +29,7 @@ const defaultOptions: UseUndoRedoOptions = {
 export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
 
 export function UndoRedoProvider({ children }) {
-  const { tabId, flows } = useContext(FlowsContext);
+  const { tabId, flows } = useContext(TabsContext);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
