@@ -593,11 +593,36 @@ export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
 export async function getStoreComponents(
   page: number = 1,
   limit: number = 10,
-  is_component?: boolean | null
+  is_component?: boolean | null,
+  sort?: string | null,
+  tags?: string[] | null,
+  filter_by_user?: boolean | null,
+  status?: string | null,
+  search?: string | null
 ): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
     const queryParams: any = [];
+    if (search !== undefined && search !== null) {
+      queryParams.push(`search=${search}`);
+    }
+    if (status !== undefined && status !== null) {
+      queryParams.push(`status=${status}`);
+    }
+    if (tags !== undefined && tags !== null) {
+      queryParams.push(`tags=${tags}`);
+    }
+
+    if (sort !== undefined && sort !== null) {
+      queryParams.push(`sort=${sort}`);
+    } else {
+      queryParams.push(`sort=-count(liked_by)`); // default sort
+    }
+
+    if (filter_by_user !== undefined && filter_by_user !== null) {
+      queryParams.push(`filter_by_user=${filter_by_user}`);
+    }
+
     if (page !== undefined) {
       queryParams.push(`page=${page}`);
     }
@@ -670,23 +695,23 @@ export async function searchComponent(
   limit?: number | null,
   status?: string | null,
   tags?: string[]
-) {
+): Promise<StoreComponentResponse | undefined> {
   try {
-    let url = `${BASE_URL_API}store/search/`;
+    let url = `${BASE_URL_API}store/components/`;
     const queryParams: any = [];
-    if (query !== undefined) {
-      queryParams.push(`query=${query}`);
+    if (query !== undefined && query !== null) {
+      queryParams.push(`search=${query}`);
     }
-    if (page !== undefined) {
+    if (page !== undefined && page !== null) {
       queryParams.push(`page=${page}`);
     }
-    if (limit !== undefined) {
+    if (limit !== undefined && limit !== null) {
       queryParams.push(`limit=${limit}`);
     }
-    if (status !== undefined) {
+    if (status !== undefined && status !== null) {
       queryParams.push(`status=${status}`);
     }
-    if (tags !== undefined) {
+    if (tags !== undefined && tags !== null) {
       queryParams.push(`tags=${tags}`);
     }
     if (queryParams.length > 0) {
