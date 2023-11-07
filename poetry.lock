@@ -465,17 +465,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.28.78"
+version = "1.28.79"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.28.78-py3-none-any.whl", hash = "sha256:ff8df4bb5aeb69acc64959a74b31042bfc52d64ca77dbe845a72c8062c48d179"},
-    {file = "boto3-1.28.78.tar.gz", hash = "sha256:aa970b1571321846543a6e615848352fe7621f1cb96b4454e919421924af95f7"},
+    {file = "boto3-1.28.79-py3-none-any.whl", hash = "sha256:02ce7dcad2d3b054cd99e7ca6df7a708e016a31b1c98b46d8df3b3891070c121"},
+    {file = "boto3-1.28.79.tar.gz", hash = "sha256:b8acb57a124434284d6ab69c61d32d70e84e13e2c27c33b4ad3c32f15ad407d3"},
 ]
 
 [package.dependencies]
-botocore = ">=1.31.78,<1.32.0"
+botocore = ">=1.31.79,<1.32.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.7.0,<0.8.0"
 
@@ -484,13 +484,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.31.78"
+version = "1.31.79"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.31.78-py3-none-any.whl", hash = "sha256:a9ca8deeb3f47a10a25637859fee8d81cac2db37ace819d24471279e44879547"},
-    {file = "botocore-1.31.78.tar.gz", hash = "sha256:320c70bc412157813c2cf60217a592b4b345f8e97e4bf3b1ce49b6be69ed8965"},
+    {file = "botocore-1.31.79-py3-none-any.whl", hash = "sha256:6f1fc49e9e12f9772b4fef577837670bc84d772a7c946b4d08fe2890e34a4305"},
+    {file = "botocore-1.31.79.tar.gz", hash = "sha256:07ecb93833475dde68e5c0e02a7ccf8ca22caf68cdc892651c300529894133e1"},
 ]
 
 [package.dependencies]
@@ -3743,13 +3743,13 @@ pytz = ">=2023.3,<2024.0"
 
 [[package]]
 name = "langsmith"
-version = "0.0.58"
+version = "0.0.59"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langsmith-0.0.58-py3-none-any.whl", hash = "sha256:75a82744da2d2fa647d8d8d66a2b3791edc914a640516fa2f46cd5502b697380"},
-    {file = "langsmith-0.0.58.tar.gz", hash = "sha256:b935b37b7ce09d998e572e5e3a25f022c283eee6a8de661d41cbda02ce09c6b5"},
+    {file = "langsmith-0.0.59-py3-none-any.whl", hash = "sha256:67e674cf0db479adf8153ed151c4e39b4eaec5f62e7704a7f85294e4755f6e02"},
+    {file = "langsmith-0.0.59.tar.gz", hash = "sha256:d512b856357ff479cdd6a224aafe38ef6f82ff6c8bdd4ba44e4e588b1aeb52ad"},
 ]
 
 [package.dependencies]
