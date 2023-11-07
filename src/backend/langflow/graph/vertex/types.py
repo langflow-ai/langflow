@@ -314,10 +314,21 @@ class OutputParserVertex(StatelessVertex):
 class CustomComponentVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="custom_components")
+        self.steps = [self._build, self._run]
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+
+    def _run(self, *args, **kwargs):
+        if self.is_power_component:
+            if self.vertex_type == "ChatOutput":
+                self.artifacts = ChatOutputResponse(
+                    message=self._built_object, is_ai=self.params.get("is_ai", True)
+                ).dict()
+                self._built_result = self._built_object
+        else:
+            super()._run(*args, **kwargs)
 
 
 class ChatVertex(StatelessVertex):

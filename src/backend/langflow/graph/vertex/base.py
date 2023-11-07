@@ -51,6 +51,10 @@ class Vertex:
         self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.parent_is_top_level = False
         self.layer = None
+        try:
+            self.is_power_component = PowerComponentTypes(self.vertex_type)
+        except ValueError:
+            self.is_power_component = False
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -70,13 +74,6 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
-
-        try:
-            if PowerComponentTypes(self.vertex_type):
-                self._built_result = self._built_object
-        except ValueError:
-            pass
-
         if isinstance(self._built_result, UnbuiltResult):
             return {}
         return (

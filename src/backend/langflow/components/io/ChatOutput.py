@@ -20,4 +20,4 @@ class ChatOutput(CustomComponent):
 
     def build(self, is_ai: bool = True, message: Optional[Text] = "") -> Text:
         self.repr_value = message
-        return ChatOutputResponse(message=message, is_ai=is_ai).dict()
+        return message
