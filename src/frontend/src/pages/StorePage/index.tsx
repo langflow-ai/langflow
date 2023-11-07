@@ -70,9 +70,10 @@ export default function StorePage(): JSX.Element {
 
   async function getSavedComponents() {
     setLoading(true);
-    const result = await getStoreSavedComponents();
+    const data = await getStoreSavedComponents();
     let savedIds = new Set<string>();
-    result.forEach((flow) => {
+    let results = data?.results ?? [];
+    results.forEach((flow) => {
       savedIds.add(flow.id);
     });
     setSavedFlows(savedIds);
