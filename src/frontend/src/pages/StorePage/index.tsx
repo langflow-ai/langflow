@@ -92,7 +92,7 @@ export default function StorePage(): JSX.Element {
 
     getStoreComponents(index - 1, size, filterComponent.current)
       .then((res) => {
-        setSearchData(res);
+        setSearchData(res.results);
         getNumberSavedComponents();
         setErrorApiKey(true);
       })
