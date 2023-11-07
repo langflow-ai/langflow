@@ -38,7 +38,6 @@ export async function buildVertices({
       try {
         const buildResponse = await postBuildVertex(flow, vertexId);
         const buildData = buildResponse.data;
-        console.log(buildData);
         if (onProgressUpdate) {
           const progress =
             verticesOrder.indexOf(vertexId) / verticesOrder.length;
@@ -47,6 +46,11 @@ export async function buildVertices({
         // Update SSE data
         if (onBuildUpdate) {
           let data = {};
+          if (!buildData.valid) {
+            if (onBuildError) {
+              onBuildError("Error Building Component", [buildData.params]);
+            }
+          }
           data[buildData.id] = buildData;
 
           onBuildUpdate({ data, id: buildData.id });

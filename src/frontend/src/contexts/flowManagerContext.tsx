@@ -20,6 +20,7 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
+import { alertContext } from "./alertContext";
 import { FlowsContext } from "./flowsContext";
 
 const initialValue: FlowManagerContextType = {
@@ -73,6 +74,7 @@ export default function FlowManagerProvider({ children }) {
   const [outputIds, setOutputIds] = useState<string[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const actualFlow = useRef<FlowType | null>(null);
+  const { setErrorData } = useContext(alertContext);
 
   useEffect(() => {
     if (checkInputandOutput()) {
@@ -230,6 +232,9 @@ export default function FlowManagerProvider({ children }) {
     return buildVertices({
       flow: actualFlow.current!,
       onBuildUpdate: handleBuildUpdate,
+      onBuildError: (title, list) => {
+        setErrorData({ list, title });
+      },
     });
   }
 
