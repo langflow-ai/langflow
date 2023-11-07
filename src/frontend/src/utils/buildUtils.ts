@@ -56,9 +56,9 @@ export async function buildVertices({
           onBuildUpdate({ data, id: buildData.id });
         }
         buildResults.push(buildData.valid);
-      } catch (error) {
+      } catch (error : any) {
         if (onBuildError) {
-          onBuildError("Error Building Component", [error]);
+          onBuildError("Error Building Component", [error.detail]);
         }
       }
     }
@@ -68,11 +68,11 @@ export async function buildVertices({
       const allNodesValid = buildResults.every((result) => result);
       onBuildComplete(allNodesValid);
     }
-  } catch (error) {
+  } catch (error:any) {
     // Callback for handling errors
     if (onBuildError) {
       if (onBuildError) {
-        onBuildError("Error Building Component", [error]);
+        onBuildError("Error Building Component", [error.detail]);
       }
     }
   }

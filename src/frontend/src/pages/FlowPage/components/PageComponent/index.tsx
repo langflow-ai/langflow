@@ -62,7 +62,6 @@ export default function Page({
   let {
     updateFlow,
     uploadFlow,
-    addFlow,
     getNodeId,
     lastCopiedSelection,
     setLastCopiedSelection,
@@ -84,6 +83,7 @@ export default function Page({
     getInputIds,
     getOutputIds,
     setFlow,
+    pasteFileOnFLow,
   } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -369,7 +369,7 @@ export default function Page({
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
-          uploadFlow(false, event.dataTransfer.files.item(0)!);
+          pasteFileOnFLow(event.dataTransfer.files.item(0)!);
         } else {
           setErrorData({
             title: "Invalid file type",
@@ -465,7 +465,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
+              Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}

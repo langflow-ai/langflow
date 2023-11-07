@@ -24,37 +24,38 @@ import { alertContext } from "./alertContext";
 import { FlowsContext } from "./flowsContext";
 
 const initialValue: FlowManagerContextType = {
-  downloadFlow: (flow: FlowType) => {},
-  deleteEdge: () => {},
-  deleteNode: () => {},
+  downloadFlow: (flow: FlowType) => { },
+  deleteEdge: () => { },
+  deleteNode: () => { },
   reactFlowInstance: null,
-  setReactFlowInstance: (newState: ReactFlowInstance) => {},
+  setReactFlowInstance: (newState: ReactFlowInstance) => { },
   flowPool: {},
-  updateFlowPoolNodes: (nodes: NodeType[]) => {},
-  addDataToFlowPool: (data: any, nodeId: string) => {},
+  updateFlowPoolNodes: (nodes: NodeType[]) => { },
+  addDataToFlowPool: (data: any, nodeId: string) => { },
   checkInputandOutput: (flow?: FlowType) => false,
   getInputTypes: (flow?: FlowType) => [],
   getOutputTypes: (flow?: FlowType) => [],
   getInputIds: (flow?: FlowType) => [],
   getOutputIds: (flow?: FlowType) => [],
-  setFilterEdge: (filter) => {},
+  setFilterEdge: (filter) => { },
   getFilterEdge: [],
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => {},
-  setTweak: (tweak: any) => {},
+  ) => { },
+  setTweak: (tweak: any) => { },
   getTweak: [],
   isBuilt: false,
-  setIsBuilt: (state: boolean) => {},
+  setIsBuilt: (state: boolean) => { },
   inputTypes: [],
   outputTypes: [],
   inputIds: [],
   outputIds: [],
   showPanel: false,
-  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => {},
-  buildFlow: () => new Promise(() => {}),
-  setFlow: (flow: FlowType) => {},
+  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => { },
+  buildFlow: () => new Promise(() => { }),
+  setFlow: (flow: FlowType) => { },
+  pasteFileOnFLow: (file?: File) => new Promise(() => { }),
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -392,9 +393,48 @@ export default function FlowManagerProvider({ children }) {
     link.click();
   }
 
+  async function pasteFileOnFLow(file?: File) {
+    if (file) {
+      const text = await file.text()
+      let fileData = JSON.parse(text);
+      if (fileData.flows) {
+        fileData.flows.forEach((flow: FlowType) => {
+          paste(
+            { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
+            { x: 10, y: 10 }
+          );
+        });
+      }
+      else {
+        let flow: FlowType = JSON.parse(text);
+        paste(
+          { nodes: flow.data!.nodes, edges: flow.data!.edges },
+          { x: 10, y: 10 }
+        );
+      }
+    }
+    else {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json";
+      // add a change event listener to the file input
+        input.onchange = async (e: Event) => {
+          if (
+            (e.target as HTMLInputElement).files![0].type === "application/json"
+          ) {
+            const currentfile = (e.target as HTMLInputElement).files![0];
+            pasteFileOnFLow(currentfile);
+          }
+        };
+        // trigger the file input click event to open the file dialog
+        input.click();
+    }
+  }
+
   return (
     <flowManagerContext.Provider
       value={{
+        pasteFileOnFLow,
         setFlow,
         buildFlow,
         showPanel,

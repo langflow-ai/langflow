@@ -21,7 +21,7 @@ import DisclosureComponent from "../DisclosureComponent";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
-  const { getFilterEdge, setFilterEdge, isBuilt } =
+  const { getFilterEdge, setFilterEdge, isBuilt,pasteFileOnFLow } =
     useContext(flowManagerContext);
   const { flows, selectedFlowId, uploadFlow, tabsState, saveFlow } =
     useContext(FlowsContext);
@@ -139,7 +139,7 @@ export default function ExtraSidebar(): JSX.Element {
             <button
               className="extra-side-bar-buttons"
               onClick={() => {
-                uploadFlow(false);
+                pasteFileOnFLow();
               }}
             >
               <IconComponent name="FileUp" className="side-bar-button-size " />

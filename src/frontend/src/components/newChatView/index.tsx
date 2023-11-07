@@ -44,7 +44,7 @@ export default function newChatView(): JSX.Element {
       }
     });
     const chatMessages: ChatMessageType[] = chatOutputResponses
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).filter((output) => !!output.data.results.message)
       .map((output) => {
         const { is_ai, message } = output.data.results as ChatOutputType;
         return { isSend: !is_ai, message };
