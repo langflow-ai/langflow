@@ -1,6 +1,7 @@
 import ast
 import contextlib
-from typing import Any, List
+from typing import Any, List, Union, Optional
+from uuid import UUID
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -208,7 +209,9 @@ def update_attributes(frontend_node, template_config):
             frontend_node[attribute] = template_config[attribute]
 
 
-def build_field_config(custom_component: CustomComponent, user_id: str = None):
+def build_field_config(
+    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
+):
     """Build the field configuration for a custom component"""
 
     try:
@@ -307,7 +310,7 @@ def add_output_types(frontend_node, return_types: List[str]):
 
 
 def build_langchain_template_custom_component(
-    custom_component: CustomComponent, user_id: str = None
+    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
 ):
     """Build a custom component template for the langchain"""
     try:
