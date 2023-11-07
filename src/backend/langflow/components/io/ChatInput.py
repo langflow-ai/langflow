@@ -1,5 +1,6 @@
-from typing import Optional, Text
+from typing import Optional, Union
 from langflow import CustomComponent
+from langflow.field_typing import Text, Data
 
 
 class ChatInput(CustomComponent):
@@ -12,6 +13,6 @@ class ChatInput(CustomComponent):
         }
     }
 
-    def build(self, message: Optional[str] = "") -> Text:
+    def build(self, message: Optional[str] = "") -> Union[Text, Data]:
         self.repr_value = message
         return message
