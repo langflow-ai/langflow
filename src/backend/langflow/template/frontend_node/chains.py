@@ -87,6 +87,8 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.advanced = False
+            field.field_type = "BaseLanguageModel"  # temporary fix
+            field.is_list = False
 
         if field.name == "return_source_documents":
             field.required = False

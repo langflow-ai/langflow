@@ -473,3 +473,11 @@ def build_loader_repr_from_documents(documents: List[Document]) -> str:
         \nAvg. Document Length (characters): {int(avg_length)}
         Documents: {documents[:3]}..."""
     return "0 documents"
+
+
+def get_type_from_union_literal(union_literal: str) -> str:
+    # if types are literal strings
+    # the type is a string
+    if "Literal" in union_literal:
+        return "str"
+    return union_literal
