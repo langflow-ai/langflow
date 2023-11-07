@@ -1,7 +1,7 @@
 import { tweakType } from "../components";
 import { FlowType } from "../flow";
 
-export type FlowsContextType = {
+export type TabsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
   isLoading: boolean;
@@ -9,8 +9,8 @@ export type FlowsContextType = {
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (
-    newProject: boolean,
-    flow?: FlowType
+    flow?: FlowType,
+    newProject?: Boolean
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -23,11 +23,11 @@ export type FlowsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
+  uploadFlow: (newFlow?: boolean, file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
-  tabsState: FlowsState;
-  setTabsState: (state: FlowsState) => void;
+  tabsState: TabsState;
+  setTabsState: (state: TabsState) => void;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -38,7 +38,7 @@ export type FlowsContextType = {
   getTweak: tweakType;
 };
 
-export type FlowsState = {
+export type TabsState = {
   [key: string]: {
     isPending: boolean;
     formKeysData: {

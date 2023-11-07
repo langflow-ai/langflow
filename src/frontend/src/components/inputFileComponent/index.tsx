@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { uploadFile } from "../../controllers/API";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -17,7 +17,7 @@ export default function InputFileComponent({
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);
-  const { tabId } = useContext(FlowsContext);
+  const { tabId } = useContext(TabsContext);
 
   // Clear component state
   useEffect(() => {

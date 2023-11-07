@@ -13,14 +13,12 @@ export type NodeType = {
   type?: string;
   position: XYPosition;
   data: NodeDataType;
-  selected?: boolean;
 };
 
 export type NodeDataType = {
   type: string;
   node?: APIClassType;
   id: string;
-  output_types?: string[];
 };
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
@@ -37,18 +35,3 @@ export type TweaksType = Array<
     };
   } & FlowStyleType
 >;
-
-// right side
-export type sourceHandleType = {
-  dataType: string;
-  id: string;
-  baseClasses: string[];
-};
-//left side
-export type targetHandleType = {
-  inputTypes?: string[];
-  type: string;
-  fieldName: string;
-  id: string;
-  proxy?: { field: string; id: string };
-};

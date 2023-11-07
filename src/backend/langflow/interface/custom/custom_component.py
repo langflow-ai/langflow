@@ -1,7 +1,7 @@
 from typing import Any, Callable, List, Optional, Union
 from uuid import UUID
 from fastapi import HTTPException
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.services.getters import get_db_service
@@ -108,9 +108,6 @@ class CustomComponent(Component, extra=Extra.allow):
                         ),
                     },
                 )
-            elif not arg.get("type"):
-                # Set the type to Data
-                arg["type"] = "Data"
         return args
 
     @property

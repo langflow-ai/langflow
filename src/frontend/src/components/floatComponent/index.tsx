@@ -23,7 +23,6 @@ export default function FloatComponent({
   return (
     <div className="w-full">
       <Input
-        id="float-input"
         type="number"
         step={step}
         min={min}

@@ -1,17 +1,27 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FlowsContext } from "../../contexts/flowsContext";
+import { darkContext } from "../../contexts/darkContext";
+import { TabsContext } from "../../contexts/tabsContext";
 import { getVersion } from "../../controllers/API";
 import Page from "../FlowPage/components/PageComponent";
 
 export default function ViewPage() {
-  const { flows, tabId, setTabId } = useContext(FlowsContext);
-  const { id } = useParams();
+  const { flows, tabId, setTabId } = useContext(TabsContext);
+  const { setDark } = useContext(darkContext);
+  const { id, theme } = useParams();
 
   // Set flow tab id
   useEffect(() => {
     setTabId(id!);
   }, [id]);
+
+  useEffect(() => {
+    if (theme) {
+      setDark(theme === "dark");
+    } else {
+      setDark(false);
+    }
+  }, [theme]);
 
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
