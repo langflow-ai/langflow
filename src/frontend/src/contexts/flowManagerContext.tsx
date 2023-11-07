@@ -64,7 +64,8 @@ export default function FlowManagerProvider({ children }) {
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
   const [getTweak, setTweak] = useState<tweakType>([]);
-  const { getNodeId, flows, selectedFlowId } = useContext(FlowsContext);
+  const { getNodeId, flows, selectedFlowId, saveFlow } =
+    useContext(FlowsContext);
   const [isBuilt, setIsBuilt] = useState(false);
   const [outputTypes, setOutputTypes] = useState<string[]>([]);
   const [inputTypes, setInputTypes] = useState<string[]>([]);
@@ -217,6 +218,15 @@ export default function FlowManagerProvider({ children }) {
     function handleBuildUpdate(data: any) {
       addDataToFlowPool(data.data[data.id], data.id);
     }
+    await saveFlow(
+      {
+        data: reactFlowInstance?.toObject()!,
+        description: actualFlow.current!.description,
+        id: actualFlow.current!.id,
+        name: actualFlow.current!.name,
+      },
+      true
+    );
     return buildVertices({
       flow: actualFlow.current!,
       onBuildUpdate: handleBuildUpdate,

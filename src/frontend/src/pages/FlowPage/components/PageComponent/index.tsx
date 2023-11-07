@@ -83,6 +83,7 @@ export default function Page({
     getOutputTypes,
     getInputIds,
     getOutputIds,
+    setFlow,
   } = useContext(flowManagerContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
@@ -164,6 +165,8 @@ export default function Page({
   useEffect(() => {
     if (reactFlowInstance && flow) {
       flow.data = reactFlowInstance.toObject();
+      setFlow({ ...flow });
+      console.log("update", JSON.parse(JSON.stringify(flow)));
       updateFlow(flow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
