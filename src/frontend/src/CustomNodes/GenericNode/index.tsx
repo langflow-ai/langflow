@@ -130,7 +130,7 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData =flowPool[data.id] && flowPool[data.id].length > 0
+    const relevantData =flowPool[data.id] && flowPool[data.id]?.length > 0
     ? flowPool[data.id][flowPool[data.id].length - 1]:null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state

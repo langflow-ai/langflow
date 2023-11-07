@@ -87,7 +87,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
         />
         {showPanel && (
           <BaseModal open={open} setOpen={setOpen}>
-            <BaseModal.Trigger>
+            <BaseModal.Trigger asChild>
               <ChatTrigger
                 canOpen={canOpen}
                 open={open}
