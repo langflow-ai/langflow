@@ -2,7 +2,6 @@ from typing import Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
-from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     FileToolVertex,
@@ -20,21 +19,11 @@ class Graph:
 
     def __init__(
         self,
-        nodes: List[Dict],
+        nodes: List[Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]],
         edges: List[Dict[str, str]],
     ) -> None:
         self._nodes = nodes
         self._edges = edges
-        self.raw_graph_data = {"nodes": nodes, "edges": edges}
-
-        self.top_level_nodes = []
-        for node in self._nodes:
-            if node_id := node.get("id"):
-                self.top_level_nodes.append(node_id)
-
-        self._graph_data = process_flow(self.raw_graph_data)
-        self._nodes = self._graph_data["nodes"]
-        self._edges = self._graph_data["edges"]
         self._build_graph()
 
     def __setstate__(self, state):
@@ -61,7 +50,6 @@ class Graph:
             edges = payload["edges"]
             return cls(nodes, edges)
         except KeyError as exc:
-            logger.exception(exc)
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc
@@ -227,9 +215,7 @@ class Graph:
             node_lc_type: str = node_data["node"]["template"]["_type"]  # type: ignore
 
             VertexClass = self._get_vertex_class(node_type, node_lc_type)
-            vertex = VertexClass(node)
-            vertex.set_top_level(self.top_level_nodes)
-            nodes.append(vertex)
+            nodes.append(VertexClass(node))
 
         return nodes
 

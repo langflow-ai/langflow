@@ -8,7 +8,6 @@ export default function IntComponent({
   onChange,
   disabled,
   editNode = false,
-  id = "",
 }: FloatComponentType): JSX.Element {
   const min = 0;
 
@@ -22,7 +21,6 @@ export default function IntComponent({
   return (
     <div className="w-full">
       <Input
-        id={id}
         onKeyDown={(event) => {
           if (
             event.key !== "Backspace" &&

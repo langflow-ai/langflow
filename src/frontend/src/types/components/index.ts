@@ -1,13 +1,11 @@
 import { ReactElement, ReactNode } from "react";
-import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { ReactFlowJsonObject } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { typesContextType } from "../typesContext";
-import { sourceHandleType, targetHandleType } from "./../flow/index";
+
 export type InputComponentType = {
-  autoFocus?: boolean;
-  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
@@ -19,15 +17,12 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
-  id?: string;
-  blurOnEnter?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
-  id?: string;
 };
 export type DropDownComponentType = {
   value: string;
@@ -41,7 +36,7 @@ export type ParameterComponentType = {
   data: NodeDataType;
   setData: (value: NodeDataType) => void;
   title: string;
-  id: sourceHandleType | targetHandleType;
+  id: string;
   color: string;
   left: boolean;
   type: string | undefined;
@@ -51,9 +46,7 @@ export type ParameterComponentType = {
   dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
-  proxy?: { field: string; id: string };
   showNode?: boolean;
-  index?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -87,8 +80,6 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
-  id?: string;
-  readonly?: boolean;
 };
 
 export type PromptAreaComponentType = {
@@ -98,9 +89,7 @@ export type PromptAreaComponentType = {
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
-  readonly?: boolean;
   editNode?: boolean;
-  id?: string;
 };
 
 export type CodeAreaComponentType = {
@@ -111,8 +100,6 @@ export type CodeAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   dynamic?: boolean;
-  id?: string;
-  readonly?: boolean;
 };
 
 export type FileComponentType = {
@@ -143,7 +130,6 @@ export type FloatComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
-  id?: string;
 };
 
 export type TooltipComponentType = {
@@ -440,7 +426,6 @@ export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setData: (newState: NodeDataType) => void;
-  position: XYPosition;
   setShowNode: (boolean: any) => void;
   numberOfHandles: boolean[] | [];
   showNode: boolean;
@@ -476,7 +461,6 @@ export type codeAreaModalPropsType = {
   setNodeClass: (Class: APIClassType) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
-  readonly?: boolean;
 };
 
 export type chatMessagePropsType = {
@@ -501,8 +485,6 @@ export type genericModalPropsType = {
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
   children: ReactNode;
-  id?: string;
-  readonly?: boolean;
 };
 
 export type buttonBoxPropsType = {

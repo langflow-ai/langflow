@@ -5,6 +5,7 @@ from langchain.agents.load_tools import (
     _EXTRA_OPTIONAL_TOOLS,
     _LLM_TOOLS,
 )
+from langchain.tools.python.tool import PythonInputs
 
 from langflow.custom import customs
 from langflow.interface.base import LangChainTypeCreator
@@ -161,8 +162,14 @@ class ToolCreator(LangChainTypeCreator):
         template = Template(fields=fields, type_name=tool_type)
 
         tool_params = {**tool_params, **self.type_to_loader_dict[name]["params"]}
+        template_dict = template.to_dict()
+        if (
+            "args_schema" in template_dict
+            and template_dict.get("args_schema").get("value") == PythonInputs
+        ):
+            template_dict["args_schema"]["value"] = ""
         return {
-            "template": util.format_dict(template.to_dict()),
+            "template": util.format_dict(template_dict),
             **tool_params,
             "base_classes": base_classes,
         }

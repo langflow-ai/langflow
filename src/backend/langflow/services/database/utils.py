@@ -32,11 +32,7 @@ def initialize_database():
     try:
         database_service.run_migrations()
     except CommandError as exc:
-        # if "overlaps with other requested revisions" or "Can't locate revision identified by"
-        # are not in the exception, we can't handle it
-        if "overlaps with other requested revisions" not in str(
-            exc
-        ) and "Can't locate revision identified by" not in str(exc):
+        if "Can't locate revision identified by" not in str(exc):
             raise exc
         # This means there's wrong revision in the DB
         # We need to delete the alembic_version table
