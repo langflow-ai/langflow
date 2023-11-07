@@ -74,7 +74,6 @@ export default function FlowManagerProvider({ children }) {
   const actualFlow = useRef<FlowType | null>(null);
 
   useEffect(() => {
-    console.log("inputIds", inputIds);
     if (checkInputandOutput()) {
       setShowPanel(true);
     }

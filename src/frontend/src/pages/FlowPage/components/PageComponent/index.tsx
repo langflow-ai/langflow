@@ -240,7 +240,6 @@ export default function Page({
     (change: NodeChange[]) => {
       onNodesChange(change);
       updateInputsOutputs(flow);
-      console.log("change", change);
       //@ts-ignore
       setTabsState((prev: TabsState) => {
         return {

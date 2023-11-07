@@ -15,7 +15,7 @@ export default function FlowPage(): JSX.Element {
   useEffect(() => {
     setFlowId(id!);
     setFlow(flows.find((flow) => flow.id === id!)!);
-  }, [id]);
+  }, [id, flows]);
 
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
