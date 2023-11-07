@@ -67,6 +67,12 @@ class ListComponentResponse(BaseModel):
             ]
 
 
+class ListComponentResponseModel(BaseModel):
+    count: int
+    authorized: bool
+    results: Optional[List[ListComponentResponse]]
+
+
 class DownloadComponentResponse(BaseModel):
     id: UUID
     name: Optional[str]

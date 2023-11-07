@@ -9,7 +9,7 @@ from langflow.services.deps import (
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
-    ListComponentResponse,
+    ListComponentResponseModel,
     StoreComponentCreate,
     TagResponse,
     UsersLikesResponse,
@@ -70,7 +70,7 @@ def create_component(
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/components/", response_model=List[ListComponentResponse])
+@router.get("/components/", response_model=ListComponentResponseModel)
 def list_components(
     filter_by_user: bool = Query(False),
     page: int = 1,
@@ -81,6 +81,7 @@ def list_components(
 ):
     try:
         with user_data_context(store_api_Key, store_service):
+            authorized = False
             result = store_service.query_components(
                 api_key=store_api_Key,
                 page=page,
@@ -89,17 +90,28 @@ def list_components(
                 is_component=is_component,
             )
 
-            if not store_api_Key:
-                return result
-
-            # Now, from the result, we need to get the components
-            # the user likes and set the liked_by_user to True
-            result = update_components_with_user_data(
-                result, store_service, store_api_Key
+            comp_count = store_service.count_components(
+                api_key=store_api_Key,
+                filter_by_user=filter_by_user,
+                is_component=is_component,
             )
-        return result
+
+            if store_api_Key:
+                # Now, from the result, we need to get the components
+                # the user likes and set the liked_by_user to True
+                try:
+                    result = update_components_with_user_data(
+                        result, store_service, store_api_Key
+                    )
+                    authorized = True
+                except Exception:
+                    # If we get an error here, it means the user is not authorized
+                    authorized = False
+        return ListComponentResponseModel(
+            results=result, authorized=authorized, count=comp_count
+        )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/components/count", response_model=dict)
