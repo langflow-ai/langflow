@@ -1,10 +1,10 @@
 import { Edge, Node, Viewport } from "reactflow";
-import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
 export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
 export type APITemplateType = {
+  variable: TemplateVariableType;
   [key: string]: TemplateVariableType;
 };
 
@@ -23,13 +23,10 @@ export type APIClassType = {
   beta?: boolean;
   documentation: string;
   error?: string;
-  flow?: FlowType;
   [key: string]:
     | Array<string>
     | string
     | APITemplateType
-    | boolean
-    | FlowType
     | CustomFieldsType
     | boolean
     | undefined;
@@ -41,14 +38,9 @@ export type TemplateVariableType = {
   placeholder?: string;
   list: boolean;
   show: boolean;
-  readonly: boolean;
   multiline?: boolean;
   value?: any;
-  dynamic?: boolean;
-  proxy?: { id: string; field: string };
   input_types?: Array<string>;
-  display_name?: string;
-  name?: string;
   [key: string]: any;
 };
 export type sendAllProps = {

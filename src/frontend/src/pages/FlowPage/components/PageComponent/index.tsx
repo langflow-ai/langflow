@@ -28,23 +28,16 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import { alertContext } from "../../../../contexts/alertContext";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
+import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
+import { FlowType, NodeType } from "../../../../types/flow";
 import { TabsState } from "../../../../types/tabs";
-import {
-  generateFlow,
-  generateNodeFromFlow,
-  isValidConnection,
-  scapeJSONParse,
-  validateSelection,
-} from "../../../../utils/reactflowUtils";
-import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { isValidConnection } from "../../../../utils/reactflowUtils";
+import { isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
-import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 
 const nodeTypes = {
@@ -70,7 +63,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
-  } = useContext(FlowsContext);
+  } = useContext(TabsContext);
   const {
     types,
     reactFlowInstance,
@@ -245,19 +238,12 @@ export default function Page({
         addEdge(
           {
             ...params,
-            data: {
-              targetHandle: scapeJSONParse(params.targetHandle!),
-              sourceHandle: scapeJSONParse(params.sourceHandle!),
-            },
             style: { stroke: "#555" },
             className:
-              ((scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text"
+              (params.targetHandle?.split("|")[0] === "Text"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
-            animated:
-              (scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text",
+            animated: params.targetHandle?.split("|")[0] === "Text",
           },
           eds
         )
@@ -310,6 +296,7 @@ export default function Page({
           event.dataTransfer.getData("nodedata")
         );
 
+        // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
         // Calculate the position where the node should be created
         const position = reactFlowInstance!.project({
           x: event.clientX - reactflowBounds!.left,
@@ -407,7 +394,7 @@ export default function Page({
     edgeUpdateSuccessful.current = true;
   }, []);
 
-  const [selectionEnded, setSelectionEnded] = useState(true);
+  const [selectionEnded, setSelectionEnded] = useState(false);
 
   const onSelectionEnd = useCallback(() => {
     setSelectionEnded(true);
@@ -447,7 +434,7 @@ export default function Page({
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div id="react-flow-id" className="h-full w-full">
+              <div className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
@@ -494,50 +481,6 @@ export default function Page({
                    [&>button]:border-b-border hover:[&>button]:bg-border"
                     ></Controls>
                   )}
-                  <SelectionMenu
-                    isVisible={selectionMenuVisible}
-                    nodes={lastSelection?.nodes}
-                    onClick={() => {
-                      if (
-                        validateSelection(lastSelection!, edges).length === 0
-                      ) {
-                        const { newFlow } = generateFlow(
-                          lastSelection!,
-                          reactFlowInstance!,
-                          getRandomName()
-                        );
-                        const newGroupNode = generateNodeFromFlow(
-                          newFlow,
-                          getNodeId
-                        );
-                        setNodes((oldNodes) => [
-                          ...oldNodes.filter(
-                            (oldNodes) =>
-                              !lastSelection?.nodes.some(
-                                (selectionNode) =>
-                                  selectionNode.id === oldNodes.id
-                              )
-                          ),
-                          newGroupNode,
-                        ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
-                            (oldEdge) =>
-                              !lastSelection!.nodes.some(
-                                (selectionNode) =>
-                                  selectionNode.id === oldEdge.target ||
-                                  selectionNode.id === oldEdge.source
-                              )
-                          )
-                        );
-                      } else {
-                        setErrorData({
-                          title: "Invalid selection",
-                          list: validateSelection(lastSelection!, edges),
-                        });
-                      }
-                    }}
-                  />
                 </ReactFlow>
                 {!view && (
                   <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />

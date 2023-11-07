@@ -22,6 +22,7 @@ export default function DictComponent({
   }, [value]);
 
   const ref = useRef(value);
+  debugger;
   return (
     <div
       className={classNames(

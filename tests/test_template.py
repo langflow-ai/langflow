@@ -237,7 +237,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": CHAT_OPENAI_MODELS,
-            "value": "gpt-4-1106-preview",
+            "value": "gpt-3.5-turbo-0613",
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai

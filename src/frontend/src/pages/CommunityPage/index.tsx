@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
+import { TabsContext } from "../../contexts/tabsContext";
 
 import { useNavigate } from "react-router-dom";
 import { CardComponent } from "../../components/cardComponent";
@@ -12,7 +12,7 @@ import { getExamples } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 export default function CommunityPage(): JSX.Element {
   const { flows, setTabId, downloadFlows, uploadFlows, addFlow } =
-    useContext(FlowsContext);
+    useContext(TabsContext);
 
   // set null id
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function CommunityPage(): JSX.Element {
                     size="sm"
                     className="whitespace-nowrap "
                     onClick={() => {
-                      addFlow(true, flow).then((id) => {
+                      addFlow(flow, true).then((id) => {
                         navigate("/flow/" + id);
                       });
                     }}

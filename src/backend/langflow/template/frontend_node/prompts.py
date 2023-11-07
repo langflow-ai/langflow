@@ -44,7 +44,6 @@ class PromptFrontendNode(FrontendNode):
 
         # All prompt fields should be password=False
         field.password = False
-        field.dynamic = True
 
 
 class PromptTemplateNode(FrontendNode):

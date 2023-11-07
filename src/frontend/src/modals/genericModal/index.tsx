@@ -30,8 +30,6 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
-  id = "",
-  readonly = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -210,9 +208,8 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === TypeModal.PROMPT && isEdit && !readonly ? (
+            {type === TypeModal.PROMPT && isEdit ? (
               <Textarea
-                id={"modal-" + id}
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
@@ -229,7 +226,7 @@ export default function GenericModal({
                   handleKeyDown(e, inputValue, "");
                 }}
               />
-            ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
+            ) : type === TypeModal.PROMPT && !isEdit ? (
               <SanitizedHTMLWrapper
                 className={getClassByNumberLength()}
                 content={coloredContent}
@@ -251,7 +248,6 @@ export default function GenericModal({
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}
-                readOnly={readonly}
               />
             ) : (
               <></>
@@ -288,7 +284,7 @@ export default function GenericModal({
                             className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                           >
                             <div className="relative bottom-[1px]">
-                              <span id={"badge" + index.toString()}>
+                              <span>
                                 {word.replace(/[{}]/g, "").length > 59
                                   ? word.replace(/[{}]/g, "").slice(0, 56) +
                                     "..."
@@ -308,8 +304,6 @@ export default function GenericModal({
               )}
             </div>
             <Button
-              id="genericModalBtnSave"
-              disabled={readonly}
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:

@@ -3,17 +3,9 @@ name: test
 on:
   push:
     branches: [main]
-    paths:
-      - "tests/**"
-      - "src/backend/**"
-      - "pyproject.toml"
-
   pull_request:
     branches: [dev]
-    paths:
-      - "tests/**"
-      - "src/backend/**"
-      - "pyproject.toml"
+
 env:
   POETRY_VERSION: "1.5.0"
 

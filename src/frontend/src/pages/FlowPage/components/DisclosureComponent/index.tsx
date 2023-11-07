@@ -8,13 +8,12 @@ export default function DisclosureComponent({
   openDisc,
 }: DisclosureComponentType): JSX.Element {
   return (
-    <Disclosure as="div" defaultOpen={openDisc} key={title}>
+    <Disclosure as="div" key={title}>
       {({ open }) => (
         <>
           <div>
             <Disclosure.Button className="components-disclosure-arrangement">
               <div className="flex gap-4">
-                {/* BUG ON THIS ICON */}
                 <Icon strokeWidth={1.5} size={22} className="text-primary" />
                 <span className="components-disclosure-title">{title}</span>
               </div>
@@ -35,7 +34,9 @@ export default function DisclosureComponent({
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div">{children}</Disclosure.Panel>
+          <Disclosure.Panel as="div" static={openDisc}>
+            {children}
+          </Disclosure.Panel>
         </>
       )}
     </Disclosure>
