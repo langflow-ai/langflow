@@ -201,9 +201,23 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return results[0].get("count", 0)
 
+    @staticmethod
+    def build_search_filter_conditions(query: str):
+        # instead of build the param ?search=query, we will build the filter
+        # that will use _icontains (case insensitive)
+        conditions = {"_or": []}
+        conditions["_or"].append({"name": {"_icontains": query}})
+        conditions["_or"].append({"description": {"_icontains": query}})
+        conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
+        return conditions
+
     def query_components(
         self,
         api_key: str,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        sort: Optional[List[str]] = None,
         page: int = 1,
         limit: int = 15,
         fields: Optional[List[str]] = None,
@@ -213,7 +227,24 @@ class StoreService(Service):
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
+
+        if sort:
+            params["sort"] = ",".join(sort)
+
         filter_conditions = []
+
+        if search is not None:
+            search_conditions = self.build_search_filter_conditions(search)
+            filter_conditions.append(search_conditions)
+
+        if status:
+            filter_conditions.append({"status": {"_eq": status}})
+
+        if tags:
+            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
+
+        if is_component is not None:
+            filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
