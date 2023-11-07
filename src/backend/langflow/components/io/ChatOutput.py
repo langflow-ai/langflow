@@ -2,7 +2,6 @@ from typing import Optional
 from langflow import CustomComponent
 
 from langflow.field_typing import Text
-from langflow.utils.schemas import ChatOutputResponse
 
 
 class ChatOutput(CustomComponent):
