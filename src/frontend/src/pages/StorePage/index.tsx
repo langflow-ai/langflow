@@ -20,7 +20,6 @@ import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
 import {
-  getCountComponents,
   getStoreComponents,
   getStoreSavedComponents,
   getStoreTags,
@@ -44,7 +43,7 @@ export default function StorePage(): JSX.Element {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
   const [errorApiKey, setErrorApiKey] = useState(false);
-  const { setSavedFlows, savedFlows, hasApiKey } = useContext(StoreContext);
+  const { setSavedFlows, hasApiKey } = useContext(StoreContext);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
   const [renderPagination, setRenderPagination] = useState(false);
@@ -75,16 +74,10 @@ export default function StorePage(): JSX.Element {
     let results = data?.results ?? [];
     results.forEach((flow) => {
       savedIds.add(flow.id);
-    });
-    setSavedFlows(savedIds);
+    }); /* 
+    setSavedFlows(savedIds); */
     setErrorApiKey(false);
-  }
-
-  async function getNumberSavedComponents() {
-    getCountComponents(filterComponent.current).then((res) => {
-      setTotalRowsCount(Number(res["count"]));
-      setLoading(false);
-    });
+    setLoading(false);
   }
 
   const handleGetComponents = () => {
@@ -93,8 +86,10 @@ export default function StorePage(): JSX.Element {
 
     getStoreComponents(index - 1, size, filterComponent.current)
       .then((res) => {
+        console.log(res);
+        setLoading(false);
         setSearchData(res.results);
-        getNumberSavedComponents();
+        setTotalRowsCount(Number(res.count));
         setErrorApiKey(true);
       })
       .catch((err) => {
