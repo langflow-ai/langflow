@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
-  const { addFlow } = useContext(TabsContext);
+  const { addFlow } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
   const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
@@ -26,7 +26,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(undefined, true).then((id) => {
+      addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();

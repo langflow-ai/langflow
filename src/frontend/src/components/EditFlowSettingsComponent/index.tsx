@@ -72,7 +72,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           type="text"
           name="name"
           value={name ?? ""}
-          placeholder="File name"
+          placeholder="Flow name"
           id="name"
           maxLength={maxLength}
         />

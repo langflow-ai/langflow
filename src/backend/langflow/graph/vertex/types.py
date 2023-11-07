@@ -206,6 +206,10 @@ class ChainVertex(Vertex):
     ) -> Any:
         if not self._built or force:
             # Check if the chain requires a PromptVertex
+
+            # Temporarily remove "code" from the params
+            self.params.pop("code", None)
+
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
                     # Build the PromptVertex, passing the tools if available

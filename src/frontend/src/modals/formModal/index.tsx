@@ -24,7 +24,7 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import { TabsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
@@ -38,7 +38,7 @@ export default function FormModal({
   setOpen: (open: boolean) => void;
   flow: FlowType;
 }): JSX.Element {
-  const { tabsState, setTabsState } = useContext(TabsContext);
+  const { tabsState, setTabsState } = useContext(FlowsContext);
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];

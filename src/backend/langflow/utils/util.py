@@ -191,7 +191,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
@@ -274,6 +276,7 @@ def format_dict(
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
+        _type = get_type_from_union_literal(_type)
 
         value["type"] = get_formatted_type(key, _type)
         value["show"] = should_show_field(value, key)
@@ -460,3 +463,11 @@ def build_loader_repr_from_documents(documents: List[Document]) -> str:
         \nAvg. Document Length (characters): {int(avg_length)}
         Documents: {documents[:3]}..."""
     return "0 documents"
+
+
+def get_type_from_union_literal(union_literal: str) -> str:
+    # if types are literal strings
+    # the type is a string
+    if "Literal" in union_literal:
+        return "str"
+    return union_literal

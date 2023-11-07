@@ -4,14 +4,18 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
-import { TabsContext } from "../../contexts/tabsContext";
+import { alertContext } from "../../contexts/alertContext";
+import { FlowsContext } from "../../contexts/flowsContext";
+import { typesContext } from "../../contexts/typesContext";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow } = useContext(TabsContext);
-    const [checked, setChecked] = useState(false);
+    const { flows, tabId, downloadFlow } = useContext(FlowsContext);
+    const { reactFlowInstance } = useContext(typesContext);
+    const { setNoticeData } = useContext(alertContext);
+    const [checked, setChecked] = useState(true);
     const flow = flows.find((f) => f.id === tabId);
     useEffect(() => {
       setName(flow!.name);
@@ -44,6 +48,7 @@ const ExportModal = forwardRef(
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox
               id="terms"
+              checked={checked}
               onCheckedChange={(event: boolean) => {
                 setChecked(event);
               }}
@@ -52,20 +57,38 @@ const ExportModal = forwardRef(
               Save with my API keys
             </label>
           </div>
+          <span className="text-xs text-destructive">
+            Caution: Uncheck this box only removes API keys from fields
+            specifically designated for API keys.
+          </span>
         </BaseModal.Content>
 
         <BaseModal.Footer>
           <Button
             onClick={() => {
-              if (checked)
+              if (checked) {
                 downloadFlow(
-                  flows.find((flow) => flow.id === tabId)!,
+                  {
+                    id: tabId,
+                    data: reactFlowInstance?.toObject()!,
+                    description,
+                    name,
+                  },
                   name!,
                   description
                 );
-              else
+                setNoticeData({
+                  title:
+                    "Warning: Critical data, JSON file may include API keys.",
+                });
+              } else
                 downloadFlow(
-                  removeApiKeys(flows.find((flow) => flow.id === tabId)!),
+                  removeApiKeys({
+                    id: tabId,
+                    data: reactFlowInstance?.toObject()!,
+                    description,
+                    name,
+                  }),
                   name!,
                   description
                 );

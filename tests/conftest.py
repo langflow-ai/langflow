@@ -35,6 +35,16 @@ def pytest_configure():
     pytest.OPENAPI_EXAMPLE_PATH = (
         Path(__file__).parent.absolute() / "data" / "Openapi.json"
     )
+    pytest.GROUPED_CHAT_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
+    )
+    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
+    )
+    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = (
+        Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
+    )
+
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
         Path(__file__).parent.absolute() / "data" / "BasicChatwithPromptandHistory.json"
     )
@@ -156,6 +166,24 @@ def openapi_graph():
 @pytest.fixture
 def json_flow():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def grouped_chat_json_flow():
+    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def one_grouped_chat_json_flow():
+    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def vector_store_grouped_json_flow():
+    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH, "r") as f:
         return f.read()
 
 

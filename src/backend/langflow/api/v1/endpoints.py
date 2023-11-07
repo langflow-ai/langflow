@@ -54,10 +54,9 @@ def get_all(
 
     logger.debug("Building langchain types dict")
     try:
-        types_dict = get_all_types_dict(settings_service)
+        return get_all_types_dict(settings_service)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return types_dict
 
 
 # For backwards compatibility we will keep the old endpoint
@@ -70,7 +69,7 @@ def get_all(
     "/process/{flow_id}",
     response_model=ProcessResponse,
 )
-async def process_flow(
+async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[dict] = None,

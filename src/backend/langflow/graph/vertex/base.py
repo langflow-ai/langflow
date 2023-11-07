@@ -38,6 +38,8 @@ class Vertex:
         self.task_id: Optional[str] = None
         self.is_task = is_task
         self.params = params or {}
+        self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
+        self.parent_is_top_level = False
 
     def reset_params(self):
         for edge in self.edges:
@@ -88,6 +90,11 @@ class Vertex:
             self._built = False
         self.artifacts: Dict[str, Any] = {}
         self.task_id: Optional[str] = None
+        self.parent_node_id = state["parent_node_id"]
+        self.parent_is_top_level = state["parent_is_top_level"]
+
+    def set_top_level(self, top_level_nodes: List[str]) -> None:
+        self.parent_is_top_level = self.parent_node_id in top_level_nodes
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -209,6 +216,16 @@ class Vertex:
                         }
                     elif isinstance(_value, dict):
                         params[key] = _value
+                elif value.get("type") == "int" and value.get("value") is not None:
+                    try:
+                        params[key] = int(value.get("value"))
+                    except ValueError:
+                        params[key] = value.get("value")
+                elif value.get("type") == "float" and value.get("value") is not None:
+                    try:
+                        params[key] = float(value.get("value"))
+                    except ValueError:
+                        params[key] = value.get("value")
                 else:
                     params[key] = value.get("value")
 
@@ -342,7 +359,7 @@ class Vertex:
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(
-                f"Error building node {self.vertex_type}: {str(exc)}"
+                f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}"
             ) from exc
 
     def _update_built_object_and_artifacts(self, result):
