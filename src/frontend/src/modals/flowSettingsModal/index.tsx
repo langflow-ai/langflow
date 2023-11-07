@@ -3,7 +3,7 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -11,7 +11,7 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
+  const { flows, tabId, updateFlow, saveFlow } = useContext(FlowsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     setName(flow!.name);

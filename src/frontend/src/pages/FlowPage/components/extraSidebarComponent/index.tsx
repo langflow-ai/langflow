@@ -5,7 +5,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -22,7 +22,7 @@ export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
-    useContext(TabsContext);
+    useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -122,7 +122,7 @@ export default function ExtraSidebar(): JSX.Element {
             }
           }
         });
-        setSearch("search");
+        setSearch("");
         return ret;
       });
     }
@@ -136,7 +136,7 @@ export default function ExtraSidebar(): JSX.Element {
             <button
               className="extra-side-bar-buttons"
               onClick={() => {
-                uploadFlow();
+                uploadFlow(false);
               }}
             >
               <IconComponent name="FileUp" className="side-bar-button-size " />
@@ -227,8 +227,12 @@ export default function ExtraSidebar(): JSX.Element {
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
-                openDisc={search.length == 0 ? false : true}
-                key={index}
+                openDisc={
+                  getFilterEdge.length !== 0 || search.length !== 0
+                    ? true
+                    : false
+                }
+                key={index + search + JSON.stringify(getFilterEdge)}
                 button={{
                   title: nodeNames[SBSectionName] ?? nodeNames.unknown,
                   Icon:
@@ -271,7 +275,13 @@ export default function ExtraSidebar(): JSX.Element {
                               );
                             }}
                           >
-                            <div className="side-bar-components-div-form">
+                            <div
+                              className="side-bar-components-div-form"
+                              id={
+                                "side" +
+                                data[SBSectionName][SBItemName].display_name
+                              }
+                            >
                               <span className="side-bar-components-text">
                                 {data[SBSectionName][SBItemName].display_name}
                               </span>

@@ -14,7 +14,9 @@ export default function PromptAreaComponent({
   onChange,
   disabled,
   editNode = false,
-}: PromptAreaComponentType) {
+  id = "",
+  readonly = false,
+}: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
       onChange("");
@@ -22,7 +24,8 @@ export default function PromptAreaComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value !== "" && !editNode) {
+    //prevent update from prompt template after group node if prompt is wrongly marked as not dynamic
+    if (value !== "" && !editNode && !readonly && !nodeClass?.flow) {
       postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
         if (apiReturn.data) {
           setNodeClass!(apiReturn.data.frontend_node);
@@ -35,6 +38,8 @@ export default function PromptAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
+        id={id}
+        readonly={readonly}
         type={TypeModal.PROMPT}
         value={value}
         buttonText="Check & Save"
@@ -47,6 +52,7 @@ export default function PromptAreaComponent({
       >
         <div className="flex w-full items-center">
           <span
+            id={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"
