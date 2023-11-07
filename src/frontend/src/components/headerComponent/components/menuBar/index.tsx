@@ -29,7 +29,7 @@ export const MenuBar = ({
 
   function handleAddFlow() {
     try {
-      addFlow(true).then((id) => {
+      addFlow().then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();

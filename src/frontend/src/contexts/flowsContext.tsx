@@ -49,7 +49,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: async (newProject: boolean, flowData?: FlowType) => "",
+  addFlow: async (flowData?: FlowType) => "",
   updateFlow: (newFlow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
@@ -250,7 +250,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
    * The resulting JSON object is passed to the addFlow function.
    */
   async function uploadFlow(
-    newProject: boolean,
     file?: File
   ): Promise<String | undefined> {
     let id;
@@ -259,13 +258,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       let fileData = JSON.parse(text);
       if (fileData.flows) {
         fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(newProject, flow);
+          id = addFlow(flow);
         });
       }
       // parse the text into a JSON object
       let flow: FlowType = JSON.parse(text);
 
-      id = await addFlow(newProject, flow);
+      id = await addFlow(flow);
     } else {
       // create a file input
       const input = document.createElement("input");
@@ -280,7 +279,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
             let flow: FlowType = JSON.parse(text);
-            const flowId = await addFlow(newProject, flow);
+            const flowId = await addFlow(flow);
             resolve(flowId);
           }
         };
@@ -328,10 +327,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   }
   const addFlow = async (
-    newProject: Boolean,
     flow?: FlowType
   ): Promise<String | undefined> => {
-    if (newProject) {
       let flowData = flow
         ? processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
@@ -357,12 +354,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         // Handle the error if needed
         throw error; // Re-throw the error so the caller can handle it if needed
       }
-    } else {
-      paste(
-        { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-        { x: 10, y: 10 }
-      );
-    }
   };
 
   const processDataFromFlow = (flow: FlowType, refreshIds = true) => {

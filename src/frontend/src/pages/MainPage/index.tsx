@@ -25,7 +25,7 @@ export default function HomePage(): JSX.Element {
     {
       name: "Import from JSON",
       onBtnClick: () =>
-        uploadFlow(true).then((id) => {
+        uploadFlow().then((id) => {
           navigate("/flow/" + id);
         }),
     },
@@ -62,7 +62,7 @@ export default function HomePage(): JSX.Element {
     setIsDragging(false);
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       if (e.dataTransfer.files.item(0).type === "application/json") {
-        uploadFlow(true, e.dataTransfer.files.item(0)!);
+        uploadFlow(e.dataTransfer.files.item(0)!);
       } else {
         setErrorData({
           title: "Invalid file type",
@@ -104,7 +104,7 @@ export default function HomePage(): JSX.Element {
             <DropdownButton
               firstButtonName="New Project"
               onFirstBtnClick={() => {
-                addFlow(true).then((id) => {
+                addFlow().then((id) => {
                   navigate("/flow/" + id);
                 });
               }}

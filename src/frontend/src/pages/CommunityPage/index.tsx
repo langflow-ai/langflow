@@ -94,7 +94,7 @@ export default function CommunityPage(): JSX.Element {
                     size="sm"
                     className="whitespace-nowrap "
                     onClick={() => {
-                      addFlow(true, flow).then((id) => {
+                      addFlow(flow).then((id) => {
                         navigate("/flow/" + id);
                       });
                     }}

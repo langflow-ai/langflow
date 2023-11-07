@@ -8,13 +8,12 @@ export type FlowsContextType = {
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (
-    newProject: boolean,
     flow?: FlowType
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   downloadFlows: () => void;
   uploadFlows: () => void;
-  uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
+  uploadFlow: (file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   tabsState: FlowsState;
