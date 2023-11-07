@@ -74,7 +74,7 @@ export default function StorePage(): JSX.Element {
     let results = data?.results ?? [];
     results.forEach((flow) => {
       savedIds.add(flow.id);
-    }); /* 
+    }); /*
     setSavedFlows(savedIds); */
     setErrorApiKey(false);
     setLoading(false);
@@ -86,10 +86,9 @@ export default function StorePage(): JSX.Element {
 
     getStoreComponents(index - 1, size, filterComponent.current)
       .then((res) => {
-        console.log(res);
         setLoading(false);
-        setSearchData(res.results);
-        setTotalRowsCount(Number(res.count));
+        setSearchData(res?.results ?? []);
+        setTotalRowsCount(Number(res?.count ?? 0));
         setErrorApiKey(true);
       })
       .catch((err) => {

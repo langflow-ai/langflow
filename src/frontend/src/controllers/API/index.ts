@@ -594,7 +594,7 @@ export async function getStoreComponents(
   page: number = 1,
   limit: number = 10,
   is_component?: boolean | null
-) {
+): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
     const queryParams: any = [];
