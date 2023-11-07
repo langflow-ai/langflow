@@ -109,10 +109,11 @@ export default function StorePage(): JSX.Element {
     setLoading(true);
     searchComponent(inputText).then(
       (res) => {
-        setSearchData(res);
+        setSearchData(res?.results ?? []);
+        setTotalRowsCount(Number(res?.count ?? 0));
         setLoading(false);
         setRenderPagination(false);
-        setTotalRowsCount(res.length);
+        setTotalRowsCount(Number(res?.count ?? 0));
       },
       (error) => {
         setLoading(false);
@@ -125,7 +126,7 @@ export default function StorePage(): JSX.Element {
     setRenderPagination(true);
     getStoreComponents(pageIndex, pageSize, filterComponent.current)
       .then((res) => {
-        setSearchData(res);
+        setSearchData(res?.results ?? []);
         setPageIndex(pageIndex);
         setPageSize(pageSize);
         setLoading(false);
@@ -148,9 +149,9 @@ export default function StorePage(): JSX.Element {
     setRenderPagination(false);
     searchComponent(null, 1, 10000, null, filterArray).then(
       (res) => {
-        setSearchData(res);
+        setSearchData(res?.results ?? []);
         setLoading(false);
-        setTotalRowsCount(res.length);
+        setTotalRowsCount(Number(res?.count ?? 0));
       },
       (error) => {
         setLoading(false);
@@ -173,17 +174,12 @@ export default function StorePage(): JSX.Element {
   }
 
   const handleOrderPage = (e) => {
-    let sortedData = cloneDeep(searchData);
-
+    let sort;
     if (e === "Popular") {
-      sortedData = sortedData.sort(
-        (a, b) => Number(b.liked_by_count) - Number(a.liked_by_count)
-      );
+      sort = "-count(liked_by)";
     } else if (e === "Alphabetical") {
-      sortedData = sortedData.sort((a, b) => a.name.localeCompare(b.name));
+      sort = "name";
     }
-
-    setSearchData([...sortedData]);
   };
 
   return (
@@ -290,13 +286,13 @@ export default function StorePage(): JSX.Element {
 
           <div className="flex items-center gap-2 px-2">
             {!loading &&
-              tags.map((i, idx) => (
+              tags.map((tag, idx) => (
                 <Badge
                   onClick={() => {
-                    const index = filteredCategories?.indexOf(i.id);
+                    const index = filteredCategories?.indexOf(tag.name);
                     const copyFilterArray = cloneDeep(filteredCategories);
                     if (index === -1) {
-                      copyFilterArray.push(i.id);
+                      copyFilterArray.push(tag.name);
                     } else {
                       copyFilterArray.splice(index, 1);
                     }
@@ -307,12 +303,12 @@ export default function StorePage(): JSX.Element {
                   size="sq"
                   className={cn(
                     "cursor-pointer",
-                    filteredCategories.some((category) => category === i.id)
+                    filteredCategories.some((category) => category === tag.name)
                       ? "bg-beta-foreground text-background hover:bg-beta-foreground"
                       : ""
                   )}
                 >
-                  {i.name}
+                  {tag.name}
                 </Badge>
               ))}
           </div>
