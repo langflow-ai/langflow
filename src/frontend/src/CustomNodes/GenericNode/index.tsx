@@ -41,7 +41,7 @@ export default function GenericNode({
     useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types } = useContext(typesContext);
-  const { deleteNode, reactFlowInstance } = useContext(flowManagerContext);
+  const { deleteNode, reactFlowInstance,buildFlow,flowPool } = useContext(flowManagerContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(true);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -130,35 +130,16 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = sseData[data.id];
+    const relevantData =flowPool[data.id] && flowPool[data.id].length > 0
+    ? flowPool[data.id][flowPool[data.id].length - 1]:null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
       setValidationStatus(null);
     }
-  }, [sseData, data.id]);
+  }, [flowPool, data.id]);
 
-  async function buildVertex(): Promise<void> {
-    setValidationStatus(null);
-    let flow = flows.find((flow) => flow.id === selectedFlowId);
-    // get order first and then build
-
-    if (flow) {
-      // updateFlow
-      await saveFlow(flow, true);
-      await buildVertices({
-        flow,
-        nodeId: data.id,
-        onBuildUpdate: updateSSEData,
-        onBuildError: (title, list) => {
-          setErrorData({ title, list });
-        },
-      });
-    } else {
-      console.log("flow not found");
-    }
-  }
 
   return (
     <>
@@ -354,7 +335,7 @@ export default function GenericNode({
               </div>
             )}
             {showNode && (
-              <div className="round-button-div" onClick={buildVertex}>
+              <div className="round-button-div" onClick={()=>buildFlow(data.id)}>
                 <Tooltip
                   title={
                     isBuilding ? (

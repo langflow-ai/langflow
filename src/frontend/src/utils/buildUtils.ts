@@ -25,7 +25,7 @@ export async function buildVertices({
     let verticesOrder = orderResponse.data.ids.flatMap((id) => id);
     // Determine the range of vertices to build
     let vertexIndex: number | null = null;
-    if (nodeId !== null) {
+    if (nodeId) {
       vertexIndex = verticesOrder.indexOf(nodeId);
     }
     let buildRange =

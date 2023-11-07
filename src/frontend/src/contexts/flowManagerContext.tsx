@@ -53,7 +53,7 @@ const initialValue: FlowManagerContextType = {
   outputIds: [],
   showPanel: false,
   updateNodeFlowData: (nodeId: string, newData: NodeDataType) => { },
-  buildFlow: () => new Promise(() => { }),
+  buildFlow: (nodeId?:string) => new Promise(() => { }),
   setFlow: (flow: FlowType) => { },
   pasteFileOnFLow: (file?: File) => new Promise(() => { }),
   CleanFlowPool: () => { },
@@ -67,7 +67,7 @@ export default function FlowManagerProvider({ children }) {
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
   const [getTweak, setTweak] = useState<tweakType>([]);
-  const { getNodeId, flows, selectedFlowId, saveFlow } =
+  const { getNodeId, saveFlow } =
     useContext(FlowsContext);
   const [isBuilt, setIsBuilt] = useState(false);
   const [outputTypes, setOutputTypes] = useState<string[]>([]);
@@ -218,7 +218,7 @@ export default function FlowManagerProvider({ children }) {
     actualFlow.current = flow;
   }
 
-  async function buildFlow() {
+  async function buildFlow(nodeId?: string) {
     function handleBuildUpdate(data: any) {
       addDataToFlowPool(data.data[data.id], data.id);
     }
@@ -229,10 +229,12 @@ export default function FlowManagerProvider({ children }) {
         id: actualFlow.current!.id,
         name: actualFlow.current!.name,
       },
-      true
+      true,
     );
+
     return buildVertices({
       flow: actualFlow.current!,
+      nodeId,
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list) => {
         setErrorData({ list, title });
