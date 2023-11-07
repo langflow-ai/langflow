@@ -71,11 +71,15 @@ def create_component(
 
 
 @router.get("/components/", response_model=ListComponentResponseModel)
-def list_components(
+def get_components(
+    search: Optional[List[str]] = Query(None),
+    status: Optional[str] = Query(None),
+    is_component: Optional[bool] = Query(None),
+    tags: Optional[List[str]] = Query(None),
+    sort: Optional[List[str]] = Query(None),
     filter_by_user: bool = Query(False),
     page: int = 1,
     limit: int = 10,
-    is_component: Optional[bool] = Query(None),
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
@@ -88,6 +92,10 @@ def list_components(
                 limit=limit,
                 filter_by_user=filter_by_user,
                 is_component=is_component,
+                search=search,
+                status=status,
+                tags=tags,
+                sort=sort,
             )
 
             comp_count = store_service.count_components(
