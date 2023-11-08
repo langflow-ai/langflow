@@ -225,7 +225,8 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
         if class_method := getattr(class_object, method, None):
             return class_method(**params)
         raise ValueError(f"Method {method} not found in {class_object}")
-
+    if isinstance(params["llm"], list):
+        params["llm"] = params["llm"][0]
     chain = class_object(**params)
 
     input_keys_dict = {
