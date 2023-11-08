@@ -249,6 +249,7 @@ export default function StorePage(): JSX.Element {
               {!loadingTags &&
                 tags.map((tag, idx) => (
                   <Badge
+                    key={idx}
                     onClick={() => {
                       updateTags(tag.name);
                     }}
