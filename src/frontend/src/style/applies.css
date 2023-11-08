@@ -241,7 +241,7 @@
   }
 
   .community-page-arrangement {
-    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16 pb-4;
   }
 
   .community-page-nav-arrangement {
