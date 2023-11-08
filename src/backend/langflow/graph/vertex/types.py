@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Union, Optional
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.graph.utils import flatten_list
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.utils.schemas import ChatOutputResponse
 
 
 class AgentVertex(StatelessVertex):
@@ -324,7 +325,8 @@ class CustomComponentVertex(StatelessVertex):
         if self.is_power_component:
             if self.vertex_type == "ChatOutput":
                 self.artifacts = ChatOutputResponse(
-                    message=self._built_object, is_ai=self.params.get("is_ai", True)
+                    message=self._built_object,
+                    is_ai=self.params.get("is_ai", True) if self.params else True,
                 ).dict()
                 self._built_result = self._built_object
         else:
