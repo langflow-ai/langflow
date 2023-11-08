@@ -113,10 +113,9 @@ export default function newChatView(): JSX.Element {
     CleanFlowPool();
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
-  }
+  } 
 
   return (
-    <div className="form-modal-iv-box ">
       <div className="eraser-column-arrangement">
         <div className="eraser-size">
           <div className="eraser-position">
@@ -181,6 +180,5 @@ export default function newChatView(): JSX.Element {
           </div>
         </div>
       </div>
-    </div>
   );
 }
