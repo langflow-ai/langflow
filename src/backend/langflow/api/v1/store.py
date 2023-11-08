@@ -50,10 +50,17 @@ def get_optional_user_store_api_key(
 @router.get("/check")
 def check_if_store_is_enabled(
     settings_service=Depends(get_settings_service),
-    api_key=Depends(get_optional_user_store_api_key),
 ):
     return {
         "enabled": settings_service.settings.STORE,
+    }
+
+
+@router.get("/check/api_key")
+def check_if_store_has_api_key(
+    api_key=Depends(get_optional_user_store_api_key),
+):
+    return {
         "has_api_key": api_key is not None,
     }
 
