@@ -591,8 +591,8 @@ export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
 }
 
 export async function getStoreComponents(
-  page: number = 1,
-  limit: number = 10,
+  page?: number | null,
+  limit?: number | null,
   is_component?: boolean | null,
   sort?: string | null,
   tags?: string[] | null,
@@ -624,10 +624,10 @@ export async function getStoreComponents(
     }
 
     if (page !== undefined) {
-      queryParams.push(`page=${page}`);
+      queryParams.push(`page=${page ?? 1}`);
     }
     if (limit !== undefined) {
-      queryParams.push(`limit=${limit}`);
+      queryParams.push(`limit=${limit ?? 9999999}`);
     }
     if (is_component !== null && is_component !== undefined) {
       queryParams.push(`is_component=${is_component}`);
@@ -638,22 +638,6 @@ export async function getStoreComponents(
 
     const res = await api.get(url);
 
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    console.log("Error:", error);
-    throw error;
-  }
-}
-
-export async function getStoreSavedComponents(): Promise<
-  StoreComponentResponse | undefined
-> {
-  try {
-    const res = await api.get(
-      `${BASE_URL_API}store/components/?filter_by_user=true`
-    );
     if (res.status === 200) {
       return res.data;
     }

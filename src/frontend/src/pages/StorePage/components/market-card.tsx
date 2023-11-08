@@ -25,11 +25,11 @@ import { classNames } from "../../../utils/utils";
 
 export const MarketCardComponent = ({
   data,
-  authorized,
+  authorized = true,
   disabled = false,
 }: {
   data: storeComponent;
-  authorized: boolean;
+  authorized?: boolean;
   disabled?: boolean;
 }) => {
   const { savedFlows } = useContext(StoreContext);
