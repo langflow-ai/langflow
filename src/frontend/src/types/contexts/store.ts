@@ -5,4 +5,7 @@ export type storeContextType = {
   hasStore: boolean;
   setHasApiKey: (key: boolean) => void;
   hasApiKey: boolean;
+  getSavedComponents: () => void;
+  errorApiKey: boolean;
+  loadingSaved: boolean;
 };

@@ -17,11 +17,7 @@ import {
 import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { TabsContext } from "../../contexts/tabsContext";
-import {
-  getStoreComponents,
-  getStoreSavedComponents,
-  getStoreTags,
-} from "../../controllers/API";
+import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
@@ -31,11 +27,11 @@ export default function StorePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const { setSavedFlows, hasApiKey } = useContext(StoreContext);
+  const { getSavedComponents, loadingSaved, errorApiKey, hasApiKey } =
+    useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
-  const [loadingSaved, setLoadingSaved] = useState(false);
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState<storeComponent[]>([]);
@@ -43,13 +39,11 @@ export default function StorePage(): JSX.Element {
   const [pageSize, setPageSize] = useState(12);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageOrder, setPageOrder] = useState("Popular");
-  const [errorApiKey, setErrorApiKey] = useState(false);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [tabActive, setTabActive] = useState("Flows");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
-    handleGetSavedComponents();
     handleGetTags();
   }, []);
 
@@ -72,30 +66,6 @@ export default function StorePage(): JSX.Element {
     });
   }
 
-  function handleGetSavedComponents() {
-    setLoadingSaved(true);
-    getStoreSavedComponents()
-      .then((data) => {
-        if (data?.authorized === false) {
-          setErrorApiKey(true);
-          setSavedFlows(new Set<string>());
-        } else {
-          let savedIds = new Set<string>();
-          let results = data?.results ?? [];
-          results.forEach((flow) => {
-            savedIds.add(flow.id);
-          });
-          setSavedFlows(savedIds);
-          setErrorApiKey(false);
-          setLoadingSaved(false);
-        }
-      })
-      .catch((err) => {
-        setSavedFlows(new Set<string>());
-        setErrorApiKey(true);
-      });
-  }
-
   const handleGetComponents = () => {
     setLoading(true);
     getStoreComponents(
@@ -112,7 +82,6 @@ export default function StorePage(): JSX.Element {
         setLoading(false);
         setSearchData(res?.results ?? []);
         setTotalRowsCount(Number(res?.count ?? 0));
-        setErrorApiKey(true);
       })
       .catch((err) => {
         setSearchData([]);
@@ -151,7 +120,7 @@ export default function StorePage(): JSX.Element {
             <div className="community-page-nav-button">
               <StoreApiKeyModal
                 onCloseModal={() => {
-                  handleGetSavedComponents();
+                  getSavedComponents();
                   handleGetTags();
                   handleGetComponents();
                 }}

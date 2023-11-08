@@ -1,5 +1,9 @@
 import { createContext, useEffect, useState } from "react";
-import { checkHasApiKey, checkHasStore } from "../controllers/API";
+import {
+  checkHasApiKey,
+  checkHasStore,
+  getStoreComponents,
+} from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
 
 //store context to share user components and update them
@@ -10,6 +14,9 @@ const initialValue = {
   setHasStore: () => {},
   hasApiKey: false,
   setHasApiKey: () => {},
+  getSavedComponents: () => {},
+  errorApiKey: false,
+  loadingSaved: false,
 };
 
 export const StoreContext = createContext<storeContextType>(initialValue);
@@ -20,6 +27,8 @@ export function StoreProvider({ children }) {
   const [hasStore, setHasStore] = useState(true);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [storeChecked, setStoreChecked] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [errorApiKey, setErrorApiKey] = useState(false);
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -34,7 +43,32 @@ export function StoreProvider({ children }) {
     };
 
     fetchStoreData();
+    getSavedComponents();
   }, []);
+
+  function getSavedComponents() {
+    setLoadingSaved(true);
+    getStoreComponents(null, null, null, null, null, true)
+      .then((data) => {
+        if (data?.authorized === false) {
+          setErrorApiKey(true);
+          setSavedFlows(new Set<string>());
+        } else {
+          let savedIds = new Set<string>();
+          let results = data?.results ?? [];
+          results.forEach((flow) => {
+            savedIds.add(flow.id);
+          });
+          setSavedFlows(savedIds);
+          setErrorApiKey(false);
+          setLoadingSaved(false);
+        }
+      })
+      .catch((err) => {
+        setSavedFlows(new Set<string>());
+        setErrorApiKey(true);
+      });
+  }
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -59,6 +93,9 @@ export function StoreProvider({ children }) {
         setHasStore,
         hasApiKey,
         setHasApiKey,
+        getSavedComponents,
+        errorApiKey,
+        loadingSaved,
       }}
     >
       {children}
