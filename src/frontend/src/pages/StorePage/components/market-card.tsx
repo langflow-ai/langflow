@@ -23,7 +23,13 @@ import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 import { classNames } from "../../../utils/utils";
 
-export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
+export const MarketCardComponent = ({
+  data,
+  authorized,
+}: {
+  data: storeComponent;
+  authorized: boolean;
+}) => {
   const { savedFlows } = useContext(StoreContext);
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [loading, setLoading] = useState(false);
@@ -32,6 +38,7 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   const flowData = useRef<FlowType>();
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
+  const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -116,7 +123,15 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
   };
 
   return (
-    <Card className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md">
+    <Card
+      onMouseEnter={() => {
+        setHovering(true);
+      }}
+      onMouseLeave={() => {
+        setHovering(false);
+      }}
+      className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md"
+    >
       <div>
         <CardHeader>
           <div>
@@ -172,31 +187,46 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 ))}
             </div>
             <div className="flex gap-0.5">
-              <ShadTooltip content="Like">
+              <ShadTooltip
+                content={authorized ? "Like" : "Please review your API key."}
+              >
                 <Button
                   variant="ghost"
                   size="xs"
-                  className="whitespace-nowrap"
+                  className={
+                    "whitespace-nowrap" +
+                    (!authorized ? " cursor-not-allowed" : "")
+                  }
                   onClick={() => {
-                    handleLike();
+                    if (authorized) handleLike();
                   }}
                 >
                   <IconComponent
                     name="Heart"
                     className={classNames(
                       "h-6 w-6 p-0.5",
-                      liked_by_user ? "fill-destructive stroke-destructive" : ""
+                      liked_by_user
+                        ? "fill-destructive stroke-destructive"
+                        : "",
+                      !authorized ? " text-ring" : ""
                     )}
                   />
                 </Button>
               </ShadTooltip>
-              <ShadTooltip content="Add to Account">
+              <ShadTooltip
+                content={
+                  authorized ? "Add to Account" : "Please review your API key."
+                }
+              >
                 <Button
                   variant="ghost"
                   size="xs"
-                  className="whitespace-nowrap"
+                  className={
+                    "whitespace-nowrap" +
+                    (!authorized ? " cursor-not-allowed" : "")
+                  }
                   onClick={() => {
-                    if (loading) {
+                    if (loading || !authorized) {
                       return;
                     }
                     if (!added) {
@@ -208,9 +238,19 @@ export const MarketCardComponent = ({ data }: { data: storeComponent }) => {
                 >
                   <IconComponent
                     name={
-                      loading ? "Loader2" : added ? "GitBranchPlus" : "Plus"
+                      loading
+                        ? "Loader2"
+                        : added
+                        ? hovering
+                          ? "GitBranchPlus"
+                          : "Check"
+                        : "Plus"
                     }
-                    className={"h-6 w-6" + (loading ? " animate-spin" : "")}
+                    className={classNames(
+                      "h-6 w-6",
+                      loading ? " animate-spin" : "",
+                      !authorized ? " text-ring" : ""
+                    )}
                   />
                 </Button>
               </ShadTooltip>
