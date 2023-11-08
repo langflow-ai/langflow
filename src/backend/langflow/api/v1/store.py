@@ -111,6 +111,7 @@ def get_components(
                     is_component=is_component,
                 )
             except Exception:
+                #! This should be removed once we fix the bug
                 comp_count = 0
 
             if store_api_Key:
