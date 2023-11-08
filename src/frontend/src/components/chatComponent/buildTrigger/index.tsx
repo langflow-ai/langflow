@@ -1,7 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
-import { useSSE } from "../../../contexts/SSEContext";
 import { alertContext } from "../../../contexts/alertContext";
 import { FlowType } from "../../../types/flow";
 
@@ -23,17 +22,15 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }): JSX.Element {
-  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { setTabsState } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { addDataToFlowPool, reactFlowInstance, showPanel } =
+  const { addDataToFlowPool, reactFlowInstance, showPanel,isBuilding,setIsBuilding } =
     useContext(flowManagerContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   function handleBuildUpdate(data: any) {
-    updateSSEData(data.data);
     addDataToFlowPool(data.data[data.id], data.id);
   }
 
@@ -75,16 +72,7 @@ export default function BuildTrigger({
   }
 
   function handleBuildComplete(allNodesValid: boolean) {
-    console.log(allNodesValid);
     setIsBuilt(allNodesValid);
-    if (!allNodesValid) {
-      setErrorData({
-        title: "Oops! Looks like you missed something",
-        list: [
-          "Check components and retry. Hover over component status icon 🔴 to inspect.",
-        ],
-      });
-    }
     if (allNodesValid) {
       setSuccessData({
         title: "Flow is ready to run",

@@ -57,6 +57,8 @@ const initialValue: FlowManagerContextType = {
   setFlow: (flow: FlowType) => { },
   pasteFileOnFLow: (file?: File) => new Promise(() => { }),
   CleanFlowPool: () => { },
+  isBuilding: false,
+  setIsBuilding: (state: boolean) => { },
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -77,6 +79,7 @@ export default function FlowManagerProvider({ children }) {
   const [showPanel, setShowPanel] = useState(false);
   const actualFlow = useRef<FlowType | null>(null);
   const { setErrorData } = useContext(alertContext);
+  const [isBuilding,setIsBuilding] = useState(false);
 
   useEffect(() => {
     if (checkInputandOutput()) {
@@ -441,6 +444,8 @@ export default function FlowManagerProvider({ children }) {
   return (
     <flowManagerContext.Provider
       value={{
+        setIsBuilding,
+        isBuilding,
         pasteFileOnFLow,
         setFlow,
         buildFlow,

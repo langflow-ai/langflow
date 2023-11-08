@@ -61,4 +61,6 @@ export type FlowManagerContextType = {
   setFlow: (flow: FlowType) => void;
   pasteFileOnFLow: (file?: File) => Promise<void>;
   CleanFlowPool: () => void;
+  isBuilding: boolean;
+  setIsBuilding: (state: boolean) => void;
 };

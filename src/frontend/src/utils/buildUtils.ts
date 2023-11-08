@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import { FlowType } from "../types/flow";
 
@@ -43,7 +44,6 @@ export async function buildVertices({
             verticesOrder.indexOf(vertexId) / verticesOrder.length;
           onProgressUpdate(progress);
         }
-        // Update SSE data
         if (onBuildUpdate) {
           let data = {};
           if (!buildData.valid) {
@@ -57,8 +57,10 @@ export async function buildVertices({
         }
         buildResults.push(buildData.valid);
       } catch (error : any) {
+        
         if (onBuildError) {
-          onBuildError("Error Building Component", [error.detail]);
+          console.log(error)
+          onBuildError("Error Building Component", [(error as AxiosError<any>).response?.data?.detail??"Unknown Error"]);
         }
       }
     }
@@ -72,7 +74,7 @@ export async function buildVertices({
     // Callback for handling errors
     if (onBuildError) {
       if (onBuildError) {
-        onBuildError("Error Building Component", [error.detail]);
+        onBuildError("Error Building Component", [(error as AxiosError<any>).response?.data?.detail??"Unknown Error"]);
       }
     }
   }

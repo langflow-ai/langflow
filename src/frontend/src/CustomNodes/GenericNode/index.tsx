@@ -6,7 +6,6 @@ import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
-import { useSSE } from "../../contexts/SSEContext";
 import { alertContext } from "../../contexts/alertContext";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
@@ -36,7 +35,6 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
-  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { updateFlow, saveFlow, flows, selectedFlowId } =
     useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -332,10 +330,7 @@ export default function GenericNode({
             {showNode && (
               <div className="round-button-div" onClick={()=>buildFlow(data.id)}>
                 <Tooltip
-                  title={
-                    isBuilding ? (
-                      <span>Building...</span>
-                    ) : !validationStatus ? (
+                  title={ !validationStatus ? (
                       <span className="flex">
                         Build{" "}
                         <IconComponent
@@ -359,7 +354,7 @@ export default function GenericNode({
                 >
                   <div className="generic-node-status-position">
                     <IconComponent
-                      name={isBuilding ? "PauseCircle" : "PlayCircle"}
+                      name={"PlayCircle"}
                       className=" h-5 stroke-build-trigger stroke-1"
                     />
                   </div>

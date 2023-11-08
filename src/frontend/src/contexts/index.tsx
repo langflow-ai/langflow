@@ -3,7 +3,6 @@ import { BrowserRouter } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
-import { SSEProvider } from "./SSEContext";
 import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
 import { DarkProvider } from "./darkContext";
@@ -26,7 +25,6 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                   <TypesProvider>
                     <LocationProvider>
                       <ApiInterceptor />
-                      <SSEProvider>
                         <FlowsProvider>
                           <UndoRedoProvider>
                             <FlowManagerProvider>
@@ -34,7 +32,6 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                             </FlowManagerProvider>
                           </UndoRedoProvider>
                         </FlowsProvider>
-                      </SSEProvider>
                     </LocationProvider>
                   </TypesProvider>
                 </DarkProvider>
