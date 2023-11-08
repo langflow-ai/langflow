@@ -17,7 +17,7 @@ from langflow.services import service_manager, ServiceType
 import orjson
 
 if TYPE_CHECKING:
-    pass
+    from langflow.services.cache.base import BaseCacheService
 
 
 class ChatHistory(Subject):
@@ -56,7 +56,9 @@ class ChatService(Service):
         self.chat_history = ChatHistory()
         self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
-        self.cache_service = service_manager.get(ServiceType.CACHE_SERVICE)
+        self.cache_service: "BaseCacheService" = service_manager.get(
+            ServiceType.CACHE_SERVICE
+        )
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""

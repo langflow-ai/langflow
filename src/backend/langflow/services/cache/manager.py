@@ -117,7 +117,7 @@ class InMemoryCache(BaseCacheService, Service):
             value: The value to insert or update.
         """
         with self._lock:
-            existing_value = self._get_without_lock(key)
+            existing_value = self.get(key)
             if (
                 existing_value is not None
                 and isinstance(existing_value, dict)
