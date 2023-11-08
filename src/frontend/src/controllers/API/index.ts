@@ -729,6 +729,18 @@ export async function searchComponent(
   }
 }
 
+export async function checkHasApiKey() {
+  try {
+    const res = await api.get(`${BASE_URL_API}/store/check/api_key`);
+    if (res?.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
 export async function checkHasStore() {
   try {
     const res = await api.get(`${BASE_URL_API}store/check/`);
