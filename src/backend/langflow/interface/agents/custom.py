@@ -16,8 +16,10 @@ from langchain.agents.agent_toolkits import (
 )
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
-from langchain.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
-from langchain.agents.agent_toolkits.pandas.prompt import (
+from langchain_experimental.agents.agent_toolkits.pandas.prompt import (
+    PREFIX as PANDAS_PREFIX,
+)
+from langchain_experimental.agents.agent_toolkits.pandas.prompt import (
     SUFFIX_WITH_DF as PANDAS_SUFFIX,
 )
 from langchain.agents.agent_toolkits.sql.prompt import SQL_PREFIX, SQL_SUFFIX
