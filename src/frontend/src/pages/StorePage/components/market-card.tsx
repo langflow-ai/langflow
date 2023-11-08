@@ -40,7 +40,6 @@ export const MarketCardComponent = ({
   const flowData = useRef<FlowType>();
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
-  const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -105,33 +104,12 @@ export const MarketCardComponent = ({
     }
   }
 
-  function handleInstall() {
-    if (flowData.current) {
-      addFlow(true, flowData.current!).then(() => {
-        setSuccessData({ title: "Flow Installed" });
-      });
-    } else {
-      getComponent(data.id).then((res) => {
-        const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
-        flowData.current = newFLow;
-        addFlow(true, newFLow);
-        setSuccessData({ title: "Flow Installed" });
-      });
-    }
-  }
-
   const totalComponentsMetadata = () => {
     return data?.metadata ? data.metadata["total"] : 0;
   };
 
   return (
     <Card
-      onMouseEnter={() => {
-        setHovering(true);
-      }}
-      onMouseLeave={() => {
-        setHovering(false);
-      }}
       className={classNames(
         "group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md",
         disabled ? "pointer-events-none opacity-50" : ""
@@ -145,12 +123,14 @@ export const MarketCardComponent = ({
                 {data.name}
               </span>
               <div className="flex gap-3">
-                <ShadTooltip content="Components">
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <IconComponent name="ToyBrick" className="h-4 w-4" />
-                    {totalComponentsMetadata()}
-                  </span>
-                </ShadTooltip>
+                {!data.is_component && (
+                  <ShadTooltip content="Components">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <IconComponent name="ToyBrick" className="h-4 w-4" />
+                      {totalComponentsMetadata()}
+                    </span>
+                  </ShadTooltip>
+                )}
                 <ShadTooltip content="Likes">
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <IconComponent
@@ -222,7 +202,7 @@ export const MarketCardComponent = ({
                 content={
                   authorized
                     ? added
-                      ? "Clone"
+                      ? "Added to Account"
                       : "Add to Account"
                     : "Please review your API key."
                 }
@@ -240,23 +220,14 @@ export const MarketCardComponent = ({
                     }
                     if (!added) {
                       handleAdd();
-                    } else {
-                      handleInstall();
                     }
                   }}
                 >
                   <IconComponent
-                    name={
-                      loading
-                        ? "Loader2"
-                        : added
-                        ? hovering
-                          ? "GitBranchPlus"
-                          : "Check"
-                        : "Plus"
-                    }
+                    name={loading ? "Loader2" : added ? "Check" : "Plus"}
                     className={classNames(
                       "h-6 w-6",
+                      added ? "text-chat-send" : "",
                       loading ? " animate-spin" : "",
                       !authorized ? " text-ring" : ""
                     )}
