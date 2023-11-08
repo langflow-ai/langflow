@@ -469,6 +469,11 @@ export function extractIdFromLongId(id: string): string {
   return newId;
 }
 
+export function extractTypeFromLongId(id: string): string {
+  let [newId,_] = id.split("-");
+  return newId;
+}
+
 export function truncateDisplayName(name: string): string {
   if (name.length > 15) {
     name = name.slice(0, 15);
@@ -565,4 +570,14 @@ export function getFieldTitle(
     : template[templateField].name
     ? toTitleCase(template[templateField].name!)
     : toTitleCase(templateField);
+}
+
+export function removeCountFromString(input: string): string {
+  // Define a regex pattern to match the count in parentheses
+  const pattern = /\s*\(\w+\)\s*$/;
+
+  // Use the `replace` method to remove the matched pattern
+  const result = input.replace(pattern, "");
+
+  return result.trim(); // Trim any leading/trailing spaces
 }
