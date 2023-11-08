@@ -315,9 +315,23 @@ class OutputParserVertex(StatelessVertex):
 class CustomComponentVertex(StatelessVertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="custom_components")
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()
+
+
+class ChatVertex(StatelessVertex):
+    def __init__(self, data: Dict):
+        super().__init__(data, base_type="custom_components", is_task=True)
         self.steps = [self._build, self._run]
 
     def _built_object_repr(self):
+        if self.task_id and self.is_task:
+            if task := self.get_task():
+                return str(task.info)
+            else:
+                return f"Task {self.task_id} is not running"
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
 
@@ -329,19 +343,6 @@ class CustomComponentVertex(StatelessVertex):
                     is_ai=self.params.get("is_ai", True) if self.params else True,
                 ).dict()
                 self._built_result = self._built_object
+
         else:
             super()._run(*args, **kwargs)
-
-
-class ChatVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="custom_components", is_task=True)
-
-    def _built_object_repr(self):
-        if self.task_id and self.is_task:
-            if task := self.get_task():
-                return str(task.info)
-            else:
-                return f"Task {self.task_id} is not running"
-        if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()

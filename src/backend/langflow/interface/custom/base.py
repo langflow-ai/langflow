@@ -8,6 +8,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
+
 from loguru import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
@@ -23,9 +24,7 @@ class CustomComponentCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
-            self.type_dict: dict[str, Any] = {
-                "CustomComponent": CustomComponent,
-            }
+            self.type_dict: dict[str, Any] = {"CustomComponent": CustomComponent}
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
