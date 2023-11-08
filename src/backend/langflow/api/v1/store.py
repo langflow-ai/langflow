@@ -104,12 +104,14 @@ def get_components(
                 tags=tags,
                 sort=sort,
             )
-
-            comp_count = store_service.count_components(
-                api_key=store_api_Key,
-                filter_by_user=filter_by_user,
-                is_component=is_component,
-            )
+            try:
+                comp_count = store_service.count_components(
+                    api_key=store_api_Key,
+                    filter_by_user=filter_by_user,
+                    is_component=is_component,
+                )
+            except Exception:
+                comp_count = 0
 
             if store_api_Key:
                 # Now, from the result, we need to get the components
