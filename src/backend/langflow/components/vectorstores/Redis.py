@@ -29,7 +29,10 @@ class RedisComponent(CustomComponent):
             "code": {"show": False, "display_name": "Code"},
             "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {"display_name": "Embedding"},
-            "redis_server_url": {"display_name": "Redis Server Connection String", "advanced": False},
+            "redis_server_url": {
+                "display_name": "Redis Server Connection String",
+                "advanced": False,
+            },
             "redis_index_name": {"display_name": "Redis Index", "advanced": False},
         }
 
@@ -52,7 +55,6 @@ class RedisComponent(CustomComponent):
         Returns:
         - VectorStore: The Vector Store object.
         """
-
 
         return Redis.from_documents(
             documents=documents,  # type: ignore
