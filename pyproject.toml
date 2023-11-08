@@ -33,7 +33,8 @@ google-search-results = "^2.4.1"
 google-api-python-client = "^2.79.0"
 typer = "^0.9.0"
 gunicorn = "^21.2.0"
-langchain = "^0.0.312"
+
+langchain = { version = "0.0.331rc2", allow-prereleases = true }
 openai = "^1.1.2"
 pandas = "2.0.3"
 chromadb = "^0.3.21"
