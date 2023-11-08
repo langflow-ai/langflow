@@ -79,7 +79,7 @@ def create_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 def get_components(
-    search: Optional[List[str]] = Query(None),
+    search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     is_component: Optional[bool] = Query(None),
     tags: Optional[List[str]] = Query(None),
