@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from "react";
-import { checkHasStore } from "../controllers/API";
+import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
 
 //store context to share user components and update them
@@ -27,7 +27,6 @@ export function StoreProvider({ children }) {
         if (storeChecked) return;
         const res = await checkHasStore();
         setHasStore(res?.enabled ?? false);
-        setHasApiKey(res?.has_api_key ?? false);
         setStoreChecked(true);
       } catch (e) {
         console.log(e);
@@ -36,6 +35,20 @@ export function StoreProvider({ children }) {
 
     fetchStoreData();
   }, []);
+
+  useEffect(() => {
+    const fetchStoreData = async () => {
+      try {
+        if (storeChecked) return;
+        const res = await checkHasApiKey();
+        setHasApiKey(res?.has_api_key ?? false);
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchStoreData();
+  }, [storeChecked]);
 
   return (
     <StoreContext.Provider
