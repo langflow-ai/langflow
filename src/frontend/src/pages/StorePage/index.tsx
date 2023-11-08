@@ -76,14 +76,19 @@ export default function StorePage(): JSX.Element {
     setLoadingSaved(true);
     getStoreSavedComponents()
       .then((data) => {
-        let savedIds = new Set<string>();
-        let results = data?.results ?? [];
-        results.forEach((flow) => {
-          savedIds.add(flow.id);
-        });
-        setSavedFlows(savedIds);
-        setErrorApiKey(false);
-        setLoadingSaved(false);
+        if (data?.authorized === false) {
+          setErrorApiKey(true);
+          setSavedFlows(new Set<string>());
+        } else {
+          let savedIds = new Set<string>();
+          let results = data?.results ?? [];
+          results.forEach((flow) => {
+            savedIds.add(flow.id);
+          });
+          setSavedFlows(savedIds);
+          setErrorApiKey(false);
+          setLoadingSaved(false);
+        }
       })
       .catch((err) => {
         setSavedFlows(new Set<string>());
@@ -291,7 +296,11 @@ export default function StorePage(): JSX.Element {
                 searchData.map((item, idx) => {
                   return (
                     <>
-                      <MarketCardComponent key={idx} data={item} />
+                      <MarketCardComponent
+                        key={idx}
+                        data={item}
+                        authorized={!loadingSaved}
+                      />
                     </>
                   );
                 })
