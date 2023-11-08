@@ -8,6 +8,7 @@ import AccordionComponent from "../AccordionComponent";
 import { Badge } from "../ui/badge";
 import ShadTooltip from "../ShadTooltipComponent";
 import IconComponent from "../genericIconComponent";
+import { Textarea } from "../ui/textarea";
 
 export default function IOView(): JSX.Element {
   const { flowPool, inputIds, outputIds, inputTypes, outputTypes } =
@@ -39,6 +40,42 @@ export default function IOView(): JSX.Element {
             Inputs
           </span>
         </div>
+        {
+          inputIds.map((inputId,index) => {
+            return (
+              <div className="file-component-accordion-div" key={index}>
+              <AccordionComponent
+                trigger={
+                  <div className="file-component-badge-div">
+                    <Badge variant="gray" size="md">
+                      {inputId}
+                    </Badge>
+                    <div
+                      className="-mb-1"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                    >
+                    </div>
+                  </div>
+                }
+                key={index}
+                keyValue={inputId}
+              >
+                <div className="file-component-tab-column">
+                  <Textarea
+                    className="custom-scroll"
+                    onChange={(e) => {
+                      console.log("change")
+                    }}
+                    placeholder="Enter text..."
+                  ></Textarea>
+                </div>
+              </AccordionComponent>
+            </div>
+            )
+          })
+        }
       </div>
       {selectedView}
     </div>
