@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Routes, useNavigate } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
@@ -22,12 +23,12 @@ import SignUp from "./pages/signUpPage";
 
 const Router = () => {
   const navigate = useNavigate();
-
-  // Redirect from root to /flows
-  if (window.location.pathname === "/") {
-    navigate("/flows");
-  }
-
+  useEffect(() => {
+    // Redirect from root to /flows
+    if (window.location.pathname === "/") {
+      navigate("/flows");
+    }
+  }, [navigate]);
   return (
     <Routes>
       <Route
