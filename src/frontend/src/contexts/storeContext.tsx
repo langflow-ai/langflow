@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import { checkHasStore } from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
 
@@ -8,7 +8,7 @@ const initialValue = {
   setSavedFlows: () => {},
   hasStore: true,
   setHasStore: () => {},
-  hasApiKey: true,
+  hasApiKey: false,
   setHasApiKey: () => {},
 };
 
@@ -18,12 +18,24 @@ export function StoreProvider({ children }) {
   const [savedFlows, setSavedFlows] = useState<Set<string>>(new Set());
 
   const [hasStore, setHasStore] = useState(true);
-  const [hasApiKey, setHasApiKey] = useState(true);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [storeChecked, setStoreChecked] = useState(false);
 
-  checkHasStore().then((res) => {
-    setHasStore(res["enabled"]);
-    setHasApiKey(res["has_api_key"]);
-  });
+  useEffect(() => {
+    const fetchStoreData = async () => {
+      try {
+        if (storeChecked) return;
+        const res = await checkHasStore();
+        setHasStore(res?.enabled ?? false);
+        setHasApiKey(res?.has_api_key ?? false);
+        setStoreChecked(true);
+      } catch (e) {
+        console.log(e);
+      }
+    };
+
+    fetchStoreData();
+  }, []);
 
   return (
     <StoreContext.Provider

@@ -74,8 +74,8 @@ export default function StorePage(): JSX.Element {
     let results = data?.results ?? [];
     results.forEach((flow) => {
       savedIds.add(flow.id);
-    }); /*
-    setSavedFlows(savedIds); */
+    });
+    setSavedFlows(savedIds);
     setErrorApiKey(false);
     setLoading(false);
   }
