@@ -151,6 +151,8 @@ export default function StorePage(): JSX.Element {
             <div className="community-page-nav-button">
               <StoreApiKeyModal
                 onCloseModal={() => {
+                  handleGetSavedComponents();
+                  handleGetTags();
                   handleGetComponents();
                 }}
               >
