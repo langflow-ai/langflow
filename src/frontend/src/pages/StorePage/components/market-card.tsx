@@ -215,7 +215,11 @@ export const MarketCardComponent = ({
               </ShadTooltip>
               <ShadTooltip
                 content={
-                  authorized ? "Add to Account" : "Please review your API key."
+                  authorized
+                    ? added
+                      ? "Clone"
+                      : "Add to Account"
+                    : "Please review your API key."
                 }
               >
                 <Button
