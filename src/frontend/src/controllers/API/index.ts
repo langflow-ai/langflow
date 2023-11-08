@@ -609,8 +609,8 @@ export async function getStoreComponents(
     if (status !== undefined && status !== null) {
       queryParams.push(`status=${status}`);
     }
-    if (tags !== undefined && tags !== null) {
-      queryParams.push(`tags=${tags}`);
+    if (tags !== undefined && tags !== null && tags.length > 0) {
+      queryParams.push(`tags=${tags.join(",")}`);
     }
 
     if (sort !== undefined && sort !== null) {

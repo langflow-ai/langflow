@@ -11,9 +11,9 @@ import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 
 export default function PaginatorComponent({
-  pageSize = 10,
+  pageSize = 12,
   pageIndex = 1,
-  rowsCount = [10, 20, 50, 100],
+  rowsCount = [12, 24, 48, 96],
   totalRowsCount = 0,
   paginate,
   storeComponent = false,

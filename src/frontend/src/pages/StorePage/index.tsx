@@ -1,6 +1,5 @@
-import { cloneDeep } from "lodash";
 import { Search } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -23,7 +22,6 @@ import {
   getStoreComponents,
   getStoreSavedComponents,
   getStoreTags,
-  searchComponent,
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
@@ -34,57 +32,78 @@ export default function StorePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const [loading, setLoading] = useState(false);
+  const { setSavedFlows, hasApiKey } = useContext(StoreContext);
+  const { setErrorData } = useContext(alertContext);
+  const [loading, setLoading] = useState(true);
+  const [loadingTags, setLoadingTags] = useState(true);
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState<storeComponent[]>([]);
-  const { setErrorData } = useContext(alertContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
-  const [size, setPageSize] = useState(10);
-  const [index, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageOrder, setPageOrder] = useState("Popular");
   const [errorApiKey, setErrorApiKey] = useState(false);
-  const { setSavedFlows, hasApiKey } = useContext(StoreContext);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
-  const tagListId = useRef<{ id: string; name: string }[]>([]);
-  const [renderPagination, setRenderPagination] = useState(false);
-  const filterComponent = useRef<boolean | null>(null);
   const [tabActive, setTabActive] = useState("Flows");
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
+    handleGetSavedComponents();
+    handleGetTags();
+  }, []);
+
+  useEffect(() => {
+    handleGetComponents();
+  }, [
+    searchText,
+    tabActive,
+    pageOrder,
+    pageIndex,
+    pageSize,
+    filteredCategories,
+  ]);
+
+  function handleGetTags() {
+    setLoadingTags(true);
     getStoreTags().then((res) => {
-      tagListId.current = res;
       setTags(res);
+      setLoadingTags(false);
     });
-  }, []);
+  }
 
-  useEffect(() => {
-    filterComponent.current = false;
-    getSavedComponents()
-      .finally(() => handleGetComponents())
+  function handleGetSavedComponents() {
+    setLoadingSaved(true);
+    getStoreSavedComponents()
+      .then((data) => {
+        let savedIds = new Set<string>();
+        let results = data?.results ?? [];
+        results.forEach((flow) => {
+          savedIds.add(flow.id);
+        });
+        setSavedFlows(savedIds);
+        setErrorApiKey(false);
+        setLoadingSaved(false);
+      })
       .catch((err) => {
+        setSavedFlows(new Set<string>());
         setErrorApiKey(true);
-        console.error(err);
       });
-  }, []);
-
-  async function getSavedComponents() {
-    setLoading(true);
-    const data = await getStoreSavedComponents();
-    let savedIds = new Set<string>();
-    let results = data?.results ?? [];
-    results.forEach((flow) => {
-      savedIds.add(flow.id);
-    });
-    setSavedFlows(savedIds);
-    setErrorApiKey(false);
-    setLoading(false);
   }
 
   const handleGetComponents = () => {
     setLoading(true);
-    setRenderPagination(true);
-
-    getStoreComponents(index - 1, size, filterComponent.current)
+    getStoreComponents(
+      pageIndex,
+      pageSize,
+      tabActive === "All" ? null : tabActive === "Flows" ? false : true,
+      pageOrder === "Popular" ? "-count(liked_by)" : "name",
+      filteredCategories,
+      null,
+      null,
+      searchText === "" ? null : searchText
+    )
       .then((res) => {
         setLoading(false);
         setSearchData(res?.results ?? []);
@@ -101,85 +120,17 @@ export default function StorePage(): JSX.Element {
       });
   };
 
-  const handleSearch = (inputText: string) => {
-    if (inputText === "") {
-      handleGetComponents();
-      return;
-    }
-    setLoading(true);
-    searchComponent(inputText).then(
-      (res) => {
-        setSearchData(res?.results ?? []);
-        setTotalRowsCount(Number(res?.count ?? 0));
-        setLoading(false);
-        setRenderPagination(false);
-        setTotalRowsCount(Number(res?.count ?? 0));
-      },
-      (error) => {
-        setLoading(false);
+  const updateTags = (tagName: string) => {
+    setFilterCategories((prevArray) => {
+      const index = prevArray.indexOf(tagName);
+      if (index === -1) {
+        // Item does not exist in array, add it
+        return [...prevArray, tagName];
+      } else {
+        // Item exists in array, remove it
+        return prevArray.filter((_, i) => i !== index);
       }
-    );
-  };
-
-  function handleChangePagination(pageIndex: number, pageSize: number) {
-    setLoading(true);
-    setRenderPagination(true);
-    getStoreComponents(pageIndex, pageSize, filterComponent.current)
-      .then((res) => {
-        setSearchData(res?.results ?? []);
-        setPageIndex(pageIndex);
-        setPageSize(pageSize);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setSearchData([]);
-        setLoading(false);
-        setErrorData({
-          title: "Error to get components.",
-          list: [err["response"]["data"]["detail"]],
-        });
-      });
-  }
-
-  function handleFilterByTags(filterArray) {
-    if (filterArray.length === 0) {
-      handleGetComponents();
-      return;
-    }
-    setRenderPagination(false);
-    searchComponent(null, 1, 10000, null, filterArray).then(
-      (res) => {
-        setSearchData(res?.results ?? []);
-        setLoading(false);
-        setTotalRowsCount(Number(res?.count ?? 0));
-      },
-      (error) => {
-        setLoading(false);
-        setSearchData([]);
-      }
-    );
-  }
-
-  function handleChangeTab(tab: string) {
-    if (tab === "All") {
-      filterComponent.current = null;
-    } else if (tab === "Flows") {
-      filterComponent.current = false;
-    } else if (tab === "Components") {
-      filterComponent.current = true;
-    }
-    setPageIndex(1);
-    setPageSize(10);
-    handleGetComponents();
-  }
-
-  const handleOrderPage = (e) => {
-    let sort;
-    if (e === "Popular") {
-      sort = "-count(liked_by)";
-    } else if (e === "Alphabetical") {
-      sort = "name";
-    }
+    });
   };
 
   return (
@@ -224,14 +175,14 @@ export default function StorePage(): JSX.Element {
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleSearch(inputText);
+                    setSearchText(inputText);
                   }
                 }}
                 value={inputText}
               />
               <Search
                 onClick={() => {
-                  handleSearch(inputText);
+                  setSearchText(inputText);
                 }}
                 className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
               />
@@ -240,7 +191,6 @@ export default function StorePage(): JSX.Element {
               <button
                 onClick={() => {
                   setTabActive("All");
-                  handleChangeTab("All");
                 }}
                 className={
                   tabActive === "All"
@@ -253,7 +203,6 @@ export default function StorePage(): JSX.Element {
               <button
                 onClick={() => {
                   setTabActive("Flows");
-                  handleChangeTab("Flows");
                 }}
                 className={
                   tabActive === "Flows"
@@ -266,7 +215,6 @@ export default function StorePage(): JSX.Element {
               <button
                 onClick={() => {
                   setTabActive("Components");
-                  handleChangeTab("Components");
                 }}
                 className={
                   tabActive === "Components"
@@ -285,19 +233,11 @@ export default function StorePage(): JSX.Element {
           </div>
 
           <div className="flex items-center gap-2 px-2">
-            {!loading &&
+            {!loadingTags &&
               tags.map((tag, idx) => (
                 <Badge
                   onClick={() => {
-                    const index = filteredCategories?.indexOf(tag.name);
-                    const copyFilterArray = cloneDeep(filteredCategories);
-                    if (index === -1) {
-                      copyFilterArray.push(tag.name);
-                    } else {
-                      copyFilterArray.splice(index, 1);
-                    }
-                    setFilterCategories(copyFilterArray);
-                    handleFilterByTags(copyFilterArray);
+                    updateTags(tag.name);
                   }}
                   variant="outline"
                   size="sq"
@@ -316,14 +256,14 @@ export default function StorePage(): JSX.Element {
             <span className="px-0.5 text-sm text-muted-foreground">
               {!loading && (
                 <>
-                  {totalRowsCount} {totalRowsCount > 0 ? "results" : "result"}
+                  {totalRowsCount} {totalRowsCount !== 1 ? "results" : "result"}
                 </>
               )}
             </span>
 
             <Select
               onValueChange={(e) => {
-                handleOrderPage(e);
+                setPageOrder(e);
               }}
             >
               <SelectTrigger>
@@ -356,15 +296,16 @@ export default function StorePage(): JSX.Element {
           </div>
         </div>
 
-        {!loading && renderPagination && (
+        {!loading && (
           <div className="relative my-3">
             <PaginatorComponent
               storeComponent={true}
-              pageIndex={index}
-              pageSize={size}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
               totalRowsCount={totalRowsCount}
               paginate={(pageSize, pageIndex) => {
-                handleChangePagination(pageIndex, pageSize);
+                setPageIndex(pageIndex);
+                setPageSize(pageSize);
               }}
             ></PaginatorComponent>
           </div>
