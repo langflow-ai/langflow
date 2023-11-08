@@ -26,9 +26,11 @@ import { classNames } from "../../../utils/utils";
 export const MarketCardComponent = ({
   data,
   authorized,
+  disabled = false,
 }: {
   data: storeComponent;
   authorized: boolean;
+  disabled?: boolean;
 }) => {
   const { savedFlows } = useContext(StoreContext);
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
@@ -130,7 +132,10 @@ export const MarketCardComponent = ({
       onMouseLeave={() => {
         setHovering(false);
       }}
-      className="group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md"
+      className={classNames(
+        "group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+        disabled ? "pointer-events-none opacity-50" : ""
+      )}
     >
       <div>
         <CardHeader>

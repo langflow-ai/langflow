@@ -300,6 +300,7 @@ export default function StorePage(): JSX.Element {
                         key={idx}
                         data={item}
                         authorized={!loadingSaved}
+                        disabled={loading}
                       />
                     </>
                   );
