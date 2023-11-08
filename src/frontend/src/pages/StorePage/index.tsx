@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -138,166 +137,176 @@ export default function StorePage(): JSX.Element {
       <Header />
 
       <div className="community-page-arrangement">
-        <div className="community-page-nav-arrangement">
-          <span className="community-page-nav-title">
-            <IconComponent name="Store" className="w-6" />
-            Langflow Store
-          </span>
-          <div className="community-page-nav-button">
-            <StoreApiKeyModal
-              onCloseModal={() => {
-                handleGetComponents();
-              }}
-            >
-              <Button
-                className={`${
-                  errorApiKey && !hasApiKey ? "animate-pulse border-error" : ""
-                }`}
-                variant="primary"
+        <div>
+          <div className="community-page-nav-arrangement">
+            <span className="community-page-nav-title">
+              <IconComponent name="Store" className="w-6" />
+              Langflow Store
+            </span>
+            <div className="community-page-nav-button">
+              <StoreApiKeyModal
+                onCloseModal={() => {
+                  handleGetComponents();
+                }}
               >
-                <IconComponent name="Key" className="main-page-nav-button" />
-                API Key
-              </Button>
-            </StoreApiKeyModal>
-          </div>
-        </div>
-        <span className="community-page-description-text">
-          Search flows and components from the community.
-        </span>
-        <div className="flex w-full flex-col gap-4 p-0">
-          <div className="flex items-end gap-4">
-            <div className="relative h-12 w-[40%]">
-              <Input
-                placeholder="Search Flows and Components"
-                className="absolute h-12 px-5"
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearchText(inputText);
-                  }
-                }}
-                value={inputText}
-              />
-              <Search
-                onClick={() => {
-                  setSearchText(inputText);
-                }}
-                className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
-              />
-            </div>
-            <div className="ml-4 flex w-full gap-2 border-b border-border">
-              <button
-                onClick={() => {
-                  setTabActive("All");
-                }}
-                className={
-                  tabActive === "All"
-                    ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
-                }
-              >
-                All
-              </button>
-              <button
-                onClick={() => {
-                  setTabActive("Flows");
-                }}
-                className={
-                  tabActive === "Flows"
-                    ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
-                }
-              >
-                Flows
-              </button>
-              <button
-                onClick={() => {
-                  setTabActive("Components");
-                }}
-                className={
-                  tabActive === "Components"
-                    ? "border-b-2 border-primary p-3"
-                    : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
-                }
-              >
-                Components
-              </button>
-              <ShadTooltip content="Coming Soon">
-                <button className="cursor-not-allowed p-3 text-muted-foreground">
-                  Bundles
-                </button>
-              </ShadTooltip>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 px-2">
-            {!loadingTags &&
-              tags.map((tag, idx) => (
-                <Badge
-                  onClick={() => {
-                    updateTags(tag.name);
-                  }}
-                  variant="outline"
-                  size="sq"
-                  className={cn(
-                    "cursor-pointer",
-                    filteredCategories.some((category) => category === tag.name)
-                      ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                <Button
+                  className={`${
+                    errorApiKey && !hasApiKey
+                      ? "animate-pulse border-error"
                       : ""
-                  )}
+                  }`}
+                  variant="primary"
                 >
-                  {tag.name}
-                </Badge>
-              ))}
+                  <IconComponent name="Key" className="main-page-nav-button" />
+                  API Key
+                </Button>
+              </StoreApiKeyModal>
+            </div>
           </div>
-          <div className="flex items-end justify-between">
-            <span className="px-0.5 text-sm text-muted-foreground">
-              {!loading && (
+          <span className="community-page-description-text">
+            Search flows and components from the community.
+          </span>
+          <div className="flex w-full flex-col gap-4 p-0">
+            <div className="flex items-end gap-4">
+              <div className="relative h-12 w-[40%]">
+                <Input
+                  placeholder="Search Flows and Components"
+                  className="absolute h-12 px-5"
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setSearchText(inputText);
+                    }
+                  }}
+                  value={inputText}
+                />
+                <IconComponent
+                  name={loading ? "Loader2" : "Search"}
+                  onClick={() => {
+                    setSearchText(inputText);
+                  }}
+                  className={
+                    "absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground" +
+                    (loading ? " animate-spin" : "")
+                  }
+                />
+              </div>
+              <div className="ml-4 flex w-full gap-2 border-b border-border">
+                <button
+                  onClick={() => {
+                    setTabActive("All");
+                  }}
+                  className={
+                    tabActive === "All"
+                      ? "border-b-2 border-primary p-3"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                  }
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => {
+                    setTabActive("Flows");
+                  }}
+                  className={
+                    tabActive === "Flows"
+                      ? "border-b-2 border-primary p-3"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                  }
+                >
+                  Flows
+                </button>
+                <button
+                  onClick={() => {
+                    setTabActive("Components");
+                  }}
+                  className={
+                    tabActive === "Components"
+                      ? "border-b-2 border-primary p-3"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                  }
+                >
+                  Components
+                </button>
+                <ShadTooltip content="Coming Soon">
+                  <button className="cursor-not-allowed p-3 text-muted-foreground">
+                    Bundles
+                  </button>
+                </ShadTooltip>
+              </div>
+            </div>
+
+            <div className="flex h-6 items-center gap-2 px-2">
+              {!loadingTags &&
+                tags.map((tag, idx) => (
+                  <Badge
+                    onClick={() => {
+                      updateTags(tag.name);
+                    }}
+                    variant="outline"
+                    size="sq"
+                    className={cn(
+                      "cursor-pointer",
+                      filteredCategories.some(
+                        (category) => category === tag.name
+                      )
+                        ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                        : ""
+                    )}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+            </div>
+            <div className="flex items-end justify-between">
+              <span className="px-0.5 text-sm text-muted-foreground">
+                {(!loading || searchData.length !== 0) && (
+                  <>
+                    {totalRowsCount}{" "}
+                    {totalRowsCount !== 1 ? "results" : "result"}
+                  </>
+                )}
+              </span>
+
+              <Select
+                onValueChange={(e) => {
+                  setPageOrder(e);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Popular">Most Popular</SelectItem>
+                  {/* <SelectItem value="Recent">Most Recent</SelectItem> */}
+                  <SelectItem value="Alphabetical">Alphabetical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {!loading || searchData.length !== 0 ? (
+                searchData.map((item, idx) => {
+                  return (
+                    <>
+                      <MarketCardComponent key={idx} data={item} />
+                    </>
+                  );
+                })
+              ) : (
                 <>
-                  {totalRowsCount} {totalRowsCount !== 1 ? "results" : "result"}
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
                 </>
               )}
-            </span>
-
-            <Select
-              onValueChange={(e) => {
-                setPageOrder(e);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sort By" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Popular">Most Popular</SelectItem>
-                {/* <SelectItem value="Recent">Most Recent</SelectItem> */}
-                <SelectItem value="Alphabetical">Alphabetical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading ? (
-              <>
-                <SkeletonCardComponent />
-                <SkeletonCardComponent />
-                <SkeletonCardComponent />
-              </>
-            ) : (
-              searchData.map((item, idx) => {
-                return (
-                  <>
-                    <MarketCardComponent key={idx} data={item} />
-                  </>
-                );
-              })
-            )}
+            </div>
           </div>
         </div>
-
-        {!loading && (
-          <div className="relative my-3">
+        {(!loading || searchData.length !== 0) && (
+          <div className="relative my-6">
             <PaginatorComponent
               storeComponent={true}
               pageIndex={pageIndex}
