@@ -115,10 +115,11 @@ def get_components(
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
-                    result = update_components_with_user_data(
+                    updated_result = update_components_with_user_data(
                         result, store_service, store_api_Key
                     )
                     authorized = True
+                    result = updated_result
                 except Exception:
                     # If we get an error here, it means the user is not authorized
                     authorized = False
