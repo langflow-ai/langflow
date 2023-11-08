@@ -24,7 +24,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
 
-from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.flow import Flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.auth.utils import (
