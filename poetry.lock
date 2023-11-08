@@ -4396,13 +4396,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.0.1"
+version = "1.1.1"
 description = "Client library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.0.1-py3-none-any.whl", hash = "sha256:3bf0152da66821a3f539c93d1d3069f7ebc16d730384e836a58de77895829525"},
-    {file = "openai-1.0.1.tar.gz", hash = "sha256:fe25079fc1264bf1356e9db80d1617de1c4547bfab4221ccfb9b87d1e7733b48"},
+    {file = "openai-1.1.1-py3-none-any.whl", hash = "sha256:1496418b132c88352bcfffa8c24e83a69f0e01b1484cbb7bb48f722aad8fd6e1"},
+    {file = "openai-1.1.1.tar.gz", hash = "sha256:80e49cb21d8445f6d51339b8af7376fc83302c78ab78578b78133ef89634869d"},
 ]
 
 [package.dependencies]
@@ -7719,6 +7719,17 @@ doc = ["cairosvg (>=2.5.2,<3.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs (>=1
 test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.0.0)", "mypy (==0.910)", "pytest (>=4.4.0,<8.0.0)", "pytest-cov (>=2.10.0,<5.0.0)", "pytest-sugar (>=0.9.4,<0.10.0)", "pytest-xdist (>=1.32.0,<4.0.0)", "rich (>=10.11.0,<14.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
 
 [[package]]
+name = "types-appdirs"
+version = "1.4.3.5"
+description = "Typing stubs for appdirs"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-appdirs-1.4.3.5.tar.gz", hash = "sha256:83268da64585361bfa291f8f506a209276212a0497bd37f0512a939b3d69ff14"},
+    {file = "types_appdirs-1.4.3.5-py3-none-any.whl", hash = "sha256:337c750e423c40911d389359b4edabe5bbc2cdd5cd0bd0518b71d2839646273b"},
+]
+
+[[package]]
 name = "types-cachetools"
 version = "5.3.0.7"
 description = "Typing stubs for cachetools"
@@ -8701,4 +8712,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "40bfcf6621603a2756f24d18bb4ee95de400d9063bb2bcbcd2e45518d96a39ed"
+content-hash = "ce38a3ce3218deb42450549e0a7e3479002bab1b339c10628991c4f77038137b"
