@@ -53,7 +53,7 @@ const initialValue: FlowManagerContextType = {
   outputIds: [],
   showPanel: false,
   updateNodeFlowData: (nodeId: string, newData: NodeDataType) => { },
-  buildFlow: (nodeId?:string) => new Promise(() => { }),
+  buildFlow: (nodeId?: string) => new Promise(() => { }),
   setFlow: (flow: FlowType) => { },
   pasteFileOnFLow: (file?: File) => new Promise(() => { }),
   CleanFlowPool: () => { },
@@ -77,10 +77,10 @@ export default function FlowManagerProvider({ children }) {
   const [inputIds, setInputIds] = useState<string[]>([]);
   const [outputIds, setOutputIds] = useState<string[]>([]);
   const [showPanel, setShowPanel] = useState(false);
-  const actualFlow = useRef<FlowType | null>(null);
+  const [actualFlow, setFlow] = useState<FlowType | null>(null);
   const { setErrorData } = useContext(alertContext);
-  const [isBuilding,setIsBuilding] = useState(false);
-
+  const [isBuilding, setIsBuilding] = useState(false);
+ 
   useEffect(() => {
     if (checkInputandOutput()) {
       setShowPanel(true);
@@ -118,6 +118,7 @@ export default function FlowManagerProvider({ children }) {
     if (targetNode) {
       targetNode.data = cloneDeep(newData);
       reactFlowInstance?.setNodes([...oldNodes!]);
+      console.log("after reactflow update", JSON.parse(JSON.stringify(reactFlowInstance?.toObject())))
     }
   }
 
@@ -217,26 +218,25 @@ export default function FlowManagerProvider({ children }) {
     return outputIds;
   }
 
-  function setFlow(flow: FlowType) {
-    actualFlow.current = flow;
-  }
 
   async function buildFlow(nodeId?: string) {
     function handleBuildUpdate(data: any) {
       addDataToFlowPool(data.data[data.id], data.id);
     }
+    console.log("building flow before save", JSON.parse(JSON.stringify(actualFlow)))
+    console.log(saveFlow)
     await saveFlow(
-      {
-        data: reactFlowInstance?.toObject()!,
-        description: actualFlow.current!.description,
-        id: actualFlow.current!.id,
-        name: actualFlow.current!.name,
-      },
+      actualFlow!,
       true,
     );
-
+    console.log("building flow AFTER save", JSON.parse(JSON.stringify(actualFlow)))
     return buildVertices({
-      flow: actualFlow.current!,
+      flow: {
+        data: reactFlowInstance?.toObject()!,
+        description: actualFlow!.description,
+        id: actualFlow!.id,
+        name: actualFlow!.name,
+      },
       nodeId,
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list) => {
@@ -424,20 +424,20 @@ export default function FlowManagerProvider({ children }) {
       input.type = "file";
       input.accept = ".json";
       // add a change event listener to the file input
-        input.onchange = async (e: Event) => {
-          if (
-            (e.target as HTMLInputElement).files![0].type === "application/json"
-          ) {
-            const currentfile = (e.target as HTMLInputElement).files![0];
-            pasteFileOnFLow(currentfile);
-          }
-        };
-        // trigger the file input click event to open the file dialog
-        input.click();
+      input.onchange = async (e: Event) => {
+        if (
+          (e.target as HTMLInputElement).files![0].type === "application/json"
+        ) {
+          const currentfile = (e.target as HTMLInputElement).files![0];
+          pasteFileOnFLow(currentfile);
+        }
+      };
+      // trigger the file input click event to open the file dialog
+      input.click();
     }
   }
 
-  function CleanFlowPool(){
+  function CleanFlowPool() {
     setFlowPool({})
   }
 

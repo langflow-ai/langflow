@@ -64,7 +64,7 @@ const FlowsContextInitialValue: FlowsContextType = {
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
-  FlowsContextInitialValue
+  FlowsContextInitialValue  
 );
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
@@ -450,7 +450,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
+      console.log("saving flow")
       const updatedFlow = await updateFlowInDatabase(newFlow);
+      console.log("saved flow", updatedFlow)
       if (updatedFlow) {
         // updates flow in state
         if (!silent) {
