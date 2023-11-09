@@ -114,11 +114,7 @@ def reinitialize_services():
     service_manager.update(ServiceType.SESSION_SERVICE)
     service_manager.update(ServiceType.AUTH_SERVICE)
     service_manager.update(ServiceType.TASK_SERVICE)
-
-    # Test cache connection
-    service_manager.get(ServiceType.CACHE_SERVICE)
-    # Test database connection
-    service_manager.get(ServiceType.DATABASE_SERVICE)
+    service_manager.update(ServiceType.MONITOR_SERVICE)
 
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)

@@ -14,3 +14,4 @@ class ServiceType(str, Enum):
     CHAT_SERVICE = "chat_service"
     SESSION_SERVICE = "session_service"
     TASK_SERVICE = "task_service"
+    MONITOR_SERVICE = "monitor_service"

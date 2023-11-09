@@ -19,6 +19,7 @@ def get_factories_and_deps():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.task import factory as task_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.monitor import factory as monitor_factory
 
     return [
         (settings_factory.SettingsServiceFactory(), []),
@@ -26,6 +27,7 @@ def get_factories_and_deps():
             auth_factory.AuthServiceFactory(),
             [ServiceType.SETTINGS_SERVICE],
         ),
+        (monitor_factory.MonitorServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
         (
             database_factory.DatabaseServiceFactory(),
             [ServiceType.SETTINGS_SERVICE],
@@ -205,6 +207,8 @@ def initialize_services():
 
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
+    # Test monitor service
+    service_manager.get(ServiceType.MONITOR_SERVICE)
     # Setup the superuser
     initialize_database()
     setup_superuser(
