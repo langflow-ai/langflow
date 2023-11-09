@@ -34,7 +34,7 @@ export default function AddedComponents(): JSX.Element {
   return (
     <CardsWrapComponent isLoading={loading}>
       {data.map((item, idx) => (
-        <MarketCardComponent key={idx} data={item} />
+        <MarketCardComponent key={idx} data={item} installable />
       ))}
     </CardsWrapComponent>
   );
