@@ -38,3 +38,9 @@ class MessageModel(BaseModel):
     class Config:
         orm_mode = True
         allow_population_by_field_name = True
+
+    @validator("artifacts", pre=True)
+    def validate_target_args(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
