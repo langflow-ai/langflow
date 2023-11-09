@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
 import { chatInputType } from "../../../types/components";
@@ -12,11 +12,22 @@ export default function ChatInput({
   inputRef,
   noInput,
 }: chatInputType): JSX.Element {
+  const [repeate, setRepeate] = useState(1);
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
     }
   }, [lockChat, inputRef]);
+
+  function handleChange(value:number){
+    console.log(value)
+    if(value>0){
+      setRepeate(value);
+    }
+    else{
+      setRepeate(1);
+    }
+  }
 
   useEffect(() => {
     if (inputRef.current) {
@@ -27,10 +38,17 @@ export default function ChatInput({
 
   return (
     <div className="relative">
+      <div className="flex flex-col">
+        <span className="text-xs">repeate</span>
+      <input onChange={(e)=>{
+        handleChange(parseInt(e.target.value));
+      }} className="bg-background" type="number" min={0}/>
+
+      </div>
       <Textarea
         onKeyDown={(event) => {
           if (event.key === "Enter" && !lockChat && !event.shiftKey) {
-            sendMessage();
+            sendMessage(repeate);
           }
         }}
         rows={1}

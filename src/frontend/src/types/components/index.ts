@@ -406,7 +406,7 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: () => void;
+  sendMessage: (count?:number) => void;
   setChatValue: (value: string) => void;
 };
 
