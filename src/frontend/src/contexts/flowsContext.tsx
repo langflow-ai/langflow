@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { skipNodeUpdate } from "../constants/constants";
+import { INPUT_TYPES, OUTPUT_TYPES, skipNodeUpdate } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
@@ -364,7 +364,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       // processFlowNodes(flow);
       //add animation to text type edges
       updateEdges(data.edges);
-      // updateNodes(data.nodes, data.edges);
+      updateNodes(data.nodes, data.edges);
       if (refreshIds) updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
@@ -387,7 +387,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
       if (node.data.node?.flow) return;
-      if (skipNodeUpdate.includes(node.data.type)) return;
+      if (!INPUT_TYPES.has(node.data.type) && !OUTPUT_TYPES.has(node.data.type)) return;
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
