@@ -9,9 +9,10 @@ import { Badge } from "../ui/badge";
 import ShadTooltip from "../ShadTooltipComponent";
 import IconComponent from "../genericIconComponent";
 import { Textarea } from "../ui/textarea";
+import { NodeDataType } from "../../types/flow";
 
 export default function IOView(): JSX.Element {
-  const { flowPool, inputIds, outputIds, inputTypes, outputTypes } =
+  const {inputIds, outputIds,reactFlowInstance,updateNodeFlowData } =
     useContext(flowManagerContext);
   const options = inputIds.concat(outputIds);
   const [selectedView, setSelectedView] = useState<ReactNode>(handleSelectChange(options[0]));
@@ -41,7 +42,8 @@ export default function IOView(): JSX.Element {
           </span>
         </div>
         {
-          inputIds.map((inputId,index) => {
+          inputIds.filter(input=>extractTypeFromLongId(input)!=="ChatInput").map((inputId,index) => {
+            const nodeData:NodeDataType = reactFlowInstance?.getNodes().find(node=>node.id===inputId)?.data;
             return (
               <div className="file-component-accordion-div" key={index}>
               <AccordionComponent
@@ -64,9 +66,14 @@ export default function IOView(): JSX.Element {
               >
                 <div className="file-component-tab-column">
                   <Textarea
+                    value={reactFlowInstance?.getNodes().find(node=>node.id===inputId)?.data?.node?.template?.value.value}
                     className="custom-scroll"
                     onChange={(e) => {
-                      console.log("change")
+                      e.target.value;
+                      if(nodeData){
+                        nodeData.node!.template["value"].value = e.target.value;
+                        updateNodeFlowData(inputId,nodeData);
+                      }
                     }}
                     placeholder="Enter text..."
                   ></Textarea>
