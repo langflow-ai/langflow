@@ -339,7 +339,7 @@ class ChatVertex(StatelessVertex):
         if self.is_power_component:
             if self.vertex_type == "ChatOutput":
                 self.artifacts = ChatOutputResponse(
-                    message=self._built_object,
+                    message=str(self._built_object),
                     is_ai=self.params.get("is_ai", True) if self.params else True,
                 ).dict()
                 self._built_result = self._built_object
