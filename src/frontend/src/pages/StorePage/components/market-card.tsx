@@ -1,4 +1,5 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
 import { Badge } from "../../../components/ui/badge";
@@ -18,7 +19,6 @@ import {
   postLikeComponent,
   saveFlowStore,
 } from "../../../controllers/API";
-import { FlowType } from "../../../types/flow";
 import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 import { classNames } from "../../../utils/utils";
@@ -40,9 +40,10 @@ export const MarketCardComponent = ({
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
-  const flowData = useRef<FlowType>();
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
+
+  const name = data.is_component ? "Component" : "Flow";
 
   useEffect(() => {
     setAdded(savedFlows.has(data.id) ? true : false);
@@ -54,7 +55,6 @@ export const MarketCardComponent = ({
       (res) => {
         console.log(res);
         const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
-        flowData.current = newFLow;
         console.log(newFLow);
         saveFlowStore(
           newFLow,
@@ -63,12 +63,12 @@ export const MarketCardComponent = ({
           .then(() => {
             setAdded(true);
             setLoading(false);
-            setSuccessData({ title: "Component Added to account" });
+            setSuccessData({ title: `${name} added to account.` });
           })
           .catch((error) => {
             console.error(error);
             setErrorData({
-              title: "Error on adding Component",
+              title: `Error on adding ${name}`,
               list: [error["response"]["data"]["detail"]],
             });
           });
@@ -79,13 +79,21 @@ export const MarketCardComponent = ({
     );
   }
 
+  const navigate = useNavigate();
+
   function handleInstall() {
-    console.log("installed");
     setLoading(true);
-    setTimeout(() => {
-      setInstalled(true);
-      setLoading(false);
-    }, 500);
+    getComponent(data.id).then((res) => {
+      const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
+      addFlow(true, newFlow).then((id) => {
+        setSuccessData({ title: `${name} Installed` });
+        setLoading(false);
+        setInstalled(true);
+        setTimeout(() => {
+          navigate("/flow/" + id);
+        }, 500);
+      });
+    });
   }
 
   function handleLike() {
@@ -105,7 +113,7 @@ export const MarketCardComponent = ({
           setLiked_by_user(temp);
           setLikes_count(tempNum);
           setErrorData({
-            title: "Error on liking component",
+            title: `Error on liking ${name}.`,
             list: [error["response"]["data"]["detail"]],
           });
         })
