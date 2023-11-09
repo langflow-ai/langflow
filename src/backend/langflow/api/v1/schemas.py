@@ -202,7 +202,7 @@ class Token(BaseModel):
 
 
 class VerticesOrderResponse(BaseModel):
-    ids: List[str]
+    ids: List[List[str]]
 
 
 class ResultDict(BaseModel):
