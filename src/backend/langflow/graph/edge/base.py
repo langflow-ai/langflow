@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from langflow.services.getters import get_monitor_service
+
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
@@ -152,11 +154,75 @@ class ContractEdge(Edge):
         self.target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
+    def build_clean_params(self) -> None:
+        """
+        Cleans the parameters of the target vertex.
+        """
+        # Removes all keys that the values aren't python types like str, int, bool, etc.
+        params = {
+            key: value
+            for key, value in self.target.params.items()
+            if isinstance(value, (str, int, bool, float, list, dict))
+        }
+        # if it is a list we need to check if the contents are python types
+        for key, value in params.items():
+            if isinstance(value, list):
+                params[key] = [
+                    item
+                    for item in value
+                    if isinstance(item, (str, int, bool, float, list, dict))
+                ]
+        return params
+
     def get_result(self):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
             self.honor()
+
+        log_transaction(self, "success")
+        # If the target vertex is a power component we log messages
+        if self.target.is_power_component and self.target.vertex_type == "ChatOutput":
+            log_message(
+                sender_type=self.target.params.get("sender", ""),
+                sender_name=self.target.params.get("sender_name", ""),
+                message=self.target.params.get("message", ""),
+                artifacts=self.target.artifacts,
+            )
         return self.result
 
     def __repr__(self) -> str:
         return f"{self.source.vertex_type} -[{self.target_param}]-> {self.target.vertex_type}"
+
+
+def log_transaction(edge: ContractEdge, status, error=None):
+    try:
+        monitor_service = get_monitor_service()
+        clean_params = edge.build_clean_params()
+        data = {
+            "source": edge.source.vertex_type,
+            "target": edge.target.vertex_type,
+            "target_args": clean_params,
+            "timestamp": monitor_service.get_timestamp(),
+            "status": status,
+            "error": error,
+        }
+        monitor_service.add_row(table_name="transactions", data=data)
+    except Exception as e:
+        logger.error(f"Error logging transaction: {e}")
+
+
+def log_message(
+    sender_type: str, sender_name: str, message: str, artifacts: Optional[dict] = None
+):
+    try:
+        monitor_service = get_monitor_service()
+        row = {
+            "sender_type": sender_type,
+            "sender_name": sender_name,
+            "message": message,
+            "artifacts": artifacts or {},
+            "timestamp": monitor_service.get_timestamp(),
+        }
+        monitor_service.add_row(table_name="messages", data=row)
+    except Exception as e:
+        logger.error(f"Error logging message: {e}")
