@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from langflow.services.monitor.schema import TransactionModel
+from langflow.services.monitor.schema import MessageModel, TransactionModel
 
 from loguru import logger
 from langflow.services.getters import get_monitor_service
@@ -21,7 +21,7 @@ def get_transactions(monitor_service: MonitorService = Depends(get_monitor_servi
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/messages", status_code=200)
+@router.get("/messages", status_code=200, response_model=List[MessageModel])
 def get_messages(monitor_service: "MonitorService" = Depends(get_monitor_service)):
     try:
         df = monitor_service.to_df("messages")
