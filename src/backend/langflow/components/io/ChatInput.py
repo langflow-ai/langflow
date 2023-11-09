@@ -15,4 +15,5 @@ class ChatInput(CustomComponent):
 
     def build(self, message: Optional[str] = "") -> Union[Text, Data]:
         self.repr_value = message
+
         return message
