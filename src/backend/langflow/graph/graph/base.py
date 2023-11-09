@@ -1,3 +1,4 @@
+from collections import defaultdict, deque
 from typing import Any, Dict, Generator, List, Type, Union
 
 from langflow.graph.edge.base import ContractEdge
@@ -166,29 +167,31 @@ class Graph:
 
         return list(reversed(sorted_vertices))
 
-    def layered_topological_sort(self) -> List[List[Vertex]]:
-        state = {node: 0 for node in self.nodes}
+    def layered_topological_sort(self):
+        in_degree = {vertex: 0 for vertex in self.vertices}  # Initialize in-degrees
+        graph = defaultdict(list)  # Adjacency list representation
+
+        # Build graph and compute in-degrees
+        for edge in self.edges:
+            graph[edge.source].append(edge.target)
+            in_degree[edge.target] += 1
+
+        # Queue for vertices with no incoming edges
+        queue = deque(vertex for vertex in self.vertices if in_degree[vertex] == 0)
         layers = []
 
-        def dfs(node, current_layer):
-            if state[node] == 1:
-                raise ValueError(
-                    "Graph contains a cycle, cannot perform topological sort"
-                )
-            if state[node] == 0:
-                state[node] = 1
-                for edge in node.edges:
-                    if edge.source == node:
-                        dfs(edge.target, current_layer + 1)
-                state[node] = 2
-                while len(layers) <= current_layer:
-                    layers.append([])
-                layers[current_layer].append(node)
-                node.layer = current_layer
-
-        for node in self.nodes:
-            if state[node] == 0:
-                dfs(node, 0)
+        current_layer = 0
+        while queue:
+            layers.append([])  # Start a new layer
+            layer_size = len(queue)
+            for _ in range(layer_size):
+                vertex = queue.popleft()
+                layers[current_layer].append(vertex.id)
+                for neighbor in graph[vertex]:
+                    in_degree[neighbor] -= 1  # 'remove' edge
+                    if in_degree[neighbor] == 0:
+                        queue.append(neighbor)
+            current_layer += 1  # Next layer
 
         return layers
 
