@@ -338,9 +338,12 @@ class ChatVertex(StatelessVertex):
     def _run(self, *args, **kwargs):
         if self.is_power_component:
             if self.vertex_type == "ChatOutput":
+                sender = self.params.get("sender", None)
+                sender_name = self.params.get("sender_name", None)
                 self.artifacts = ChatOutputResponse(
                     message=str(self._built_object),
-                    is_ai=self.params.get("is_ai", True) if self.params else True,
+                    sender=sender,
+                    sender_name=sender_name,
                 ).dict()
                 self._built_result = self._built_object
 

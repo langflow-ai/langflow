@@ -15,10 +15,17 @@ class ChatOutput(CustomComponent):
     }
 
     def build_config(self):
-        return {"message": {"input_types": ["Text"]}}
+        return {
+            "message": {"input_types": ["Text"]},
+            "sender": {"options": ["Machine", "User"], "display_name": "Sender"},
+            "sender_name": {"display_name": "Sender Name"},
+        }
 
     def build(
-        self, is_ai: bool = True, message: Optional[Text] = ""
+        self,
+        sender: Optional[str] = "Machine",
+        sender_name: Optional[str] = "AI",
+        message: Optional[Text] = "",
     ) -> Union[Text, Data]:
         self.repr_value = message
         return message
