@@ -355,8 +355,8 @@ class Vertex:
                 pass
 
         # If there's no task_id, build the vertex locally
-        self.build(requester=requester, user_id=user_id)
-        return self._built_object
+
+        return self.build(requester=requester, user_id=user_id)
 
     def _build_node_and_update_params(self, key, node, user_id=None):
         """
