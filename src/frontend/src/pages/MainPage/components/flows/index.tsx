@@ -35,9 +35,7 @@ export default function FlowsComponent() {
         .map((flow, idx) => (
           <CardComponent
             key={idx}
-            isFlow
             data={flow}
-            id={flow.id}
             button={
               <Link to={"/flow/" + flow.id}>
                 <Button
