@@ -226,7 +226,7 @@ export default function FlowManagerProvider({ children }) {
     console.log("building flow before save", JSON.parse(JSON.stringify(actualFlow)))
     console.log(saveFlow)
     await saveFlow(
-      actualFlow!,
+      {...actualFlow!,data:reactFlowInstance!.toObject()!},
       true,
     );
     console.log("building flow AFTER save", JSON.parse(JSON.stringify(actualFlow)))

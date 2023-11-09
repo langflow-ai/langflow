@@ -45,9 +45,9 @@ export default function newChatView(): JSX.Element {
       }
     });
     const chatMessages: ChatMessageType[] = chatOutputResponses
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).filter((output) => !!output.data.results.message)
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).filter((output) => !!output.data.artifacts.message)
       .map((output) => {
-        const { is_ai, message } = output.data.results as ChatOutputType;
+        const { is_ai, message } = output.data.artifacts as ChatOutputType;
         return { isSend: !is_ai, message };
       });
     setChatHistory(chatMessages);
