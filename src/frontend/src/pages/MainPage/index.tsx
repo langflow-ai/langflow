@@ -35,8 +35,8 @@ export default function HomePage(): JSX.Element {
 
   if (hasStore) {
     sidebarNavItems.push({
-      title: "Added Components",
-      href: "/added-components",
+      title: "From Store",
+      href: "/from-store",
     });
   }
 

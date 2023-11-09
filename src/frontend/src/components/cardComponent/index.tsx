@@ -10,9 +10,7 @@ import {
 } from "../ui/card";
 
 export const CardComponent = ({
-  isFlow,
   data,
-  id,
   onDelete,
   button,
 }: cardComponentPropsType): JSX.Element => {
@@ -44,11 +42,11 @@ export const CardComponent = ({
         </CardDescription>
       </CardHeader>
 
-      {isFlow && (
+      {button && (
         <CardFooter>
           <div className="card-component-footer-arrangement">
             <div className="card-component-footer"></div>
-            {button && button}
+            {button}
           </div>
         </CardFooter>
       )}

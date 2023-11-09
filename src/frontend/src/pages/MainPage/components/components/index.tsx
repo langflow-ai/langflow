@@ -1,9 +1,6 @@
 import { useContext } from "react";
-import { Link } from "react-router-dom";
 import { CardComponent } from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
 import { alertContext } from "../../../../contexts/alertContext";
 import { TabsContext } from "../../../../contexts/tabsContext";
 
@@ -37,22 +34,6 @@ export default function ComponentsComponent() {
           <CardComponent
             key={idx}
             data={flow}
-            id={flow.id}
-            button={
-              <Link to={"/flow/" + flow.id}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="whitespace-nowrap "
-                >
-                  <IconComponent
-                    name="ExternalLink"
-                    className="main-page-nav-button"
-                  />
-                  Edit Flow
-                </Button>
-              </Link>
-            }
             onDelete={() => {
               removeFlow(flow.id);
             }}

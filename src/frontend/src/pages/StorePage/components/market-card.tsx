@@ -89,9 +89,7 @@ export const MarketCardComponent = ({
         setSuccessData({ title: `${name} Installed` });
         setLoading(false);
         setInstalled(true);
-        setTimeout(() => {
-          navigate("/flow/" + id);
-        }, 500);
+        if (!data.is_component) navigate("/flow/" + id);
       });
     });
   }

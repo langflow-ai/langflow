@@ -5,7 +5,7 @@ import { getStoreComponents } from "../../../../controllers/API";
 import { storeComponent } from "../../../../types/store";
 import { MarketCardComponent } from "../../../StorePage/components/market-card";
 
-export default function AddedComponents(): JSX.Element {
+export default function FromStore(): JSX.Element {
   const [data, setData] = useState<storeComponent[]>([]);
   const [loading, setLoading] = useState(false);
   const { setErrorData } = useContext(alertContext);
