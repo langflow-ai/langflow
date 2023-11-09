@@ -181,11 +181,14 @@ class ContractEdge(Edge):
 
         log_transaction(self, "success")
         # If the target vertex is a power component we log messages
-        if self.target.is_power_component and self.target.vertex_type == "ChatOutput":
+        if self.target.vertex_type == "ChatOutput" and isinstance(
+            self.target.params.get("message"), str
+        ):
             log_message(
                 sender_type=self.target.params.get("sender", ""),
                 sender_name=self.target.params.get("sender_name", ""),
                 message=self.target.params.get("message", ""),
+                session_id=self.target.params.get("session_id", ""),
                 artifacts=self.target.artifacts,
             )
         return self.result
@@ -212,7 +215,11 @@ def log_transaction(edge: ContractEdge, status, error=None):
 
 
 def log_message(
-    sender_type: str, sender_name: str, message: str, artifacts: Optional[dict] = None
+    sender_type: str,
+    sender_name: str,
+    message: str,
+    session_id: str,
+    artifacts: Optional[dict] = None,
 ):
     try:
         monitor_service = get_monitor_service()
@@ -221,6 +228,7 @@ def log_message(
             "sender_name": sender_name,
             "message": message,
             "artifacts": artifacts or {},
+            "session_id": session_id,
             "timestamp": monitor_service.get_timestamp(),
         }
         monitor_service.add_row(table_name="messages", data=row)

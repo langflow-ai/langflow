@@ -17,7 +17,7 @@ from langflow.interface.custom.base import custom_component_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 
-chat_components = ["ChatInput", "ChatOutput"]
+chat_components = ["ChatInput", "ChatOutput", "TextInput"]
 
 
 class VertexTypesDict(LazyLoadDictBase):

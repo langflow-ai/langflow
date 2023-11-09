@@ -345,7 +345,7 @@ class ChatVertex(StatelessVertex):
                     sender=sender,
                     sender_name=sender_name,
                 ).dict()
-                self._built_result = self._built_object
+            self._built_result = self._built_object
 
         else:
             super()._run(*args, **kwargs)

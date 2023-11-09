@@ -314,7 +314,10 @@ class Vertex:
                     inputs[key] = ""
             if inputs == {} and hasattr(self._built_object, "prompt"):
                 inputs = self._built_object.prompt.partial_variables
-        self._built_result = self._built_object.run(inputs)
+        if isinstance(self._built_object, str):
+            self._built_result = self._built_object
+        elif hasattr(self._built_object, "invoke"):
+            self._built_result = self._built_object.invoke(inputs)
 
     def _build_each_node_in_params_dict(self, user_id=None):
         """
