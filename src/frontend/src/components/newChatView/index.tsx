@@ -24,7 +24,7 @@ export default function newChatView(): JSX.Element {
     reactFlowInstance,
     flowPool,
     outputIds,
-    inputIds,
+    inputIds,inputTypes,
     updateNodeFlowData,
     buildFlow,
     CleanFlowPool
@@ -92,15 +92,15 @@ export default function newChatView(): JSX.Element {
         newData.node!.template["message"].value = chatValue;
         chatInput.data = { ...newData };
         updateNodeFlowData(chatInputId!, newData);
-        buildFlow()
-          .then(() => {
-            setLockChat(false);
-          })
-          .catch((err) => {
-            console.error(err);
-            setLockChat(false);
-          });
       }
+      buildFlow()
+      .then(() => {
+        setLockChat(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLockChat(false);
+      });
       //set chat message in the flow and run build
       //@ts-ignore
     } else {
@@ -170,7 +170,7 @@ export default function newChatView(): JSX.Element {
             <div className="langflow-chat-input">
               <ChatInput
                 chatValue={chatValue}
-                noInput={inputIds.includes("ChatOutput")}
+                noInput={!inputIds.includes("ChatOutput")}
                 lockChat={lockChat}
                 sendMessage={sendMessage}
                 setChatValue={(value) => {
