@@ -10,9 +10,10 @@ class TextInput(CustomComponent):
     field_config = {
         "code": {
             "show": False,
-        }
+        },
+        "value": {"display_name": "Value"},
     }
 
-    def build(self, message: Optional[str] = "") -> Union[Text, Data]:
-        self.repr_value = message
-        return message
+    def build(self, value: Optional[str] = "") -> Union[Text, Data]:
+        self.repr_value = value
+        return value
