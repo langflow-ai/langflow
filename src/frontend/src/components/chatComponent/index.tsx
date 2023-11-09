@@ -81,12 +81,12 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   return (
     <>
       <div className="flex flex-col">
-        <BuildTrigger
+        {/* <BuildTrigger
           open={open}
           flow={flow}
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
-        />
+        /> */}
         {showPanel && (
           <BaseModal open={open} setOpen={setOpen}>
             <BaseModal.Trigger asChild>

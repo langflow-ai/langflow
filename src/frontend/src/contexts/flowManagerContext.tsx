@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, set } from "lodash";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { tweakType } from "../types/components";
@@ -84,6 +84,9 @@ export default function FlowManagerProvider({ children }) {
   useEffect(() => {
     if (checkInputandOutput()) {
       setShowPanel(true);
+    }
+    else{
+      setShowPanel(false);
     }
   }, [inputIds, outputIds, setShowPanel]);
 
