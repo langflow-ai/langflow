@@ -10,4 +10,5 @@ export type ChatMessageType = {
   files?: Array<{ data: string; type: string; data_type: string }>;
   prompt?: string;
   chatKey?: string;
+  sender_name?: string;
 };

@@ -8,7 +8,8 @@ export type chatInputType = {
 
 export type ChatOutputType = {
   message: string;
-  is_ai: boolean;
+  sender: string;
+  sender_name: string;
 };
 
 export type FlowPoolObjectType = {
