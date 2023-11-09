@@ -170,7 +170,7 @@ export default function newChatView(): JSX.Element {
             <div className="langflow-chat-input">
               <ChatInput
                 chatValue={chatValue}
-                noInput={!inputTypes.includes("ChatOutput")}
+                noInput={!inputTypes.includes("ChatInput")}
                 lockChat={lockChat}
                 sendMessage={sendMessage}
                 setChatValue={(value) => {
