@@ -27,13 +27,16 @@ export const MarketCardComponent = ({
   data,
   authorized = true,
   disabled = false,
+  installable = false,
 }: {
   data: storeComponent;
   authorized?: boolean;
   disabled?: boolean;
+  installable?: boolean;
 }) => {
   const { savedFlows } = useContext(StoreContext);
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
+  const [installed, setInstalled] = useState(false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
@@ -74,6 +77,15 @@ export const MarketCardComponent = ({
         console.log(error);
       }
     );
+  }
+
+  function handleInstall() {
+    console.log("installed");
+    setLoading(true);
+    setTimeout(() => {
+      setInstalled(true);
+      setLoading(false);
+    }, 500);
   }
 
   function handleLike() {
@@ -119,9 +131,7 @@ export const MarketCardComponent = ({
         <CardHeader>
           <div>
             <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-              <span className="flex w-full items-center gap-2 word-break-break-word">
-                {data.name}
-              </span>
+              <span className="w-full truncate">{data.name}</span>
               <div className="flex gap-3">
                 {!data.is_component && (
                   <ShadTooltip content="Components">
@@ -202,7 +212,9 @@ export const MarketCardComponent = ({
                 content={
                   authorized
                     ? added
-                      ? "Added to Account"
+                      ? installable
+                        ? "Install Locally"
+                        : "Added to Account"
                       : "Add to Account"
                     : "Please review your API key."
                 }
@@ -220,14 +232,31 @@ export const MarketCardComponent = ({
                     }
                     if (!added) {
                       handleAdd();
+                    } else if (installable) {
+                      handleInstall();
                     }
                   }}
                 >
                   <IconComponent
-                    name={loading ? "Loader2" : added ? "Check" : "Plus"}
+                    name={
+                      loading
+                        ? "Loader2"
+                        : added && installable && !installed
+                        ? "ExternalLink"
+                        : added
+                        ? "Check"
+                        : "Plus"
+                    }
                     className={classNames(
-                      "h-6 w-6",
-                      added ? "text-chat-send" : "",
+                      !added && !installable && !loading
+                        ? "h-6 w-6"
+                        : "h-5 w-5",
+                      ((added && !installable) || installed) && !loading
+                        ? "text-chat-send"
+                        : "",
+                      added && installable && !installed && !loading
+                        ? "text-high-indigo"
+                        : "",
                       loading ? " animate-spin" : "",
                       !authorized ? " text-ring" : ""
                     )}
