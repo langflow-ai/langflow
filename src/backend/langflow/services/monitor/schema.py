@@ -32,6 +32,7 @@ class MessageModel(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     sender_type: str
     sender_name: str
+    session_id: str
     message: str
     artifacts: dict
 

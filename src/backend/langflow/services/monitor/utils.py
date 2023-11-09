@@ -12,12 +12,7 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     columns = {}
     for field_name, field_type in model.__fields__.items():
         field_info = field_type.type_
-        # If field_Name is id we want to make it the primary key
-        # and and we need to create a SEQUENCE for it
-        # 1. Create a sequence: sql CREATE SEQUENCE seq_personid START 1;  2. Create a table: sql CREATE TABLE Persons (     Personid INTEGER PRIMARY KEY DEFAULT NEXTVAL('Publisher_Id_Seq'),     LastName VARCHAR(255) NOT NULL,     FirstName VARCHAR(255),     Age INTEGER );
-        if field_name == "id":
-            sql_type = "INTEGER PRIMARY KEY"
-        elif field_info.__name__ == "int":
+        if field_info.__name__ == "int":
             sql_type = "INTEGER"
         elif field_info.__name__ == "str":
             sql_type = "VARCHAR"
