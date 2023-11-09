@@ -268,9 +268,6 @@ async def get_vertices(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        for i, layer in enumerate(vertices):
-            vertices[i] = [vertex.id for vertex in layer]
-
         return VerticesOrderResponse(ids=vertices)
 
     except Exception as exc:
