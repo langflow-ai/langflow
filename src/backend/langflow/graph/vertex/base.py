@@ -341,13 +341,9 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    def get_result(self, user_id=None, timeout=None) -> Any:
-        # Check if the Vertex was built already
-        if self._built:
-            if isinstance(self._built_result, UnbuiltResult):
-                return self._built_object
-            return self._built_result
-
+    def get_result(
+        self, requester: Optional["Vertex"] = None, user_id=None, timeout=None
+    ) -> Any:
         if self.is_task and self.task_id is not None:
             task = self.get_task()
             result = task.get(timeout=timeout)
@@ -359,7 +355,7 @@ class Vertex:
                 pass
 
         # If there's no task_id, build the vertex locally
-        self.build(user_id)
+        self.build(requester=requester, user_id=user_id)
         return self._built_object
 
     def _build_node_and_update_params(self, key, node, user_id=None):
@@ -367,7 +363,7 @@ class Vertex:
         Builds a given node and updates the params dictionary accordingly.
         """
 
-        result = node.get_result(user_id)
+        result = node.get_result(requester=self, user_id=user_id)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -462,8 +458,8 @@ class Vertex:
 
     def build(
         self,
-        requester: Optional["Vertex"] = None,
         user_id=None,
+        requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Dict:
         if self.pinned:
