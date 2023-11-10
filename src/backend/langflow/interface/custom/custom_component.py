@@ -23,6 +23,7 @@ class CustomComponent(Component, extra=Extra.allow):
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
+    status: Optional[str] = None
 
     @property
     def return_type_valid_list(self):
@@ -32,6 +33,8 @@ class CustomComponent(Component, extra=Extra.allow):
         super().__init__(**data)
 
     def custom_repr(self):
+        if self.status:
+            self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
