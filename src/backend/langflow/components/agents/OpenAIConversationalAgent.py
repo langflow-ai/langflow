@@ -20,10 +20,11 @@ class ConversationalAgent(CustomComponent):
 
     def build_config(self):
         openai_function_models = [
-            "gpt-3.5-turbo-0613",
-            "gpt-3.5-turbo-16k-0613",
-            "gpt-4-0613",
-            "gpt-4-32k-0613",
+            "gpt-4-1106-preview",
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-16k",
+            "gpt-4",
+            "gpt-4-32k",
         ]
         return {
             "tools": {"is_list": True, "display_name": "Tools"},
