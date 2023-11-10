@@ -1,9 +1,7 @@
 from typing import List, Optional
 from langflow import CustomComponent
 from langchain.schema import Document
-import pandas as pd
-
-import platformdirs
+from langflow.services.getters import get_monitor_service
 
 
 class MessageHistoryComponent(CustomComponent):
@@ -22,22 +20,31 @@ class MessageHistoryComponent(CustomComponent):
                 "display_name": "Number of Messages",
                 "info": "Number of messages to retrieve.",
             },
+            "session_id": {
+                "display_name": "Session ID",
+                "info": "Session ID of the chat history.",
+                "input_types": ["Text"],
+            },
         }
 
     def build(
         self,
         sender: Optional[str] = None,
         sender_name: Optional[str] = None,
-        file_path: str = "chat_history.json",
+        session_id: Optional[str] = None,
         n_messages: int = 5,
     ) -> List[Document]:
         # Load the chat history df
-        chat_history_df = pd.read_json(
-            platformdirs.user_cache_dir("langflow") + "/" + file_path
-        )
+        monitor_service = get_monitor_service()
+        chat_history_df = monitor_service.to_df("messages")
+
         # Filter the df
+        if session_id:
+            chat_history_df = chat_history_df[
+                chat_history_df["session_id"] == session_id
+            ]
         if sender:
-            chat_history_df = chat_history_df[chat_history_df["sender"] == sender]
+            chat_history_df = chat_history_df[chat_history_df["sender_type"] == sender]
         if sender_name:
             chat_history_df = chat_history_df[
                 chat_history_df["sender_name"] == sender_name
