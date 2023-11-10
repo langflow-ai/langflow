@@ -181,13 +181,15 @@ class ContractEdge(Edge):
 
         log_transaction(self, "success")
         # If the target vertex is a power component we log messages
-        if self.target.vertex_type == "ChatOutput" and isinstance(
-            self.target.params.get("message"), str
+        if (
+            self.target.vertex_type == "ChatOutput"
+            and isinstance(self.target.params.get("message"), str)
+            or isinstance(self.target.params.get("message"), dict)
         ):
             log_message(
                 sender_type=self.target.params.get("sender", ""),
                 sender_name=self.target.params.get("sender_name", ""),
-                message=self.target.params.get("message", ""),
+                message=self.target.params.get("message", {}),
                 session_id=self.target.params.get("session_id", ""),
                 artifacts=self.target.artifacts,
             )
@@ -222,6 +224,11 @@ def log_message(
     artifacts: Optional[dict] = None,
 ):
     try:
+        from langflow.graph.vertex.base import Vertex
+
+        if isinstance(session_id, Vertex):
+            session_id = session_id.build()
+
         monitor_service = get_monitor_service()
         row = {
             "sender_type": sender_type,
