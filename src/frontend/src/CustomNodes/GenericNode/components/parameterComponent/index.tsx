@@ -198,6 +198,7 @@ export default function ParameterComponent({
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
+  console.log(data)
 
   return !showNode ? (
     left &&
