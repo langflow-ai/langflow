@@ -305,15 +305,15 @@ class Vertex:
     def _run(self, user_id: str, inputs: Optional[dict] = None):
         # user_id is just for compatibility with the other build methods
         inputs = inputs or {}
-        inputs = {key: value or "" for key, value in inputs.items()}
-        if hasattr(self._built_object, "input_keys"):
-            # test if all keys are in inputs
-            # and if not add them with empty string
-            # for key in self._built_object.input_keys:
-            #     if key not in inputs:
-            #         inputs[key] = ""
-            if inputs == {} and hasattr(self._built_object, "prompt"):
-                inputs = self._built_object.prompt.partial_variables
+        # inputs = {key: value or "" for key, value in inputs.items()}
+        # if hasattr(self._built_object, "input_keys"):
+        #     # test if all keys are in inputs
+        #     # and if not add them with empty string
+        #     # for key in self._built_object.input_keys:
+        #     #     if key not in inputs:
+        #     #         inputs[key] = ""
+        #     if inputs == {} and hasattr(self._built_object, "prompt"):
+        #         inputs = self._built_object.prompt.partial_variables
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
         elif hasattr(self._built_object, "run"):
