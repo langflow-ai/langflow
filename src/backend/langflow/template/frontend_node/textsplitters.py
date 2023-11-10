@@ -1,9 +1,12 @@
+from langchain.text_splitter import Language
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
-from langchain.text_splitter import Language
 
 
 class TextSplittersFrontendNode(FrontendNode):
+    output_type: str = "Document"
+
     def add_extra_base_classes(self) -> None:
         self.base_classes = ["Document"]
         self.output_types = ["Document"]

@@ -2,17 +2,19 @@ from typing import Optional
 
 from langchain.agents.mrkl import prompt
 
+from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import (
     DEFAULT_PROMPT,
     HUMAN_PROMPT,
     SYSTEM_PROMPT,
 )
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
 
 class PromptFrontendNode(FrontendNode):
+    output_type: str = "Prompt"
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
@@ -48,6 +50,7 @@ class PromptFrontendNode(FrontendNode):
 
 
 class PromptTemplateNode(FrontendNode):
+    output_type: str = "Prompt"
     name: str = "PromptTemplate"
     template: Template
     description: str
@@ -64,6 +67,7 @@ class PromptTemplateNode(FrontendNode):
 
 
 class BasePromptFrontendNode(FrontendNode):
+    output_type: str = "Prompt"
     name: str
     template: Template
     description: str

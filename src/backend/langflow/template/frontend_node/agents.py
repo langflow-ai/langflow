@@ -14,6 +14,8 @@ NON_CHAT_AGENTS = {
 
 
 class AgentFrontendNode(FrontendNode):
+    output_type: str = "Agent"
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         if field.name in ["suffix", "prefix"]:
@@ -24,6 +26,7 @@ class AgentFrontendNode(FrontendNode):
 
 
 class SQLAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "SQLAgent"
     template: Template = Template(
         type_name="sql_agent",
@@ -55,6 +58,7 @@ class SQLAgentNode(FrontendNode):
 
 
 class VectorStoreRouterAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "VectorStoreRouterAgent"
     template: Template = Template(
         type_name="vectorstorerouter_agent",
@@ -83,6 +87,7 @@ class VectorStoreRouterAgentNode(FrontendNode):
 
 
 class VectorStoreAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "VectorStoreAgent"
     template: Template = Template(
         type_name="vectorstore_agent",
@@ -111,6 +116,7 @@ class VectorStoreAgentNode(FrontendNode):
 
 
 class SQLDatabaseNode(FrontendNode):
+    output_type: str = "SQLDatabase"
     name: str = "SQLDatabase"
     template: Template = Template(
         type_name="sql_database",
@@ -134,6 +140,7 @@ class SQLDatabaseNode(FrontendNode):
 
 
 class CSVAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "CSVAgent"
     template: Template = Template(
         type_name="csv_agent",
@@ -164,6 +171,7 @@ class CSVAgentNode(FrontendNode):
 
 
 class InitializeAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "AgentInitializer"
     display_name: str = "AgentInitializer"
     template: Template = Template(
@@ -218,6 +226,7 @@ class InitializeAgentNode(FrontendNode):
 
 
 class JsonAgentNode(FrontendNode):
+    output_type: str = "Agent"
     name: str = "JsonAgent"
     template: Template = Template(
         type_name="json_agent",

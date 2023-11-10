@@ -1,12 +1,14 @@
 import ast
 from typing import Optional
-from langflow.services.database.models.base import orjson_dumps
 
+from langflow.services.database.models.base import orjson_dumps
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
 
 class UtilitiesFrontendNode(FrontendNode):
+    output_type: str = "Utilities"
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)

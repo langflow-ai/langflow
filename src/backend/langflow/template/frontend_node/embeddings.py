@@ -5,6 +5,8 @@ from langflow.template.frontend_node.base import FrontendNode
 
 
 class EmbeddingFrontendNode(FrontendNode):
+    output_type: str = "Embedding"
+
     def add_extra_fields(self) -> None:
         if "VertexAI" in self.template.type_name:
             # Add credentials field which should of type file.

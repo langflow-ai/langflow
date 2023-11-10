@@ -5,6 +5,8 @@ from langflow.template.frontend_node.base import FrontendNode
 
 
 class RetrieverFrontendNode(FrontendNode):
+    output_type: str = "Retriever"
+
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)

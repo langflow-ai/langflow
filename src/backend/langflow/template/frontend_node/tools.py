@@ -1,12 +1,11 @@
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.utils.constants import (
-    DEFAULT_PYTHON_FUNCTION,
-)
+from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
 class ToolNode(FrontendNode):
+    output_type: str = "Tool"
     name: str = "Tool"
     template: Template = Template(
         type_name="Tool",
@@ -62,6 +61,7 @@ class ToolNode(FrontendNode):
 
 
 class PythonFunctionToolNode(FrontendNode):
+    output_type: str = "Tool"
     name: str = "PythonFunctionTool"
     template: Template = Template(
         type_name="PythonFunctionTool",
@@ -118,6 +118,7 @@ class PythonFunctionToolNode(FrontendNode):
 
 
 class PythonFunctionNode(FrontendNode):
+    output_type: str = "Tool"
     name: str = "PythonFunction"
     template: Template = Template(
         type_name="PythonFunction",

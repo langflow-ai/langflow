@@ -19,6 +19,8 @@ def build_file_field(
 
 
 class DocumentLoaderFrontNode(FrontendNode):
+    output_type: str = "Document"
+
     def add_extra_base_classes(self) -> None:
         self.base_classes = ["Document"]
         self.output_types = ["Document"]

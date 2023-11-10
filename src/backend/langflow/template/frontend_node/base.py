@@ -1,15 +1,15 @@
-from collections import defaultdict
 import re
+from collections import defaultdict
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from langflow.template.frontend_node.formatter import field_formatters
+from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import (
     CLASSES_TO_REMOVE,
     FORCE_SHOW_FIELDS,
 )
-from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
 
@@ -43,6 +43,7 @@ class FieldFormatters(BaseModel):
 
 
 class FrontendNode(BaseModel):
+    output_type: str = Field(default="", description="Output type of the node.")
     template: Template
     description: Optional[str] = None
     base_classes: List[str]
@@ -77,6 +78,8 @@ class FrontendNode(BaseModel):
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
         self.process_base_classes()
+        if self.output_type:
+            self.output_types = [self.output_type]
         return {
             self.name: {
                 "template": self.template.to_dict(self.format_field),

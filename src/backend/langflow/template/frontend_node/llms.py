@@ -1,13 +1,17 @@
 from typing import Optional
-from langflow.services.database.models.base import orjson_dumps
 
+from langflow.services.database.models.base import orjson_dumps
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG
-from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
+from langflow.template.frontend_node.constants import (
+    CTRANSFORMERS_DEFAULT_CONFIG,
+    OPENAI_API_BASE_INFO,
+)
 
 
 class LLMFrontendNode(FrontendNode):
+    output_type: str = "LLM"
+
     def add_extra_fields(self) -> None:
         if "VertexAI" in self.template.type_name:
             # Add credentials field which should of type file.

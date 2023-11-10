@@ -7,6 +7,8 @@ from langflow.template.template.base import Template
 
 
 class ChainFrontendNode(FrontendNode):
+    output_type: str = "Chain"
+
     def add_extra_base_classes(self) -> None:
         self.base_classes.append("Text")
 
@@ -101,6 +103,7 @@ class ChainFrontendNode(FrontendNode):
 
 
 class SeriesCharacterChainNode(FrontendNode):
+    output_type: str = "Chain"
     name: str = "SeriesCharacterChain"
     template: Template = Template(
         type_name="SeriesCharacterChain",
@@ -150,6 +153,7 @@ class SeriesCharacterChainNode(FrontendNode):
 
 
 class TimeTravelGuideChainNode(FrontendNode):
+    output_type: str = "Chain"
     name: str = "TimeTravelGuideChain"
     template: Template = Template(
         type_name="TimeTravelGuideChain",
@@ -185,6 +189,7 @@ class TimeTravelGuideChainNode(FrontendNode):
 
 
 class MidJourneyPromptChainNode(FrontendNode):
+    output_type: str = "Chain"
     name: str = "MidJourneyPromptChain"
     template: Template = Template(
         type_name="MidJourneyPromptChain",
@@ -220,6 +225,7 @@ class MidJourneyPromptChainNode(FrontendNode):
 
 
 class CombineDocsChainNode(FrontendNode):
+    output_type: str = "Chain"
     name: str = "CombineDocsChain"
     template: Template = Template(
         type_name="load_qa_chain",

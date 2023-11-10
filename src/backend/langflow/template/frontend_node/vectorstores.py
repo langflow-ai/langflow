@@ -3,7 +3,6 @@ from typing import List, Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
-
 BASIC_FIELDS = [
     "work_dir",
     "collection_name",
@@ -51,6 +50,8 @@ ADVANCED_FIELDS = [
 
 
 class VectorStoreFrontendNode(FrontendNode):
+    output_type: str = "VectorStore"
+
     def add_extra_fields(self) -> None:
         extra_fields: List[TemplateField] = []
         # Add search_kwargs field
