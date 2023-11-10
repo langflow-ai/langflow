@@ -198,7 +198,6 @@ export default function ParameterComponent({
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
-  console.log(data)
 
   return !showNode ? (
     left &&
@@ -332,10 +331,9 @@ export default function ParameterComponent({
             </div>
           </Button>
         )}
-
         {left === true &&
           type === "str" &&
-          data.node?.template[name]?.options===undefined || data.node?.template[name]?.options==null ? (
+          (data.node?.template[name]?.options===undefined || data.node?.template[name]?.options===null) ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
               <InputListComponent
@@ -387,7 +385,7 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name]?.options!==undefined && data.node?.template[name]?.options!==null ? (
+          (data.node?.template[name]?.options!==undefined && data.node?.template[name]?.options!==null) ? (
           <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name]?.options}
