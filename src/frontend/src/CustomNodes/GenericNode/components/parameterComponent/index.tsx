@@ -334,7 +334,7 @@ export default function ParameterComponent({
 
         {left === true &&
           type === "str" &&
-          data.node?.template[name].options===undefined || data.node?.template[name].options==null ? (
+          data.node?.template[name]?.options===undefined || data.node?.template[name]?.options==null ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
               <InputListComponent
@@ -386,10 +386,10 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name].options!==undefined && data.node?.template[name].options!==null ? (
+          data.node?.template[name]?.options!==undefined && data.node?.template[name]?.options!==null ? (
           <div className="mt-2 w-full">
             <Dropdown
-              options={data.node.template[name].options}
+              options={data.node.template[name]?.options}
               onSelect={handleOnNewValue}
               value={data.node.template[name].value ?? "Choose an option"}
             ></Dropdown>
