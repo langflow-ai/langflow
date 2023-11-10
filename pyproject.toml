@@ -93,6 +93,7 @@ markupsafe = "^2.1.3"
 boto3 = "^1.28.63"
 numexpr = "^2.8.6"
 qianfan = "0.0.5"
+pgvector = "^0.2.3"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
