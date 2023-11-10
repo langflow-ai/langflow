@@ -19,12 +19,18 @@ class ChatOutput(CustomComponent):
             "message": {"input_types": ["Text"]},
             "sender": {"options": ["Machine", "User"], "display_name": "Sender Type"},
             "sender_name": {"display_name": "Sender Name"},
+            "session_id": {
+                "display_name": "Session ID",
+                "info": "Session ID of the chat history.",
+                "input_types": ["Text"],
+            },
         }
 
     def build(
         self,
         sender: Optional[str] = "Machine",
         sender_name: Optional[str] = "AI",
+        session_id: Optional[str] = None,
         message: Optional[Text] = "",
     ) -> Union[Text, Data]:
         self.repr_value = message
