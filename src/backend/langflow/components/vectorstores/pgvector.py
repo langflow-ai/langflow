@@ -14,7 +14,9 @@ class PostgresqlVectorComponent(CustomComponent):
 
     display_name: str = "PGVector"
     description: str = "Implementation of Vector Store using PostgreSQL"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
+    )
     beta = True
 
     def build_config(self):
@@ -56,11 +58,12 @@ class PostgresqlVectorComponent(CustomComponent):
         - VectorStore: The Vector Store object.
         """
 
-        return PGVector.from_documents(
-            embedding=embedding,
-            documents=documents,
-            collection_name=collection_name,
-            connection_string=pg_server_url,
-        )
-
-
+        try:
+            return PGVector.from_documents(
+                embedding=embedding,
+                documents=documents,
+                collection_name=collection_name,
+                connection_string=pg_server_url,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to build Vector Store: {str(e)}")
