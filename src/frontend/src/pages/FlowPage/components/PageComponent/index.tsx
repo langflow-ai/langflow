@@ -271,12 +271,16 @@ export default function Page({
             style: { stroke: "#555" },
             className:
               ((scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text"
+                .type === "Text" ||
+              (scapeJSONParse(params.targetHandle!) as targetHandleType)
+                .type === "Data"
                 ? "stroke-foreground "
                 : "stroke-foreground ") + " stroke-connection",
             animated:
               (scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text",
+                .type === "Text" ||
+              (scapeJSONParse(params.targetHandle!) as targetHandleType)
+                .type === "Data",
           },
           eds
         )
@@ -465,7 +469,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-              Object.keys(types).length > 0 ? (
+            Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}

@@ -1,5 +1,5 @@
-import { cloneDeep, set } from "lodash";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { cloneDeep } from "lodash";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Edge, Node, ReactFlowInstance, addEdge } from "reactflow";
 import { tweakType } from "../types/components";
 import {
@@ -24,41 +24,41 @@ import { alertContext } from "./alertContext";
 import { FlowsContext } from "./flowsContext";
 
 const initialValue: FlowManagerContextType = {
-  downloadFlow: (flow: FlowType) => { },
-  deleteEdge: () => { },
-  deleteNode: () => { },
+  downloadFlow: (flow: FlowType) => {},
+  deleteEdge: () => {},
+  deleteNode: () => {},
   reactFlowInstance: null,
-  setReactFlowInstance: (newState: ReactFlowInstance) => { },
+  setReactFlowInstance: (newState: ReactFlowInstance) => {},
   flowPool: {},
-  updateFlowPoolNodes: (nodes: NodeType[]) => { },
-  addDataToFlowPool: (data: any, nodeId: string) => { },
+  updateFlowPoolNodes: (nodes: NodeType[]) => {},
+  addDataToFlowPool: (data: any, nodeId: string) => {},
   checkInputandOutput: (flow?: FlowType) => false,
   getInputTypes: (flow?: FlowType) => [],
   getOutputTypes: (flow?: FlowType) => [],
   getInputIds: (flow?: FlowType) => [],
   getOutputIds: (flow?: FlowType) => [],
-  setFilterEdge: (filter) => { },
+  setFilterEdge: (filter) => {},
   getFilterEdge: [],
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => { },
-  setTweak: (tweak: any) => { },
+  ) => {},
+  setTweak: (tweak: any) => {},
   getTweak: [],
   isBuilt: false,
-  setIsBuilt: (state: boolean) => { },
+  setIsBuilt: (state: boolean) => {},
   inputTypes: [],
   outputTypes: [],
   inputIds: [],
   outputIds: [],
   showPanel: false,
-  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => { },
-  buildFlow: (nodeId?: string) => new Promise(() => { }),
-  setFlow: (flow: FlowType) => { },
-  pasteFileOnFLow: (file?: File) => new Promise(() => { }),
-  CleanFlowPool: () => { },
+  updateNodeFlowData: (nodeId: string, newData: NodeDataType) => {},
+  buildFlow: (nodeId?: string) => new Promise(() => {}),
+  setFlow: (flow: FlowType) => {},
+  pasteFileOnFLow: (file?: File) => new Promise(() => {}),
+  CleanFlowPool: () => {},
   isBuilding: false,
-  setIsBuilding: (state: boolean) => { },
+  setIsBuilding: (state: boolean) => {},
 };
 
 export const flowManagerContext = createContext(initialValue);
@@ -69,8 +69,7 @@ export default function FlowManagerProvider({ children }) {
     useState<ReactFlowInstance | null>(null);
   const [getFilterEdge, setFilterEdge] = useState([]);
   const [getTweak, setTweak] = useState<tweakType>([]);
-  const { getNodeId, saveFlow } =
-    useContext(FlowsContext);
+  const { getNodeId, saveFlow } = useContext(FlowsContext);
   const [isBuilt, setIsBuilt] = useState(false);
   const [outputTypes, setOutputTypes] = useState<string[]>([]);
   const [inputTypes, setInputTypes] = useState<string[]>([]);
@@ -78,14 +77,13 @@ export default function FlowManagerProvider({ children }) {
   const [outputIds, setOutputIds] = useState<string[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [actualFlow, setFlow] = useState<FlowType | null>(null);
-  const { setErrorData,setNoticeData } = useContext(alertContext);
+  const { setErrorData, setNoticeData } = useContext(alertContext);
   const [isBuilding, setIsBuilding] = useState(false);
- 
+
   useEffect(() => {
     if (checkInputandOutput()) {
       setShowPanel(true);
-    }
-    else{
+    } else {
       setShowPanel(false);
     }
   }, [inputIds, outputIds, setShowPanel]);
@@ -121,7 +119,10 @@ export default function FlowManagerProvider({ children }) {
     if (targetNode) {
       targetNode.data = cloneDeep(newData);
       reactFlowInstance?.setNodes([...oldNodes!]);
-      console.log("after reactflow update", JSON.parse(JSON.stringify(reactFlowInstance?.toObject())))
+      console.log(
+        "after reactflow update",
+        JSON.parse(JSON.stringify(reactFlowInstance?.toObject()))
+      );
     }
   }
 
@@ -221,18 +222,23 @@ export default function FlowManagerProvider({ children }) {
     return outputIds;
   }
 
-
   async function buildFlow(nodeId?: string) {
     function handleBuildUpdate(data: any) {
       addDataToFlowPool(data.data[data.id], data.id);
     }
-    console.log("building flow before save", JSON.parse(JSON.stringify(actualFlow)))
-    console.log(saveFlow)
-    await saveFlow(
-      {...actualFlow!,data:reactFlowInstance!.toObject()!},
-      true,
+    console.log(
+      "building flow before save",
+      JSON.parse(JSON.stringify(actualFlow))
     );
-    console.log("building flow AFTER save", JSON.parse(JSON.stringify(actualFlow)))
+    console.log(saveFlow);
+    await saveFlow(
+      { ...actualFlow!, data: reactFlowInstance!.toObject()! },
+      true
+    );
+    console.log(
+      "building flow AFTER save",
+      JSON.parse(JSON.stringify(actualFlow))
+    );
     return buildVertices({
       flow: {
         data: reactFlowInstance?.toObject()!,
@@ -241,9 +247,11 @@ export default function FlowManagerProvider({ children }) {
         name: actualFlow!.name,
       },
       nodeId,
-      onBuildComplete:()=>{if(nodeId){
-        setNoticeData({title:`${nodeId} built successfully`})
-      }},
+      onBuildComplete: () => {
+        if (nodeId) {
+          setNoticeData({ title: `${nodeId} built successfully` });
+        }
+      },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list) => {
         setErrorData({ list, title });
@@ -361,10 +369,13 @@ export default function FlowManagerProvider({ children }) {
           data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className:
-            targetHandleObject.type === "Text"
+            targetHandleObject.type === "Text" ||
+            targetHandleObject.type === "Data"
               ? "stroke-gray-800 "
               : "stroke-gray-900 ",
-          animated: targetHandleObject.type === "Text",
+          animated:
+            targetHandleObject.type === "Text" ||
+            targetHandleObject.type === "Data",
           selected: false,
         },
         edges.map((edge) => ({ ...edge, selected: false }))
@@ -407,7 +418,7 @@ export default function FlowManagerProvider({ children }) {
 
   async function pasteFileOnFLow(file?: File) {
     if (file) {
-      const text = await file.text()
+      const text = await file.text();
       let fileData = JSON.parse(text);
       if (fileData.flows) {
         fileData.flows.forEach((flow: FlowType) => {
@@ -416,16 +427,14 @@ export default function FlowManagerProvider({ children }) {
             { x: 10, y: 10 }
           );
         });
-      }
-      else {
+      } else {
         let flow: FlowType = JSON.parse(text);
         paste(
           { nodes: flow.data!.nodes, edges: flow.data!.edges },
           { x: 10, y: 10 }
         );
       }
-    }
-    else {
+    } else {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json";
@@ -444,7 +453,7 @@ export default function FlowManagerProvider({ children }) {
   }
 
   function CleanFlowPool() {
-    setFlowPool({})
+    setFlowPool({});
   }
 
   return (

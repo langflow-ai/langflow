@@ -9,7 +9,11 @@ import {
 } from "react";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { INPUT_TYPES, OUTPUT_TYPES, skipNodeUpdate } from "../constants/constants";
+import {
+  INPUT_TYPES,
+  OUTPUT_TYPES,
+  skipNodeUpdate,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
@@ -64,7 +68,7 @@ const FlowsContextInitialValue: FlowsContextType = {
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
-  FlowsContextInitialValue  
+  FlowsContextInitialValue
 );
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
@@ -249,9 +253,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  async function uploadFlow(
-    file?: File
-  ): Promise<String | undefined> {
+  async function uploadFlow(file?: File): Promise<String | undefined> {
     let id;
     if (file) {
       let text = await file.text();
@@ -326,34 +328,32 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       });
     }
   }
-  const addFlow = async (
-    flow?: FlowType
-  ): Promise<String | undefined> => {
-      let flowData = flow
-        ? processDataFromFlow(flow)
-        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
+  const addFlow = async (flow?: FlowType): Promise<String | undefined> => {
+    let flowData = flow
+      ? processDataFromFlow(flow)
+      : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
-      // Create a new flow with a default name if no flow is provided.
-      const newFlow = createNewFlow(flowData, flow!);
+    // Create a new flow with a default name if no flow is provided.
+    const newFlow = createNewFlow(flowData, flow!);
 
-      const flowName = addVersionToDuplicates(newFlow, flows);
+    const flowName = addVersionToDuplicates(newFlow, flows);
 
-      newFlow.name = flowName;
+    newFlow.name = flowName;
 
-      try {
-        const { id } = await saveFlowToDatabase(newFlow);
-        // Change the id to the new id.
-        newFlow.id = id;
+    try {
+      const { id } = await saveFlowToDatabase(newFlow);
+      // Change the id to the new id.
+      newFlow.id = id;
 
-        // Add the new flow to the list of flows.
-        addFlowToLocalState(newFlow);
+      // Add the new flow to the list of flows.
+      addFlowToLocalState(newFlow);
 
-        // Return the id
-        return id;
-      } catch (error) {
-        // Handle the error if needed
-        throw error; // Re-throw the error so the caller can handle it if needed
-      }
+      // Return the id
+      return id;
+    } catch (error) {
+      // Handle the error if needed
+      throw error; // Re-throw the error so the caller can handle it if needed
+    }
   };
 
   const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
@@ -377,17 +377,21 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         edge.targetHandle!
       );
       edge.className =
-        (targetHandleObject.type === "Text"
+        (targetHandleObject.type === "Text" ||
+        targetHandleObject.type === "Data"
           ? "stroke-gray-800 "
           : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = targetHandleObject.type === "Text";
+      edge.animated =
+        targetHandleObject.type === "Text" ||
+        targetHandleObject.type === "Data";
     });
   };
 
   const updateNodes = (nodes: Node[], edges: Edge[]) => {
     nodes.forEach((node) => {
       if (node.data.node?.flow) return;
-      if (!INPUT_TYPES.has(node.data.type) && !OUTPUT_TYPES.has(node.data.type)) return;
+      if (!INPUT_TYPES.has(node.data.type) && !OUTPUT_TYPES.has(node.data.type))
+        return;
       const template = templates[node.data.type];
       if (!template) {
         setErrorData({ title: `Unknown node type: ${node.data.type}` });
@@ -450,9 +454,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
-      console.log("saving flow")
+      console.log("saving flow");
       const updatedFlow = await updateFlowInDatabase(newFlow);
-      console.log("saved flow", updatedFlow)
+      console.log("saved flow", updatedFlow);
       if (updatedFlow) {
         // updates flow in state
         if (!silent) {
