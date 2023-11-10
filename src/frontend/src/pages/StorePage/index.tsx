@@ -158,16 +158,17 @@ export default function StorePage(): JSX.Element {
                   }}
                   value={inputText}
                 />
-                <IconComponent
-                  name={loading ? "Loader2" : "Search"}
+                <button
+                  className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
                   onClick={() => {
                     setSearchText(inputText);
                   }}
-                  className={
-                    "absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground" +
-                    (loading ? " animate-spin" : "")
-                  }
-                />
+                >
+                  <IconComponent
+                    name={loading ? "Loader2" : "Search"}
+                    className={loading ? " animate-spin" : ""}
+                  />
+                </button>
               </div>
               <div className="ml-4 flex w-full gap-2 border-b border-border">
                 <button
