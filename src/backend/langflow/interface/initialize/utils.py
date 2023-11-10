@@ -91,6 +91,8 @@ def format_document(variable, input_variable: str, format_kwargs: Dict):
 def format_content(variable):
     if len(variable) > 1:
         return "\n".join([item.page_content for item in variable if item.page_content])
+    if not variable:
+        return " "
     content = variable[0].page_content
     return try_to_load_json(content)
 
