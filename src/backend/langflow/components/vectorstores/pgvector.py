@@ -43,7 +43,7 @@ class PostgresqlVectorComponent(CustomComponent):
         embedding: Embeddings,
         pg_server_url: str,
         collection_name: str,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
     ) -> VectorStore:
         """
         Builds the Vector Store or BaseRetriever object.
