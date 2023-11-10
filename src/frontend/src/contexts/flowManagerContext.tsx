@@ -78,7 +78,7 @@ export default function FlowManagerProvider({ children }) {
   const [outputIds, setOutputIds] = useState<string[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [actualFlow, setFlow] = useState<FlowType | null>(null);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData,setNoticeData } = useContext(alertContext);
   const [isBuilding, setIsBuilding] = useState(false);
  
   useEffect(() => {
@@ -241,6 +241,9 @@ export default function FlowManagerProvider({ children }) {
         name: actualFlow!.name,
       },
       nodeId,
+      onBuildComplete:()=>{if(nodeId){
+        setNoticeData({title:`${nodeId} built successfully`})
+      }},
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list) => {
         setErrorData({ list, title });
