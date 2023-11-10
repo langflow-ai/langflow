@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from langflow import CustomComponent
 
 from langchain.vectorstores.pgvector import PGVector
@@ -59,6 +59,13 @@ class PostgresqlVectorComponent(CustomComponent):
         """
 
         try:
+            if documents is None:
+                return PGVector.from_existing_index(
+                    embedding=embedding,
+                    collection_name=collection_name,
+                    connection_string=pg_server_url,
+                )
+
             return PGVector.from_documents(
                 embedding=embedding,
                 documents=documents,
