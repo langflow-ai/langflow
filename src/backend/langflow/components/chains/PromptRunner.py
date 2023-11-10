@@ -8,7 +8,7 @@ from langchain.schema import Document
 class PromptRunner(CustomComponent):
     display_name: str = "Prompt Runner"
     description: str = "Run a Chain with the given PromptTemplate"
-    beta = True
+    beta: bool = True
     field_config = {
         "llm": {"display_name": "LLM"},
         "prompt": {

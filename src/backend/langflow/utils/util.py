@@ -34,7 +34,7 @@ def build_template_from_function(
             docs = parse(_class.__doc__)
 
             variables = {"_type": _type}
-            for class_field_items, value in _class.__fields__.items():
+            for class_field_items, value in _class.model_fields.items():
                 if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
@@ -60,7 +60,7 @@ def build_template_from_function(
             # the output to be a function
             base_classes = get_base_classes(_class)
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, name),
@@ -114,7 +114,7 @@ def build_template_from_class(
             # Adding function to base classes to allow
             # the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
             return {
                 "template": format_dict(variables, name),
                 "description": docs.short_description or "",
@@ -178,7 +178,7 @@ def build_template_from_method(
 
             # Adding function to base classes to allow the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, class_name),
@@ -276,6 +276,7 @@ def format_dict(
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
+        _type = get_type_from_union_literal(_type)
 
         value["type"] = get_formatted_type(key, _type)
         value["show"] = should_show_field(value, key)
@@ -295,6 +296,15 @@ def format_dict(
     return dictionary
 
 
+# "Union[Literal['f-string'], Literal['jinja2']]" -> "str"
+def get_type_from_union_literal(union_literal: str) -> str:
+    # if types are literal strings
+    # the type is a string
+    if "Literal" in union_literal:
+        return "str"
+    return union_literal
+
+
 def get_type(value: Any) -> Union[str, type]:
     """
     Retrieves the type value from the dictionary.
@@ -302,7 +312,8 @@ def get_type(value: Any) -> Union[str, type]:
     Returns:
         The type value.
     """
-    _type = value["type"]
+    # get "type" or "annotation" from the value
+    _type = value.get("type") or value.get("annotation")
 
     return _type if isinstance(_type, str) else _type.__name__
 

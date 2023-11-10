@@ -20,7 +20,7 @@ class JSONDocumentBuilder(CustomComponent):
     display_name: str = "JSON Document Builder"
     description: str = "Build a Document containing a JSON object using a key and another Document page content."
     output_types: list[str] = ["Document"]
-    beta = True
+    beta: bool = True
     documentation: str = (
         "https://docs.langflow.org/components/utilities#json-document-builder"
     )

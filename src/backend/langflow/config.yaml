@@ -14,14 +14,14 @@ agents:
   SQLAgent:
     documentation: ""
 chains:
-  LLMChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
+  # LLMChain:
+  #   documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
   LLMMathChain:
     documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_math"
   LLMCheckerChain:
     documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
-  ConversationChain:
-    documentation: ""
+  # ConversationChain:
+  #   documentation: ""
   SeriesCharacterChain:
     documentation: ""
   MidJourneyPromptChain:

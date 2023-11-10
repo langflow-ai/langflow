@@ -1,27 +1,28 @@
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 from fastapi import HTTPException
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.services.getters import get_db_service
-from langflow.interface.custom.utils import extract_inner_type
+from langflow.interface.custom.utils import extract_inner_type, extract_union_types
 
 from langflow.utils import validate
 
 from langflow.services.database.utils import session_getter
 from langflow.services.database.models.flow import Flow
-from pydantic import Extra
 import yaml
 
 
-class CustomComponent(Component, extra=Extra.allow):
-    code: Optional[str]
+class CustomComponent(Component):
+    display_name: Optional[str] = "Custom Component"
+    description: Optional[str] = "Custom Component"
+    code: Optional[str] = None
     field_config: dict = {}
-    code_class_base_inheritance = "CustomComponent"
-    function_entrypoint_name = "build"
+    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
-    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+    return_type_valid_list: List[str] = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
 
@@ -151,9 +152,7 @@ class CustomComponent(Component, extra=Extra.allow):
             return [return_type] if return_type in self.return_type_valid_list else []
 
         # If the return type is a Union, then we need to parse it
-        return_type = return_type.replace("Union", "").replace("[", "").replace("]", "")
-        return_type = return_type.split(",")
-        return_type = [item.strip() for item in return_type]
+        return_type = extract_union_types(return_type)
         return [item for item in return_type if item in self.return_type_valid_list]
 
     @property
@@ -202,7 +201,7 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices(graph_data)
+        return build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self.user_id:

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from langchain.agents import types
 
@@ -15,7 +15,7 @@ from langflow.utils.util import build_template_from_class, build_template_from_m
 class AgentCreator(LangChainTypeCreator):
     type_name: str = "agents"
 
-    from_method_nodes = {"ZeroShotAgent": "from_llm_and_tools"}
+    from_method_nodes: ClassVar[Dict] = {"ZeroShotAgent": "from_llm_and_tools"}
 
     @property
     def frontend_node_class(self) -> type[AgentFrontendNode]:

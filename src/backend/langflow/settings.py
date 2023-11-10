@@ -1,18 +1,15 @@
 import contextlib
 import json
-import orjson
 import os
-from shutil import copy2
 from typing import Optional, List
 from pathlib import Path
 
 import yaml
-from pydantic import field_validator, validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from loguru import logger
+from pydantic import validator, model_validator
+from pydantic_settings import BaseSettings
+from langflow.utils.logger import logger
 
-# BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
-BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
+BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 
 
 class Settings(BaseSettings):
@@ -33,51 +30,14 @@ class Settings(BaseSettings):
     OUTPUT_PARSERS: dict = {}
     CUSTOM_COMPONENTS: dict = {}
 
-    # Define the default LANGFLOW_DIR
-    CONFIG_DIR: Optional[str] = None
-
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE_TYPE: str = "memory"
+    CACHE: str = "InMemoryCache"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
-    LANGCHAIN_CACHE: str = "InMemoryCache"
-
-    # Redis
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_DB: int = 0
-    REDIS_CACHE_EXPIRE: int = 3600
-
-    LANGFUSE_SECRET_KEY: Optional[str] = None
-    LANGFUSE_PUBLIC_KEY: Optional[str] = None
-    LANGFUSE_HOST: Optional[str] = None
-
-    @validator("CONFIG_DIR", pre=True, allow_reuse=True)
-    def set_langflow_dir(cls, value):
-        if not value:
-            from platformdirs import user_cache_dir
-
-            # Define the app name and author
-            app_name = "langflow"
-            app_author = "logspace"
-
-            # Get the cache directory for the application
-            cache_dir = user_cache_dir(app_name, app_author)
-
-            # Create a .langflow directory inside the cache directory
-            value = Path(cache_dir)
-            value.mkdir(parents=True, exist_ok=True)
-
-        if isinstance(value, str):
-            value = Path(value)
-        if not value.exists():
-            value.mkdir(parents=True, exist_ok=True)
-
-        return str(value)
 
     @validator("DATABASE_URL", pre=True)
-    def set_database_url(cls, value, values):
+    def set_database_url(cls, value):
         if not value:
             logger.debug(
                 "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
@@ -87,32 +47,11 @@ class Settings(BaseSettings):
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
-                # Originally, we used sqlite:///./langflow.db
-                # so we need to migrate to the new format
-                # if there is a database in that location
-                if not values["CONFIG_DIR"]:
-                    raise ValueError(
-                        "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
-                    )
-
-                new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                if Path("./langflow.db").exists():
-                    if Path(new_path).exists():
-                        logger.debug(f"Database already exists at {new_path}, using it")
-                    else:
-                        try:
-                            logger.debug("Copying existing database to new location")
-                            copy2("./langflow.db", new_path)
-                            logger.debug(f"Copied existing database to {new_path}")
-                        except Exception:
-                            logger.error("Failed to copy database, using default path")
-                            new_path = "./langflow.db"
-
-                value = f"sqlite:///{new_path}"
+                value = "sqlite:///./langflow.db"
 
         return value
 
-    @field_validator("COMPONENTS_PATH", mode="before")
+    @validator("COMPONENTS_PATH", pre=True)
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -144,17 +83,17 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
-    model_config = SettingsConfigDict(
-        validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_"
-    )
+    class Config:
+        validate_assignment = True
+        extra = "ignore"
+        env_prefix = "LANGFLOW_"
 
-    # @model_validator()
-    # @classmethod
-    # def validate_lists(cls, values):
-    #     for key, value in values.items():
-    #         if key != "dev" and not value:
-    #             values[key] = []
-    #     return values
+    @model_validator(mode="after")
+    def validate_lists(cls, values):
+        for key, value in values.items():
+            if key != "dev" and not value:
+                values[key] = []
+        return values
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
@@ -188,7 +127,7 @@ class Settings(BaseSettings):
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    value = orjson.loads(str(value))
+                    value = json.loads(str(value))
                 if isinstance(value, list):
                     for item in value:
                         if isinstance(item, Path):
@@ -233,3 +172,6 @@ def load_settings_from_yaml(file_path: str) -> Settings:
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return Settings(**settings_dict)
+
+
+settings = load_settings_from_yaml("config.yaml")
