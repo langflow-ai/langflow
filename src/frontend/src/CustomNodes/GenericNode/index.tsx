@@ -137,8 +137,6 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [flowPool, data.id]);
-
-
   return (
     <>
       <NodeToolbar>

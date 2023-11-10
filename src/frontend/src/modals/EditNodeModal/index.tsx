@@ -91,8 +91,8 @@ const EditNodeModal = forwardRef(
     useEffect(() => {
       if (modalOpen) {
         myData.current = data; // reset data to what it is on node when opening modal
-        onClose!(modalOpen);
       }
+      onClose!(modalOpen);
     }, [modalOpen]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);

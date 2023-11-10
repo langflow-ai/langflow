@@ -64,7 +64,6 @@ export default function NodeToolbarComponent({
     if (event.includes("advanced")) {
       return setShowModalAdvanced(true);
     }
-    setShowModalAdvanced(false);
     if (event.includes("show")) {
       setShowNode((prev) => !prev);
       updateNodeInternals(data.id);
