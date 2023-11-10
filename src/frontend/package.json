@@ -32,7 +32,7 @@
     "ace-builds": "^1.24.1",
     "add": "^2.0.6",
     "ansi-to-html": "^0.7.2",
-    "axios": "^1.5.0",
+    "axios": "^1.6.0",
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.6.1",
     "clsx": "^1.2.1",
