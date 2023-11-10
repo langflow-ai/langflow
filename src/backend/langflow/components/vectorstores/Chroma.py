@@ -17,7 +17,7 @@ class ChromaComponent(CustomComponent):
     display_name: str = "Chroma"
     description: str = "Implementation of Vector Store using Chroma"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
-    beta = True
+    beta: bool = True
 
     def build_config(self):
         """

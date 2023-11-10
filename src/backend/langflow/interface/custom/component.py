@@ -1,6 +1,5 @@
 import ast
-from typing import Any, Optional
-from pydantic import BaseModel
+from typing import Any, ClassVar, Optional
 from fastapi import HTTPException
 
 from langflow.utils import validate
@@ -15,18 +14,19 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
     pass
 
 
-class Component(BaseModel):
-    ERROR_CODE_NULL = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL = (
-        "The name of the entrypoint function must be provided."
-    )
+class Component:
+    ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[
+        str
+    ] = "The name of the entrypoint function must be provided."
 
-    code: Optional[str]
-    function_entrypoint_name = "build"
+    code: Optional[str] = None
+    _function_entrypoint_name: str = "build"
     field_config: dict = {}
 
     def __init__(self, **data):
-        super().__init__(**data)
+        for key, value in data.items():
+            setattr(self, key, value)
 
     def get_code_tree(self, code: str):
         parser = CodeParser(code)
@@ -39,7 +39,7 @@ class Component(BaseModel):
                 detail={"error": self.ERROR_CODE_NULL, "traceback": ""},
             )
 
-        if not self.function_entrypoint_name:
+        if not self._function_entrypoint_name:
             raise ComponentFunctionEntrypointNameNullError(
                 status_code=400,
                 detail={
@@ -48,7 +48,7 @@ class Component(BaseModel):
                 },
             )
 
-        return validate.create_function(self.code, self.function_entrypoint_name)
+        return validate.create_function(self.code, self._function_entrypoint_name)
 
     def build_template_config(self, attributes) -> dict:
         template_config = {}

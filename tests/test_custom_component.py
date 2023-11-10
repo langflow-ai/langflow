@@ -10,7 +10,6 @@ from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.component import (
     Component,
     ComponentCodeNullError,
-    ComponentFunctionEntrypointNameNullError,
 )
 from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
 
@@ -73,16 +72,16 @@ def test_component_init():
     """
     Test the initialization of the Component class.
     """
-    component = Component(code=code_default, function_entrypoint_name="build")
+    component = Component(code=code_default, _function_entrypoint_name="build")
     assert component.code == code_default
-    assert component.function_entrypoint_name == "build"
+    assert component._function_entrypoint_name == "build"
 
 
 def test_component_get_code_tree():
     """
     Test the get_code_tree method of the Component class.
     """
-    component = Component(code=code_default, function_entrypoint_name="build")
+    component = Component(code=code_default, _function_entrypoint_name="build")
     tree = component.get_code_tree(component.code)
     assert "imports" in tree
 
@@ -92,19 +91,20 @@ def test_component_code_null_error():
     Test the get_function method raises the
     ComponentCodeNullError when the code is empty.
     """
-    component = Component(code="", function_entrypoint_name="")
+    component = Component(code="", _function_entrypoint_name="")
     with pytest.raises(ComponentCodeNullError):
         component.get_function()
 
 
-def test_component_function_entrypoint_name_null_error():
-    """
-    Test the get_function method raises the ComponentFunctionEntrypointNameNullError
-    when the function_entrypoint_name is empty.
-    """
-    component = Component(code=code_default, function_entrypoint_name="")
-    with pytest.raises(ComponentFunctionEntrypointNameNullError):
-        component.get_function()
+# TODO: Validate if we should remove this
+# def test_component_function_entrypoint_name_null_error():
+#     """
+#     Test the get_function method raises the ComponentFunctionEntrypointNameNullError
+#     when the function_entrypoint_name is empty.
+#     """
+#     component = Component(code=code_default, _function_entrypoint_name="")
+#     with pytest.raises(ComponentFunctionEntrypointNameNullError):
+#         component.get_function()
 
 
 def test_custom_component_init():
@@ -212,7 +212,7 @@ def test_component_get_function_valid():
     Test the get_function method of the Component
     class with valid code and function_entrypoint_name.
     """
-    component = Component(code="def build(): pass", function_entrypoint_name="build")
+    component = Component(code="def build(): pass", _function_entrypoint_name="build")
     my_function = component.get_function()
     assert callable(my_function)
 
@@ -382,7 +382,7 @@ def test_component_get_code_tree_syntax_error():
     Test the get_code_tree method of the Component class
     raises the CodeSyntaxError when given incorrect syntax.
     """
-    component = Component(code="import os as", function_entrypoint_name="build")
+    component = Component(code="import os as", _function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component.code)
 

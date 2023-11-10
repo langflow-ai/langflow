@@ -206,7 +206,7 @@ class InitializeAgentNode(FrontendNode):
         ],
     )
     description: str = """Construct a zero shot agent from an LLM and tools."""
-    base_classes: list[str] = ["AgentExecutor", "function"]
+    base_classes: list[str] = ["AgentExecutor", "Callable"]
 
     def to_dict(self):
         return super().to_dict()
