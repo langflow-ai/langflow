@@ -16,7 +16,8 @@ export default function FromStore(): JSX.Element {
 
   const handleGetComponents = () => {
     setLoading(true);
-    getStoreComponents(null, null, true, "name", null, true)
+    console.log("get store components");
+    getStoreComponents(null, null, null, "name", null, true)
       .then((res) => {
         setLoading(false);
         setData(res?.results ?? []);
