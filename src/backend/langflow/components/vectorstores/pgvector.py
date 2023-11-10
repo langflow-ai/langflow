@@ -66,4 +66,4 @@ class PostgresqlVectorComponent(CustomComponent):
                 connection_string=pg_server_url,
             )
         except Exception as e:
-            raise RuntimeError(f"Failed to build Vector Store: {str(e)}")
+            raise RuntimeError(f"Failed to build PGVector: {e}")
