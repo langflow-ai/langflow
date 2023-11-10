@@ -1,5 +1,5 @@
 from loguru import logger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
@@ -130,7 +130,7 @@ class ContractEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
         super().__init__(source, target, raw_edge)
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
-        self.result = None
+        self.result: Any = None
 
     def honor(self) -> None:
         """
