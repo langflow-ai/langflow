@@ -316,8 +316,8 @@ class Vertex:
                 inputs = self._built_object.prompt.partial_variables
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
-        elif hasattr(self._built_object, "invoke"):
-            self._built_result = self._built_object.invoke(inputs)
+        elif hasattr(self._built_object, "run"):
+            self._built_result = self._built_object.run(inputs)
 
     def _build_each_node_in_params_dict(self, user_id=None):
         """
@@ -488,7 +488,10 @@ class Vertex:
             (edge for edge in self.edges if edge.target.id == requester.id), None
         )
         # Return the result of the requester edge
-        return None if requester_edge is None else requester_edge.get_result()
+        if requester_edge is None:
+            return None
+
+        return requester_edge.get_result()
 
     def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:
