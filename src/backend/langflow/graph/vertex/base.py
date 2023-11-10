@@ -309,15 +309,19 @@ class Vertex:
         if hasattr(self._built_object, "input_keys"):
             # test if all keys are in inputs
             # and if not add them with empty string
-            for key in self._built_object.input_keys:
-                if key not in inputs:
-                    inputs[key] = ""
+            # for key in self._built_object.input_keys:
+            #     if key not in inputs:
+            #         inputs[key] = ""
             if inputs == {} and hasattr(self._built_object, "prompt"):
                 inputs = self._built_object.prompt.partial_variables
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
         elif hasattr(self._built_object, "run"):
-            self._built_result = self._built_object.run(inputs)
+            try:
+                result = self._built_object.run(inputs)
+                self._built_result = result
+            except Exception as exc:
+                logger.error(f"Error running {self.vertex_type}: {exc}")
 
     def _build_each_node_in_params_dict(self, user_id=None):
         """
