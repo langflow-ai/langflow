@@ -334,7 +334,7 @@ export default function ParameterComponent({
 
         {left === true &&
           type === "str" &&
-          !data.node?.template[name].options ? (
+          data.node?.template[name].options===undefined || data.node?.template[name].options==null ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
               <InputListComponent
