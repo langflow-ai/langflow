@@ -1,6 +1,7 @@
-from typing import Optional, Union
+from typing import Optional
+
 from langflow import CustomComponent
-from langflow.field_typing import Text, Data
+from langflow.field_typing import Text
 
 
 class TextInput(CustomComponent):
@@ -14,6 +15,8 @@ class TextInput(CustomComponent):
         "value": {"display_name": "Value"},
     }
 
-    def build(self, value: Optional[str] = "") -> Union[Text, Data]:
-        self.repr_value = value
+    def build(self, value: Optional[str] = "") -> Text:
+        self.status = value
+        if not value:
+            value = ""
         return value

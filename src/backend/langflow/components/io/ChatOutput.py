@@ -1,7 +1,7 @@
-from typing import Optional, Union
-from langflow import CustomComponent
+from typing import Optional
 
-from langflow.field_typing import Text, Data
+from langflow import CustomComponent
+from langflow.field_typing import Text
 
 
 class ChatOutput(CustomComponent):
@@ -31,7 +31,9 @@ class ChatOutput(CustomComponent):
         sender: Optional[str] = "Machine",
         sender_name: Optional[str] = "AI",
         session_id: Optional[str] = None,
-        message: Optional[Text] = "",
-    ) -> Union[Text, Data]:
+        message: Optional[str] = None,
+    ) -> Text:
         self.repr_value = message
+        if not message:
+            message = ""
         return message
