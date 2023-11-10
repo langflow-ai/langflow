@@ -13,6 +13,7 @@ CHAT_OPENAI_MODELS = [
     "gpt-3.5-turbo-16k",
 ]
 
+
 ANTHROPIC_MODELS = [
     # largest model, ideal for a wide range of more complex tasks.
     "claude-v1",
