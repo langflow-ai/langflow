@@ -67,11 +67,7 @@ export default function StoreApiKeyModal({
   return (
     <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header
-        description={
-          "Insert your Langflow API key. If you don't have it, please sign up."
-        }
-      >
+      <BaseModal.Header description={"Insert your Langflow API key."}>
         <span className="pr-2">API Key</span>
         <IconComponent
           name="Key"
@@ -88,13 +84,9 @@ export default function StoreApiKeyModal({
           <div className="grid gap-5">
             <Form.Field name="username">
               <div className="flex items-center justify-between gap-2">
-                <a href="https://langflow.store/" target="_blank">
-                  <Button type="button" className="w-24" variant="secondary">
-                    Sign up
-                  </Button>
-                </a>
                 <Form.Control asChild>
                   <Input
+                    type="password"
                     onChange={({ target: { value } }) => {
                       handleInput({ target: { name: "apikey", value } });
                     }}
@@ -104,27 +96,39 @@ export default function StoreApiKeyModal({
               </div>
             </Form.Field>
           </div>
-          <div className="float-right">
-            <Button
-              className="mr-3"
-              variant="outline"
-              onClick={() => {
-                setOpen(false);
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Form.Submit asChild>
+          <div className="flex items-end justify-between">
+            <span className="pr-1 text-xs text-muted-foreground">
+              Don’t have an API key? Sign up at{" "}
+              <a
+                className="text-high-indigo underline"
+                href="https://langflow.store/"
+                target="_blank"
+              >
+                langflow.store
+              </a>
+            </span>
+            <div className="">
               <Button
-                className="mt-8"
+                className="mr-3"
+                variant="outline"
                 onClick={() => {
-                  handleSaveKey();
+                  setOpen(false);
                 }}
               >
-                Save
+                Cancel
               </Button>
-            </Form.Submit>
+
+              <Form.Submit asChild>
+                <Button
+                  className="mt-8"
+                  onClick={() => {
+                    handleSaveKey();
+                  }}
+                >
+                  Save
+                </Button>
+              </Form.Submit>
+            </div>
           </div>
         </Form.Root>
       </BaseModal.Content>
