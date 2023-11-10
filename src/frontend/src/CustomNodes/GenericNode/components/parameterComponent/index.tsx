@@ -174,14 +174,14 @@ export default function ParameterComponent({
                   {item.type === "" ? "" : " - "}
                   {item.type.split(", ").length > 2
                     ? item.type.split(", ").map((el, index) => (
-                      <React.Fragment key={el + index}>
-                        <span>
-                          {index === item.type.split(", ").length - 1
-                            ? el
-                            : (el += `, `)}
-                        </span>
-                      </React.Fragment>
-                    ))
+                        <React.Fragment key={el + index}>
+                          <span>
+                            {index === item.type.split(", ").length - 1
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
                     : item.type}
                 </span>
               </span>
@@ -201,16 +201,16 @@ export default function ParameterComponent({
 
   return !showNode ? (
     left &&
-      (type === "str" ||
-        type === "bool" ||
-        type === "float" ||
-        type === "code" ||
-        type === "prompt" ||
-        type === "file" ||
-        type === "int" ||
-        type === "dict" ||
-        type === "NestedDict") &&
-      !optionalHandle ? (
+    (type === "str" ||
+      type === "bool" ||
+      type === "float" ||
+      type === "code" ||
+      type === "prompt" ||
+      type === "file" ||
+      type === "int" ||
+      type === "dict" ||
+      type === "NestedDict") &&
+    !optionalHandle ? (
       <></>
     ) : (
       <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -284,16 +284,16 @@ export default function ParameterComponent({
           </div>
         </div>
         {left &&
-          (type === "str" ||
-            type === "bool" ||
-            type === "float" ||
-            type === "code" ||
-            type === "prompt" ||
-            type === "file" ||
-            type === "int" ||
-            type === "dict" ||
-            type === "NestedDict") &&
-          !optionalHandle ? (
+        (type === "str" ||
+          type === "bool" ||
+          type === "float" ||
+          type === "code" ||
+          type === "prompt" ||
+          type === "file" ||
+          type === "int" ||
+          type === "dict" ||
+          type === "NestedDict") &&
+        !optionalHandle ? (
           <></>
         ) : (
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -331,16 +331,19 @@ export default function ParameterComponent({
             </div>
           </Button>
         )}
-        {left === true &&
+
+        {(left === true &&
           type === "str" &&
-          (data.node?.template[name]?.options===undefined || data.node?.template[name]?.options===null) ? (
+          data.node?.template[name]?.options === undefined) ||
+        data.node?.template[name]?.options === null ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
               <InputListComponent
                 disabled={disabled}
                 value={
-                  (!Array.isArray(data.node.template[name].value) && !data.node.template[name].value) ||
-                    data.node.template[name].value === ""
+                  (!Array.isArray(data.node.template[name].value) &&
+                    !data.node.template[name].value) ||
+                  data.node.template[name].value === ""
                     ? [""]
                     : data.node.template[name].value
                 }
@@ -385,7 +388,8 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          (data.node?.template[name]?.options!==undefined && data.node?.template[name]?.options!==null) ? (
+          data.node?.template[name].options !== undefined &&
+          data.node?.template[name].options !== null ? (
           <div className="mt-2 w-full">
             <Dropdown
               options={data.node.template[name]?.options}
@@ -461,10 +465,10 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name].value ||
-                  data.node!.template[name].value?.toString() === "{}"
+                data.node!.template[name].value?.toString() === "{}"
                   ? {
-                    yourkey: "value",
-                  }
+                      yourkey: "value",
+                    }
                   : data.node!.template[name].value
               }
               onChange={(newValue) => {
@@ -480,7 +484,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name].value?.length === 0 ||
-                  !data.node!.template[name].value
+                !data.node!.template[name].value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name].value)
               }
