@@ -121,10 +121,10 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
+  //CAUSADORA DE BUGS
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
       setFilterData(data);
-      setFilterEdge([]);
       setSearch("");
     }
   }, [getFilterEdge, data]);

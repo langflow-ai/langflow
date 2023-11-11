@@ -391,15 +391,8 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     if (index >= 0) {
       await deleteFlowFromDatabase(id);
       //removes component from data if there is any
-      if (flows[index].is_component) {
-        setData((prev) => {
-          let newData = _.cloneDeep(prev);
-          const key = flows[index].data!.nodes[0].data.type;
-          delete newData["custom_components"][key];
-          return newData;
-        });
-      }
       setFlows(flows.filter((flow) => flow.id !== id));
+      processFlows(flows.filter((flow) => flow.id !== id));
     }
   }
   /**

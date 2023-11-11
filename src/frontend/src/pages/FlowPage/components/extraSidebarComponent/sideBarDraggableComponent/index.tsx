@@ -49,7 +49,10 @@ export default function SidebarDraggableComponent({
         );
         break;
       case "delete":
-        deleteComponent(autoLogin ? "auto" : userData?.id!, itemName);
+        deleteComponent(
+          autoLogin ? "auto" : userData?.id!,
+          removeCountFromString(itemName)
+        );
         break;
     }
   }
