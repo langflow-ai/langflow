@@ -7,11 +7,7 @@ from langchain.vectorstores import Vectara
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseRetriever
-from langchain.embeddings.base import Embeddings
 from langchain.schema.vectorstore import VectorStore
-from langchain.base_language import BaseLanguageModel
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.embeddings import FakeEmbeddings
 
 

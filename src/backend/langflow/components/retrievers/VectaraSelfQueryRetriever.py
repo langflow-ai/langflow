@@ -1,17 +1,11 @@
-from typing import Optional, Union, List
+from typing import Optional, List
 from langflow import CustomComponent
 import json
-import lark
-from langchain.vectorstores import Vectara
-from langchain.schema import Document
-# from langchain.vectorstores.base import VectorStore
 from langchain.schema import BaseRetriever
-from langchain.embeddings.base import Embeddings
 from langchain.schema.vectorstore import VectorStore
 from langchain.base_language import BaseLanguageModel
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain.chains.query_constructor.base import AttributeInfo
-from langchain.embeddings import FakeEmbeddings
 
 
 class VectaraComponent(CustomComponent):
@@ -31,13 +25,14 @@ class VectaraComponent(CustomComponent):
             "display_name": "LLM", 
             "info": "For self query retriever"
             },
-        'document_content_description':{
+        "document_content_description":{
             "display_name": "Document Content Description", 
             "info": "For self query retriever",
             },
         "metadata_field_info": {
             "display_name": "Metadata Field Info", 
-            "info": "Check json format in documentation for self query retriever",
+            "info": "Check dictionary format in documentation for self query retriever",
+            "info": "Each metadata field is a json string containing additional search metadata. Example input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}. The keys should remain constant",
             },
     }
 
