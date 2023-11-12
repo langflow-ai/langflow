@@ -16,13 +16,15 @@ from langflow.services.auth.utils import (
     get_current_active_user,
     get_current_user_by_jwt,
 )
-from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
 from sqlmodel import Session
 from langflow.services.chat.manager import ChatService
 from langflow.services.cache.manager import BaseCacheService
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from langflow.services.cache.utils import update_build_status
 
 router = APIRouter(tags=["Chat"])
 

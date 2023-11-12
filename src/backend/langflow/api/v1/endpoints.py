@@ -1,9 +1,8 @@
 from http import HTTPStatus
-from typing import Annotated, Optional, Union
+from typing import Annotated, Optional, Union, TYPE_CHECKING
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 
 
-from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.database.models.user.user import User
@@ -41,6 +40,9 @@ from sqlmodel import Session
 
 
 from langflow.services.task.manager import TaskService
+
+if TYPE_CHECKING:
+    from langflow.services.cache.utils import save_uploaded_file
 
 # build router
 router = APIRouter(tags=["Base"])
