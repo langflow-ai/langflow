@@ -32,7 +32,7 @@ class VectaraComponent(CustomComponent):
         "metadata_field_info": {
             "display_name": "Metadata Field Info", 
             "info": "Check dictionary format in documentation for self query retriever",
-            "info": "Each metadata field is a json string containing additional search metadata. Example input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}. The keys should remain constant",
+            "info": "Each metadata field is a string in the form of json containing additional search metadata.\nExample input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}.\nThe keys should remain constant",
             },
     }
 
