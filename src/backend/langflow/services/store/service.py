@@ -30,15 +30,14 @@ user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
 def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
     # Fetch and set user data to the context variable
     if api_key:
-        user_data = None
         try:
             user_data = store_service._get(
                 f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
             )
+            user_data_var.set(user_data)
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
                 raise ValueError("Invalid API key")
-        user_data_var.set(user_data)
     try:
         yield
     finally:
@@ -268,6 +267,8 @@ class StoreService(Service):
         if filter_by_user and api_key:
             user_data = user_data_var.get()
             # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+            if not user_data:
+                raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
@@ -290,6 +291,8 @@ class StoreService(Service):
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
         user_data = user_data_var.get()
+        if not user_data:
+            raise ValueError("No user data")
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -309,6 +312,8 @@ class StoreService(Service):
         self, component_ids: List[UUID], api_key: str
     ):
         user_data = user_data_var.get()
+        if not user_data:
+            raise ValueError("No user data")
         params = {
             "fields": "id",
             "filter": json.dumps(
