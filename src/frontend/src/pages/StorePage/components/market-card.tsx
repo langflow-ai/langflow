@@ -238,8 +238,6 @@ export const MarketCardComponent = ({
                     }
                     if (!added) {
                       handleAdd();
-                    } else if (installable) {
-                      handleInstall();
                     }
                   }}
                 >
