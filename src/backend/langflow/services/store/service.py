@@ -1,11 +1,12 @@
-from datetime import datetime
 import json
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID
-from langflow.services.base import Service
-from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
-import httpx
 
-from httpx import HTTPError
+import httpx
+from httpx import HTTPError, HTTPStatusError
+
+from langflow.services.base import Service
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
@@ -16,6 +17,7 @@ from langflow.services.store.utils import process_tags_for_post
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
 from contextlib import contextmanager
 from contextvars import ContextVar
 
@@ -25,12 +27,16 @@ user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
 
 
 @contextmanager
-def user_data_context(api_key: str, store_service: "StoreService"):
+def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
     # Fetch and set user data to the context variable
     if api_key:
-        user_data = store_service._get(
-            f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
-        )
+        try:
+            user_data = store_service._get(
+                f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
+            )
+        except HTTPStatusError as exc:
+            if exc.response.status_code == 403:
+                raise ValueError("Invalid API key")
         user_data_var.set(user_data)
     try:
         yield
@@ -199,7 +205,7 @@ class StoreService(Service):
             params["filter"] = json.dumps({"_and": filter_conditions})
 
         results = self._get(self.components_url, api_key, params)
-        return results[0].get("count", 0)
+        return int(results[0].get("count", 0))
 
     @staticmethod
     def build_search_filter_conditions(query: str):
@@ -213,7 +219,7 @@ class StoreService(Service):
 
     def query_components(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         search: Optional[str] = None,
         status: Optional[str] = None,
         tags: Optional[List[str]] = None,
