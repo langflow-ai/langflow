@@ -137,7 +137,9 @@ export const MarketCardComponent = ({
         <CardHeader>
           <div>
             <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-              <span className="w-full truncate">{data.name}</span>
+              <ShadTooltip content={data.name}>
+                <div className="w-full truncate">{data.name}</div>
+              </ShadTooltip>
               <div className="flex gap-3">
                 {!data.is_component && (
                   <ShadTooltip content="Components">
@@ -238,6 +240,8 @@ export const MarketCardComponent = ({
                     }
                     if (!added) {
                       handleAdd();
+                    } else if (installable) {
+                      handleInstall();
                     }
                   }}
                 >
