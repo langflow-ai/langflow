@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -77,12 +77,12 @@ def create_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 def get_components(
-    search: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    is_component: Optional[bool] = Query(None),
-    tags: Optional[List[str]] = Query(None),
-    sort: Optional[List[str]] = Query(None),
-    filter_by_user: bool = Query(False),
+    search: Annotated[Optional[str], Query()] = None,
+    status: Annotated[Optional[str], Query()] = None,
+    is_component: Annotated[Optional[bool], Query()] = None,
+    tags: Annotated[Optional[list[str]], Query()] = None,
+    sort: Annotated[Union[list[str], None], Query()] = None,
+    filter_by_user: Annotated[bool, Query()] = False,
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
@@ -112,11 +112,14 @@ def get_components(
                     )
             try:
                 if result:
-                    comp_count = store_service.count_components(
-                        api_key=store_api_Key,
-                        filter_by_user=filter_by_user,
-                        filter_conditions=filter_conditions,
-                    )
+                    if len(result) >= limit:
+                        comp_count = store_service.count_components(
+                            api_key=store_api_Key,
+                            filter_by_user=filter_by_user,
+                            filter_conditions=filter_conditions,
+                        )
+                    else:
+                        comp_count = len(result)
                 else:
                     comp_count = 0
             except HTTPStatusError as exc:
@@ -148,24 +151,6 @@ def get_components(
             raise HTTPException(status_code=403, detail=str(exc))
 
         raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.get("/components/count", response_model=dict)
-def count_components(
-    filter_by_user: bool = Query(False),
-    store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
-    is_component: Optional[bool] = Query(None),
-):
-    try:
-        result = store_service.count_components(
-            api_key=store_api_Key,
-            filter_by_user=filter_by_user,
-            is_component=is_component,
-        )
-        return {"count": result}
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
