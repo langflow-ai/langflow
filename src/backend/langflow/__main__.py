@@ -98,12 +98,8 @@ def update_settings(
 
 @app.command()
 def run(
-    host: str = typer.Option(
-        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
-    ),
-    workers: int = typer.Option(
-        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
-    ),
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
+    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
@@ -111,19 +107,11 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(
-        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
-    ),
+    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
     # .env file param
-    env_file: Path = typer.Option(
-        None, help="Path to the .env file containing environment variables."
-    ),
-    log_level: str = typer.Option(
-        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
-    log_file: Path = typer.Option(
-        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
-    ),
+    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
     cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -202,9 +190,7 @@ def run(
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    webapp_process = Process(
-        target=run_langflow, args=(host, port, log_level, options, app)
-    )
+    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
     webapp_process.start()
     status_code = 0
     while status_code != 200:
@@ -280,9 +266,7 @@ def print_banner(host, port):
     )
 
     # Create a panel with the title and the info text, and a border around it
-    panel = Panel(
-        f"{title}\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False
-    )
+    panel = Panel(f"{title}\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False)
 
     # Print the banner with a separator line before and after
     rprint(panel)
@@ -314,12 +298,8 @@ def run_langflow(host, port, log_level, options, app):
 @app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(
-        ..., prompt=True, hide_input=True, help="Password for the superuser."
-    ),
-    log_level: str = typer.Option(
-        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
+    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ):
     """
     Create a superuser.

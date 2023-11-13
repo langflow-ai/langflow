@@ -30,13 +30,12 @@ else
 endif
 
 format:
-	poetry run black .
-	poetry run ruff . --fix --exclude src/backend/langflow/alembic
+	poetry run ruff . --fix
+	poetry run ruff format .
 	cd src/frontend && npm run format
 
 lint:
 	poetry run mypy src/backend/langflow
-	poetry run black . --check
 	poetry run ruff . --fix
 
 install_frontend:

@@ -53,8 +53,7 @@ class MemoryCreator(LangChainTypeCreator):
         return [
             memory.__name__
             for memory in self.type_to_loader_dict.values()
-            if memory.__name__ in settings_service.settings.MEMORIES
-            or settings_service.settings.DEV
+            if memory.__name__ in settings_service.settings.MEMORIES or settings_service.settings.DEV
         ]
 
 

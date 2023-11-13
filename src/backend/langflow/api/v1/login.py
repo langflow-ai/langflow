@@ -44,9 +44,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(
-    db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
-):
+async def auto_login(db: Session = Depends(get_session), settings_service=Depends(get_settings_service)):
     if settings_service.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
@@ -60,9 +58,7 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(
-    token: str, current_user: Session = Depends(get_current_active_user)
-):
+async def refresh_token(token: str, current_user: Session = Depends(get_current_active_user)):
     if token:
         return create_refresh_token(token)
     else:

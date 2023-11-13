@@ -37,8 +37,7 @@ class EmbeddingCreator(LangChainTypeCreator):
         return [
             embedding.__name__
             for embedding in self.type_to_loader_dict.values()
-            if embedding.__name__ in settings_service.settings.EMBEDDINGS
-            or settings_service.settings.DEV
+            if embedding.__name__ in settings_service.settings.EMBEDDINGS or settings_service.settings.DEV
         ]
 
 

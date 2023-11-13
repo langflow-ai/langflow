@@ -53,9 +53,9 @@ class CustomComponent(Component, extra=Extra.allow):
         reader = DirectoryReader("", False)
 
         for type_hint in TYPE_HINT_LIST:
-            if reader._is_type_hint_used_in_args(
+            if reader._is_type_hint_used_in_args(type_hint, code) and not reader._is_type_hint_imported(
                 type_hint, code
-            ) and not reader._is_type_hint_imported(type_hint, code):
+            ):
                 error_detail = {
                     "error": "Type hint Error",
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
@@ -74,20 +74,14 @@ class CustomComponent(Component, extra=Extra.allow):
             return ""
         tree = self.get_code_tree(self.code)
 
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return ""
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         if not build_methods:
@@ -103,8 +97,7 @@ class CustomComponent(Component, extra=Extra.allow):
                     detail={
                         "error": "Type hint Error",
                         "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
+                            "Prompt type is not supported in the build method." " Try using PromptTemplate instead."
                         ),
                     },
                 )
@@ -119,20 +112,14 @@ class CustomComponent(Component, extra=Extra.allow):
             return []
         tree = self.get_code_tree(self.code)
 
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return []
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         if not build_methods:
@@ -230,11 +217,7 @@ class CustomComponent(Component, extra=Extra.allow):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = (
-                    session.query(Flow)
-                    .filter(Flow.name == flow_name)
-                    .filter(Flow.user_id == self.user_id)
-                ).first()
+                flow = (session.query(Flow).filter(Flow.name == flow_name).filter(Flow.user_id == self.user_id)).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 

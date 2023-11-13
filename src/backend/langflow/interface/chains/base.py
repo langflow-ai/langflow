@@ -33,8 +33,7 @@ class ChainCreator(LangChainTypeCreator):
         if self.type_dict is None:
             settings_service = get_settings_service()
             self.type_dict: dict[str, Any] = {
-                chain_name: import_class(f"langchain.chains.{chain_name}")
-                for chain_name in chains.__all__
+                chain_name: import_class(f"langchain.chains.{chain_name}") for chain_name in chains.__all__
             }
             from langflow.interface.chains.custom import CUSTOM_CHAINS
 
@@ -45,8 +44,7 @@ class ChainCreator(LangChainTypeCreator):
             self.type_dict = {
                 name: chain
                 for name, chain in self.type_dict.items()
-                if name in settings_service.settings.CHAINS
-                or settings_service.settings.DEV
+                if name in settings_service.settings.CHAINS or settings_service.settings.DEV
             }
         return self.type_dict
 
@@ -61,9 +59,7 @@ class ChainCreator(LangChainTypeCreator):
                     method_name=self.from_method_nodes[name],
                     add_function=True,
                 )
-            return build_template_from_class(
-                name, self.type_to_loader_dict, add_function=True
-            )
+            return build_template_from_class(name, self.type_to_loader_dict, add_function=True)
         except ValueError as exc:
             raise ValueError(f"Chain {name} not found: {exc}") from exc
         except AttributeError as exc:
@@ -73,11 +69,7 @@ class ChainCreator(LangChainTypeCreator):
     def to_list(self) -> List[str]:
         names = []
         for _, chain in self.type_to_loader_dict.items():
-            chain_name = (
-                chain.function_name()
-                if hasattr(chain, "function_name")
-                else chain.__name__
-            )
+            chain_name = chain.function_name() if hasattr(chain, "function_name") else chain.__name__
             names.append(chain_name)
         return names
 

@@ -95,6 +95,7 @@ export const MarketCardComponent = ({
   }
 
   function handleLike() {
+    setLoading(true);
     if (liked_by_user !== undefined || liked_by_user !== null) {
       const temp = liked_by_user;
       const tempNum = likes_count;
@@ -107,6 +108,7 @@ export const MarketCardComponent = ({
       console.log(data.id);
       postLikeComponent(data.id)
         .catch((error) => {
+          setLoading(false);
           console.error(error);
           setLiked_by_user(temp);
           setLikes_count(tempNum);
@@ -116,6 +118,7 @@ export const MarketCardComponent = ({
           });
         })
         .then((response) => {
+          setLoading(false);
           setLikes_count(response.likes_count);
           setLiked_by_user(response.liked_by_user);
         });
@@ -137,7 +140,9 @@ export const MarketCardComponent = ({
         <CardHeader>
           <div>
             <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-              <span className="w-full truncate">{data.name}</span>
+              <ShadTooltip content={data.name}>
+                <div className="w-full truncate">{data.name}</div>
+              </ShadTooltip>
               <div className="flex gap-3">
                 {!data.is_component && (
                   <ShadTooltip content="Components">
@@ -192,6 +197,7 @@ export const MarketCardComponent = ({
                 content={authorized ? "Like" : "Please review your API key."}
               >
                 <Button
+                  disabled={loading || !authorized}
                   variant="ghost"
                   size="xs"
                   className={
@@ -199,7 +205,7 @@ export const MarketCardComponent = ({
                     (!authorized ? " cursor-not-allowed" : "")
                   }
                   onClick={() => {
-                    if (authorized) handleLike();
+                    handleLike();
                   }}
                 >
                   <IconComponent

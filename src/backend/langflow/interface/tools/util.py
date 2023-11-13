@@ -21,16 +21,12 @@ def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
                         for keyword in tool.keywords:
                             if keyword.arg == "name":
                                 try:
-                                    tool_params["name"] = ast.literal_eval(
-                                        keyword.value
-                                    )
+                                    tool_params["name"] = ast.literal_eval(keyword.value)
                                 except ValueError:
                                     break
                             elif keyword.arg == "description":
                                 try:
-                                    tool_params["description"] = ast.literal_eval(
-                                        keyword.value
-                                    )
+                                    tool_params["description"] = ast.literal_eval(keyword.value)
                                 except ValueError:
                                     continue
 
@@ -43,9 +39,7 @@ def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:
                 else:
                     # get the class object from the return statement
                     try:
-                        class_obj = eval(
-                            compile(ast.Expression(tool), "<string>", "eval")
-                        )
+                        class_obj = eval(compile(ast.Expression(tool), "<string>", "eval"))
                     except Exception:
                         return None
 

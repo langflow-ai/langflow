@@ -6,6 +6,7 @@ import { Input } from "../../components/ui/input";
 import { CONTROL_NEW_API_KEY } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
+import { StoreContext } from "../../contexts/storeContext";
 import { addApiKeyStore } from "../../controllers/API";
 import {
   ApiKeyInputType,
@@ -25,6 +26,7 @@ export default function StoreApiKeyModal({
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { storeApiKey } = useContext(AuthContext);
+  const { hasApiKey } = useContext(StoreContext);
 
   function handleInput({
     target: { name, value },
@@ -86,6 +88,8 @@ export default function StoreApiKeyModal({
               <div className="flex items-center justify-between gap-2">
                 <Form.Control asChild>
                   <Input
+                    //fake api key
+                    value={hasApiKey ? "this is not a real api key :)" : ""}
                     type="password"
                     onChange={({ target: { value } }) => {
                       handleInput({ target: { name: "apikey", value } });

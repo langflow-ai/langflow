@@ -63,9 +63,7 @@ class TaskService(Service):
         result = task.get()
         return task.id, result
 
-    async def launch_task(
-        self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Any:
+    async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         logger.debug(f"Launching task {task_func} with args {args} and kwargs {kwargs}")
         logger.debug(f"Using backend {self.backend}")
         task = self.backend.launch_task(task_func, *args, **kwargs)

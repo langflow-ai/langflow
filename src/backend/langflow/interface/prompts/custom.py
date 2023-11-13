@@ -42,17 +42,13 @@ class BaseCustomPrompt(PromptTemplate):
         values["template"] = values["template"].format(**format_dict)
 
         values["template"] = values["template"]
-        values["input_variables"] = extract_input_variables_from_prompt(
-            values["template"]
-        )
+        values["input_variables"] = extract_input_variables_from_prompt(values["template"])
         return values
 
 
 class SeriesCharacterPrompt(BaseCustomPrompt):
     # Add a very descriptive description for the prompt generator
-    description: Optional[
-        str
-    ] = "A prompt that asks the AI to act like a character from a series."
+    description: Optional[str] = "A prompt that asks the AI to act like a character from a series."
     character: str
     series: str
     template: str = """I want you to act like {character} from {series}.
@@ -68,6 +64,4 @@ Human: {input}
     input_variables: List[str] = ["character", "series"]
 
 
-CUSTOM_PROMPTS: Dict[str, Type[BaseCustomPrompt]] = {
-    "SeriesCharacterPrompt": SeriesCharacterPrompt
-}
+CUSTOM_PROMPTS: Dict[str, Type[BaseCustomPrompt]] = {"SeriesCharacterPrompt": SeriesCharacterPrompt}

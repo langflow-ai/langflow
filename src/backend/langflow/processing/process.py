@@ -112,9 +112,7 @@ def load_langchain_object(
     logger.debug("Loaded LangChain object")
 
     if langchain_object is None:
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
+        raise ValueError("There was an error loading the langchain_object. Please, check all the nodes and try again.")
 
     return langchain_object, artifacts, session_id
 
@@ -164,9 +162,7 @@ async def process_graph_cached(
     if clear_cache:
         session_service.clear_session(session_id)
     if session_id is None:
-        session_id = session_service.generate_key(
-            session_id=session_id, data_graph=data_graph
-        )
+        session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
     graph, artifacts = session_service.load_session(session_id, data_graph)
     built_object = graph.build()
@@ -179,9 +175,7 @@ async def process_graph_cached(
     return Result(result=result, session_id=session_id)
 
 
-def load_flow_from_json(
-    flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
-):
+def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True):
     """
     Load flow from a JSON file or a JSON object.
 
@@ -198,9 +192,7 @@ def load_flow_from_json(
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError(
-            "Input must be either a file path (str) or a JSON object (dict)"
-        )
+        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
 
     graph_data = flow_graph["data"]
     if tweaks is not None:
@@ -226,18 +218,14 @@ def load_flow_from_json(
     return graph
 
 
-def validate_input(
-    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+def validate_input(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         raise ValueError("graph_data and tweaks should be dictionaries")
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
-        raise ValueError(
-            "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
-        )
+        raise ValueError("graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key")
 
     return nodes
 
@@ -246,9 +234,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
     template_data = node.get("data", {}).get("node", {}).get("template")
 
     if not isinstance(template_data, dict):
-        logger.warning(
-            f"Template data for node {node.get('id')} should be a dictionary"
-        )
+        logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
@@ -257,9 +243,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
             template_data[tweak_name][key] = tweak_value
 
 
-def process_tweaks(
-    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
-) -> Dict[str, Any]:
+def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
 
@@ -280,8 +264,6 @@ def process_tweaks(
             if node_tweaks := tweaks.get(node_id):
                 apply_tweaks(node, node_tweaks)
         else:
-            logger.warning(
-                "Each node should be a dictionary with an 'id' key of type str"
-            )
+            logger.warning("Each node should be a dictionary with an 'id' key of type str")
 
     return graph_data

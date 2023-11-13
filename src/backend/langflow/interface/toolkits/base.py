@@ -32,13 +32,10 @@ class ToolkitCreator(LangChainTypeCreator):
         if self.type_dict is None:
             settings_service = get_settings_service()
             self.type_dict = {
-                toolkit_name: import_class(
-                    f"langchain.agents.agent_toolkits.{toolkit_name}"
-                )
+                toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
                 # if toolkit_name is not lower case it is a class
                 for toolkit_name in agent_toolkits.__all__
-                if not toolkit_name.islower()
-                and toolkit_name in settings_service.settings.TOOLKITS
+                if not toolkit_name.islower() and toolkit_name in settings_service.settings.TOOLKITS
             }
 
         return self.type_dict
@@ -61,9 +58,7 @@ class ToolkitCreator(LangChainTypeCreator):
 
     def get_create_function(self, name: str) -> Callable:
         if loader_name := self.create_functions.get(name):
-            return import_module(
-                f"from langchain.agents.agent_toolkits import {loader_name[0]}"
-            )
+            return import_module(f"from langchain.agents.agent_toolkits import {loader_name[0]}")
         else:
             raise ValueError("Toolkit not found")
 

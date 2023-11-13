@@ -37,13 +37,9 @@ async def chat(
         await websocket.accept()
         user = await get_current_user(token, db)
         if not user:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
         if not user.is_active:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
 
         if client_id in chat_service.cache_service:
             await chat_service.handle_websocket(client_id, websocket)
@@ -59,9 +55,7 @@ async def chat(
         logger.error(f"Error in chat websocket: {exc}")
         messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
         if "Could not validate credentials" in str(exc):
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
         else:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
@@ -103,15 +97,10 @@ async def init_build(
 
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
-async def build_status(
-    flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)
-):
+async def build_status(flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)):
     """Check the flow_id is in the cache_service."""
     try:
-        built = (
-            flow_id in cache_service
-            and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
-        )
+        built = flow_id in cache_service and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
 
         return BuiltResponse(
             built=built,
@@ -173,9 +162,7 @@ async def stream_build(
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
-                    logger.debug(
-                        f"Output: {params[:100]}{'...' if len(params) > 100 else ''}"
-                    )
+                    logger.debug(f"Output: {params[:100]}{'...' if len(params) > 100 else ''}")
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response
@@ -187,9 +174,7 @@ async def stream_build(
                     valid = False
                     update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
-                vertex_id = (
-                    vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
-                )
+                vertex_id = vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
                 if vertex_id in graph.top_level_nodes:
                     response = {
                         "valid": valid,
@@ -203,9 +188,7 @@ async def stream_build(
             langchain_object = graph.build()
             # Now we  need to check the input_keys to send them to the client
             if hasattr(langchain_object, "input_keys"):
-                input_keys_response = build_input_keys_response(
-                    langchain_object, artifacts
-                )
+                input_keys_response = build_input_keys_response(langchain_object, artifacts)
             else:
                 input_keys_response = {
                     "input_keys": None,

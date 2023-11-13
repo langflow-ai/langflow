@@ -39,9 +39,7 @@ def test_template_field_defaults(sample_template_field: TemplateField):
     assert sample_template_field.name == "test_field"
 
 
-def test_template_to_dict(
-    sample_template: Template, sample_template_field: TemplateField
-):
+def test_template_to_dict(sample_template: Template, sample_template_field: TemplateField):
     template_dict = sample_template.to_dict()
     assert template_dict["_type"] == "test_template"
     assert len(template_dict) == 2  # _type and test_field
