@@ -84,7 +84,11 @@ export default function StorePage(): JSX.Element {
       .then((res) => {
         setLoading(false);
         setSearchData(res?.results ?? []);
-        setTotalRowsCount(Number(res?.count ?? 0));
+        setTotalRowsCount(
+          filteredCategories?.length === 0
+            ? Number(res?.count ?? 0)
+            : res?.results?.length ?? 0
+        );
       })
       .catch((err) => {
         setSearchData([]);
@@ -291,7 +295,7 @@ export default function StorePage(): JSX.Element {
             </div>
           </div>
         </div>
-        {(!loading || searchData.length !== 0) && (
+        {!loading && searchData.length !== 0 && (
           <div className="relative my-6">
             <PaginatorComponent
               storeComponent={true}
