@@ -85,15 +85,11 @@ def test_deactivated_user_cannot_access(client, deactivated_user, logged_in_head
     assert response.json()["detail"] == "The user doesn't have enough privileges"
 
 
-def test_data_consistency_after_update(
-    client, active_user, logged_in_headers, super_user_headers
-):
+def test_data_consistency_after_update(client, active_user, logged_in_headers, super_user_headers):
     user_id = active_user.id
     update_data = UserUpdate(is_active=False)
 
-    response = client.patch(
-        f"/api/v1/users/{user_id}", json=update_data.dict(), headers=super_user_headers
-    )
+    response = client.patch(f"/api/v1/users/{user_id}", json=update_data.dict(), headers=super_user_headers)
     assert response.status_code == 200, response.json()
 
     # Fetch the updated user from the database
@@ -167,17 +163,13 @@ def test_patch_user(client, active_user, logged_in_headers):
         username="newname",
     )
 
-    response = client.patch(
-        f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
-    )
+    response = client.patch(f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers)
     assert response.status_code == 200, response.json()
     update_data = UserUpdate(
         profile_image="new_image",
     )
 
-    response = client.patch(
-        f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
-    )
+    response = client.patch(f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers)
     assert response.status_code == 200, response.json()
 
 
@@ -205,9 +197,7 @@ def test_patch_user_wrong_id(client, active_user, logged_in_headers):
         username="newname",
     )
 
-    response = client.patch(
-        f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers
-    )
+    response = client.patch(f"/api/v1/users/{user_id}", json=update_data.dict(), headers=logged_in_headers)
     assert response.status_code == 422, response.json()
     assert response.json() == {
         "detail": [

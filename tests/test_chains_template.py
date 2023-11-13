@@ -96,10 +96,7 @@ def test_conversation_chain(client: TestClient, logged_in_headers):
     assert template["_type"] == "ConversationChain"
 
     # Test the description object
-    assert (
-        chain["description"]
-        == "Chain to have a conversation and load context from memory."
-    )
+    assert chain["description"] == "Chain to have a conversation and load context from memory."
 
 
 def test_llm_chain(client: TestClient, logged_in_headers):
@@ -293,10 +290,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
     assert template["_type"] == "LLMMathChain"
 
     # Test the description object
-    assert (
-        chain["description"]
-        == "Chain that interprets a prompt and executes python code to do math."
-    )
+    assert chain["description"] == "Chain that interprets a prompt and executes python code to do math."
 
 
 def test_series_character_chain(client: TestClient, logged_in_headers):
@@ -402,10 +396,7 @@ def test_mid_journey_prompt_chain(client: TestClient, logged_in_headers):
         "info": "",
     }
     # Test the description object
-    assert (
-        chain["description"]
-        == "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
-    )
+    assert chain["description"] == "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
 
 
 def test_time_travel_guide_chain(client: TestClient, logged_in_headers):

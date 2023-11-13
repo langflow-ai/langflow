@@ -28,9 +28,7 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.websocket.send_json(resp.dict())
 
-    async def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
-    ) -> Any:
+    async def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Run when tool starts running."""
         resp = ChatResponse(
             message="",

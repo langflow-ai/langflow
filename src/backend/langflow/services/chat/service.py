@@ -59,9 +59,7 @@ class ChatService(Service):
         """Send the last chat message to the client."""
         client_id = self.chat_cache.current_client_id
         if client_id in self.active_connections:
-            chat_response = self.chat_history.get_history(
-                client_id, filter_messages=False
-            )[-1]
+            chat_response = self.chat_history.get_history(client_id, filter_messages=False)[-1]
             if chat_response.is_bot:
                 # Process FileResponse
                 if isinstance(chat_response, FileResponse):
@@ -88,9 +86,7 @@ class ChatService(Service):
                 data_type=self.last_cached_object_dict["type"],
             )
 
-            self.chat_history.add_message(
-                self.chat_cache.current_client_id, chat_response
-            )
+            self.chat_history.add_message(self.chat_cache.current_client_id, chat_response)
 
     async def connect(self, client_id: str, websocket: WebSocket):
         self.active_connections[client_id] = websocket
@@ -121,9 +117,7 @@ class ChatService(Service):
                 if "after sending" in str(exc):
                     logger.error(f"Error closing connection: {exc}")
 
-    async def process_message(
-        self, client_id: str, payload: Dict, langchain_object: Any
-    ):
+    async def process_message(self, client_id: str, payload: Dict, langchain_object: Any):
         # Process the graph data and chat message
         chat_inputs = payload.pop("inputs", {})
         chatkey = payload.pop("chatKey", None)
@@ -211,15 +205,11 @@ class ChatService(Service):
                     continue
 
                 with self.chat_cache.set_client_id(client_id):
-                    if langchain_object := self.cache_service.get(client_id).get(
-                        "result"
-                    ):
+                    if langchain_object := self.cache_service.get(client_id).get("result"):
                         await self.process_message(client_id, payload, langchain_object)
 
                     else:
-                        raise RuntimeError(
-                            f"Could not find a build result for client_id {client_id}"
-                        )
+                        raise RuntimeError(f"Could not find a build result for client_id {client_id}")
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.exception(f"Error handling websocket: {exc}")

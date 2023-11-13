@@ -21,9 +21,7 @@ if TYPE_CHECKING:
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
-    "user_data", default=None
-)
+user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
 
 
 @contextmanager
@@ -31,9 +29,7 @@ def user_data_context(store_service: "StoreService", api_key: Optional[str] = No
     # Fetch and set user data to the context variable
     if api_key:
         try:
-            user_data = store_service._get(
-                f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
-            )
+            user_data = store_service._get(f"{store_service.base_url}/users/me", api_key, params={"fields": "id"})
             user_data_var.set(user_data)
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
@@ -77,9 +73,7 @@ class StoreService(Service):
     # will make a property return that data
     # Without making the request multiple times
 
-    def _get(
-        self, url: str, api_key: str, params: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+    def _get(self, url: str, api_key: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -99,9 +93,7 @@ class StoreService(Service):
         # For now we are calling it just for testing
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = httpx.post(
-                webhook_url, headers=headers, json={"component_id": str(component_id)}
-            )
+            response = httpx.post(webhook_url, headers=headers, json={"component_id": str(component_id)})
             response.raise_for_status()
             return response.json()
         except HTTPError as exc:
@@ -146,9 +138,7 @@ class StoreService(Service):
         if tags:
             tags_filter = {"tags": {"_and": []}}
             for tag in tags:
-                tags_filter["tags"]["_and"].append(
-                    {"_some": {"tags_id": {"name": {"_eq": tag}}}}
-                )
+                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
             filter_conditions.append(tags_filter)
 
         if date_from:
@@ -166,13 +156,7 @@ class StoreService(Service):
             params["fields"] = ",".join(fields)
 
         if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
-            )
+            params["deep"] = json.dumps({"components": {"_filter": {"user_created": {"token": {"_eq": api_key}}}}})
         else:
             # params["filter"] = json.dumps({"status": {"_eq": "public"}})
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
@@ -192,13 +176,7 @@ class StoreService(Service):
         params = {"aggregate": json.dumps({"count": "*"})}
         filter_conditions = [] if filter_conditions is None else filter_conditions
         if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
-            )
+            params["deep"] = json.dumps({"components": {"_filter": {"user_created": {"token": {"_eq": api_key}}}}})
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
 
@@ -250,9 +228,7 @@ class StoreService(Service):
         if tags:
             tags_filter = {"tags": {"_and": []}}
             for tag in tags:
-                tags_filter["tags"]["_and"].append(
-                    {"_some": {"tags_id": {"name": {"_eq": tag}}}}
-                )
+                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
             filter_conditions.append(tags_filter)
 
         if is_component is not None:
@@ -286,9 +262,7 @@ class StoreService(Service):
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
         return results_objects, filter_conditions
 
-    def get_liked_by_user_components(
-        self, component_ids: List[UUID], api_key: str
-    ) -> List[UUID]:
+    def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[UUID]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
@@ -310,9 +284,7 @@ class StoreService(Service):
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
-    def get_components_in_users_collection(
-        self, component_ids: List[UUID], api_key: str
-    ):
+    def get_components_in_users_collection(self, component_ids: List[UUID], api_key: str):
         user_data = user_data_var.get()
         if not user_data:
             raise ValueError("No user data")
@@ -332,18 +304,14 @@ class StoreService(Service):
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
-        params = {
-            "fields": ",".join(["id", "name", "description", "data", "is_component"])
-        }
+        params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
 
         component = self._get(url, api_key, params)
         self.call_webhook(api_key, self.download_webhook_url, component_id)
 
         return DownloadComponentResponse(**component)
 
-    def upload(
-        self, api_key: str, component_data: StoreComponentCreate
-    ) -> ComponentResponse:
+    def upload(self, api_key: str, component_data: StoreComponentCreate) -> ComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
         component_dict = component_data.dict(exclude_unset=True)
         # Parent is a UUID, but the store expects a string
@@ -353,9 +321,7 @@ class StoreService(Service):
 
         component_dict = process_tags_for_post(component_dict)
         try:
-            response = httpx.post(
-                self.components_url, headers=headers, json=component_dict
-            )
+            response = httpx.post(self.components_url, headers=headers, json=component_dict)
             response.raise_for_status()
             component = response.json()["data"]
             return ComponentResponse(**component)

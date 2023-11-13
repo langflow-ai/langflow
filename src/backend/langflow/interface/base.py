@@ -30,13 +30,8 @@ class LangChainTypeCreator(BaseModel, ABC):
         settings_service = get_settings_service()
         if self.name_docs_dict is None:
             try:
-                type_settings = getattr(
-                    settings_service.settings, self.type_name.upper()
-                )
-                self.name_docs_dict = {
-                    name: value_dict["documentation"]
-                    for name, value_dict in type_settings.items()
-                }
+                type_settings = getattr(settings_service.settings, self.type_name.upper())
+                self.name_docs_dict = {name: value_dict["documentation"] for name, value_dict in type_settings.items()}
             except AttributeError as exc:
                 logger.error(f"Error getting settings for {self.type_name}: {exc}")
 

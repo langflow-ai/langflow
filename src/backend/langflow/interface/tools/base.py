@@ -31,9 +31,7 @@ TOOL_INPUTS = {
         placeholder="",
         value="",
     ),
-    "llm": TemplateField(
-        field_type="BaseLanguageModel", required=True, is_list=False, show=True
-    ),
+    "llm": TemplateField(field_type="BaseLanguageModel", required=True, is_list=False, show=True),
     "func": TemplateField(
         field_type="function",
         required=True,
@@ -76,10 +74,7 @@ class ToolCreator(LangChainTypeCreator):
 
                 tool_name = tool_params.get("name") or tool
 
-                if (
-                    tool_name in settings_service.settings.TOOLS
-                    or settings_service.settings.DEV
-                ):
+                if tool_name in settings_service.settings.TOOLS or settings_service.settings.DEV:
                     if tool_name == "JsonSpec":
                         tool_params["path"] = tool_params.pop("dict_")  # type: ignore
                     all_tools[tool_name] = {

@@ -68,10 +68,7 @@ class InMemoryCache(BaseCacheService, Service):
         Retrieve an item from the cache without acquiring the lock.
         """
         if item := self._cache.get(key):
-            if (
-                self.expiration_time is None
-                or time.time() - item["time"] < self.expiration_time
-            ):
+            if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
                 # Check if the value is pickled
@@ -118,11 +115,7 @@ class InMemoryCache(BaseCacheService, Service):
         """
         with self._lock:
             existing_value = self._get_without_lock(key)
-            if (
-                existing_value is not None
-                and isinstance(existing_value, dict)
-                and isinstance(value, dict)
-            ):
+            if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
                 existing_value.update(value)
                 value = existing_value
 
@@ -276,9 +269,7 @@ class RedisCache(BaseCacheService, Service):
                 if not result:
                     raise ValueError("RedisCache could not set the value.")
         except TypeError as exc:
-            raise TypeError(
-                "RedisCache only accepts values that can be pickled. "
-            ) from exc
+            raise TypeError("RedisCache only accepts values that can be pickled. ") from exc
 
     def upsert(self, key, value):
         """
@@ -290,11 +281,7 @@ class RedisCache(BaseCacheService, Service):
             value: The value to insert or update.
         """
         existing_value = self.get(key)
-        if (
-            existing_value is not None
-            and isinstance(existing_value, dict)
-            and isinstance(value, dict)
-        ):
+        if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
 
