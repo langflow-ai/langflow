@@ -39,6 +39,7 @@ export const MarketCardComponent = ({
   const [installed, setInstalled] = useState(false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(TabsContext);
+  const [loadingLike, setLoadingLike] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
@@ -95,7 +96,7 @@ export const MarketCardComponent = ({
   }
 
   function handleLike() {
-    setLoading(true);
+    setLoadingLike(true);
     if (liked_by_user !== undefined || liked_by_user !== null) {
       const temp = liked_by_user;
       const tempNum = likes_count;
@@ -108,7 +109,7 @@ export const MarketCardComponent = ({
       console.log(data.id);
       postLikeComponent(data.id)
         .catch((error) => {
-          setLoading(false);
+          setLoadingLike(false);
           console.error(error);
           setLiked_by_user(temp);
           setLikes_count(tempNum);
@@ -118,7 +119,7 @@ export const MarketCardComponent = ({
           });
         })
         .then((response) => {
-          setLoading(false);
+          setLoadingLike(false);
           setLikes_count(response.likes_count);
           setLiked_by_user(response.liked_by_user);
         });
@@ -197,7 +198,7 @@ export const MarketCardComponent = ({
                 content={authorized ? "Like" : "Please review your API key."}
               >
                 <Button
-                  disabled={loading || !authorized}
+                  disabled={loadingLike || !authorized}
                   variant="ghost"
                   size="xs"
                   className={
