@@ -610,7 +610,7 @@ export async function getStoreComponents(
       queryParams.push(`status=${status}`);
     }
     if (tags !== undefined && tags !== null && tags.length > 0) {
-      queryParams.push(`tags=${tags.join(",")}`);
+      queryParams.push(`tags=${tags.join(encodeURIComponent(","))}`);
     }
 
     if (sort !== undefined && sort !== null) {
