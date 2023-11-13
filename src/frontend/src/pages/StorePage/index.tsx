@@ -75,7 +75,7 @@ export default function StorePage(): JSX.Element {
       pageIndex,
       pageSize,
       tabActive === "All" ? null : tabActive === "Flows" ? false : true,
-      pageOrder === "Popular" ? "-count(liked_by)" : "name",
+      pageOrder === "Popular" ? "-count(downloads)" : "name",
       filteredCategories,
       null,
       null,
