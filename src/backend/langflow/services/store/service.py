@@ -144,11 +144,12 @@ class StoreService(Service):
             filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if tags:
-            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
-            # tags_filter = {"tags": {"_or": []}}
-            # for tag in tags:
-            #     tags_filter["tags"]["_or"].append({"tags_id": {"name": {"_eq": tag}}})
-            # filter_conditions.append(tags_filter)
+            tags_filter = {"tags": {"_and": []}}
+            for tag in tags:
+                tags_filter["tags"]["_and"].append(
+                    {"_some": {"tags_id": {"name": {"_eq": tag}}}}
+                )
+            filter_conditions.append(tags_filter)
 
         if date_from:
             # params["filter[date_updated][_gte]"] = date_from.isoformat()
@@ -247,11 +248,12 @@ class StoreService(Service):
             filter_conditions.append({"status": {"_eq": status}})
 
         if tags:
-            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
-            # tags_filter = {"tags": {"_or": []}}
-            # for tag in tags:
-            #     tags_filter["tags"]["_or"].append({"tags_id": {"name": {"_eq": tag}}})
-            # filter_conditions.append(tags_filter)
+            tags_filter = {"tags": {"_and": []}}
+            for tag in tags:
+                tags_filter["tags"]["_and"].append(
+                    {"_some": {"tags_id": {"name": {"_eq": tag}}}}
+                )
+            filter_conditions.append(tags_filter)
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
