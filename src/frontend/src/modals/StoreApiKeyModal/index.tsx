@@ -20,13 +20,15 @@ export default function StoreApiKeyModal({
   onCloseModal,
 }: StoreApiKeyType) {
   const [open, setOpen] = useState(false);
-  const [apiKeyValue, setApiKeyValue] = useState("");
   const [inputState, setInputState] =
     useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { storeApiKey } = useContext(AuthContext);
   const { hasApiKey } = useContext(StoreContext);
+  const [apiKeyValue, setApiKeyValue] = useState(
+    hasApiKey ? "this is not a real api key :)" : ""
+  );
 
   function handleInput({
     target: { name, value },
@@ -36,7 +38,7 @@ export default function StoreApiKeyModal({
 
   useEffect(() => {
     if (open) {
-      resetForm();
+      // resetForm();
     } else {
       onCloseModal();
     }
@@ -89,10 +91,11 @@ export default function StoreApiKeyModal({
                 <Form.Control asChild>
                   <Input
                     //fake api key
-                    value={hasApiKey ? "this is not a real api key :)" : ""}
+                    value={apiKeyValue}
                     type="password"
                     onChange={({ target: { value } }) => {
                       handleInput({ target: { name: "apikey", value } });
+                      setApiKeyValue(value);
                     }}
                     placeholder="Insert your API Key"
                   />

@@ -75,6 +75,7 @@ export function StoreProvider({ children }) {
       try {
         if (storeChecked) return;
         const res = await checkHasApiKey();
+        console.log(res);
         setHasApiKey(res?.has_api_key ?? false);
       } catch (e) {
         console.log(e);
