@@ -30,6 +30,7 @@ user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
 def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
     # Fetch and set user data to the context variable
     if api_key:
+        user_data = None
         try:
             user_data = store_service._get(
                 f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
