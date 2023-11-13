@@ -119,9 +119,11 @@ def get_components(
                     )
                 else:
                     comp_count = 0
-            except Exception:
-                #! This should be removed once we fix the bug
-                comp_count = 0
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError(
+                        "You are not authorized to access this public resource"
+                    )
 
             if store_api_Key and result:
                 # Now, from the result, we need to get the components
