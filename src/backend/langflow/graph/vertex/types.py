@@ -205,6 +205,8 @@ class ChainVertex(Vertex):
         **kwargs,
     ) -> Any:
         if not self._built or force:
+            # Temporarily remove the code from the params
+            self.params.pop("code", None)
             # Check if the chain requires a PromptVertex
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
