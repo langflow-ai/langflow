@@ -1,26 +1,24 @@
-from typing import List, Optional
+from datetime import datetime
+from typing import Annotated, Any, Dict, List, Optional, Union
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
-from langflow.services.deps import (
-    get_store_service,
-    get_settings_service,
-)
+from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
+    ListComponentResponse,
     ListComponentResponseModel,
     StoreComponentCreate,
     TagResponse,
     UsersLikesResponse,
 )
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-from datetime import datetime
-
 from langflow.services.store.service import StoreService, user_data_context
 from langflow.services.store.utils import update_components_with_user_data
-
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
@@ -30,9 +28,7 @@ def get_user_store_api_key(
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:
-        raise HTTPException(
-            status_code=400, detail="You must have a store API key set."
-        )
+        raise HTTPException(status_code=400, detail="You must have a store API key set.")
     decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     return decrypted
 
@@ -79,76 +75,72 @@ def create_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 def get_components(
-    search: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    is_component: Optional[bool] = Query(None),
-    tags: Optional[List[str]] = Query(None),
-    sort: Optional[List[str]] = Query(None),
-    filter_by_user: bool = Query(False),
+    search: Annotated[Optional[str], Query()] = None,
+    status: Annotated[Optional[str], Query()] = None,
+    is_component: Annotated[Optional[bool], Query()] = None,
+    tags: Annotated[Optional[list[str]], Query()] = None,
+    sort: Annotated[Union[list[str], None], Query()] = None,
+    filter_by_user: Annotated[bool, Query()] = False,
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
-        with user_data_context(store_api_Key, store_service):
+        with user_data_context(api_key=store_api_Key, store_service=store_service):
+            filter_conditions: List[Dict[str, Any]] = []
+            result: List[ListComponentResponse] = []
             authorized = False
-            result = store_service.query_components(
-                api_key=store_api_Key,
-                page=page,
-                limit=limit,
-                filter_by_user=filter_by_user,
-                is_component=is_component,
-                search=search,
-                status=status,
-                tags=tags,
-                sort=sort,
-            )
             try:
-                comp_count = store_service.count_components(
+                result, filter_conditions = store_service.query_components(
                     api_key=store_api_Key,
+                    page=page,
+                    limit=limit,
                     filter_by_user=filter_by_user,
                     is_component=is_component,
+                    search=search,
+                    status=status,
+                    tags=tags,
+                    sort=sort,
                 )
-            except Exception:
-                #! This should be removed once we fix the bug
-                comp_count = 0
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError("You are not authorized to access this public resource")
+            try:
+                if result:
+                    if len(result) >= limit:
+                        comp_count = store_service.count_components(
+                            api_key=store_api_Key,
+                            filter_by_user=filter_by_user,
+                            filter_conditions=filter_conditions,
+                        )
+                    else:
+                        comp_count = len(result)
+                else:
+                    comp_count = 0
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError("You are not authorized to access this public resource")
 
-            if store_api_Key:
+            if store_api_Key and result:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
-                    updated_result = update_components_with_user_data(
-                        result, store_service, store_api_Key
-                    )
+                    updated_result = update_components_with_user_data(result, store_service, store_api_Key)
                     authorized = True
                     result = updated_result
                 except Exception:
                     # If we get an error here, it means the user is not authorized
                     authorized = False
-        return ListComponentResponseModel(
-            results=result, authorized=authorized, count=comp_count
-        )
+        return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
     except Exception as exc:
+        if isinstance(exc, HTTPStatusError):
+            if exc.response.status_code == 403:
+                raise HTTPException(status_code=403, detail="Forbidden")
+        elif isinstance(exc, ValueError):
+            raise HTTPException(status_code=403, detail=str(exc))
+
         raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.get("/components/count", response_model=dict)
-def count_components(
-    filter_by_user: bool = Query(False),
-    store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
-    is_component: Optional[bool] = Query(None),
-):
-    try:
-        result = store_service.count_components(
-            api_key=store_api_Key,
-            filter_by_user=filter_by_user,
-            is_component=is_component,
-        )
-        return {"count": result}
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
@@ -235,9 +227,7 @@ def like_component(
 ):
     try:
         result = store_service.like_component(store_api_Key, component_id)
-        likes_count = store_service.get_component_likes_count(
-            store_api_Key, component_id
-        )
+        likes_count = store_service.get_component_likes_count(store_api_Key, component_id)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:

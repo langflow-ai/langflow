@@ -1,7 +1,8 @@
 from datetime import datetime
-from pydantic import BaseModel, validator
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
+
+from pydantic import BaseModel, validator
 
 
 class TagResponse(BaseModel):
@@ -62,9 +63,7 @@ class ListComponentResponse(BaseModel):
         if all(["id" in tag and "name" in tag for tag in v]):
             return v
         else:
-            return [
-                TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")
-            ]
+            return [TagResponse(**tag.get("tags_id")) for tag in v if tag.get("tags_id")]
 
 
 class ListComponentResponseModel(BaseModel):

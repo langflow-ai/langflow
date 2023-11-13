@@ -40,26 +40,23 @@ export default function StorePage(): JSX.Element {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageOrder, setPageOrder] = useState("Popular");
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
-  const [tabActive, setTabActive] = useState("Flows");
+  const [tabActive, setTabActive] = useState("All");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     handleGetTags();
   }, []);
 
-  useEffect(() => {
+  function getAllStore() {
     handleGetComponents();
     if (hasApiKey) {
       getSavedComponents();
     }
-  }, [
-    searchText,
-    tabActive,
-    pageOrder,
-    pageIndex,
-    pageSize,
-    filteredCategories,
-  ]);
+  }
+
+  useEffect(() => {
+    getAllStore();
+  }, [tabActive, pageOrder, pageIndex, pageSize, filteredCategories]);
 
   function handleGetTags() {
     setLoadingTags(true);
@@ -75,7 +72,7 @@ export default function StorePage(): JSX.Element {
       pageIndex,
       pageSize,
       tabActive === "All" ? null : tabActive === "Flows" ? false : true,
-      pageOrder === "Popular" ? "-count(liked_by)" : "name",
+      pageOrder === "Popular" ? "-count(downloads)" : "name",
       filteredCategories,
       null,
       null,
@@ -153,6 +150,7 @@ export default function StorePage(): JSX.Element {
             <div className="flex items-end gap-4">
               <div className="relative h-12 w-[40%]">
                 <Input
+                  disabled={loading}
                   placeholder="Search Flows and Components"
                   className="absolute h-12 px-5"
                   onChange={(e) => {
@@ -161,55 +159,66 @@ export default function StorePage(): JSX.Element {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       setSearchText(inputText);
+                      getAllStore();
                     }
                   }}
                   value={inputText}
                 />
                 <button
+                  disabled={loading}
                   className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
                   onClick={() => {
                     setSearchText(inputText);
+                    getAllStore();
                   }}
                 >
                   <IconComponent
                     name={loading ? "Loader2" : "Search"}
-                    className={loading ? " animate-spin" : ""}
+                    className={
+                      loading ? " animate-spin cursor-not-allowed" : ""
+                    }
                   />
                 </button>
               </div>
               <div className="ml-4 flex w-full gap-2 border-b border-border">
                 <button
+                  disabled={loading}
                   onClick={() => {
                     setTabActive("All");
                   }}
                   className={
-                    tabActive === "All"
+                    (tabActive === "All"
                       ? "border-b-2 border-primary p-3"
-                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                    (loading ? " cursor-not-allowed " : "")
                   }
                 >
                   All
                 </button>
                 <button
+                  disabled={loading}
                   onClick={() => {
                     setTabActive("Flows");
                   }}
                   className={
-                    tabActive === "Flows"
+                    (tabActive === "Flows"
                       ? "border-b-2 border-primary p-3"
-                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                    (loading ? " cursor-not-allowed " : "")
                   }
                 >
                   Flows
                 </button>
                 <button
+                  disabled={loading}
                   onClick={() => {
                     setTabActive("Components");
                   }}
                   className={
-                    tabActive === "Components"
+                    (tabActive === "Components"
                       ? "border-b-2 border-primary p-3"
-                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary"
+                      : " border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
+                    (loading ? " cursor-not-allowed " : "")
                   }
                 >
                   Components
@@ -225,24 +234,28 @@ export default function StorePage(): JSX.Element {
             <div className="flex h-6 items-center gap-2 px-2">
               {!loadingTags &&
                 tags.map((tag, idx) => (
-                  <Badge
-                    key={idx}
+                  <button
+                    disabled={loading}
+                    className={loading ? "cursor-not-allowed" : ""}
                     onClick={() => {
                       updateTags(tag.name);
                     }}
-                    variant="outline"
-                    size="sq"
-                    className={cn(
-                      "cursor-pointer",
-                      filteredCategories.some(
-                        (category) => category === tag.name
-                      )
-                        ? "bg-beta-foreground text-background hover:bg-beta-foreground"
-                        : ""
-                    )}
                   >
-                    {tag.name}
-                  </Badge>
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      size="sq"
+                      className={cn(
+                        filteredCategories.some(
+                          (category) => category === tag.name
+                        )
+                          ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                          : ""
+                      )}
+                    >
+                      {tag.name}
+                    </Badge>
+                  </button>
                 ))}
             </div>
             <div className="flex items-end justify-between">
@@ -256,12 +269,13 @@ export default function StorePage(): JSX.Element {
               </span>
 
               <Select
+                disabled={loading}
                 onValueChange={(e) => {
                   setPageOrder(e);
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sort By" />
+                  <SelectValue placeholder="Popular" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Popular">Most Popular</SelectItem>

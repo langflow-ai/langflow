@@ -107,11 +107,9 @@ class DocumentLoaderVertex(Vertex):
         # show how many documents are in the list?
 
         if self._built_object:
-            avg_length = sum(
-                len(doc.page_content)
-                for doc in self._built_object
-                if hasattr(doc, "page_content")
-            ) / len(self._built_object)
+            avg_length = sum(len(doc.page_content) for doc in self._built_object if hasattr(doc, "page_content")) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
@@ -184,9 +182,7 @@ class TextSplitterVertex(Vertex):
         # show how many documents are in the list?
 
         if self._built_object:
-            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
-                self._built_object
-            )
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             \nDocuments: {self._built_object[:3]}..."""
@@ -205,6 +201,8 @@ class ChainVertex(Vertex):
         **kwargs,
     ) -> Any:
         if not self._built or force:
+            # Temporarily remove the code from the params
+            self.params.pop("code", None)
             # Check if the chain requires a PromptVertex
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
@@ -230,27 +228,18 @@ class PromptVertex(Vertex):
         **kwargs,
     ) -> Any:
         if not self._built or force:
-            if (
-                "input_variables" not in self.params
-                or self.params["input_variables"] is None
-            ):
+            if "input_variables" not in self.params or self.params["input_variables"] is None:
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = (
-                    [tool_node.build(user_id=user_id) for tool_node in tools]
-                    if tools is not None
-                    else []
-                )
+                tools = [tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
                     tools = flatten_list(tools)
                 self.params["tools"] = tools
                 prompt_params = [
-                    key
-                    for key, value in self.params.items()
-                    if isinstance(value, str) and key != "format_instructions"
+                    key for key, value in self.params.items() if isinstance(value, str) and key != "format_instructions"
                 ]
             else:
                 prompt_params = ["template"]
@@ -260,9 +249,7 @@ class PromptVertex(Vertex):
                     prompt_text = self.params[param]
                     variables = extract_input_variables_from_prompt(prompt_text)
                     self.params["input_variables"].extend(variables)
-                self.params["input_variables"] = list(
-                    set(self.params["input_variables"])
-                )
+                self.params["input_variables"] = list(set(self.params["input_variables"]))
             elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
@@ -270,11 +257,7 @@ class PromptVertex(Vertex):
         return self._built_object
 
     def _built_object_repr(self):
-        if (
-            not self.artifacts
-            or self._built_object is None
-            or not hasattr(self._built_object, "format")
-        ):
+        if not self.artifacts or self._built_object is None or not hasattr(self._built_object, "format"):
             return super()._built_object_repr()
         # We'll build the prompt with the artifacts
         # to show the user what the prompt looks like
@@ -284,9 +267,7 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            if not hasattr(self._built_object, "template") and hasattr(
-                self._built_object, "prompt"
-            ):
+            if not hasattr(self._built_object, "template") and hasattr(self._built_object, "prompt"):
                 template = self._built_object.prompt.template
             else:
                 template = self._built_object.template
@@ -294,11 +275,7 @@ class PromptVertex(Vertex):
                 if value:
                     replace_key = "{" + key + "}"
                     template = template.replace(replace_key, value)
-            return (
-                template
-                if isinstance(template, str)
-                else f"{self.vertex_type}({template})"
-            )
+            return template if isinstance(template, str) else f"{self.vertex_type}({template})"
         except KeyError:
             return str(self._built_object)
 

@@ -1,5 +1,4 @@
-from typing import TYPE_CHECKING
-
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
@@ -14,7 +13,7 @@ def process_tags_for_post(component_dict):
 
 
 def update_components_with_user_data(
-    components: "ListComponentResponse",
+    components: List["ListComponentResponse"],
     store_service: "StoreService",
     store_api_Key: str,
 ):

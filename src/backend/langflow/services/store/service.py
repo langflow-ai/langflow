@@ -1,11 +1,12 @@
-from datetime import datetime
 import json
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import UUID
-from langflow.services.base import Service
-from typing import TYPE_CHECKING, List, Dict, Any, Optional, Union
-import httpx
 
-from httpx import HTTPError
+import httpx
+from httpx import HTTPError, HTTPStatusError
+
+from langflow.services.base import Service
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
@@ -16,22 +17,23 @@ from langflow.services.store.utils import process_tags_for_post
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
-    "user_data", default=None
-)
+user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
 
 
 @contextmanager
-def user_data_context(api_key: str, store_service: "StoreService"):
+def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
     # Fetch and set user data to the context variable
     if api_key:
-        user_data = store_service._get(
-            f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
-        )
-        user_data_var.set(user_data)
+        try:
+            user_data = store_service._get(f"{store_service.base_url}/users/me", api_key, params={"fields": "id"})
+            user_data_var.set(user_data)
+        except HTTPStatusError as exc:
+            if exc.response.status_code == 403:
+                raise ValueError("Invalid API key")
     try:
         yield
     finally:
@@ -71,9 +73,7 @@ class StoreService(Service):
     # will make a property return that data
     # Without making the request multiple times
 
-    def _get(
-        self, url: str, api_key: str, params: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+    def _get(self, url: str, api_key: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -93,9 +93,7 @@ class StoreService(Service):
         # For now we are calling it just for testing
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = httpx.post(
-                webhook_url, headers=headers, json={"component_id": str(component_id)}
-            )
+            response = httpx.post(webhook_url, headers=headers, json={"component_id": str(component_id)})
             response.raise_for_status()
             return response.json()
         except HTTPError as exc:
@@ -138,8 +136,10 @@ class StoreService(Service):
             filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if tags:
-            # params["filter[tags][_in]"] = ",".join(tags)
-            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
+            tags_filter = {"tags": {"_and": []}}
+            for tag in tags:
+                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
+            filter_conditions.append(tags_filter)
 
         if date_from:
             # params["filter[date_updated][_gte]"] = date_from.isoformat()
@@ -156,13 +156,7 @@ class StoreService(Service):
             params["fields"] = ",".join(fields)
 
         if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
-            )
+            params["deep"] = json.dumps({"components": {"_filter": {"user_created": {"token": {"_eq": api_key}}}}})
         else:
             # params["filter"] = json.dumps({"status": {"_eq": "public"}})
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
@@ -177,29 +171,20 @@ class StoreService(Service):
         self,
         api_key: Optional[str] = None,
         filter_by_user: bool = False,
-        is_component: Optional[bool] = None,
+        filter_conditions: Optional[List[Dict[str, Any]]] = None,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
-        filter_conditions = []
+        filter_conditions = [] if filter_conditions is None else filter_conditions
         if filter_by_user:
-            params["deep"] = json.dumps(
-                {
-                    "components": {
-                        "_filter": {"user_created": {"token": {"_eq": api_key}}}
-                    }
-                }
-            )
+            params["deep"] = json.dumps({"components": {"_filter": {"user_created": {"token": {"_eq": api_key}}}}})
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
-
-        if is_component is not None:
-            filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
 
         results = self._get(self.components_url, api_key, params)
-        return results[0].get("count", 0)
+        return int(results[0].get("count", 0))
 
     @staticmethod
     def build_search_filter_conditions(query: str):
@@ -213,7 +198,7 @@ class StoreService(Service):
 
     def query_components(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         search: Optional[str] = None,
         status: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -223,7 +208,7 @@ class StoreService(Service):
         fields: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         filter_by_user: bool = False,
-    ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
+    ) -> Tuple[List[ListComponentResponse], List[Dict[str, Any]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
@@ -241,7 +226,10 @@ class StoreService(Service):
             filter_conditions.append({"status": {"_eq": status}})
 
         if tags:
-            filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
+            tags_filter = {"tags": {"_and": []}}
+            for tag in tags:
+                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
+            filter_conditions.append(tags_filter)
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
@@ -257,6 +245,8 @@ class StoreService(Service):
         if filter_by_user and api_key:
             user_data = user_data_var.get()
             # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+            if not user_data:
+                raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
@@ -270,15 +260,15 @@ class StoreService(Service):
         # for component in results_objects:
         #     if component.tags:
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
-        return results_objects
+        return results_objects, filter_conditions
 
-    def get_liked_by_user_components(
-        self, component_ids: List[UUID], api_key: str
-    ) -> List[UUID]:
+    def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[UUID]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
         user_data = user_data_var.get()
+        if not user_data:
+            raise ValueError("No user data")
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -294,10 +284,10 @@ class StoreService(Service):
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
-    def get_components_in_users_collection(
-        self, component_ids: List[UUID], api_key: str
-    ):
+    def get_components_in_users_collection(self, component_ids: List[UUID], api_key: str):
         user_data = user_data_var.get()
+        if not user_data:
+            raise ValueError("No user data")
         params = {
             "fields": "id",
             "filter": json.dumps(
@@ -314,18 +304,14 @@ class StoreService(Service):
 
     def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
-        params = {
-            "fields": ",".join(["id", "name", "description", "data", "is_component"])
-        }
+        params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
 
         component = self._get(url, api_key, params)
         self.call_webhook(api_key, self.download_webhook_url, component_id)
 
         return DownloadComponentResponse(**component)
 
-    def upload(
-        self, api_key: str, component_data: StoreComponentCreate
-    ) -> ComponentResponse:
+    def upload(self, api_key: str, component_data: StoreComponentCreate) -> ComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
         component_dict = component_data.dict(exclude_unset=True)
         # Parent is a UUID, but the store expects a string
@@ -335,9 +321,7 @@ class StoreService(Service):
 
         component_dict = process_tags_for_post(component_dict)
         try:
-            response = httpx.post(
-                self.components_url, headers=headers, json=component_dict
-            )
+            response = httpx.post(self.components_url, headers=headers, json=component_dict)
             response.raise_for_status()
             component = response.json()["data"]
             return ComponentResponse(**component)
