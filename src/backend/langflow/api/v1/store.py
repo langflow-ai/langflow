@@ -1,11 +1,13 @@
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
-from langflow.services.deps import (
-    get_store_service,
-    get_settings_service,
-)
+from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
@@ -14,13 +16,8 @@ from langflow.services.store.schema import (
     TagResponse,
     UsersLikesResponse,
 )
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-from datetime import datetime
-
 from langflow.services.store.service import StoreService, user_data_context
 from langflow.services.store.utils import update_components_with_user_data
-
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
@@ -91,19 +88,25 @@ def get_components(
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
-        with user_data_context(store_api_Key, store_service):
-            authorized = False
-            result = store_service.query_components(
-                api_key=store_api_Key,
-                page=page,
-                limit=limit,
-                filter_by_user=filter_by_user,
-                is_component=is_component,
-                search=search,
-                status=status,
-                tags=tags,
-                sort=sort,
-            )
+        with user_data_context(api_key=store_api_Key, store_service=store_service):
+            try:
+                authorized = False
+                result = store_service.query_components(
+                    api_key=store_api_Key,
+                    page=page,
+                    limit=limit,
+                    filter_by_user=filter_by_user,
+                    is_component=is_component,
+                    search=search,
+                    status=status,
+                    tags=tags,
+                    sort=sort,
+                )
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError(
+                        "You are not authorized to access this public resource"
+                    )
             try:
                 comp_count = store_service.count_components(
                     api_key=store_api_Key,
@@ -130,6 +133,12 @@ def get_components(
             results=result, authorized=authorized, count=comp_count
         )
     except Exception as exc:
+        if isinstance(exc, HTTPStatusError):
+            if exc.response.status_code == 403:
+                raise HTTPException(status_code=403, detail="Forbidden")
+        elif isinstance(exc, ValueError):
+            raise HTTPException(status_code=403, detail=str(exc))
+
         raise HTTPException(status_code=500, detail=str(exc))
 
 
