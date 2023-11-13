@@ -22,25 +22,25 @@ class VectaraComponent(CustomComponent):
         "vectara_customer_id": {
             "display_name": "Vectara Customer ID",
             "required": True,
-            },
+        },
         "vectara_corpus_id": {
-            "display_name": "Vectara Corpus ID", 
+            "display_name": "Vectara Corpus ID",
             "required": True,
-            },
+        },
         "vectara_api_key": {
             "display_name": "Vectara API Key",
             "password": True,
             "required": True,
-            },
+        },
         "code": {"show": False},
         "documents": {
-            "display_name": "Documents", 
-            "info": "Pass in either for Self Query Retriever or for making a Vectara Object"
-            },
-        'files_url':{
-            "display_name": "Files Url", 
+            "display_name": "Documents",
+            "info": "Pass in either for Self Query Retriever or for making a Vectara Object",
+        },
+        "files_url": {
+            "display_name": "Files Url",
             "info": "Make vectara object using url of files(documents not needed)",
-            },
+        },
     }
 
     def build(
@@ -48,11 +48,10 @@ class VectaraComponent(CustomComponent):
         vectara_customer_id: str,
         vectara_corpus_id: str,
         vectara_api_key: str,
-        files_url: Optional[List[str]] = None, 
+        files_url: Optional[List[str]] = None,
         documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
-        
-        if documents is not None :
+        if documents is not None:
             return Vectara.from_documents(
                 documents=documents,
                 embedding=FakeEmbeddings(size=768),
@@ -60,8 +59,8 @@ class VectaraComponent(CustomComponent):
                 vectara_corpus_id=vectara_corpus_id,
                 vectara_api_key=vectara_api_key,
             )
-        
-        if files_url is not None :
+
+        if files_url is not None:
             files_list = []
             for url in files_url:
                 name = tempfile.NamedTemporaryFile().name
