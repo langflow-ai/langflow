@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 import httpx
@@ -144,8 +144,11 @@ class StoreService(Service):
             filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if tags:
-            # params["filter[tags][_in]"] = ",".join(tags)
             filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
+            # tags_filter = {"tags": {"_or": []}}
+            # for tag in tags:
+            #     tags_filter["tags"]["_or"].append({"tags_id": {"name": {"_eq": tag}}})
+            # filter_conditions.append(tags_filter)
 
         if date_from:
             # params["filter[date_updated][_gte]"] = date_from.isoformat()
@@ -183,10 +186,10 @@ class StoreService(Service):
         self,
         api_key: Optional[str] = None,
         filter_by_user: bool = False,
-        is_component: Optional[bool] = None,
+        filter_conditions: Optional[List[Dict[str, Any]]] = None,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
-        filter_conditions = []
+        filter_conditions = [] if filter_conditions is None else filter_conditions
         if filter_by_user:
             params["deep"] = json.dumps(
                 {
@@ -197,9 +200,6 @@ class StoreService(Service):
             )
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
-
-        if is_component is not None:
-            filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
@@ -229,7 +229,7 @@ class StoreService(Service):
         fields: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         filter_by_user: bool = False,
-    ) -> Union[List[ListComponentResponse], List[Dict[str, int]]]:
+    ) -> Tuple[List[ListComponentResponse], List[Dict[str, Any]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
         params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
@@ -248,6 +248,10 @@ class StoreService(Service):
 
         if tags:
             filter_conditions.append({"tags": {"tags_id": {"name": {"_in": tags}}}})
+            # tags_filter = {"tags": {"_or": []}}
+            # for tag in tags:
+            #     tags_filter["tags"]["_or"].append({"tags_id": {"name": {"_eq": tag}}})
+            # filter_conditions.append(tags_filter)
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
@@ -276,7 +280,7 @@ class StoreService(Service):
         # for component in results_objects:
         #     if component.tags:
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
-        return results_objects
+        return results_objects, filter_conditions
 
     def get_liked_by_user_components(
         self, component_ids: List[UUID], api_key: str

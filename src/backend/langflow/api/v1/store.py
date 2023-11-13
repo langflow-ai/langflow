@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +11,7 @@ from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.schema import (
     ComponentResponse,
     DownloadComponentResponse,
+    ListComponentResponse,
     ListComponentResponseModel,
     StoreComponentCreate,
     TagResponse,
@@ -89,9 +90,11 @@ def get_components(
 ):
     try:
         with user_data_context(api_key=store_api_Key, store_service=store_service):
+            filter_conditions: List[Dict[str, Any]] = []
+            result: List[ListComponentResponse] = []
+            authorized = False
             try:
-                authorized = False
-                result = store_service.query_components(
+                result, filter_conditions = store_service.query_components(
                     api_key=store_api_Key,
                     page=page,
                     limit=limit,
@@ -108,16 +111,19 @@ def get_components(
                         "You are not authorized to access this public resource"
                     )
             try:
-                comp_count = store_service.count_components(
-                    api_key=store_api_Key,
-                    filter_by_user=filter_by_user,
-                    is_component=is_component,
-                )
+                if result:
+                    comp_count = store_service.count_components(
+                        api_key=store_api_Key,
+                        filter_by_user=filter_by_user,
+                        filter_conditions=filter_conditions,
+                    )
+                else:
+                    comp_count = 0
             except Exception:
                 #! This should be removed once we fix the bug
                 comp_count = 0
 
-            if store_api_Key:
+            if store_api_Key and result:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
