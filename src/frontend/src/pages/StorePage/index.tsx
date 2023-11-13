@@ -40,7 +40,7 @@ export default function StorePage(): JSX.Element {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageOrder, setPageOrder] = useState("Popular");
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
-  const [tabActive, setTabActive] = useState("Flows");
+  const [tabActive, setTabActive] = useState("All");
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
@@ -261,7 +261,7 @@ export default function StorePage(): JSX.Element {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sort By" />
+                  <SelectValue placeholder="Popular" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Popular">Most Popular</SelectItem>
