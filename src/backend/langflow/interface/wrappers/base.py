@@ -16,8 +16,7 @@ class WrapperCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
             self.type_dict = {
-                wrapper.__name__: wrapper
-                for wrapper in [requests.TextRequestsWrapper, sql_database.SQLDatabase]
+                wrapper.__name__: wrapper for wrapper in [requests.TextRequestsWrapper, sql_database.SQLDatabase]
             }
         return self.type_dict
 

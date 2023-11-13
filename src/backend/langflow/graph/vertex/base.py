@@ -51,9 +51,7 @@ class Vertex:
                     self.params.pop(target_param, None)
                     continue
 
-                if target_param in self.params and not is_basic_type(
-                    self.params[target_param]
-                ):
+                if target_param in self.params and not is_basic_type(self.params[target_param]):
                     # edge.source.params = {}
                     edge.source._build_params()
                     edge.source._built_object = UnbuiltObject()
@@ -99,29 +97,17 @@ class Vertex:
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
-        template_dicts = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
+        template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
 
         self.required_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
-            if value["required"]
+            template_dicts[key]["type"] for key, value in template_dicts.items() if value["required"]
         ]
         self.optional_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
-            if not value["required"]
+            template_dicts[key]["type"] for key, value in template_dicts.items() if not value["required"]
         ]
         # Add the template_dicts[key]["input_types"] to the optional_inputs
         self.optional_inputs.extend(
-            [
-                input_type
-                for value in template_dicts.values()
-                for input_type in value.get("input_types", [])
-            ]
+            [input_type for value in template_dicts.values() for input_type in value.get("input_types", [])]
         )
 
         template_dict = self.data["node"]["template"]
@@ -160,11 +146,7 @@ class Vertex:
         # and use that as the value for the param
         # If the type is "str", then we need to get the value of the "value" key
         # and use that as the value for the param
-        template_dict = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
+        template_dict = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
         params = self.params.copy() if self.params else {}
 
         for edge in self.edges:
@@ -209,11 +191,7 @@ class Vertex:
                     # before passing it to the build method
                     _value = value.get("value")
                     if isinstance(_value, list):
-                        params[key] = {
-                            k: v
-                            for item in value.get("value", [])
-                            for k, v in item.items()
-                        }
+                        params[key] = {k: v for item in value.get("value", []) for k, v in item.items()}
                     elif isinstance(_value, dict):
                         params[key] = _value
                 elif value.get("type") == "int" and value.get("value") is not None:
@@ -304,9 +282,7 @@ class Vertex:
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
 
-    def _build_list_of_nodes_and_update_params(
-        self, key, nodes: List["Vertex"], user_id=None
-    ):
+    def _build_list_of_nodes_and_update_params(self, key, nodes: List["Vertex"], user_id=None):
         """
         Iterates over a list of nodes, builds each and updates the params dictionary.
         """
@@ -358,9 +334,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
-            raise ValueError(
-                f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}"
-            ) from exc
+            raise ValueError(f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -408,8 +382,4 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return (
-            "Built sucessfully ✨"
-            if self._built_object is not None
-            else "Failed to build 😵‍💫"
-        )
+        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"

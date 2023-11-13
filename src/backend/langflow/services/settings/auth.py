@@ -26,9 +26,7 @@ class AuthSettings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12
 
     # API Key to execute /process endpoint
-    API_KEY_SECRET_KEY: Optional[
-        str
-    ] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
+    API_KEY_SECRET_KEY: Optional[str] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 

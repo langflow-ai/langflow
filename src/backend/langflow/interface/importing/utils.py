@@ -104,10 +104,7 @@ def import_prompt(prompt: str) -> Type[PromptTemplate]:
 
 def import_wrapper(wrapper: str) -> Any:
     """Import wrapper from wrapper name"""
-    if (
-        isinstance(wrapper_creator.type_dict, dict)
-        and wrapper in wrapper_creator.type_dict
-    ):
+    if isinstance(wrapper_creator.type_dict, dict) and wrapper in wrapper_creator.type_dict:
         return wrapper_creator.type_dict.get(wrapper)
 
 

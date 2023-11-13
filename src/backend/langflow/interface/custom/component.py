@@ -17,9 +17,7 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class Component(BaseModel):
     ERROR_CODE_NULL = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL = (
-        "The name of the entrypoint function must be provided."
-    )
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL = "The name of the entrypoint function must be provided."
 
     code: Optional[str]
     function_entrypoint_name = "build"

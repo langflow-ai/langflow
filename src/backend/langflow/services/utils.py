@@ -71,16 +71,12 @@ def get_or_create_super_user(session: Session, username, password, is_default):
                 )
                 return None
         else:
-            logger.debug(
-                "User with superuser credentials exists but is not a superuser."
-            )
+            logger.debug("User with superuser credentials exists but is not a superuser.")
             return None
 
     if user:
         if verify_password(password, user.password):
-            raise ValueError(
-                "User with superuser credentials exists but is not a superuser."
-            )
+            raise ValueError("User with superuser credentials exists but is not a superuser.")
         else:
             raise ValueError("Incorrect superuser credentials")
 
@@ -109,21 +105,15 @@ def setup_superuser(settings_service, session: Session):
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
-    is_default = (username == DEFAULT_SUPERUSER) and (
-        password == DEFAULT_SUPERUSER_PASSWORD
-    )
+    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 
     try:
-        user = get_or_create_super_user(
-            session=session, username=username, password=password, is_default=is_default
-        )
+        user = get_or_create_super_user(session=session, username=username, password=password, is_default=is_default)
         if user is not None:
             logger.debug("Superuser created successfully.")
     except Exception as exc:
         logger.exception(exc)
-        raise RuntimeError(
-            "Could not create superuser. Please create a superuser manually."
-        ) from exc
+        raise RuntimeError("Could not create superuser. Please create a superuser manually.") from exc
     finally:
         settings_service.auth_settings.reset_credentials()
 
@@ -137,9 +127,7 @@ def teardown_superuser(settings_service, session):
 
     if not settings_service.auth_settings.AUTO_LOGIN:
         try:
-            logger.debug(
-                "AUTO_LOGIN is set to False. Removing default superuser if exists."
-            )
+            logger.debug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.user import User
 
@@ -187,9 +175,7 @@ def initialize_session_service():
 
     initialize_settings_service()
 
-    service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
+    service_manager.register_factory(cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE])
 
     service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
@@ -206,17 +192,13 @@ def initialize_services():
             service_manager.register_factory(factory, dependencies=dependencies)
         except Exception as exc:
             logger.exception(exc)
-            raise RuntimeError(
-                "Could not initialize services. Please check your settings."
-            ) from exc
+            raise RuntimeError("Could not initialize services. Please check your settings.") from exc
 
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
     # Setup the superuser
     initialize_database()
-    setup_superuser(
-        service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session())
-    )
+    setup_superuser(service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:

@@ -84,9 +84,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(
-    static_files_dir: Optional[Path] = None, backend_only: bool = False
-) -> FastAPI:
+def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:

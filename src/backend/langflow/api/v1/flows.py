@@ -64,12 +64,7 @@ def read_flow(
     current_user: User = Depends(get_current_active_user),
 ):
     """Read a flow."""
-    if user_flow := (
-        session.query(Flow)
-        .filter(Flow.id == flow_id)
-        .filter(Flow.user_id == current_user.id)
-        .first()
-    ):
+    if user_flow := (session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == current_user.id).first()):
         return user_flow
     else:
         raise HTTPException(status_code=404, detail="Flow not found")

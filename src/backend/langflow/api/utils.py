@@ -2,9 +2,7 @@ API_WORDS = ["api", "key", "token"]
 
 
 def has_api_terms(word: str):
-    return "api" in word and (
-        "key" in word or ("token" in word and "tokens" not in word)
-    )
+    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
 def remove_api_keys(flow: dict):
@@ -14,11 +12,7 @@ def remove_api_keys(flow: dict):
             node_data = node.get("data").get("node")
             template = node_data.get("template")
             for value in template.values():
-                if (
-                    isinstance(value, dict)
-                    and has_api_terms(value["name"])
-                    and value.get("password")
-                ):
+                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
                     value["value"] = None
 
     return flow
@@ -39,9 +33,7 @@ def build_input_keys_response(langchain_object, artifacts):
             input_keys_response["input_keys"][key] = value
     # If the object has memory, that memory will have a memory_variables attribute
     # memory variables should be removed from the input keys
-    if hasattr(langchain_object, "memory") and hasattr(
-        langchain_object.memory, "memory_variables"
-    ):
+    if hasattr(langchain_object, "memory") and hasattr(langchain_object.memory, "memory_variables"):
         # Remove memory variables from input keys
         input_keys_response["input_keys"] = {
             key: value
@@ -51,9 +43,7 @@ def build_input_keys_response(langchain_object, artifacts):
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
 
-    if hasattr(langchain_object, "prompt") and hasattr(
-        langchain_object.prompt, "template"
-    ):
+    if hasattr(langchain_object, "prompt") and hasattr(langchain_object.prompt, "template"):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response

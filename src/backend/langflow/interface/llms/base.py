@@ -38,8 +38,7 @@ class LLMCreator(LangChainTypeCreator):
         return [
             llm.__name__
             for llm in self.type_to_loader_dict.values()
-            if llm.__name__ in settings_service.settings.LLMS
-            or settings_service.settings.DEV
+            if llm.__name__ in settings_service.settings.LLMS or settings_service.settings.DEV
         ]
 
 

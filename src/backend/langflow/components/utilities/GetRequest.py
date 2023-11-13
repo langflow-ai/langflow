@@ -30,9 +30,7 @@ class GetRequest(CustomComponent):
         },
     }
 
-    def get_document(
-        self, session: requests.Session, url: str, headers: Optional[dict], timeout: int
-    ) -> Document:
+    def get_document(self, session: requests.Session, url: str, headers: Optional[dict], timeout: int) -> Document:
         try:
             response = session.get(url, headers=headers, timeout=int(timeout))
             try:

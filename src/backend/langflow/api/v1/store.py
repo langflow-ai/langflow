@@ -28,9 +28,7 @@ def get_user_store_api_key(
     settings_service=Depends(get_settings_service),
 ):
     if not user.store_api_key:
-        raise HTTPException(
-            status_code=400, detail="You must have a store API key set."
-        )
+        raise HTTPException(status_code=400, detail="You must have a store API key set.")
     decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
     return decrypted
 
@@ -107,9 +105,7 @@ def get_components(
                 )
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ValueError(
-                        "You are not authorized to access this public resource"
-                    )
+                    raise ValueError("You are not authorized to access this public resource")
             try:
                 if result:
                     if len(result) >= limit:
@@ -124,25 +120,19 @@ def get_components(
                     comp_count = 0
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ValueError(
-                        "You are not authorized to access this public resource"
-                    )
+                    raise ValueError("You are not authorized to access this public resource")
 
             if store_api_Key and result:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
-                    updated_result = update_components_with_user_data(
-                        result, store_service, store_api_Key
-                    )
+                    updated_result = update_components_with_user_data(result, store_service, store_api_Key)
                     authorized = True
                     result = updated_result
                 except Exception:
                     # If we get an error here, it means the user is not authorized
                     authorized = False
-        return ListComponentResponseModel(
-            results=result, authorized=authorized, count=comp_count
-        )
+        return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
     except Exception as exc:
         if isinstance(exc, HTTPStatusError):
             if exc.response.status_code == 403:
@@ -237,9 +227,7 @@ def like_component(
 ):
     try:
         result = store_service.like_component(store_api_Key, component_id)
-        likes_count = store_service.get_component_likes_count(
-            store_api_Key, component_id
-        )
+        likes_count = store_service.get_component_likes_count(store_api_Key, component_id)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
