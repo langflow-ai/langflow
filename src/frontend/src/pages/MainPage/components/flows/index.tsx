@@ -32,6 +32,7 @@ export default function FlowsComponent() {
     >
       {flows
         .filter((flow) => !flow.is_component)
+        .reverse()
         .map((flow, idx) => (
           <CardComponent
             key={idx}
