@@ -47,19 +47,16 @@ export default function StorePage(): JSX.Element {
     handleGetTags();
   }, []);
 
-  useEffect(() => {
+  function getAllStore() {
     handleGetComponents();
     if (hasApiKey) {
       getSavedComponents();
     }
-  }, [
-    searchText,
-    tabActive,
-    pageOrder,
-    pageIndex,
-    pageSize,
-    filteredCategories,
-  ]);
+  }
+
+  useEffect(() => {
+    getAllStore();
+  }, [tabActive, pageOrder, pageIndex, pageSize, filteredCategories]);
 
   function handleGetTags() {
     setLoadingTags(true);
@@ -161,6 +158,7 @@ export default function StorePage(): JSX.Element {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       setSearchText(inputText);
+                      getAllStore();
                     }
                   }}
                   value={inputText}
@@ -169,6 +167,7 @@ export default function StorePage(): JSX.Element {
                   className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
                   onClick={() => {
                     setSearchText(inputText);
+                    getAllStore();
                   }}
                 >
                   <IconComponent
