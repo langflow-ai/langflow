@@ -5,7 +5,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     ComponentResponse,
@@ -73,7 +72,9 @@ class StoreService(Service):
     # will make a property return that data
     # Without making the request multiple times
 
-    def _get(self, url: str, api_key: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def _get(
+        self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -127,7 +128,7 @@ class StoreService(Service):
             "limit": limit,
         }
 
-        filter_conditions = []
+        filter_conditions: List[Dict[str, Any]] = []
 
         if status:
             filter_conditions.append({"status": {"_eq": status}})
@@ -136,9 +137,7 @@ class StoreService(Service):
             filter_conditions.append({"is_component": {"_eq": is_component}})
 
         if tags:
-            tags_filter = {"tags": {"_and": []}}
-            for tag in tags:
-                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
+            tags_filter = self.build_tags_filter(tags)
             filter_conditions.append(tags_filter)
 
         if date_from:
@@ -167,19 +166,18 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [ComponentResponse(**component) for component in results]
 
+    def build_tags_filter(self, tags: List[str]):
+        tags_filter = {"tags": {"_and": []}}
+        for tag in tags:
+            tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
+        return tags_filter
+
     def count_components(
         self,
+        filter_conditions: List[Dict[str, Any]],
         api_key: Optional[str] = None,
-        filter_by_user: bool = False,
-        filter_conditions: Optional[List[Dict[str, Any]]] = None,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
-        filter_conditions = [] if filter_conditions is None else filter_conditions
-        if filter_by_user:
-            params["deep"] = json.dumps({"components": {"_filter": {"user_created": {"token": {"_eq": api_key}}}}})
-        else:
-            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
-
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
 
@@ -207,7 +205,7 @@ class StoreService(Service):
         limit: int = 15,
         fields: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
-        filter_by_user: bool = False,
+        liked: bool = False,
     ) -> Tuple[List[ListComponentResponse], List[Dict[str, Any]]]:
         params = {"page": page, "limit": limit}
         # ?aggregate[count]=likes
@@ -239,15 +237,15 @@ class StoreService(Service):
 
         # Only public components or the ones created by the user
         # check for "public" or "Public"
-        if filter_by_user and not api_key:
+        if liked and not api_key:
             raise ValueError("No API key provided")
 
-        if filter_by_user and api_key:
+        if liked and api_key:
             user_data = user_data_var.get()
             # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
             if not user_data:
                 raise ValueError("No user data")
-            filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
+            filter_conditions.append({"liked_by": {"_eq": user_data["id"]}})
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
 
@@ -284,7 +282,7 @@ class StoreService(Service):
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
-    def get_components_in_users_collection(self, component_ids: List[UUID], api_key: str):
+    def get_components_in_users_collection(self, component_ids: List[str], api_key: str):
         user_data = user_data_var.get()
         if not user_data:
             raise ValueError("No user data")
@@ -302,7 +300,7 @@ class StoreService(Service):
         results = self._get(self.components_url, api_key, params)
         return [result["id"] for result in results]
 
-    def download(self, api_key: str, component_id: str) -> DownloadComponentResponse:
+    def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
         params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
 
