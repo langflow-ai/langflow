@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Annotated, Any, Dict, List, Optional, Union
 from uuid import UUID
 
@@ -124,7 +123,7 @@ def get_components(
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
-                    updated_result = update_components_with_user_data(result, store_service, store_api_Key)
+                    updated_result = update_components_with_user_data(result, store_service, store_api_Key, liked=liked)
                     authorized = True
                     result = updated_result
                 except Exception:
@@ -158,41 +157,6 @@ def read_component(
         raise HTTPException(status_code=400, detail="Component not found")
 
     return component
-
-
-@router.get("/search", response_model=List[ComponentResponse])
-async def search_endpoint(
-    query: str = Query(...),
-    page: int = Query(1),
-    limit: int = Query(10),
-    status: Optional[str] = Query(None),
-    is_component: Optional[bool] = Query(None),
-    tags: Optional[List[str]] = Query(None),
-    date_from: Optional[datetime] = Query(None),
-    date_to: Optional[datetime] = Query(None),
-    sort: Optional[List[str]] = Query(None),
-    filter_by_user: bool = Query(False),
-    fields: Optional[List[str]] = Query(None),
-    store_service: "StoreService" = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
-):
-    try:
-        return store_service.search(
-            api_key=store_api_Key,
-            query=query,
-            page=page,
-            limit=limit,
-            status=status,
-            is_component=is_component,
-            tags=tags,
-            date_from=date_from,
-            date_to=date_to,
-            sort=sort,
-            fields=fields,
-            filter_by_user=filter_by_user,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/tags", response_model=List[TagResponse])
