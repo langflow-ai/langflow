@@ -73,7 +73,7 @@ def create_component(
 
 
 @router.get("/components/", response_model=ListComponentResponseModel)
-def get_components(
+async def get_components(
     search: Annotated[Optional[str], Query()] = None,
     status: Annotated[Optional[str], Query()] = None,
     is_component: Annotated[Optional[bool], Query()] = None,
@@ -98,7 +98,7 @@ def get_components(
             result: List[ListComponentResponse] = []
             authorized = False
             try:
-                result = store_service.query_components(
+                result = await store_service.query_components(
                     api_key=store_api_Key, page=page, limit=limit, sort=sort, filter_conditions=filter_conditions
                 )
             except HTTPStatusError as exc:
@@ -107,7 +107,7 @@ def get_components(
             try:
                 if result:
                     if len(result) >= limit:
-                        comp_count = store_service.count_components(
+                        comp_count = await store_service.count_components(
                             api_key=store_api_Key,
                             filter_conditions=filter_conditions,
                         )
@@ -123,7 +123,9 @@ def get_components(
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 try:
-                    updated_result = update_components_with_user_data(result, store_service, store_api_Key, liked=liked)
+                    updated_result = await update_components_with_user_data(
+                        result, store_service, store_api_Key, liked=liked
+                    )
                     authorized = True
                     result = updated_result
                 except Exception:
@@ -141,7 +143,7 @@ def get_components(
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
-def read_component(
+async def read_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
@@ -149,7 +151,7 @@ def read_component(
     # If the component is from the store, we need to get it from the store
 
     try:
-        component = store_service.download(store_api_Key, component_id)
+        component = await store_service.download(store_api_Key, component_id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -160,36 +162,36 @@ def read_component(
 
 
 @router.get("/tags", response_model=List[TagResponse])
-def get_tags(
+async def get_tags(
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        return store_service.get_tags(store_api_Key)
+        return await store_service.get_tags(store_api_Key)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.get("/users/likes", response_model=List[UsersLikesResponse])
-def get_list_of_components_liked_by_user(
+async def get_list_of_components_liked_by_user(
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
-        return store_service.get_user_likes(store_api_Key)
+        return await store_service.get_user_likes(store_api_Key)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.post("/users/likes/{component_id}", response_model=UsersLikesResponse)
-def like_component(
+async def like_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
-        result = store_service.like_component(store_api_Key, component_id)
-        likes_count = store_service.get_component_likes_count(store_api_Key, component_id)
+        result = await store_service.like_component(store_api_Key, component_id)
+        likes_count = await store_service.get_component_likes_count(store_api_Key, component_id)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
