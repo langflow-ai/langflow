@@ -45,7 +45,6 @@ class ListComponentResponse(BaseModel):
     description: Optional[str]
     liked_by_count: Optional[int]
     liked_by_user: Optional[bool]
-    in_user_collection: Optional[bool]
     is_component: Optional[bool]
     metadata: Optional[dict]
     user_created: Optional[dict]
