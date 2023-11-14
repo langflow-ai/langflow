@@ -273,7 +273,7 @@ export default function StorePage(): JSX.Element {
                   <SelectValue placeholder="Popular" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Popular">Most Popular</SelectItem>
+                  <SelectItem value="Popular">Popular</SelectItem>
                   {/* <SelectItem value="Recent">Most Recent</SelectItem> */}
                   <SelectItem value="Alphabetical">Alphabetical</SelectItem>
                 </SelectContent>
