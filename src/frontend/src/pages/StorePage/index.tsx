@@ -293,7 +293,7 @@ export default function StorePage(): JSX.Element {
                       <MarketCardComponent
                         key={item.id}
                         data={item}
-                        authorized={!loadingSaved}
+                        authorized={hasApiKey}
                         disabled={loading}
                       />
                     </>
