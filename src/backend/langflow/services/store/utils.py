@@ -12,7 +12,7 @@ def process_tags_for_post(component_dict):
     return component_dict
 
 
-def update_components_with_user_data(
+async def update_components_with_user_data(
     components: List["ListComponentResponse"],
     store_service: "StoreService",
     store_api_Key: str,
@@ -27,7 +27,7 @@ def update_components_with_user_data(
         # So we can set liked_by_user to True for all components
         liked_by_user_ids = component_ids
     else:
-        liked_by_user_ids = store_service.get_liked_by_user_components(
+        liked_by_user_ids = await store_service.get_liked_by_user_components(
             component_ids=component_ids,
             api_key=store_api_Key,
         )
