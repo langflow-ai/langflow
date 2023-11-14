@@ -115,7 +115,8 @@ export default function ExtraSidebar(): JSX.Element {
   }, []);
 
   function handleBlur() {
-    if (!search && search === "") {
+    // check if search is search to reset fitler on click input
+    if ((!search && search === "") || search === "search") {
       setFilterData(data);
       setFilterEdge([]);
       setSearch("");
