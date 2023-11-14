@@ -27,8 +27,7 @@ export default function StorePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const { getSavedComponents, loadingSaved, errorApiKey, hasApiKey } =
-    useContext(StoreContext);
+  const { errorApiKey, hasApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -49,9 +48,6 @@ export default function StorePage(): JSX.Element {
 
   function getAllStore() {
     handleGetComponents();
-    if (hasApiKey) {
-      getSavedComponents();
-    }
   }
 
   useEffect(() => {
@@ -124,7 +120,6 @@ export default function StorePage(): JSX.Element {
             <div className="community-page-nav-button">
               <StoreApiKeyModal
                 onCloseModal={() => {
-                  getSavedComponents();
                   handleGetTags();
                   handleGetComponents();
                 }}
