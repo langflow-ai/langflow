@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -86,20 +87,19 @@ def get_components(
 ):
     try:
         with user_data_context(api_key=store_api_Key, store_service=store_service):
-            filter_conditions: List[Dict[str, Any]] = []
+            filter_conditions: List[Dict[str, Any]] = store_service.build_filter_conditions(
+                search=search,
+                status=status,
+                tags=tags,
+                is_component=is_component,
+                liked=liked,
+                api_key=store_api_Key,
+            )
             result: List[ListComponentResponse] = []
             authorized = False
             try:
-                result, filter_conditions = store_service.query_components(
-                    api_key=store_api_Key,
-                    page=page,
-                    limit=limit,
-                    liked=liked,
-                    is_component=is_component,
-                    search=search,
-                    status=status,
-                    tags=tags,
-                    sort=sort,
+                result = store_service.query_components(
+                    api_key=store_api_Key, page=page, limit=limit, sort=sort, filter_conditions=filter_conditions
                 )
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
