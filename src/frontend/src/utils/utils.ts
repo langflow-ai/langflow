@@ -183,7 +183,6 @@ export function groupByFamily(
         full: tempOutputs.length === totalNodes,
       });
   }
-
   return left
     ? arrOfPossibleOutputs.map((output) => ({
         family: output.category,
