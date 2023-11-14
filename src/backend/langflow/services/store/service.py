@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     ComponentResponse,
@@ -14,6 +12,7 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -131,26 +130,15 @@ class StoreService(Service):
         conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
         return conditions
 
-    def query_components(
+    def build_filter_conditions(
         self,
-        api_key: Optional[str] = None,
         search: Optional[str] = None,
         status: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        sort: Optional[List[str]] = None,
-        page: int = 1,
-        limit: int = 15,
-        fields: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         liked: bool = False,
-    ) -> Tuple[List[ListComponentResponse], List[Dict[str, Any]]]:
-        params = {"page": page, "limit": limit}
-        # ?aggregate[count]=likes
-        params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
-
-        if sort:
-            params["sort"] = ",".join(sort)
-
+        api_key: Optional[str] = None,
+    ):
         filter_conditions = []
 
         if search is not None:
@@ -161,19 +149,18 @@ class StoreService(Service):
             filter_conditions.append({"status": {"_eq": status}})
 
         if tags:
-            tags_filter = {"tags": {"_and": []}}
-            for tag in tags:
-                tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
+            tags_filter = self.build_tags_filter(tags)
             filter_conditions.append(tags_filter)
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
 
-        if is_component is not None:
-            filter_conditions.append({"is_component": {"_eq": is_component}})
+        liked_filter = self.build_liked_filter(liked, api_key)
+        filter_conditions.append(liked_filter)
 
-        # Only public components or the ones created by the user
-        # check for "public" or "Public"
+        return filter_conditions
+
+    def build_liked_filter(self, liked: bool, api_key: Optional[str] = None):
         if liked and not api_key:
             raise ValueError("No API key provided")
 
@@ -182,9 +169,32 @@ class StoreService(Service):
             # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
             if not user_data:
                 raise ValueError("No user data")
-            filter_conditions.append({"liked_by": {"_eq": user_data["id"]}})
+            return {"liked_by": {"_eq": user_data["id"]}}
         else:
-            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
+            return {"status": {"_in": ["public", "Public"]}}
+
+    def query_components(
+        self,
+        api_key: Optional[str] = None,
+        sort: Optional[List[str]] = None,
+        page: int = 1,
+        limit: int = 15,
+        fields: Optional[List[str]] = None,
+        is_component: Optional[bool] = None,
+        filter_conditions: Optional[List[Dict[str, Any]]] = None,
+    ) -> Tuple[List[ListComponentResponse], List[Dict[str, Any]]]:
+        params = {"page": page, "limit": limit}
+        # ?aggregate[count]=likes
+        params["fields"] = ",".join(fields) if fields else ",".join(self.default_fields)
+
+        if sort:
+            params["sort"] = ",".join(sort)
+
+        if is_component is not None:
+            filter_conditions.append({"is_component": {"_eq": is_component}})
+
+        # Only public components or the ones created by the user
+        # check for "public" or "Public"
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
@@ -195,7 +205,7 @@ class StoreService(Service):
         # for component in results_objects:
         #     if component.tags:
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
-        return results_objects, filter_conditions
+        return results_objects
 
     def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[UUID]:
         # Get fields id
