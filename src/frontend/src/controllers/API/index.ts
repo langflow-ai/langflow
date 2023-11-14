@@ -596,7 +596,7 @@ export async function getStoreComponents(
   is_component?: boolean | null,
   sort?: string | null,
   tags?: string[] | null,
-  filter_by_user?: boolean | null,
+  liked?: boolean | null,
   status?: string | null,
   search?: string | null
 ): Promise<StoreComponentResponse | undefined> {
@@ -619,8 +619,8 @@ export async function getStoreComponents(
       queryParams.push(`sort=-count(liked_by)`); // default sort
     }
 
-    if (filter_by_user !== undefined && filter_by_user !== null) {
-      queryParams.push(`filter_by_user=${filter_by_user}`);
+    if (liked !== undefined && liked !== null) {
+      queryParams.push(`liked=${liked}`);
     }
 
     if (page !== undefined) {
