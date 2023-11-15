@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from langchain.agents import AgentExecutor
 from langchain.schema import AgentAction
 from langflow.interface.run import (
     build_sorted_vertices,
@@ -70,7 +71,11 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
         if hasattr(langchain_object, "return_intermediate_steps"):
             langchain_object.return_intermediate_steps = False
 
-        fix_memory_inputs(langchain_object)
+        try:
+            if not isinstance(langchain_object, AgentExecutor):
+                fix_memory_inputs(langchain_object)
+        except Exception as exc:
+            logger.error(f"Error fixing memory inputs: {exc}")
 
         try:
             output = langchain_object(inputs, return_only_outputs=True)
