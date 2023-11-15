@@ -15,7 +15,7 @@ on:
       - "pyproject.toml"
 
 env:
-  POETRY_VERSION: "1.4.0"
+  POETRY_VERSION: "1.7.0"
 
 jobs:
   lint:

@@ -49,15 +49,16 @@ run_frontend:
 	cd src/frontend && npm start
 
 run_cli:
-	poetry run langflow run --path src/frontend/build
+	poetry run langflow --path src/frontend/build
 
 run_cli_debug:
-	poetry run langflow run --path src/frontend/build --log-level debug
+	poetry run langflow --path src/frontend/build --log-level debug
 
 setup_devcontainer:
 	make init
 	make build_frontend
-	poetry run langflow --path src/frontend/build
+	@echo 'Run Cli'
+	make run_cli
 
 frontend:
 	@-make install_frontend || (echo "An error occurred while installing frontend dependencies. Attempting to fix." && make install_frontendc)

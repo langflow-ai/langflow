@@ -50,6 +50,9 @@ def update_user(user_db: Optional[User], user: UserUpdate, db: Session = Depends
 
 
 def update_user_last_login_at(user_id: UUID, db: Session = Depends(get_session)):
-    user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))  # type: ignore
-    user = get_user_by_id(db, user_id)
-    return update_user(user, user_data, db)
+    try:
+        user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))  # type: ignore
+        user = get_user_by_id(db, user_id)
+        return update_user(user, user_data, db)
+    except Exception:
+        pass

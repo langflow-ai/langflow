@@ -7,12 +7,20 @@ import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { StoreContext } from "../../contexts/storeContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { alertContext } from "../../contexts/alertContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 export default function HomePage(): JSX.Element {
-  const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
-    useContext(TabsContext);
-  const { hasStore } = useContext(StoreContext);
+  const {
+    flows,
+    setTabId,
+    downloadFlows,
+    uploadFlows,
+    addFlow,
+    removeFlow,
+    uploadFlow,
+    isLoading,
+  } = useContext(FlowsContext);
+  const { setErrorData } = useContext(alertContext);
   const dropdownOptions = [
     {
       name: "Import from JSON",

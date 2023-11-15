@@ -1,10 +1,10 @@
 from typing import Optional, Union
-from langflow import CustomComponent
 
+from langchain.schema import BaseRetriever, Document
 from langchain.vectorstores import Vectara
-from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
-from langchain.schema import BaseRetriever
+
+from langflow import CustomComponent
 
 
 class VectaraComponent(CustomComponent):

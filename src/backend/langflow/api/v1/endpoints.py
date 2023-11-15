@@ -210,6 +210,7 @@ def get_version():
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
     raw_code: CustomComponentCode,
+    user: User = Depends(get_current_active_user),
 ):
     from langflow.interface.types import (
         build_langchain_template_custom_component,
@@ -218,4 +219,4 @@ async def custom_component(
     extractor = CustomComponent(code=raw_code.code)
     extractor.is_check_valid()
 
-    return build_langchain_template_custom_component(extractor)
+    return build_langchain_template_custom_component(extractor, user_id=user.id)

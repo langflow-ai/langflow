@@ -7,7 +7,7 @@ import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
@@ -18,7 +18,7 @@ import {
   scapedJSONStringfy,
 } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, toTitleCase } from "../../utils/utils";
+import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -33,7 +33,7 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const [data, setData] = useState(olddata);
-  const { updateFlow, flows, tabId } = useContext(TabsContext);
+  const { updateFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
@@ -239,15 +239,10 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                             }
-                            title={
-                              data.node?.template[templateField].display_name
-                                ? data.node.template[templateField].display_name
-                                : data.node?.template[templateField].name
-                                ? toTitleCase(
-                                    data.node.template[templateField].name
-                                  )
-                                : toTitleCase(templateField)
-                            }
+                            title={getFieldTitle(
+                              data.node?.template!,
+                              templateField
+                            )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
                             tooltipTitle={
@@ -448,15 +443,10 @@ export default function GenericNode({
                           ] ??
                           nodeColors.unknown
                         }
-                        title={
-                          data.node?.template[templateField].display_name
-                            ? data.node.template[templateField].display_name
-                            : data.node?.template[templateField].name
-                            ? toTitleCase(
-                                data.node.template[templateField].name
-                              )
-                            : toTitleCase(templateField)
-                        }
+                        title={getFieldTitle(
+                          data.node?.template!,
+                          templateField
+                        )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={

@@ -7,7 +7,8 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
 import { StoreContext } from "../../contexts/storeContext";
-import { TabsContext } from "../../contexts/tabsContext";
+
+import { FlowsContext } from "../../contexts/flowsContext";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -23,7 +24,7 @@ import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
 export default function Header(): JSX.Element {
-  const { flows, tabId } = useContext(TabsContext);
+  const { flows, tabId } = useContext(FlowsContext);
   const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();

@@ -22,7 +22,7 @@ import {
 } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import {
   addUser,
   deleteUser,
@@ -43,7 +43,8 @@ export default function AdminPage() {
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
-  const { setTabId } = useContext(TabsContext);
+
+  const { setTabId } = useContext(FlowsContext);
 
   // set null id
   useEffect(() => {

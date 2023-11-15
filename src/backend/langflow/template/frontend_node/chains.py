@@ -87,6 +87,8 @@ class ChainFrontendNode(FrontendNode):
             field.required = True
             field.show = True
             field.advanced = False
+            field.field_type = "BaseLanguageModel"  # temporary fix
+            field.is_list = False
 
         if field.name == "return_source_documents":
             field.required = False
@@ -142,7 +144,7 @@ class SeriesCharacterChainNode(FrontendNode):
         "Chain",
         "ConversationChain",
         "SeriesCharacterChain",
-        "function",
+        "Callable",
     ]
 
 
@@ -243,7 +245,7 @@ class CombineDocsChainNode(FrontendNode):
         ],
     )
     description: str = """Load question answering chain."""
-    base_classes: list[str] = ["BaseCombineDocumentsChain", "function"]
+    base_classes: list[str] = ["BaseCombineDocumentsChain", "Callable"]
 
     def to_dict(self):
         return super().to_dict()

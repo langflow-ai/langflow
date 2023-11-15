@@ -12,7 +12,7 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "ZeroShotAgent",
         "BaseSingleActionAgent",
         "Agent",
-        "function",
+        "Callable",
     }
     template = zero_shot_agent["template"]
 
@@ -202,7 +202,7 @@ def test_initialize_agent(client: TestClient, logged_in_headers):
     agents = json_response["agents"]
 
     initialize_agent = agents["AgentInitializer"]
-    assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
+    assert initialize_agent["base_classes"] == ["AgentExecutor", "Callable"]
     template = initialize_agent["template"]
 
     assert template["agent"] == {

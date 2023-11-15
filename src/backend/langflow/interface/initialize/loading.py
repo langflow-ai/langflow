@@ -1,40 +1,39 @@
 import json
+from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
+
 import orjson
-from typing import Any, Callable, Dict, Sequence, Type, TYPE_CHECKING
-from langchain.schema import Document
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.tools import BaseTool
+from langchain.chains.base import Chain
+from langchain.document_loaders.base import BaseLoader
+from langchain.schema import Document
+from langchain.vectorstores.base import VectorStore
+from loguru import logger
+from pydantic import ValidationError
+
+from langflow.interface.agents.base import agent_creator
+from langflow.interface.chains.base import chain_creator
+from langflow.interface.custom_lists import CUSTOM_NODES
+from langflow.interface.importing.utils import (
+    get_function,
+    get_function_custom,
+    import_by_type,
+)
 from langflow.interface.initialize.llm import initialize_vertexai
 from langflow.interface.initialize.utils import (
     handle_format_kwargs,
     handle_node_type,
     handle_partial_variables,
 )
-
 from langflow.interface.initialize.vector_store import vecstore_initializer
-
-from pydantic import ValidationError
-
-from langflow.interface.importing.utils import (
-    get_function,
-    get_function_custom,
-    import_by_type,
-)
-from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.agents.base import agent_creator
-from langflow.interface.toolkits.base import toolkits_creator
-from langflow.interface.chains.base import chain_creator
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
-from langflow.interface.wrappers.base import wrapper_creator
+from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
+from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
-from langchain.chains.base import Chain
-from langchain.vectorstores.base import VectorStore
-from langchain.document_loaders.base import BaseLoader
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -279,12 +278,14 @@ def instantiate_embedding(node_type, class_object, params: Dict):
     try:
         return class_object(**params)
     except ValidationError:
-        params = {key: value for key, value in params.items() if key in class_object.__fields__}
+        params = {key: value for key, value in params.items() if key in class_object.model_fields}
         return class_object(**params)
 
 
 def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
+    if search_kwargs == {"yourkey": "value"}:
+        search_kwargs = {}
     # clean up docs or texts to have only documents
     if "texts" in params:
         params["documents"] = params.pop("texts")
