@@ -17,6 +17,7 @@ from langflow.field_typing import (
     AgentExecutor,
     NestedDict,
     Data,
+    Object,
 )
 
 
