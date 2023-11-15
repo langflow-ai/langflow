@@ -13,8 +13,6 @@ from langchain.vectorstores.base import VectorStore
 from loguru import logger
 from pydantic import ValidationError
 
-from langflow.interface.agents.base import agent_creator
-from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import (
     get_function,
@@ -208,6 +206,8 @@ def instantiate_retriever(node_type, class_object, params):
 
 
 def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
+    from langflow.interface.chains.base import chain_creator
+
     if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
         params["retriever"] = params["retriever"].as_retriever()
     if node_type in chain_creator.from_method_nodes:
@@ -220,6 +220,8 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
 
 
 def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params: Dict):
+    from langflow.interface.agents.base import agent_creator
+
     if node_type in agent_creator.from_method_nodes:
         method = agent_creator.from_method_nodes[node_type]
         if class_method := getattr(class_object, method, None):
