@@ -1,25 +1,24 @@
-from contextlib import contextmanager
 import json
-from contextlib import suppress
-from pathlib import Path
-from typing import AsyncGenerator, TYPE_CHECKING
 
+# we need to import tmpdir
+import tempfile
+from contextlib import contextmanager, suppress
+from pathlib import Path
+from typing import TYPE_CHECKING, AsyncGenerator
+
+import orjson
+import pytest
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.flow import Flow, FlowCreate
 from langflow.services.database.models.user.user import User, UserCreate
-import orjson
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-import pytest
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
-
-# we need to import tmpdir
-import tempfile
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -264,7 +263,12 @@ def flow(client, json_flow: str, active_user):
     from langflow.services.database.models.flow.flow import FlowCreate
 
     loaded_json = json.loads(json_flow)
-    flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
+    flow_data = FlowCreate(
+        name="test_flow",
+        data=loaded_json.get("data"),
+        user_id=active_user.id,
+        description="description",
+    )
     flow = Flow(**flow_data.dict())
     with session_getter(get_db_service()) as session:
         session.add(flow)

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { getStoreTags, saveFlowStore } from "../../../../controllers/API";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
@@ -51,7 +51,7 @@ export default function NodeToolbarComponent({
     ).length
   );
   const updateNodeInternals = useUpdateNodeInternals();
-  const { getNodeId } = useContext(TabsContext);
+  const { getNodeId } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
 
   function canMinimize() {
@@ -65,7 +65,7 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent } = useContext(TabsContext);
+  const { paste, saveComponent } = useContext(FlowsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);

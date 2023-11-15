@@ -10,7 +10,7 @@ class UpdateRequest(CustomComponent):
     description: str = "Make a PATCH request to the given URL."
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.langflow.org/components/utilities#update-request"
-    beta = True
+    beta: bool = True
     field_config = {
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "headers": {

@@ -28,7 +28,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { TabsContextType, TabsState } from "../types/tabs";
+import { FlowsContextType, TabsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -52,7 +52,7 @@ import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
 
-const TabsContextInitialValue: TabsContextType = {
+const FlowsContextInitialValue: FlowsContextType = {
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
@@ -84,11 +84,11 @@ const TabsContextInitialValue: TabsContextType = {
   deleteComponent: (id: string, key: string) => {},
 };
 
-export const TabsContext = createContext<TabsContextType>(
-  TabsContextInitialValue
+export const FlowsContext = createContext<FlowsContextType>(
+  FlowsContextInitialValue
 );
 
-export function TabsProvider({ children }: { children: ReactNode }) {
+export function FlowsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
@@ -713,7 +713,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const [isBuilt, setIsBuilt] = useState(false);
 
   return (
-    <TabsContext.Provider
+    <FlowsContext.Provider
       value={{
         saveFlow,
         isBuilt,
@@ -744,6 +744,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </TabsContext.Provider>
+    </FlowsContext.Provider>
   );
 }

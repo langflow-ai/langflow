@@ -1,16 +1,14 @@
-from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from uuid import UUID, uuid4
+
 import orjson
 import pytest
-
-from uuid import UUID, uuid4
-from sqlmodel import Session
-
 from fastapi.testclient import TestClient
-
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
+from sqlmodel import Session
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +34,7 @@ def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
-    flow = FlowCreate(name="Test Flow")
+    flow = FlowCreate(name="Test Flow", description="description")
     response = client.post("api/v1/flows/", json=flow.dict(exclude_unset=True), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name

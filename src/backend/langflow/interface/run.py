@@ -1,9 +1,12 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, Union
 from langflow.graph import Graph
 from loguru import logger
+from uuid import UUID
 
 
-def build_sorted_vertices(data_graph) -> Tuple[Graph, Dict]:
+def build_sorted_vertices(
+    data_graph, user_id: Optional[Union[str, UUID]] = None
+) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """
@@ -13,7 +16,7 @@ def build_sorted_vertices(data_graph) -> Tuple[Graph, Dict]:
     sorted_vertices = graph.topological_sort()
     artifacts = {}
     for vertex in sorted_vertices:
-        vertex.build()
+        vertex.build(user_id=user_id)
         if vertex.artifacts:
             artifacts.update(vertex.artifacts)
     return graph, artifacts

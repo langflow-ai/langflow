@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from langchain import retrievers
 
@@ -14,7 +14,10 @@ from langflow.utils.util import build_template_from_method, build_template_from_
 class RetrieverCreator(LangChainTypeCreator):
     type_name: str = "retrievers"
 
-    from_method_nodes = {"MultiQueryRetriever": "from_llm", "ZepRetriever": "__init__"}
+    from_method_nodes: ClassVar[Dict] = {
+        "MultiQueryRetriever": "from_llm",
+        "ZepRetriever": "__init__",
+    }
 
     @property
     def frontend_node_class(self) -> Type[RetrieverFrontendNode]:

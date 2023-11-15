@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langchain.prompts import PromptTemplate
-from pydantic import root_validator
+from pydantic.v1 import root_validator
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 

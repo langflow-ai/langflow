@@ -1,17 +1,18 @@
 from typing import List, Union
-from langflow import CustomComponent
 
-from metaphor_python import Metaphor  # type: ignore
-from langchain.tools import Tool
 from langchain.agents import tool
 from langchain.agents.agent_toolkits.base import BaseToolkit
+from langchain.tools import Tool
+from metaphor_python import Metaphor  # type: ignore
+
+from langflow import CustomComponent
 
 
 class MetaphorToolkit(CustomComponent):
     display_name: str = "Metaphor"
     description: str = "Metaphor Toolkit"
     documentation = "https://python.langchain.com/docs/integrations/tools/metaphor_search"
-    beta = True
+    beta: bool = True
     # api key should be password = True
     field_config = {
         "metaphor_api_key": {"display_name": "Metaphor API Key", "password": True},

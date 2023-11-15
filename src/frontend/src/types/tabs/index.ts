@@ -1,7 +1,7 @@
 import { tweakType } from "../components";
 import { FlowType, NodeDataType } from "../flow";
 
-export type TabsContextType = {
+export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
   isLoading: boolean;
@@ -26,8 +26,8 @@ export type TabsContextType = {
   uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
-  tabsState: TabsState;
-  setTabsState: (state: TabsState) => void;
+  tabsState: FlowsState;
+  setTabsState: (state: FlowsState) => void;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -40,7 +40,7 @@ export type TabsContextType = {
   deleteComponent: (id: string, key: string) => void;
 };
 
-export type TabsState = {
+export type FlowsState = {
   [key: string]: {
     isPending: boolean;
     formKeysData: {

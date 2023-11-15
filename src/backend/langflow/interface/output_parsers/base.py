@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Type
+from typing import ClassVar, Dict, List, Optional, Type
 
 from langchain import output_parsers
 
@@ -13,7 +13,7 @@ from langflow.utils.util import build_template_from_class, build_template_from_m
 
 class OutputParserCreator(LangChainTypeCreator):
     type_name: str = "output_parsers"
-    from_method_nodes = {
+    from_method_nodes: ClassVar[Dict] = {
         "StructuredOutputParser": "from_response_schemas",
     }
 
