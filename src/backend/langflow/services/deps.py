@@ -1,16 +1,17 @@
-from langflow.services import ServiceType, service_manager
 from typing import TYPE_CHECKING, Generator
 
+from langflow.services import ServiceType, service_manager
 
 if TYPE_CHECKING:
-    from langflow.services.database.service import DatabaseService
-    from langflow.services.settings.service import SettingsService
-    from langflow.services.cache.service import BaseCacheService
-    from langflow.services.session.service import SessionService
-    from langflow.services.task.service import TaskService
-    from langflow.services.chat.service import ChatService
-    from langflow.services.store.service import StoreService
     from sqlmodel import Session
+
+    from langflow.services.cache.service import BaseCacheService
+    from langflow.services.chat.service import ChatService
+    from langflow.services.database.service import DatabaseService
+    from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
+    from langflow.services.store.service import StoreService
+    from langflow.services.task.service import TaskService
 
 
 def get_settings_service() -> "SettingsService":
