@@ -366,6 +366,11 @@ export type groupedObjType = {
   type: string;
 };
 
+export type nodeGroupedObjType = {
+  displayName: string;
+  node: string[] | string;
+};
+
 type test = {
   [char: string]: string;
 };
