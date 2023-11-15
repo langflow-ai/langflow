@@ -5,10 +5,10 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 
 export default function FlowsComponent() {
-  const { uploadFlow, removeFlow, flows, isLoading } = useContext(TabsContext);
+  const { uploadFlow, removeFlow, flows, isLoading } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
 
   const onFileDrop = (e) => {

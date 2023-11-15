@@ -16,17 +16,12 @@ import {
 } from "../../components/ui/select";
 import { alertContext } from "../../contexts/alertContext";
 import { StoreContext } from "../../contexts/storeContext";
-import { TabsContext } from "../../contexts/tabsContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
-  const { setTabId } = useContext(TabsContext);
-  useEffect(() => {
-    setTabId("");
-  }, []);
   const { errorApiKey, hasApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
