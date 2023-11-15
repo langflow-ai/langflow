@@ -7,7 +7,7 @@ import {
   SelectTrigger,
 } from "../../../../../components/ui/select-custom";
 import { AuthContext } from "../../../../../contexts/authContext";
-import { TabsContext } from "../../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../../contexts/flowsContext";
 import { APIClassType } from "../../../../../types/api";
 import {
   createFlowComponent,
@@ -35,7 +35,7 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const open = useRef(false);
-  const { getNodeId, deleteComponent } = useContext(TabsContext);
+  const { getNodeId, deleteComponent } = useContext(FlowsContext);
   const { autoLogin, userData } = useContext(AuthContext);
 
   function handleSelectChange(value: string) {
