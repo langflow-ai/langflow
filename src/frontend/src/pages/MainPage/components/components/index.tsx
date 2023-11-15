@@ -2,10 +2,10 @@ import { useContext } from "react";
 import { CardComponent } from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import { alertContext } from "../../../../contexts/alertContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 
 export default function ComponentsComponent() {
-  const { flows, removeFlow, uploadFlow, isLoading } = useContext(TabsContext);
+  const { flows, removeFlow, uploadFlow, isLoading } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
 
   const onFileDrop = (e) => {

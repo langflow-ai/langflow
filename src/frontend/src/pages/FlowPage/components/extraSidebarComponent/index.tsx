@@ -122,13 +122,51 @@ export default function ExtraSidebar(): JSX.Element {
       setSearch("");
     }
   }
-  //CAUSADORA DE BUGS
+
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
       setFilterData(data);
+      setFilterEdge([]);
       setSearch("");
     }
-  }, [getFilterEdge, data]);
+  }, [getFilterEdge]);
+
+  useEffect(() => {
+    if (getFilterEdge?.length > 0) {
+      setFilterData((_) => {
+        let dataClone = cloneDeep(data);
+        let ret = {};
+        Object.keys(dataClone).forEach((d: keyof APIObjectType, i) => {
+          ret[d] = {};
+          if (getFilterEdge.some((x) => x.family === d)) {
+            ret[d] = dataClone[d];
+
+            const filtered = getFilterEdge
+              .filter((x) => x.family === d)
+              .pop()
+              .type.split(",");
+
+            for (let i = 0; i < filtered.length; i++) {
+              filtered[i] = filtered[i].trimStart();
+            }
+
+            if (filtered.some((x) => x !== "")) {
+              let keys = Object.keys(dataClone[d]).filter((nd) =>
+                filtered.includes(nd)
+              );
+              Object.keys(dataClone[d]).forEach((element) => {
+                if (!keys.includes(element)) {
+                  delete ret[d][element];
+                }
+              });
+            }
+          }
+        });
+        setSearch("");
+        return ret;
+      });
+    }
+  }, [getFilterEdge]);
 
   useEffect(() => {
     handleSearchInput(search);
