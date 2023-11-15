@@ -62,7 +62,7 @@ ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^4.32.0"
 python-multipart = "^0.0.6"
 # install sqlmodel using https://github.com/honglei/sqlmodel.git
-sqlmodel = { git = "https://github.com/AntonDeMeester/sqlmodel.git", branch = "main" }
+sqlmodel = { git = "https://github.com/honglei/sqlmodel.git", branch = "main" }
 faiss-cpu = "^1.7.4"
 anthropic = "^0.5.0"
 orjson = "3.9.3"
