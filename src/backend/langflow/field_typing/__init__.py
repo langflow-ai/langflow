@@ -31,6 +31,7 @@ from .constants import (
     AgentExecutor,
     NestedDict,
     Data,
+    Object,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "TextSplitter",
     "Document",
     "AgentExecutor",
+    "Object",
 ]
