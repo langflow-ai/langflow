@@ -3,14 +3,13 @@ from uuid import UUID
 
 import yaml
 from fastapi import HTTPException
-
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import extract_inner_type, extract_union_types
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
+from langflow.services.deps import get_db_service
 from langflow.utils import validate
 
 
