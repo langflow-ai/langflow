@@ -12,8 +12,8 @@ import {
   CardTitle,
 } from "../../../components/ui/card";
 import { alertContext } from "../../../contexts/alertContext";
+import { FlowsContext } from "../../../contexts/flowsContext";
 import { StoreContext } from "../../../contexts/storeContext";
-import { TabsContext } from "../../../contexts/tabsContext";
 import {
   getComponent,
   postLikeComponent,
@@ -38,7 +38,7 @@ export const MarketCardComponent = ({
   const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
   const [installed, setInstalled] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { addFlow } = useContext(TabsContext);
+  const { addFlow } = useContext(FlowsContext);
   const [loadingLike, setLoadingLike] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
