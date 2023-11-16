@@ -568,7 +568,7 @@ export async function saveFlowStore(
       is_component: newFlow.is_component,
       parent: newFlow.parent,
       tags: tags,
-      public: publicFlow,
+      status: publicFlow ? "public" : "private",
     });
 
     if (response.status !== 201) {
