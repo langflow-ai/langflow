@@ -38,8 +38,10 @@ export default function CollectionCardComponent({
   const [loadingLike, setLoadingLike] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { setValidApiKey } = useContext(StoreContext);
-  const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
-  const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
+  const [liked_by_user, setLiked_by_user] = useState(
+    data?.liked_by_user ?? false
+  );
+  const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
 
   const name = data.is_component ? "Component" : "Flow";
 
