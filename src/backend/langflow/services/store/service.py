@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -14,6 +12,7 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -285,10 +284,10 @@ class StoreService(Service):
                     pass
             raise ValueError(f"Upload failed: {exc}")
 
-    async def get_tags(self, api_key: str) -> List[Dict[str, Any]]:
+    async def get_tags(self) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
         params = {"fields": ",".join(["id", "name"])}
-        tags = await self._get(url, api_key, params)
+        tags = await self._get(url, api_key=None, params=params)
         return tags
 
     async def get_user_likes(self, api_key: str) -> List[Dict[str, Any]]:

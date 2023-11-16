@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -127,6 +126,8 @@ async def get_components(
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
                     raise ValueError("You are not authorized to access this public resource")
+                elif exc.response.status_code == 401:
+                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
             try:
                 if result:
                     if len(result) >= limit:
@@ -187,10 +188,9 @@ async def download_component(
 @router.get("/tags", response_model=List[TagResponse])
 async def get_tags(
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_optional_user_store_api_key),
 ):
     try:
-        return await store_service.get_tags(store_api_Key)
+        return await store_service.get_tags()
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
