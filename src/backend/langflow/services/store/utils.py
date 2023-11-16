@@ -36,3 +36,13 @@ async def update_components_with_user_data(
         component.liked_by_user = str(component.id) in liked_by_user_ids
 
     return components
+
+
+# Get the latest released version of langflow (https://pypi.org/project/langflow/)
+def get_lf_version_from_pypi():
+    import requests
+
+    response = requests.get("https://pypi.org/pypi/langflow/json")
+    if response.status_code != 200:
+        return None
+    return response.json()["info"]["version"]
