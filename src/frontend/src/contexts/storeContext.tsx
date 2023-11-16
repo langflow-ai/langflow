@@ -42,9 +42,7 @@ export function StoreProvider({ children }) {
         const res = await checkHasApiKey();
         console.log(res);
         setHasApiKey(res?.has_api_key ?? false);
-        if (!res?.has_api_key) {
-          setValidApiKey(false);
-        }
+        setValidApiKey(res?.is_valid ?? false);
       } catch (e) {
         console.log(e);
       }
