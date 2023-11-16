@@ -17,7 +17,7 @@ from langflow.services.store.schema import (
     UsersLikesResponse,
 )
 from langflow.services.store.service import StoreService, user_data_context
-from langflow.services.store.utils import update_components_with_user_data
+from langflow.services.store.utils import get_lf_version_from_pypi, update_components_with_user_data
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
@@ -67,6 +67,21 @@ def create_component(
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
+        # Verify if this is the latest version of Langflow
+        # If not, raise an error
+        langflow_version = get_lf_version_from_pypi()
+        if langflow_version is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to verify the latest version of Langflow",
+            )
+        elif langflow_version != component.last_tested_version:
+            # If the user is using an older version of Langflow, we need to raise an error
+            raise ValueError(
+                f"Your version of Langflow ({component.last_tested_version}) is outdated."
+                " Please update to the latest version ({langflow_version}) and try again."
+            )
+
         return store_service.upload(store_api_Key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -190,8 +205,8 @@ async def like_component(
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
     try:
-        result = await store_service.like_component(store_api_Key, component_id)
-        likes_count = await store_service.get_component_likes_count(store_api_Key, component_id)
+        result = await store_service.like_component(store_api_Key, str(component_id))
+        likes_count = await store_service.get_component_likes_count(store_api_Key, str(component_id))
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
