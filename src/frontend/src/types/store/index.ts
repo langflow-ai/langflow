@@ -8,6 +8,7 @@ export type storeComponent = {
   description: string;
   liked_by_count: number;
   liked_by_user?: boolean;
+  user_created: { first_name: string };
 };
 
 export type StoreComponentResponse = {
