@@ -216,6 +216,7 @@ export type IconComponentProps = {
   className?: string;
   iconColor?: string;
   onClick?: () => void;
+  stroke?: string;
 };
 
 export type InputProps = {

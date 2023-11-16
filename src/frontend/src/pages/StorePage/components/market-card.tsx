@@ -21,6 +21,7 @@ import {
 } from "../../../controllers/API";
 import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
+import { gradients } from "../../../utils/styleUtils";
 import { classNames } from "../../../utils/utils";
 
 export const MarketCardComponent = ({
@@ -141,6 +142,66 @@ export const MarketCardComponent = ({
         <CardHeader>
           <div>
             <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
+              <div
+                className={classNames(
+                  "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary",
+                  gradients[
+                    parseInt(data.id.slice(0, 12), 16) % gradients.length
+                  ]
+                )}
+              >
+                <div
+                  className={classNames(
+                    data.is_component ? "h-7 w-7 rounded-full bg-muted" : "",
+                    "flex items-center justify-center"
+                  )}
+                >
+                  {data.is_component ? (
+                    <svg className="h-5 w-5" viewBox="0 0 24 24">
+                      <defs>
+                        <linearGradient
+                          id={data.id}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                          className={
+                            gradients[
+                              parseInt(data.id.slice(0, 12), 16) %
+                                gradients.length
+                            ]
+                          }
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="var(--tw-gradient-from)"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--tw-gradient-to)"
+                          />
+                        </linearGradient>
+                      </defs>
+                      <IconComponent
+                        className={classNames(
+                          "h-4 w-4",
+                          gradients[
+                            parseInt(data.id.slice(0, 12), 16) %
+                              gradients.length
+                          ]
+                        )}
+                        stroke={`url(#${data.id})`}
+                        name="ToyBrick"
+                      />
+                    </svg>
+                  ) : (
+                    <IconComponent
+                      className="h-4 w-4 text-background"
+                      name="Network"
+                    />
+                  )}
+                </div>
+              </div>
               <ShadTooltip content={data.name}>
                 <div className="w-full truncate">{data.name}</div>
               </ShadTooltip>
