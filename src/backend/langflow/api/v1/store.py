@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -116,6 +117,8 @@ async def get_components(
                 tags=tags,
                 is_component=is_component,
                 filter_by_user=filter_by_user,
+                liked=liked,
+                store_api_Key=store_api_Key,
             )
 
             result: List[ListComponentResponse] = []
