@@ -17,8 +17,8 @@ export default function FromStore(): JSX.Element {
   const handleGetComponents = () => {
     setLoading(true);
     getStoreComponents({
-      liked: true,
       sort: "name",
+      filterByUser: true,
     })
       .then((res) => {
         setLoading(false);

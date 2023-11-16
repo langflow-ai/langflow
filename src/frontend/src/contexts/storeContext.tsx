@@ -50,7 +50,7 @@ export function StoreProvider({ children }) {
     setLoadingSaved(true);
     getStoreComponents({
       sort: "-count(liked_by)",
-      liked: true,
+      filterByUser: true,
     })
       .then((data) => {
         if (data?.authorized === false) {
