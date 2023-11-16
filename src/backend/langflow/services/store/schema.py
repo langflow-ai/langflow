@@ -30,7 +30,7 @@ class ComponentResponse(BaseModel):
     tags: Optional[List[int]]
     liked_by_count: Optional[int]
     downloads_count: Optional[int]
-    parent: Optional[UUID]
+    parent: Optional[UUID] = None
     metadata: Optional[dict]
     last_tested_version: Optional[str]
 
@@ -44,7 +44,7 @@ class ListComponentResponse(BaseModel):
     name: Optional[str]
     description: Optional[str]
     liked_by_count: Optional[int]
-    liked_by_user: Optional[bool]
+    liked_by_user: Optional[bool] = None
     is_component: Optional[bool]
     metadata: Optional[dict]
     user_created: Optional[dict]
@@ -86,7 +86,8 @@ class StoreComponentCreate(BaseModel):
     description: Optional[str]
     data: dict
     tags: Optional[List[str]]
-    parent: Optional[UUID]
+    parent: Optional[UUID] = None
     is_component: Optional[bool]
     metadata: Optional[dict]
     last_tested_version: Optional[str]
+    public: Optional[bool] = False
