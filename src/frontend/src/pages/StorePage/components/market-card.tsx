@@ -13,6 +13,7 @@ import {
 } from "../../../components/ui/card";
 import { alertContext } from "../../../contexts/alertContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
+import { StoreContext } from "../../../contexts/storeContext";
 import { getComponent, postLikeComponent } from "../../../controllers/API";
 import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
@@ -32,6 +33,7 @@ export const MarketCardComponent = ({
   const { addFlow } = useContext(FlowsContext);
   const [loadingLike, setLoadingLike] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { setValidApiKey } = useContext(StoreContext);
   const [liked_by_user, setLiked_by_user] = useState(data.liked_by_user);
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
 
@@ -64,20 +66,24 @@ export const MarketCardComponent = ({
       }
       console.log(data.id);
       postLikeComponent(data.id)
-        .catch((error) => {
-          setLoadingLike(false);
-          console.error(error);
-          setLiked_by_user(temp);
-          setLikes_count(tempNum);
-          setErrorData({
-            title: `Error on liking ${name}.`,
-            list: [error["response"]["data"]["detail"]],
-          });
-        })
         .then((response) => {
           setLoadingLike(false);
           setLikes_count(response.likes_count);
           setLiked_by_user(response.liked_by_user);
+        })
+        .catch((error) => {
+          setLoadingLike(false);
+          setLikes_count(tempNum);
+          setLiked_by_user(temp);
+          if (error.response.status === 403 || error.response.status === 401) {
+            setValidApiKey(false);
+          } else {
+            console.error(error);
+            setErrorData({
+              title: `Error on liking ${name}.`,
+              list: [error["response"]["data"]["detail"]],
+            });
+          }
         });
     }
   }

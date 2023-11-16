@@ -43,7 +43,6 @@ export function StoreProvider({ children }) {
     setLoadingApiKey(true);
     try {
       const res = await checkHasApiKey();
-      console.log(res);
       setHasApiKey(res?.has_api_key ?? false);
       setValidApiKey(res?.is_valid ?? false);
       setLoadingApiKey(false);
