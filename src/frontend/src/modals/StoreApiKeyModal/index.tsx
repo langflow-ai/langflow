@@ -27,7 +27,7 @@ export default function StoreApiKeyModal({
   const { storeApiKey } = useContext(AuthContext);
   const { hasApiKey } = useContext(StoreContext);
   const [apiKeyValue, setApiKeyValue] = useState(
-    hasApiKey ? "this is not a real api key :)" : ""
+    hasApiKey ? "This is not a real api key." : ""
   );
 
   function handleInput({
@@ -44,10 +44,6 @@ export default function StoreApiKeyModal({
     }
   }, [open]);
 
-  function resetForm() {
-    setApiKeyValue("");
-  }
-
   const handleSaveKey = () => {
     if (inputState && inputState["apikey"]) {
       addApiKeyStore(inputState["apikey"]).then(
@@ -55,7 +51,7 @@ export default function StoreApiKeyModal({
           setSuccessData({
             title: "Success! Your API Key has been saved.",
           });
-          storeApiKey("9bxW74lS1qee3UWKMx3Vydxu5wxPqC8W");
+          storeApiKey(inputState["apikey"]);
           setOpen(false);
         },
         (error) => {
