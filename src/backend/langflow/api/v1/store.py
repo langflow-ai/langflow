@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -57,14 +56,14 @@ async def check_if_store_has_api_key(
     store_service: StoreService = Depends(get_store_service),
 ):
     if api_key is None:
-        return {"has_api_key": False}
+        return {"has_api_key": False, "is_valid": False}
 
     try:
         is_valid = await store_service.check_api_key(api_key)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    return {"has_api_key": is_valid}
+    return {"has_api_key": api_key is not None, "is_valid": is_valid}
 
 
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)
