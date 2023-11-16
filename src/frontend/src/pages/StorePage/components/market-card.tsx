@@ -174,6 +174,9 @@ export const MarketCardComponent = ({
           <CardDescription className="pb-2 pt-2">
             <div className="truncate-doubleline">{data.description}</div>
           </CardDescription>
+          <span className="flex items-center gap-1.5 text-xs text-foreground">
+            Created by: {data.user_created?.first_name}
+          </span>
         </CardHeader>
       </div>
 
