@@ -4,16 +4,16 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
     ListComponentResponse,
+    ListComponentResponseModel,
     StoreComponentCreate,
 )
-from langflow.services.store.utils import process_tags_for_post
+from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -368,3 +368,73 @@ class StoreService(Service):
                 raise ValueError(f"Unexpected result: {result}")
         else:
             raise ValueError(f"Unexpected status code: {response.status_code}")
+
+    async def get_list_component_response_model(
+        self,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        is_component: Optional[bool] = None,
+        filter_by_user: Optional[bool] = False,
+        liked: Optional[bool] = False,
+        store_api_Key: Optional[str] = None,
+        sort: Optional[List[str]] = None,
+        page: int = 1,
+        limit: int = 15,
+    ):
+        async with user_data_context(api_key=store_api_Key, store_service=self):
+            filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
+                search=search,
+                status=status,
+                tags=tags,
+                is_component=is_component,
+                filter_by_user=filter_by_user,
+                liked=liked,
+                store_api_Key=store_api_Key,
+            )
+
+            result: List[ListComponentResponse] = []
+            authorized = False
+            try:
+                result = await self.query_components(
+                    api_key=store_api_Key,
+                    page=page,
+                    limit=limit,
+                    sort=sort,
+                    filter_conditions=filter_conditions,
+                    use_api_key=liked or filter_by_user,
+                )
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError("You are not authorized to access this public resource")
+                elif exc.response.status_code == 401:
+                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
+            try:
+                if result:
+                    if len(result) >= limit:
+                        comp_count = await self.count_components(
+                            api_key=store_api_Key,
+                            filter_conditions=filter_conditions,
+                            use_api_key=liked or filter_by_user,
+                        )
+                    else:
+                        comp_count = len(result)
+                else:
+                    comp_count = 0
+            except HTTPStatusError as exc:
+                if exc.response.status_code == 403:
+                    raise ValueError("You are not authorized to access this public resource")
+                elif exc.response.status_code == 401:
+                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
+
+            if store_api_Key and result:
+                # Now, from the result, we need to get the components
+                # the user likes and set the liked_by_user to True
+                try:
+                    updated_result = await update_components_with_user_data(result, self, store_api_Key, liked=liked)
+                    authorized = True
+                    result = updated_result
+                except Exception:
+                    # If we get an error here, it means the user is not authorized
+                    authorized = False
+        return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)

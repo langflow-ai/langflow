@@ -1,24 +1,22 @@
 import warnings
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
-    ListComponentResponse,
     ListComponentResponseModel,
     StoreComponentCreate,
     TagResponse,
     UsersLikesResponse,
 )
-from langflow.services.store.service import StoreService, user_data_context
-from langflow.services.store.utils import get_lf_version_from_pypi, update_components_with_user_data
+from langflow.services.store.service import StoreService
+from langflow.services.store.utils import get_lf_version_from_pypi
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
@@ -110,64 +108,18 @@ async def get_components(
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
-        async with user_data_context(api_key=store_api_Key, store_service=store_service):
-            filter_conditions: List[Dict[str, Any]] = store_service.build_filter_conditions(
-                search=search,
-                status=status,
-                tags=tags,
-                is_component=is_component,
-                filter_by_user=filter_by_user,
-                liked=liked,
-                store_api_Key=store_api_Key,
-            )
-
-            result: List[ListComponentResponse] = []
-            authorized = False
-            try:
-                result = await store_service.query_components(
-                    api_key=store_api_Key,
-                    page=page,
-                    limit=limit,
-                    sort=sort,
-                    filter_conditions=filter_conditions,
-                    use_api_key=liked or filter_by_user,
-                )
-            except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
-                    raise ValueError("You are not authorized to access this public resource")
-                elif exc.response.status_code == 401:
-                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
-            try:
-                if result:
-                    if len(result) >= limit:
-                        comp_count = await store_service.count_components(
-                            api_key=store_api_Key,
-                            filter_conditions=filter_conditions,
-                            use_api_key=liked or filter_by_user,
-                        )
-                    else:
-                        comp_count = len(result)
-                else:
-                    comp_count = 0
-            except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
-                    raise ValueError("You are not authorized to access this public resource")
-                elif exc.response.status_code == 401:
-                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
-
-            if store_api_Key and result:
-                # Now, from the result, we need to get the components
-                # the user likes and set the liked_by_user to True
-                try:
-                    updated_result = await update_components_with_user_data(
-                        result, store_service, store_api_Key, liked=liked
-                    )
-                    authorized = True
-                    result = updated_result
-                except Exception:
-                    # If we get an error here, it means the user is not authorized
-                    authorized = False
-        return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
+        return await store_service.get_list_component_response_model(
+            search=search,
+            status=status,
+            is_component=is_component,
+            tags=tags,
+            sort=sort,
+            liked=liked,
+            filter_by_user=filter_by_user,
+            page=page,
+            limit=limit,
+            store_api_Key=store_api_Key,
+        )
     except Exception as exc:
         if isinstance(exc, HTTPStatusError):
             if exc.response.status_code == 403:
