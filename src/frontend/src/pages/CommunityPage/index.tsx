@@ -4,7 +4,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 
 import { useNavigate } from "react-router-dom";
-import { CardComponent } from "../../components/cardComponent";
+import CollectionCardComponent from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
@@ -84,11 +84,9 @@ export default function CommunityPage(): JSX.Element {
             </>
           ) : (
             examples.map((flow, idx) => (
-              <CardComponent
+              <CollectionCardComponent
                 key={idx}
-                isFlow
                 data={flow}
-                id={flow.id}
                 button={
                   <Button
                     variant="outline"
