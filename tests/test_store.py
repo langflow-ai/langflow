@@ -1,7 +1,7 @@
 # FILEPATH: /Users/ogabrielluiz/Projects/langflow2/tests/test_store_service.py
 
 from datetime import datetime
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from langflow.services.deps import get_store_service
 
@@ -9,7 +9,7 @@ from langflow.services.deps import get_store_service
 @patch("langflow.services.store.service.httpx")
 def test_search_components(mock_httpx: Mock, client):
     # Mock the response from the HTTP GET request
-    from langflow.services.store.schema import ComponentResponse
+    from langflow.services.store.schema import CreateComponentResponse
 
     mock_response = Mock()
     mock_response.json.return_value = {
@@ -54,4 +54,4 @@ def test_search_components(mock_httpx: Mock, client):
 
     # Assert that the search method returns a list of ComponentResponse objects
     assert len(components) == 2
-    assert all(isinstance(component, ComponentResponse) for component in components)
+    assert all(isinstance(component, CreateComponentResponse) for component in components)
