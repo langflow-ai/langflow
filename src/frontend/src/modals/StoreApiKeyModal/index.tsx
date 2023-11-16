@@ -1,57 +1,31 @@
 import * as Form from "@radix-ui/react-form";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { CONTROL_NEW_API_KEY } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { addApiKeyStore } from "../../controllers/API";
-import {
-  ApiKeyInputType,
-  StoreApiKeyType,
-  inputHandlerEventType,
-} from "../../types/components";
+import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
 
-export default function StoreApiKeyModal({
-  children,
-  onCloseModal,
-}: StoreApiKeyType) {
+export default function StoreApiKeyModal({ children }: StoreApiKeyType) {
   const [open, setOpen] = useState(false);
-  const [inputState, setInputState] =
-    useState<ApiKeyInputType>(CONTROL_NEW_API_KEY);
   const { setSuccessData, setErrorData } = useContext(alertContext);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const { storeApiKey } = useContext(AuthContext);
-  const { hasApiKey } = useContext(StoreContext);
-  const [apiKeyValue, setApiKeyValue] = useState(
-    hasApiKey ? "This is not a real api key." : ""
-  );
-
-  function handleInput({
-    target: { name, value },
-  }: inputHandlerEventType): void {
-    setInputState((prev) => ({ ...prev, [name]: value }));
-  }
-
-  useEffect(() => {
-    if (open) {
-      // resetForm();
-    } else {
-      onCloseModal();
-    }
-  }, [open]);
+  const { hasApiKey, setHasApiKey, validApiKey } = useContext(StoreContext);
+  const [apiKeyValue, setApiKeyValue] = useState("");
 
   const handleSaveKey = () => {
-    if (inputState && inputState["apikey"]) {
-      addApiKeyStore(inputState["apikey"]).then(
+    if (apiKeyValue) {
+      addApiKeyStore(apiKeyValue).then(
         () => {
           setSuccessData({
             title: "Success! Your API Key has been saved.",
           });
-          storeApiKey(inputState["apikey"]);
+          storeApiKey(apiKeyValue);
+          setHasApiKey(true);
           setOpen(false);
         },
         (error) => {
@@ -67,7 +41,15 @@ export default function StoreApiKeyModal({
   return (
     <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={"Insert your Langflow API key."}>
+      <BaseModal.Header
+        description={
+          (hasApiKey && !validApiKey
+            ? "Your API key is not valid. "
+            : !hasApiKey
+            ? "You don't have an API key. "
+            : "") + "Insert your Langflow API key."
+        }
+      >
         <span className="pr-2">API Key</span>
         <IconComponent
           name="Key"
@@ -82,7 +64,7 @@ export default function StoreApiKeyModal({
           }}
         >
           <div className="grid gap-5">
-            <Form.Field name="username">
+            <Form.Field name="apikey">
               <div className="flex items-center justify-between gap-2">
                 <Form.Control asChild>
                   <Input
@@ -90,7 +72,6 @@ export default function StoreApiKeyModal({
                     value={apiKeyValue}
                     type="password"
                     onChange={({ target: { value } }) => {
-                      handleInput({ target: { name: "apikey", value } });
                       setApiKeyValue(value);
                     }}
                     placeholder="Insert your API Key"

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ShadTooltip from "../../../components/ShadTooltipComponent";
 import IconComponent from "../../../components/genericIconComponent";
@@ -13,12 +13,7 @@ import {
 } from "../../../components/ui/card";
 import { alertContext } from "../../../contexts/alertContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
-import { StoreContext } from "../../../contexts/storeContext";
-import {
-  getComponent,
-  postLikeComponent,
-  saveFlowStore,
-} from "../../../controllers/API";
+import { getComponent, postLikeComponent } from "../../../controllers/API";
 import { storeComponent } from "../../../types/store";
 import cloneFLowWithParent from "../../../utils/storeUtils";
 import { gradients } from "../../../utils/styleUtils";
@@ -28,16 +23,11 @@ export const MarketCardComponent = ({
   data,
   authorized = true,
   disabled = false,
-  installable = false,
 }: {
   data: storeComponent;
   authorized?: boolean;
   disabled?: boolean;
-  installable?: boolean;
 }) => {
-  const { savedFlows } = useContext(StoreContext);
-  const [added, setAdded] = useState(savedFlows.has(data.id) ? true : false);
-  const [installed, setInstalled] = useState(false);
   const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(FlowsContext);
   const [loadingLike, setLoadingLike] = useState(false);
@@ -46,40 +36,6 @@ export const MarketCardComponent = ({
   const [likes_count, setLikes_count] = useState(data.liked_by_count ?? 0);
 
   const name = data.is_component ? "Component" : "Flow";
-
-  useEffect(() => {
-    setAdded(savedFlows.has(data.id) ? true : false);
-  }, [savedFlows]);
-
-  function handleAdd() {
-    setLoading(true);
-    getComponent(data.id).then(
-      (res) => {
-        console.log(res);
-        const newFLow = cloneFLowWithParent(res, res.id, data.is_component);
-        console.log(newFLow);
-        saveFlowStore(
-          newFLow,
-          data.tags.map((tag) => tag.id)
-        )
-          .then(() => {
-            setAdded(true);
-            setLoading(false);
-            setSuccessData({ title: `${name} added to account.` });
-          })
-          .catch((error) => {
-            console.error(error);
-            setErrorData({
-              title: `Error on adding ${name}`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          });
-      },
-      (error) => {
-        console.log(error);
-      }
-    );
-  }
 
   const navigate = useNavigate();
 
@@ -90,7 +46,6 @@ export const MarketCardComponent = ({
       addFlow(true, newFlow).then((id) => {
         setSuccessData({ title: `${name} Installed` });
         setLoading(false);
-        setInstalled(true);
         if (!data.is_component) navigate("/flow/" + id);
       });
     });
@@ -290,13 +245,7 @@ export const MarketCardComponent = ({
               </ShadTooltip>
               <ShadTooltip
                 content={
-                  authorized
-                    ? added
-                      ? installable
-                        ? "Install Locally"
-                        : "Added to Account"
-                      : "Add to Account"
-                    : "Please review your API key."
+                  authorized ? "Install Locally" : "Please review your API key."
                 }
               >
                 <Button
@@ -310,34 +259,13 @@ export const MarketCardComponent = ({
                     if (loading || !authorized) {
                       return;
                     }
-                    if (!added) {
-                      handleAdd();
-                    } else if (installable) {
-                      handleInstall();
-                    }
+                    handleInstall();
                   }}
                 >
                   <IconComponent
-                    name={
-                      loading
-                        ? "Loader2"
-                        : added && installable && !installed
-                        ? "ExternalLink"
-                        : added
-                        ? "Check"
-                        : "Plus"
-                    }
+                    name={loading ? "Loader2" : "Plus"}
                     className={classNames(
-                      !added && !installable && !loading
-                        ? "h-6 w-6"
-                        : "h-5 w-5",
-                      ((added && !installable) || installed) && !loading
-                        ? "text-chat-send"
-                        : "",
-                      added && installable && !installed && !loading
-                        ? "text-high-indigo"
-                        : "",
-                      loading ? " animate-spin" : "",
+                      loading ? "h-5 w-5 animate-spin" : "h-6 w-6 p-0.5",
                       !authorized ? " text-ring" : ""
                     )}
                   />

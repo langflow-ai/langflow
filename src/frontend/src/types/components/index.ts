@@ -269,7 +269,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string | boolean;
+    value: string;
     name: string;
   };
 };
@@ -356,11 +356,6 @@ export type ApiKeyType = {
 
 export type StoreApiKeyType = {
   children: ReactElement;
-  onCloseModal: () => void;
-};
-
-export type ApiKeyInputType = {
-  apikeyname: string;
 };
 export type groupedObjType = {
   family: string;
