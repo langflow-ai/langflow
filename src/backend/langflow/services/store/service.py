@@ -117,10 +117,13 @@ class StoreService(Service):
         self,
         filter_conditions: List[Dict[str, Any]],
         api_key: Optional[str] = None,
+        use_api_key: Optional[bool] = False,
     ) -> int:
         params = {"aggregate": json.dumps({"count": "*"})}
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
+
+        api_key = api_key if use_api_key else None
 
         results = await self._get(self.components_url, api_key, params)
         return int(results[0].get("count", 0))
@@ -209,11 +212,11 @@ class StoreService(Service):
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
-        if not use_api_key:
-            # If not liked, this means we are getting public components
-            # so we don't need to risk passing an invalid api_key
-            # and getting 401
-            api_key = None
+
+        # If not liked, this means we are getting public components
+        # so we don't need to risk passing an invalid api_key
+        # and getting 401
+        api_key = api_key if use_api_key else None
         results = await self._get(self.components_url, api_key, params)
         if isinstance(results, dict):
             results = [results]
@@ -224,7 +227,7 @@ class StoreService(Service):
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
         return results_objects
 
-    async def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[UUID]:
+    async def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[str]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
@@ -275,7 +278,7 @@ class StoreService(Service):
 
     async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
-        component_dict = component_data.dict(exclude_unset=True)
+        component_dict = component_data.model_dump(exclude_unset=True)
         # Parent is a UUID, but the store expects a string
         response = None
         if component_dict.get("parent"):
