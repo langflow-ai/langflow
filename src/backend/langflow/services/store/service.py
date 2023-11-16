@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -14,6 +12,7 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -60,7 +59,7 @@ class StoreService(Service):
             "id",
             "name",
             "description",
-            "user_created.first_name",
+            "user_created.username",
             "is_component",
             "tags.tags_id.name",
             "tags.tags_id.id",
