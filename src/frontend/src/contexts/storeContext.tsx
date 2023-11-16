@@ -48,7 +48,10 @@ export function StoreProvider({ children }) {
 
   function getSavedComponents() {
     setLoadingSaved(true);
-    getStoreComponents(null, null, null, null, null, true)
+    getStoreComponents({
+      sort: "-count(liked_by)",
+      liked: true,
+    })
       .then((data) => {
         if (data?.authorized === false) {
           setErrorApiKey(true);
