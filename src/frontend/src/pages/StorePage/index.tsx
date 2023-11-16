@@ -10,6 +10,7 @@ import { Input } from "../../components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -36,18 +37,22 @@ export default function StorePage(): JSX.Element {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [tabActive, setTabActive] = useState("All");
   const [searchText, setSearchText] = useState("");
+  const [selectFilter, setSelectFilter] = useState("all");
 
   useEffect(() => {
     handleGetTags();
   }, []);
 
-  function getAllStore() {
-    handleGetComponents();
-  }
-
   useEffect(() => {
-    getAllStore();
-  }, [tabActive, pageOrder, pageIndex, pageSize, filteredCategories]);
+    handleGetComponents();
+  }, [
+    tabActive,
+    pageOrder,
+    pageIndex,
+    pageSize,
+    filteredCategories,
+    selectFilter,
+  ]);
 
   function handleGetTags() {
     setLoadingTags(true);
@@ -57,7 +62,7 @@ export default function StorePage(): JSX.Element {
     });
   }
 
-  const handleGetComponents = () => {
+  function handleGetComponents() {
     setLoading(true);
     getStoreComponents(
       pageIndex,
@@ -65,7 +70,7 @@ export default function StorePage(): JSX.Element {
       tabActive === "All" ? null : tabActive === "Flows" ? false : true,
       pageOrder === "Popular" ? "-count(downloads)" : "name",
       filteredCategories,
-      null,
+      selectFilter === "likedbyme" ? true : null,
       null,
       searchText === "" ? null : searchText
     )
@@ -86,7 +91,7 @@ export default function StorePage(): JSX.Element {
           list: [err["response"]["data"]["detail"]],
         });
       });
-  };
+  }
 
   const updateTags = (tagName: string) => {
     setFilterCategories((prevArray) => {
@@ -149,7 +154,6 @@ export default function StorePage(): JSX.Element {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       setSearchText(inputText);
-                      getAllStore();
                     }
                   }}
                   value={inputText}
@@ -159,7 +163,6 @@ export default function StorePage(): JSX.Element {
                   className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
                   onClick={() => {
                     setSearchText(inputText);
-                    getAllStore();
                   }}
                 >
                   <IconComponent
@@ -221,7 +224,19 @@ export default function StorePage(): JSX.Element {
               </div>
             </div>
 
-            <div className="flex h-6 items-center gap-2 px-2">
+            <div className="flex h-6 items-center gap-2">
+              <Select onValueChange={setSelectFilter} value={selectFilter}>
+                <SelectTrigger className="mr-4 w-[160px]">
+                  <SelectValue placeholder="Filter Values" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="createdbyme">Created By Me</SelectItem>
+                    <SelectItem value="likedbyme">Liked By Me</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               {!loadingTags &&
                 tags.map((tag, idx) => (
                   <button
