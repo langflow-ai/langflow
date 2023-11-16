@@ -13,7 +13,6 @@ import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import FlowsComponent from "./pages/MainPage/components/flows";
-import FromStore from "./pages/MainPage/components/from-store";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
@@ -41,14 +40,6 @@ const Router = () => {
       >
         <Route path="flows" element={<FlowsComponent />} />
         <Route path="components" element={<ComponentsComponent />} />
-        <Route
-          path="from-store"
-          element={
-            <StoreGuard>
-              <FromStore />
-            </StoreGuard>
-          }
-        />
       </Route>
       <Route
         path="/community"

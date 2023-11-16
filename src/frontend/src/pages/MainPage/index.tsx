@@ -41,13 +41,6 @@ export default function HomePage(): JSX.Element {
     },
   ];
 
-  // if (hasStore) {
-  //   sidebarNavItems.push({
-  //     title: "From Store",
-  //     href: "/from-store",
-  //   });
-  // }
-
   // Set a null id
   useEffect(() => {
     setTabId("");
