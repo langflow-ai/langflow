@@ -14,6 +14,7 @@ import { skipNodeUpdate } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
+  getVersion,
   readFlowsFromDatabase,
   saveFlowToDatabase,
   updateFlowInDatabase,
@@ -82,6 +83,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   ) => {},
   saveComponent: async (component: NodeDataType) => "",
   deleteComponent: (id: string, key: string) => {},
+  version: "",
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -711,10 +713,18 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   const [isBuilt, setIsBuilt] = useState(false);
+  // Initialize state variable for the version
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
+  }, []);
 
   return (
     <FlowsContext.Provider
       value={{
+        version,
         saveFlow,
         isBuilt,
         setIsBuilt,

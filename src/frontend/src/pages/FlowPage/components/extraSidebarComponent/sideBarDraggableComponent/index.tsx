@@ -35,7 +35,7 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const open = useRef(false);
-  const { getNodeId, deleteComponent } = useContext(FlowsContext);
+  const { getNodeId, deleteComponent, version } = useContext(FlowsContext);
   const { autoLogin, userData } = useContext(AuthContext);
 
   function handleSelectChange(value: string) {
@@ -45,7 +45,10 @@ export default function SidebarDraggableComponent({
       case "download":
         const type = removeCountFromString(itemName);
         downloadNode(
-          createFlowComponent({ id: getNodeId(type), type, node: apiClass })
+          createFlowComponent(
+            { id: getNodeId(type), type, node: apiClass },
+            version
+          )
         );
         break;
       case "delete":

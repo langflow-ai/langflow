@@ -7,13 +7,12 @@ import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
-import { getVersion } from "../../controllers/API";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow } = useContext(FlowsContext);
+    const { flows, tabId, downloadFlow, version } = useContext(FlowsContext);
     const { reactFlowInstance } = useContext(typesContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
@@ -25,13 +24,6 @@ const ExportModal = forwardRef(
     const [name, setName] = useState(flow!.name);
     const [description, setDescription] = useState(flow!.description);
     const [open, setOpen] = useState(false);
-    // Initialize state variable for the version
-    const [version, setVersion] = useState("");
-    useEffect(() => {
-      getVersion().then((data) => {
-        setVersion(data.version);
-      });
-    }, []);
 
     return (
       <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
@@ -81,7 +73,7 @@ const ExportModal = forwardRef(
                     data: reactFlowInstance?.toObject()!,
                     description,
                     name,
-                    version,
+                    last_tested_version: version,
                   },
                   name!,
                   description
@@ -97,7 +89,7 @@ const ExportModal = forwardRef(
                     data: reactFlowInstance?.toObject()!,
                     description,
                     name,
-                    version: version,
+                    last_tested_version: version,
                   }),
                   name!,
                   description
