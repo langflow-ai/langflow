@@ -167,7 +167,7 @@ class StoreService(Service):
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
         if liked and store_api_Key:
-            liked_filter = self.build_liked_filter(liked, store_api_Key)
+            liked_filter = self.build_liked_filter()
             filter_conditions.append(liked_filter)
         elif liked and not store_api_Key:
             raise ValueError("You must provide an API key to filter by likes")
@@ -184,12 +184,12 @@ class StoreService(Service):
 
         return filter_conditions
 
-    def build_liked_filter(self, liked: bool, api_key: Optional[str] = None):
+    def build_liked_filter(self):
         user_data = user_data_var.get()
         # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
         if not user_data:
             raise ValueError("No user data")
-        return {"liked_by": {"_eq": user_data["id"]}}
+        return {"liked_by": {"directus_users_id": {"_eq": user_data["id"]}}}
 
     async def query_components(
         self,
@@ -274,7 +274,8 @@ class StoreService(Service):
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
         params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
-
+        if not self.download_webhook_url:
+            raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
         component = await self._get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
 
@@ -342,6 +343,8 @@ class StoreService(Service):
     async def like_component(self, api_key: str, component_id: str) -> bool:
         # if it returns a list with one id, it means the like was successful
         # if it returns an int, it means the like was removed
+        if not self.like_webhook_url:
+            raise ValueError("LIKE_WEBHOOK_URL is not set")
         headers = {"Authorization": f"Bearer {api_key}"}
         # response = httpx.post(
         #     self.like_webhook_url,
