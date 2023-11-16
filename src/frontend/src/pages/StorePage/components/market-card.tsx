@@ -171,6 +171,9 @@ export const MarketCardComponent = ({
               </div>
             </CardTitle>
           </div>
+          <span className="text-xs text-primary">
+            by <b>{data.user_created.first_name}</b>
+          </span>
           <CardDescription className="pb-2 pt-2">
             <div className="truncate-doubleline">{data.description}</div>
           </CardDescription>
