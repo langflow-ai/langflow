@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -173,7 +172,7 @@ async def get_components(
         elif isinstance(exc, ValueError):
             if "Check your API key" in str(exc):
                 raise HTTPException(status_code=401, detail=str(exc))
-            elif "filter by likes" in str(exc):
+            elif "filter by likes" in str(exc) or "filter your components" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc))
             raise HTTPException(status_code=403, detail=str(exc))
 
