@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -118,11 +117,6 @@ async def get_components(
                 is_component=is_component,
                 filter_by_user=filter_by_user,
             )
-            if liked and store_api_Key:
-                liked_filter = store_service.build_liked_filter(liked, store_api_Key)
-                filter_conditions.append(liked_filter)
-            elif liked and not store_api_Key:
-                raise ValueError("You must provide an API key to filter by likes")
 
             result: List[ListComponentResponse] = []
             authorized = False
