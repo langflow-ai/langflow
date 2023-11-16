@@ -320,13 +320,13 @@ class StoreService(Service):
         likes = await self._get(url, api_key, params)
         return likes
 
-    async def get_component_likes_count(self, component_id: str) -> int:
+    async def get_component_likes_count(self, component_id: str, api_key: Optional[str] = None) -> int:
         url = f"{self.components_url}/{component_id}"
 
         params = {
             "fields": ",".join(["id", "count(liked_by)"]),
         }
-        result = await self._get(url, api_key=None, params=params)
+        result = await self._get(url, api_key=api_key, params=params)
         if len(result) == 0:
             raise ValueError("Component not found")
         likes = result[0]["liked_by_count"]
