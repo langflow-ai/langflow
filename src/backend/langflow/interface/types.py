@@ -203,9 +203,7 @@ def update_attributes(frontend_node, template_config):
             frontend_node[attribute] = template_config[attribute]
 
 
-def build_field_config(
-    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
-):
+def build_field_config(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
     """Build the field configuration for a custom component"""
 
     try:
