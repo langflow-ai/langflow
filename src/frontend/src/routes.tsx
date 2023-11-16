@@ -8,7 +8,6 @@ import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
-import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
@@ -41,14 +40,6 @@ const Router = () => {
         <Route path="flows" element={<FlowsComponent />} />
         <Route path="components" element={<ComponentsComponent />} />
       </Route>
-      <Route
-        path="/community"
-        element={
-          <ProtectedRoute>
-            <CommunityPage />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/store"
         element={
