@@ -80,7 +80,7 @@ export const MarketCardComponent = ({
           } else {
             console.error(error);
             setErrorData({
-              title: `Error on liking ${name}.`,
+              title: `Error liking ${name}.`,
               list: [error["response"]["data"]["detail"]],
             });
           }
