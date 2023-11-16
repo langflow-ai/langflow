@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 import httpx
@@ -77,7 +77,7 @@ class StoreService(Service):
 
     async def _get(
         self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
-    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -91,7 +91,10 @@ class StoreService(Service):
                 raise exc
             except Exception as exc:
                 raise ValueError(f"GET failed: {exc}")
-        return response.json()["data"]
+        result = response.json()["data"]
+        if isinstance(result, dict):
+            return [result]
+        return result
 
     async def call_webhook(self, api_key: str, webhook_url: str, component_id: UUID) -> None:
         # The webhook is a POST request with the data in the body
@@ -317,16 +320,16 @@ class StoreService(Service):
         likes = await self._get(url, api_key, params)
         return likes
 
-    async def get_component_likes_count(self, api_key: str, component_id: str) -> int:
+    async def get_component_likes_count(self, component_id: str) -> int:
         url = f"{self.components_url}/{component_id}"
 
         params = {
             "fields": ",".join(["id", "count(liked_by)"]),
         }
-        result = await self._get(url, api_key, params)
+        result = await self._get(url, api_key=None, params=params)
         if len(result) == 0:
             raise ValueError("Component not found")
-        likes = result["liked_by_count"]
+        likes = result[0]["liked_by_count"]
         # likes_by_count is a string
         # try to convert it to int
         try:
