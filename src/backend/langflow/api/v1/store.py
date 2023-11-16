@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -127,7 +128,7 @@ async def get_components(
                     limit=limit,
                     sort=sort,
                     filter_conditions=filter_conditions,
-                    liked=liked,
+                    use_api_key=liked or filter_by_user,
                 )
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
