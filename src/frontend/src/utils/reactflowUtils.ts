@@ -1058,7 +1058,10 @@ export function getGroupStatus(
   return status;
 }
 
-export function createFlowComponent(nodeData: NodeDataType): FlowType {
+export function createFlowComponent(
+  nodeData: NodeDataType,
+  version: string
+): FlowType {
   nodeData.node!.official = false;
   const flowNode: FlowType = {
     data: {
@@ -1077,6 +1080,7 @@ export function createFlowComponent(nodeData: NodeDataType): FlowType {
     name: nodeData.node?.display_name || nodeData.type || "",
     id: nodeData.id || "",
     is_component: true,
+    last_tested_version: version,
   };
   return flowNode;
 }

@@ -31,9 +31,9 @@ import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates, getFilterEdge, setFilterEdge } =
+  const { data, templates, getFilterEdge, setFilterEdge, reactFlowInstance } =
     useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
@@ -173,7 +173,9 @@ export default function ExtraSidebar(): JSX.Element {
   }, [getFilterEdge]);
 
   const handleShareFlow = () => {
-    const reactFlow = flow!.data as ReactFlowJsonObject;
+    const reactFlow = reactFlowInstance
+      ? reactFlowInstance.toObject()
+      : (flow!.data as ReactFlowJsonObject);
     const saveFlow: FlowType = {
       name: flow!.name,
       id: flow!.id,
@@ -182,6 +184,7 @@ export default function ExtraSidebar(): JSX.Element {
         ...reactFlow,
       },
       is_component: false,
+      last_tested_version: version,
     };
     saveFlowStore(
       saveFlow,

@@ -65,7 +65,7 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent } = useContext(FlowsContext);
+  const { paste, saveComponent, version } = useContext(FlowsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -99,7 +99,7 @@ export default function NodeToolbarComponent({
     const componentFlow = cloneDeep(data);
     saveComponent(componentFlow).then(() => {
       saveFlowStore(
-        createFlowComponent(componentFlow),
+        createFlowComponent(componentFlow, version),
         getTagsIds(Array.from(selectedTags), tagListId),
         sharePublic
       ).then(
@@ -127,7 +127,7 @@ export default function NodeToolbarComponent({
         updateNodeInternals(data.id);
         break;
       case "Download":
-        downloadNode(createFlowComponent(cloneDeep(data)));
+        downloadNode(createFlowComponent(cloneDeep(data), version));
         break;
       case "Share":
         setShowconfirmShare(true);
