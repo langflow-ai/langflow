@@ -1,13 +1,15 @@
+import warnings
 from typing import Annotated, Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
 from langflow.services.store.schema import (
-    ComponentResponse,
+    CreateComponentResponse,
     DownloadComponentResponse,
     ListComponentResponse,
     ListComponentResponseModel,
@@ -59,8 +61,8 @@ def check_if_store_has_api_key(
     }
 
 
-@router.post("/components/", response_model=ComponentResponse, status_code=201)
-def create_component(
+@router.post("/components/", response_model=CreateComponentResponse, status_code=201)
+async def create_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
@@ -68,6 +70,11 @@ def create_component(
     try:
         # Verify if this is the latest version of Langflow
         # If not, raise an error
+        if not component.last_tested_version:
+            # Get the local version of Langflow
+            from langflow import __version__ as current_version
+
+            component.last_tested_version = current_version
         langflow_version = get_lf_version_from_pypi()
         if langflow_version is None:
             raise HTTPException(
@@ -76,12 +83,14 @@ def create_component(
             )
         elif langflow_version != component.last_tested_version:
             # If the user is using an older version of Langflow, we need to raise an error
-            raise ValueError(
+            # raise ValueError(
+            warnings.warn(
                 f"Your version of Langflow ({component.last_tested_version}) is outdated."
-                " Please update to the latest version ({langflow_version}) and try again."
+                f" Please update to the latest version ({langflow_version}) and try again."
             )
 
-        return store_service.upload(store_api_Key, component)
+        result = await store_service.upload(store_api_Key, component)
+        return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
