@@ -171,6 +171,7 @@ class StoreService(Service):
             filter_conditions.append(liked_filter)
         elif liked and not store_api_Key:
             raise ValueError("You must provide an API key to filter by likes")
+
         if filter_by_user and store_api_Key:
             user_data = user_data_var.get()
             if not user_data:
