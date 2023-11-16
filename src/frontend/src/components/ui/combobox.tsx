@@ -18,10 +18,14 @@ export function Combobox({
   onChange,
 }: {
   items: { value: string; label: string }[];
-  onChange: (value: string) => void;
+  onChange: (value: string[]) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    onChange(value);
+  }, [value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

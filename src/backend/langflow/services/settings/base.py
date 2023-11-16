@@ -138,9 +138,7 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
-    model_config = SettingsConfigDict(
-        validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_"
-    )
+    model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     # @model_validator()
     # @classmethod

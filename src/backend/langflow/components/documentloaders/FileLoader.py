@@ -122,9 +122,7 @@ class FileLoaderComponent(CustomComponent):
     beta = True
 
     def build_config(self):
-        loader_options = ["Automatic"] + [
-            loader_info["name"] for loader_info in loaders_info
-        ]
+        loader_options = ["Automatic"] + [loader_info["name"] for loader_info in loaders_info]
 
         file_types = []
         suffixes = []
@@ -214,9 +212,7 @@ class FileLoaderComponent(CustomComponent):
         if isinstance(selected_loader_info, dict):
             loader_import: str = selected_loader_info["import"]
         else:
-            raise ValueError(
-                f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}"
-            )
+            raise ValueError(f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}")
         module_name, class_name = loader_import.rsplit(".", 1)
 
         try:
@@ -224,9 +220,7 @@ class FileLoaderComponent(CustomComponent):
             loader_module = __import__(module_name, fromlist=[class_name])
             loader_instance = getattr(loader_module, class_name)
         except ImportError as e:
-            raise ValueError(
-                f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}"
-            ) from e
+            raise ValueError(f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}") from e
 
         result = loader_instance(file_path=file_path)
         return result.load()
