@@ -23,7 +23,7 @@ import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
-  const { errorApiKey, hasApiKey, setHasApiKey } = useContext(StoreContext);
+  const { validApiKey, setValidApiKey, hasApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -52,7 +52,7 @@ export default function StorePage(): JSX.Element {
     pageSize,
     filteredCategories,
     selectFilter,
-    hasApiKey,
+    validApiKey,
   ]);
 
   function handleGetTags() {
@@ -72,29 +72,36 @@ export default function StorePage(): JSX.Element {
         tabActive === "All" ? null : tabActive === "Flows" ? false : true,
       sort: pageOrder === "Popular" ? "-count(downloads)" : "name",
       tags: filteredCategories,
-      liked: selectFilter === "likedbyme" && hasApiKey ? true : null,
+      liked: selectFilter === "likedbyme" && validApiKey ? true : null,
       status: null,
       search: searchText === "" ? null : searchText,
-      filterByUser: selectFilter === "createdbyme" && hasApiKey ? true : null,
+      filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
       .then((res) => {
-        setHasApiKey(res?.authorized ?? false);
-        setLoading(false);
-        setSearchData(res?.results ?? []);
-        setTotalRowsCount(
-          filteredCategories?.length === 0
-            ? Number(res?.count ?? 0)
-            : res?.results?.length ?? 0
-        );
+        if (!res?.authorized && validApiKey === true) {
+          setValidApiKey(false);
+        } else {
+          setLoading(false);
+          setSearchData(res?.results ?? []);
+          setTotalRowsCount(
+            filteredCategories?.length === 0
+              ? Number(res?.count ?? 0)
+              : res?.results?.length ?? 0
+          );
+        }
       })
       .catch((err) => {
-        setSearchData([]);
-        setTotalRowsCount(0);
-        setLoading(false);
-        setErrorData({
-          title: "Error to get components.",
-          list: [err["response"]["data"]["detail"]],
-        });
+        if (err.response.status === 403) {
+          setValidApiKey(false);
+        } else {
+          setSearchData([]);
+          setTotalRowsCount(0);
+          setLoading(false);
+          setErrorData({
+            title: "Error to get components.",
+            list: [err["response"]["data"]["detail"]],
+          });
+        }
       });
   }
 
@@ -123,17 +130,10 @@ export default function StorePage(): JSX.Element {
               Langflow Store
             </span>
             <div className="community-page-nav-button">
-              <StoreApiKeyModal
-                onCloseModal={() => {
-                  handleGetTags();
-                  handleGetComponents();
-                }}
-              >
+              <StoreApiKeyModal>
                 <Button
                   className={`${
-                    errorApiKey && !hasApiKey
-                      ? "animate-pulse border-error"
-                      : ""
+                    !validApiKey ? "animate-pulse border-error" : ""
                   }`}
                   variant="primary"
                 >
@@ -303,7 +303,7 @@ export default function StorePage(): JSX.Element {
                       <MarketCardComponent
                         key={item.id}
                         data={item}
-                        authorized={hasApiKey}
+                        authorized={validApiKey}
                         disabled={loading}
                       />
                     </>

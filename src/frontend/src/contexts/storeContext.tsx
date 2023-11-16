@@ -1,34 +1,24 @@
 import { createContext, useEffect, useState } from "react";
-import {
-  checkHasApiKey,
-  checkHasStore,
-  getStoreComponents,
-} from "../controllers/API";
+import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
 
 //store context to share user components and update them
 const initialValue = {
-  savedFlows: new Set<string>(),
-  setSavedFlows: () => {},
   hasStore: true,
   setHasStore: () => {},
+  validApiKey: false,
+  setValidApiKey: () => {},
   hasApiKey: false,
   setHasApiKey: () => {},
-  getSavedComponents: () => {},
-  errorApiKey: false,
-  loadingSaved: false,
 };
 
 export const StoreContext = createContext<storeContextType>(initialValue);
 
 export function StoreProvider({ children }) {
-  const [savedFlows, setSavedFlows] = useState<Set<string>>(new Set());
-
   const [hasStore, setHasStore] = useState(true);
   const [hasApiKey, setHasApiKey] = useState(false);
+  const [validApiKey, setValidApiKey] = useState(false);
   const [storeChecked, setStoreChecked] = useState(false);
-  const [loadingSaved, setLoadingSaved] = useState(false);
-  const [errorApiKey, setErrorApiKey] = useState(false);
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -43,35 +33,7 @@ export function StoreProvider({ children }) {
     };
 
     fetchStoreData();
-    getSavedComponents();
   }, []);
-
-  function getSavedComponents() {
-    setLoadingSaved(true);
-    getStoreComponents({
-      sort: "-count(liked_by)",
-      filterByUser: true,
-    })
-      .then((data) => {
-        if (data?.authorized === false) {
-          setErrorApiKey(true);
-          setSavedFlows(new Set<string>());
-        } else {
-          let savedIds = new Set<string>();
-          let results = data?.results ?? [];
-          results.forEach((flow) => {
-            savedIds.add(flow.id);
-          });
-          setSavedFlows(savedIds);
-          setErrorApiKey(false);
-          setLoadingSaved(false);
-        }
-      })
-      .catch((err) => {
-        setSavedFlows(new Set<string>());
-        setErrorApiKey(true);
-      });
-  }
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -80,26 +42,26 @@ export function StoreProvider({ children }) {
         const res = await checkHasApiKey();
         console.log(res);
         setHasApiKey(res?.has_api_key ?? false);
+        if (!res?.has_api_key) {
+          setValidApiKey(false);
+        }
       } catch (e) {
         console.log(e);
       }
     };
 
     fetchStoreData();
-  }, [storeChecked]);
+  }, [storeChecked, validApiKey]);
 
   return (
     <StoreContext.Provider
       value={{
-        savedFlows,
-        setSavedFlows,
         hasStore,
         setHasStore,
         hasApiKey,
         setHasApiKey,
-        getSavedComponents,
-        errorApiKey,
-        loadingSaved,
+        validApiKey,
+        setValidApiKey,
       }}
     >
       {children}
