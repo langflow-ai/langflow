@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { Link } from "react-router-dom";
-import { CardComponent } from "../../../../components/cardComponent";
+import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
@@ -34,7 +34,7 @@ export default function FlowsComponent() {
         .filter((flow) => !flow.is_component)
         .reverse()
         .map((flow, idx) => (
-          <CardComponent
+          <CollectionCardComponent
             key={idx}
             data={flow}
             button={

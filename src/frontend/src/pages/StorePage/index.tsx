@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
+import CollectionCardComponent from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
@@ -21,7 +22,6 @@ import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
@@ -326,7 +326,7 @@ export default function StorePage(): JSX.Element {
                 searchData.map((item) => {
                   return (
                     <>
-                      <MarketCardComponent
+                      <CollectionCardComponent
                         key={item.id}
                         data={item}
                         authorized={validApiKey}

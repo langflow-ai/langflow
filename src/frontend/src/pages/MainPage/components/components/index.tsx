@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { CardComponent } from "../../../../components/cardComponent";
+import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
@@ -31,7 +31,7 @@ export default function ComponentsComponent() {
       {flows
         .filter((flow) => flow.is_component)
         .map((flow, idx) => (
-          <CardComponent
+          <CollectionCardComponent
             key={idx}
             data={flow}
             onDelete={() => {

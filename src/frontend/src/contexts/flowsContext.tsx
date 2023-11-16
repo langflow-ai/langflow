@@ -29,7 +29,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowsContextType, TabsState } from "../types/tabs";
+import { FlowsContextType, FlowsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
@@ -73,7 +73,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
-  setTabsState: (state: TabsState) => {},
+  setTabsState: (state: FlowsState) => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -107,7 +107,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     nodes: any;
     edges: any;
   } | null>(null);
-  const [tabsState, setTabsState] = useState<TabsState>({});
+  const [tabsState, setTabsState] = useState<FlowsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
 
   useEffect(() => {
@@ -698,7 +698,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           ` (${increment})`;
       }
     }
-    return addFlow(true, createFlowComponent(component));
+    return addFlow(true, createFlowComponent(component, version));
   }
 
   function deleteComponent(id: string, key: string) {
