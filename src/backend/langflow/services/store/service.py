@@ -4,6 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -12,7 +14,6 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -141,6 +142,8 @@ class StoreService(Service):
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         filter_by_user: Optional[bool] = False,
+        liked: Optional[bool] = False,
+        store_api_Key: Optional[str] = None,
     ):
         filter_conditions = []
 
@@ -157,13 +160,18 @@ class StoreService(Service):
 
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
-
-        if filter_by_user:
+        if liked and store_api_Key:
+            liked_filter = self.build_liked_filter(liked, store_api_Key)
+            filter_conditions.append(liked_filter)
+        elif liked and not store_api_Key:
+            raise ValueError("You must provide an API key to filter by likes")
+        if filter_by_user and store_api_Key:
             user_data = user_data_var.get()
             if not user_data:
                 raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
-
+        elif filter_by_user and not store_api_Key:
+            raise ValueError("You must provide an API key to filter your components")
         return filter_conditions
 
     def build_liked_filter(self, liked: bool, api_key: Optional[str] = None):
