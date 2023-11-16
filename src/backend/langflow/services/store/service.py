@@ -4,6 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -12,7 +14,6 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -150,7 +151,7 @@ class StoreService(Service):
             search_conditions = self.build_search_filter_conditions(search)
             filter_conditions.append(search_conditions)
 
-        if status:
+        if status is not None:
             filter_conditions.append({"status": {"_eq": status}})
 
         if tags:
@@ -171,20 +172,17 @@ class StoreService(Service):
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         elif filter_by_user and not store_api_Key:
             raise ValueError("You must provide an API key to filter your components")
+        else:
+            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
+
         return filter_conditions
 
     def build_liked_filter(self, liked: bool, api_key: Optional[str] = None):
-        if liked and not api_key:
-            raise ValueError("No API key provided")
-
-        if liked and api_key:
-            user_data = user_data_var.get()
-            # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
-            if not user_data:
-                raise ValueError("No user data")
-            return {"liked_by": {"_eq": user_data["id"]}}
-        else:
-            return {"status": {"_in": ["public", "Public"]}}
+        user_data = user_data_var.get()
+        # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
+        if not user_data:
+            raise ValueError("No user data")
+        return {"liked_by": {"_eq": user_data["id"]}}
 
     async def query_components(
         self,
@@ -194,7 +192,7 @@ class StoreService(Service):
         limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_conditions: Optional[List[Dict[str, Any]]] = None,
-        liked: Optional[bool] = False,
+        use_api_key: Optional[bool] = False,
     ) -> List[ListComponentResponse]:
         params: Dict[str, Any] = {
             "page": page,
@@ -211,7 +209,7 @@ class StoreService(Service):
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
-        if not liked:
+        if not use_api_key:
             # If not liked, this means we are getting public components
             # so we don't need to risk passing an invalid api_key
             # and getting 401
