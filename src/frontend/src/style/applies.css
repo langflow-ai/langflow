@@ -353,34 +353,6 @@
     @apply alert-font-size text-success-foreground word-break-break-word;
   }
 
-  .card-component-title-display {
-    @apply round-button-div flex-max-width;
-  }
-  .card-component-image {
-    @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
-  }
-  .card-component-title-size {
-    @apply w-full flex-1 truncate-doubleline word-break-break-word;
-  }
-  .card-component-delete-button {
-    @apply flex self-start;
-  }
-  .card-component-delete-icon {
-    @apply h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100;
-  }
-  .card-component-desc {
-    @apply pb-2 pt-2;
-  }
-  .card-component-desc-text {
-    @apply truncate-doubleline;
-  }
-  .card-component-footer-arrangement {
-    @apply flex-max-width items-end justify-between gap-2;
-  }
-  .card-component-footer {
-    @apply flex flex-wrap gap-2;
-  }
-
   .unused-side-bar-aside {
     @apply flex flex-shrink-0 flex-col overflow-hidden border-r  transition-all duration-500;
   }

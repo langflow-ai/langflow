@@ -8,6 +8,7 @@ import {
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
+import ShortUniqueId from "short-unique-id";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
@@ -519,6 +520,7 @@ export function generateFlow(
 
   const newFlow: FlowType = {
     data: newFlowData,
+    is_component: false,
     name: name,
     description: "",
     //generating local id instead of using the id from the server, can change in the future
