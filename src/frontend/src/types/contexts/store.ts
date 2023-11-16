@@ -5,4 +5,5 @@ export type storeContextType = {
   hasApiKey: boolean;
   setValidApiKey: (key: boolean) => void;
   validApiKey: boolean;
+  loadingApiKey: boolean;
 };

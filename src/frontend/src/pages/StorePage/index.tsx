@@ -23,7 +23,8 @@ import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
-  const { validApiKey, setValidApiKey, hasApiKey } = useContext(StoreContext);
+  const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
+    useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -44,6 +45,26 @@ export default function StorePage(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    if (!loadingApiKey) {
+      if (!hasApiKey) {
+        setErrorData({
+          title: "API Key Error",
+          list: [
+            "You don't have an API Key. Please add one to use the Langflow Store.",
+          ],
+        });
+      } else if (!validApiKey) {
+        setErrorData({
+          title: "API Key Error",
+          list: [
+            "Your API Key is not valid. Please add a valid API Key to use the Langflow Store.",
+          ],
+        });
+      }
+    }
+  }, [loadingApiKey, validApiKey, hasApiKey]);
+
+  useEffect(() => {
     handleGetComponents();
   }, [
     tabActive,
@@ -53,6 +74,7 @@ export default function StorePage(): JSX.Element {
     filteredCategories,
     selectFilter,
     validApiKey,
+    hasApiKey,
   ]);
 
   function handleGetTags() {
@@ -64,6 +86,7 @@ export default function StorePage(): JSX.Element {
   }
 
   function handleGetComponents() {
+    if (!hasApiKey) return;
     setLoading(true);
     getStoreComponents({
       page: pageIndex,
@@ -81,6 +104,9 @@ export default function StorePage(): JSX.Element {
         if (!res?.authorized && validApiKey === true) {
           setValidApiKey(false);
         } else {
+          if (res?.authorized) {
+            setValidApiKey(true);
+          }
           setLoading(false);
           setSearchData(res?.results ?? []);
           setTotalRowsCount(
