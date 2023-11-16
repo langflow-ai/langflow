@@ -3,7 +3,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -158,7 +157,7 @@ async def get_components(
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
-async def read_component(
+async def download_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
