@@ -51,12 +51,19 @@ def check_if_store_is_enabled(
 
 
 @router.get("/check/api_key")
-def check_if_store_has_api_key(
-    api_key=Depends(get_optional_user_store_api_key),
+async def check_if_store_has_api_key(
+    api_key: Optional[str] = Depends(get_optional_user_store_api_key),
+    store_service: StoreService = Depends(get_store_service),
 ):
-    return {
-        "has_api_key": api_key is not None,
-    }
+    if api_key is None:
+        return {"has_api_key": False}
+
+    try:
+        is_valid = await store_service.check_api_key(api_key)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"has_api_key": is_valid}
 
 
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)

@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -15,6 +13,7 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -77,6 +76,23 @@ class StoreService(Service):
     # get the user data and all requests inside the context manager
     # will make a property return that data
     # Without making the request multiple times
+
+    async def check_api_key(self, api_key: str):
+        # Check if the api key is valid
+        # If it is, return True
+        # If it is not, return False
+        try:
+            user_data, _ = await self._get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
+            if isinstance(user_data, list):
+                user_data = user_data[0]
+            return "id" in user_data
+        except HTTPStatusError as exc:
+            if exc.response.status_code in [403, 401]:
+                return False
+            else:
+                raise ValueError(f"Unexpected status code: {exc.response.status_code}")
+        except Exception as exc:
+            raise ValueError(f"Unexpected error: {exc}")
 
     async def _get(
         self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
