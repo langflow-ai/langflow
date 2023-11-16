@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -227,7 +228,7 @@ async def like_component(
 ):
     try:
         result = await store_service.like_component(store_api_Key, str(component_id))
-        likes_count = await store_service.get_component_likes_count(store_api_Key, str(component_id))
+        likes_count = await store_service.get_component_likes_count(str(component_id))
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
