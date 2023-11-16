@@ -4,7 +4,6 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
-  Component,
   LoginType,
   Users,
   changeUser,
@@ -590,17 +589,27 @@ export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
   return await api.get(`${BASE_URL_API}store/`);
 }
 
-export async function getStoreComponents(
-  page?: number | null,
-  limit?: number | null,
-  is_component?: boolean | null,
-  sort?: string | null,
-  tags?: string[] | null,
-  liked?: boolean | null,
-  status?: string | null,
-  search?: string | null,
-  filterByUser?: boolean | null
-): Promise<StoreComponentResponse | undefined> {
+export async function getStoreComponents({
+  page = 1,
+  limit = 9999999,
+  is_component = null,
+  sort = "-count(liked_by)",
+  tags = [] || null,
+  liked = null,
+  status = null,
+  search = null,
+  filterByUser = null,
+}: {
+  page?: number;
+  limit?: number;
+  is_component?: boolean | null;
+  sort?: string;
+  tags?: string[] | null;
+  liked?: boolean | null;
+  status?: string | null;
+  search?: string | null;
+  filterByUser?: boolean | null;
+}): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
     const queryParams: any = [];
@@ -643,18 +652,6 @@ export async function getStoreComponents(
 
     const res = await api.get(url);
 
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    console.log("Error:", error);
-    throw error;
-  }
-}
-
-export async function postStoreComponents(component: Component) {
-  try {
-    const res = await api.post(`${BASE_URL_API}store/components/`, component);
     if (res.status === 200) {
       return res.data;
     }

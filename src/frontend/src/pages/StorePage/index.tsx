@@ -65,17 +65,18 @@ export default function StorePage(): JSX.Element {
 
   function handleGetComponents() {
     setLoading(true);
-    getStoreComponents(
-      pageIndex,
-      pageSize,
-      tabActive === "All" ? null : tabActive === "Flows" ? false : true,
-      pageOrder === "Popular" ? "-count(downloads)" : "name",
-      filteredCategories,
-      selectFilter === "likedbyme" && hasApiKey ? true : null,
-      null,
-      searchText === "" ? null : searchText,
-      selectFilter === "createdbyme" && hasApiKey ? true : null
-    )
+    getStoreComponents({
+      page: pageIndex,
+      limit: pageSize,
+      is_component:
+        tabActive === "All" ? null : tabActive === "Flows" ? false : true,
+      sort: pageOrder === "Popular" ? "-count(downloads)" : "name",
+      tags: filteredCategories,
+      liked: selectFilter === "likedbyme" && hasApiKey ? true : null,
+      status: null,
+      search: searchText === "" ? null : searchText,
+      filterByUser: selectFilter === "createdbyme" && hasApiKey ? true : null,
+    })
       .then((res) => {
         setHasApiKey(res?.authorized ?? false);
         setLoading(false);
