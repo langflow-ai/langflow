@@ -60,8 +60,7 @@ class DownloadComponentResponse(BaseModel):
     description: Optional[str]
     data: Optional[dict]
     is_component: Optional[bool]
-    metadata: Optional[dict]
-    downloads_count: Optional[int]
+    metadata: Optional[dict] = {}
 
 
 class StoreComponentCreate(BaseModel):
