@@ -142,6 +142,8 @@ async def get_components(
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
                     raise ValueError("You are not authorized to access this public resource")
+                elif exc.response.status_code == 401:
+                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
 
             if store_api_Key and result:
                 # Now, from the result, we need to get the components
@@ -161,6 +163,8 @@ async def get_components(
             if exc.response.status_code == 403:
                 raise HTTPException(status_code=403, detail="Forbidden")
         elif isinstance(exc, ValueError):
+            if "Check your API key" in str(exc):
+                raise HTTPException(status_code=401, detail=str(exc))
             raise HTTPException(status_code=403, detail=str(exc))
 
         raise HTTPException(status_code=500, detail=str(exc))
