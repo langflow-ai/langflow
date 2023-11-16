@@ -10,6 +10,7 @@ export type FlowType = {
   is_component?: boolean;
   parent?: string;
   date_created?: string;
+  version?: string;
 };
 export type NodeType = {
   id: string;
