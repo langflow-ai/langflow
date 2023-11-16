@@ -147,7 +147,7 @@ export default function StorePage(): JSX.Element {
                 <Input
                   disabled={loading}
                   placeholder="Search Flows and Components"
-                  className="absolute h-12 px-5"
+                  className="absolute h-12 pl-5 pr-12"
                   onChange={(e) => {
                     setInputText(e.target.value);
                   }}
