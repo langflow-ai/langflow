@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -141,6 +140,7 @@ async def get_components(
                         comp_count = await store_service.count_components(
                             api_key=store_api_Key,
                             filter_conditions=filter_conditions,
+                            use_api_key=liked or filter_by_user,
                         )
                     else:
                         comp_count = len(result)
