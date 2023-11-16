@@ -556,6 +556,7 @@ export async function saveFlowStore(
     style?: FlowStyleType;
     is_component?: boolean;
     parent?: string;
+    last_tested_version?: string;
   },
   tags: string[],
   publicFlow = false
@@ -569,6 +570,7 @@ export async function saveFlowStore(
       parent: newFlow.parent,
       tags: tags,
       status: publicFlow ? "public" : "private",
+      last_tested_version: newFlow.last_tested_version,
     });
 
     if (response.status !== 201) {
