@@ -298,11 +298,13 @@ class StoreService(Service):
 
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
         url = f"{self.components_url}/{component_id}"
-        params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
+        params = {"fields": ",".join(["id", "name", "description", "data", "is_component", "metadata"])}
         if not self.download_webhook_url:
             raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
         component, _ = await self._get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
+        if isinstance(component, list):
+            component = component[0]
 
         return DownloadComponentResponse(**component)
 
