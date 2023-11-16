@@ -72,7 +72,8 @@ export default function StorePage(): JSX.Element {
       filteredCategories,
       selectFilter === "likedbyme" ? true : null,
       null,
-      searchText === "" ? null : searchText
+      searchText === "" ? null : searchText,
+      selectFilter === "createdbyme" ? true : null
     )
       .then((res) => {
         setLoading(false);

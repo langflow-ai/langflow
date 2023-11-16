@@ -599,7 +599,7 @@ export async function getStoreComponents(
   liked?: boolean | null,
   status?: string | null,
   search?: string | null,
-  filterByUser?: string | null
+  filterByUser?: boolean | null
 ): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
