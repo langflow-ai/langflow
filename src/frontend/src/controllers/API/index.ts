@@ -4,6 +4,7 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
+  Component,
   LoginType,
   Users,
   changeUser,
@@ -652,6 +653,18 @@ export async function getStoreComponents({
 
     const res = await api.get(url);
 
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function postStoreComponents(component: Component) {
+  try {
+    const res = await api.post(`${BASE_URL_API}store/components/`, component);
     if (res.status === 200) {
       return res.data;
     }
