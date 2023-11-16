@@ -1,18 +1,19 @@
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
-    ComponentResponse,
+    CreateComponentResponse,
     DownloadComponentResponse,
     ListComponentResponse,
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -74,7 +75,7 @@ class StoreService(Service):
 
     async def _get(
         self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -257,7 +258,7 @@ class StoreService(Service):
 
         return DownloadComponentResponse(**component)
 
-    async def upload(self, api_key: str, component_data: StoreComponentCreate) -> ComponentResponse:
+    async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
         component_dict = component_data.dict(exclude_unset=True)
         # Parent is a UUID, but the store expects a string
@@ -273,7 +274,7 @@ class StoreService(Service):
                 response = await client.post(self.components_url, headers=headers, json=component_dict)
                 response.raise_for_status()
             component = response.json()["data"]
-            return ComponentResponse(**component)
+            return CreateComponentResponse(**component)
         except HTTPError as exc:
             if response:
                 try:

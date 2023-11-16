@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -15,24 +14,8 @@ class UsersLikesResponse(BaseModel):
     liked_by_user: Optional[bool]
 
 
-class ComponentResponse(BaseModel):
+class CreateComponentResponse(BaseModel):
     id: UUID
-    status: Optional[str]
-    sort: Optional[int]
-    user_name: Optional[str]
-    date_created: Optional[datetime]
-    user_updated: Optional[UUID]
-    date_updated: Optional[datetime]
-    is_component: Optional[bool]
-    name: Optional[str]
-    description: Optional[str]
-    data: Optional[dict]
-    tags: Optional[List[int]]
-    liked_by_count: Optional[int]
-    downloads_count: Optional[int]
-    parent: Optional[UUID] = None
-    metadata: Optional[dict]
-    last_tested_version: Optional[str]
 
 
 class TagsIdResponse(BaseModel):
@@ -88,6 +71,5 @@ class StoreComponentCreate(BaseModel):
     tags: Optional[List[str]]
     parent: Optional[UUID] = None
     is_component: Optional[bool]
-    metadata: Optional[dict]
-    last_tested_version: Optional[str]
+    last_tested_version: Optional[str] = None
     public: Optional[bool] = False
