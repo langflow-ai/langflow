@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -14,22 +12,25 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
 user_data_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar("user_data", default=None)
 
 
-@contextmanager
-def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
+@asynccontextmanager
+async def user_data_context(store_service: "StoreService", api_key: Optional[str] = None):
     # Fetch and set user data to the context variable
     if api_key:
         try:
-            user_data = store_service._get(f"{store_service.base_url}/users/me", api_key, params={"fields": "id"})
+            user_data = await store_service._get(f"{store_service.base_url}/users/me", api_key, params={"fields": "id"})
+            if isinstance(user_data, list):
+                user_data = user_data[0]
             user_data_var.set(user_data)
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
@@ -139,8 +140,6 @@ class StoreService(Service):
         status: Optional[str] = None,
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
-        liked: bool = False,
-        api_key: Optional[str] = None,
         filter_by_user: Optional[bool] = False,
     ):
         filter_conditions = []
@@ -165,9 +164,6 @@ class StoreService(Service):
                 raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
 
-        liked_filter = self.build_liked_filter(liked, api_key)
-        filter_conditions.append(liked_filter)
-
         return filter_conditions
 
     def build_liked_filter(self, liked: bool, api_key: Optional[str] = None):
@@ -191,6 +187,7 @@ class StoreService(Service):
         limit: int = 15,
         fields: Optional[List[str]] = None,
         filter_conditions: Optional[List[Dict[str, Any]]] = None,
+        liked: Optional[bool] = False,
     ) -> List[ListComponentResponse]:
         params: Dict[str, Any] = {
             "page": page,
@@ -207,8 +204,14 @@ class StoreService(Service):
 
         if filter_conditions:
             params["filter"] = json.dumps({"_and": filter_conditions})
-
+        if not liked:
+            # If not liked, this means we are getting public components
+            # so we don't need to risk passing an invalid api_key
+            # and getting 401
+            api_key = None
         results = await self._get(self.components_url, api_key, params)
+        if isinstance(results, dict):
+            results = [results]
         results_objects = [ListComponentResponse(**component) for component in results]
         # Flatten the tags
         # for component in results_objects:
