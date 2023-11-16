@@ -88,6 +88,7 @@ export default function StorePage(): JSX.Element {
       })
       .catch((err) => {
         setSearchData([]);
+        setTotalRowsCount(0);
         setLoading(false);
         setErrorData({
           title: "Error to get components.",
