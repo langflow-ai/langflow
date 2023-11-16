@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -41,7 +42,7 @@ def get_optional_user_store_api_key(
     return decrypted
 
 
-@router.get("/check")
+@router.get("/check/")
 def check_if_store_is_enabled(
     settings_service=Depends(get_settings_service),
 ):
