@@ -598,7 +598,8 @@ export async function getStoreComponents(
   tags?: string[] | null,
   liked?: boolean | null,
   status?: string | null,
-  search?: string | null
+  search?: string | null,
+  filterByUser?: string | null
 ): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
@@ -621,6 +622,10 @@ export async function getStoreComponents(
 
     if (liked !== undefined && liked !== null) {
       queryParams.push(`liked=${liked}`);
+    }
+
+    if (filterByUser !== undefined && filterByUser !== null) {
+      queryParams.push(`filter_by_user=${filterByUser}`);
     }
 
     if (page !== undefined) {

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -102,6 +103,7 @@ async def get_components(
     tags: Annotated[Optional[list[str]], Query()] = None,
     sort: Annotated[Union[list[str], None], Query()] = None,
     liked: Annotated[bool, Query()] = False,
+    filter_by_user: Annotated[bool, Query()] = False,
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
@@ -116,6 +118,7 @@ async def get_components(
                 is_component=is_component,
                 liked=liked,
                 api_key=store_api_Key,
+                filter_by_user=filter_by_user,
             )
             result: List[ListComponentResponse] = []
             authorized = False
