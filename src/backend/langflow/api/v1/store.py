@@ -110,21 +110,30 @@ async def get_components(
     store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
-        with user_data_context(api_key=store_api_Key, store_service=store_service):
+        async with user_data_context(api_key=store_api_Key, store_service=store_service):
             filter_conditions: List[Dict[str, Any]] = store_service.build_filter_conditions(
                 search=search,
                 status=status,
                 tags=tags,
                 is_component=is_component,
-                liked=liked,
-                api_key=store_api_Key,
                 filter_by_user=filter_by_user,
             )
+            if liked and store_api_Key:
+                liked_filter = store_service.build_liked_filter(liked, store_api_Key)
+                filter_conditions.append(liked_filter)
+            elif liked and not store_api_Key:
+                raise ValueError("You must provide an API key to filter by likes")
+
             result: List[ListComponentResponse] = []
             authorized = False
             try:
                 result = await store_service.query_components(
-                    api_key=store_api_Key, page=page, limit=limit, sort=sort, filter_conditions=filter_conditions
+                    api_key=store_api_Key,
+                    page=page,
+                    limit=limit,
+                    sort=sort,
+                    filter_conditions=filter_conditions,
+                    liked=liked,
                 )
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
@@ -168,6 +177,8 @@ async def get_components(
         elif isinstance(exc, ValueError):
             if "Check your API key" in str(exc):
                 raise HTTPException(status_code=401, detail=str(exc))
+            elif "filter by likes" in str(exc):
+                raise HTTPException(status_code=400, detail=str(exc))
             raise HTTPException(status_code=403, detail=str(exc))
 
         raise HTTPException(status_code=500, detail=str(exc))
