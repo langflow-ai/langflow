@@ -49,7 +49,7 @@ class ListComponentResponse(BaseModel):
 
 
 class ListComponentResponseModel(BaseModel):
-    count: int
+    count: Optional[int] = 0
     authorized: bool
     results: Optional[List[ListComponentResponse]]
 

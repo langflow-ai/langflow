@@ -1,9 +1,11 @@
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -13,7 +15,6 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -29,7 +30,9 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
     # Fetch and set user data to the context variable
     if api_key:
         try:
-            user_data = await store_service._get(f"{store_service.base_url}/users/me", api_key, params={"fields": "id"})
+            user_data, _ = await store_service._get(
+                f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
+            )
             if isinstance(user_data, list):
                 user_data = user_data[0]
             user_data_var.set(user_data)
@@ -77,7 +80,7 @@ class StoreService(Service):
 
     async def _get(
         self, url: str, api_key: Optional[str] = None, params: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """Utility method to perform GET requests."""
         if api_key:
             headers = {"Authorization": f"Bearer {api_key}"}
@@ -91,10 +94,15 @@ class StoreService(Service):
                 raise exc
             except Exception as exc:
                 raise ValueError(f"GET failed: {exc}")
-        result = response.json()["data"]
+        json_response = response.json()
+        result = json_response["data"]
+        metadata = {}
+        if "meta" in json_response:
+            metadata = json_response["meta"]
+
         if isinstance(result, dict):
-            return [result]
-        return result
+            return [result], metadata
+        return result, metadata
 
     async def call_webhook(self, api_key: str, webhook_url: str, component_id: UUID) -> None:
         # The webhook is a POST request with the data in the body
@@ -128,7 +136,7 @@ class StoreService(Service):
 
         api_key = api_key if use_api_key else None
 
-        results = await self._get(self.components_url, api_key, params)
+        results, _ = await self._get(self.components_url, api_key, params)
         return int(results[0].get("count", 0))
 
     @staticmethod
@@ -200,11 +208,12 @@ class StoreService(Service):
         fields: Optional[List[str]] = None,
         filter_conditions: Optional[List[Dict[str, Any]]] = None,
         use_api_key: Optional[bool] = False,
-    ) -> List[ListComponentResponse]:
+    ) -> Tuple[List[ListComponentResponse], Dict[str, Any]]:
         params: Dict[str, Any] = {
             "page": page,
             "limit": limit,
             "fields": ",".join(fields) if fields else ",".join(self.default_fields),
+            "meta": "filter_count",  # !This is DEPRECATED so we should remove it ASAP
         }
         # ?aggregate[count]=likes
 
@@ -221,7 +230,7 @@ class StoreService(Service):
         # so we don't need to risk passing an invalid api_key
         # and getting 401
         api_key = api_key if use_api_key else None
-        results = await self._get(self.components_url, api_key, params)
+        results, metadata = await self._get(self.components_url, api_key, params)
         if isinstance(results, dict):
             results = [results]
         results_objects = [ListComponentResponse(**component) for component in results]
@@ -229,7 +238,7 @@ class StoreService(Service):
         # for component in results_objects:
         #     if component.tags:
         #         component.tags = [tags_id.tags_id for tags_id in component.tags]
-        return results_objects
+        return results_objects, metadata
 
     async def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[str]:
         # Get fields id
@@ -249,7 +258,7 @@ class StoreService(Service):
                 }
             ),
         }
-        results = await self._get(self.components_url, api_key, params)
+        results, _ = await self._get(self.components_url, api_key, params)
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
@@ -268,7 +277,7 @@ class StoreService(Service):
                 }
             ),
         }
-        results = await self._get(self.components_url, api_key, params)
+        results, _ = await self._get(self.components_url, api_key, params)
         return [result["id"] for result in results]
 
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
@@ -276,7 +285,7 @@ class StoreService(Service):
         params = {"fields": ",".join(["id", "name", "description", "data", "is_component"])}
         if not self.download_webhook_url:
             raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
-        component = await self._get(url, api_key, params)
+        component, _ = await self._get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
 
         return DownloadComponentResponse(**component)
@@ -311,7 +320,7 @@ class StoreService(Service):
     async def get_tags(self) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
         params = {"fields": ",".join(["id", "name"])}
-        tags = await self._get(url, api_key=None, params=params)
+        tags, _ = await self._get(url, api_key=None, params=params)
         return tags
 
     async def get_user_likes(self, api_key: str) -> List[Dict[str, Any]]:
@@ -319,7 +328,7 @@ class StoreService(Service):
         params = {
             "fields": ",".join(["id", "likes"]),
         }
-        likes = await self._get(url, api_key, params)
+        likes, _ = await self._get(url, api_key, params)
         return likes
 
     async def get_component_likes_count(self, component_id: str, api_key: Optional[str] = None) -> int:
@@ -328,7 +337,7 @@ class StoreService(Service):
         params = {
             "fields": ",".join(["id", "count(liked_by)"]),
         }
-        result = await self._get(url, api_key=api_key, params=params)
+        result, _ = await self._get(url, api_key=api_key, params=params)
         if len(result) == 0:
             raise ValueError("Component not found")
         likes = result[0]["liked_by_count"]
@@ -399,7 +408,7 @@ class StoreService(Service):
             result: List[ListComponentResponse] = []
             authorized = False
             try:
-                result = await self.query_components(
+                result, metadata = await self.query_components(
                     api_key=store_api_Key,
                     page=page,
                     limit=limit,
@@ -407,13 +416,15 @@ class StoreService(Service):
                     filter_conditions=filter_conditions,
                     use_api_key=liked or filter_by_user,
                 )
+                if metadata:
+                    comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
                     raise ValueError("You are not authorized to access this public resource")
                 elif exc.response.status_code == 401:
                     raise ValueError("You are not authorized to access this resource. Please check your API key.")
             try:
-                if result:
+                if result and not metadata:
                     if len(result) >= limit:
                         comp_count = await self.count_components(
                             api_key=store_api_Key,
@@ -422,7 +433,7 @@ class StoreService(Service):
                         )
                     else:
                         comp_count = len(result)
-                else:
+                elif not metadata:
                     comp_count = 0
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
