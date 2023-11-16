@@ -228,7 +228,7 @@ async def like_component(
 ):
     try:
         result = await store_service.like_component(store_api_Key, str(component_id))
-        likes_count = await store_service.get_component_likes_count(str(component_id))
+        likes_count = await store_service.get_component_likes_count(str(component_id), store_api_Key)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except Exception as exc:
