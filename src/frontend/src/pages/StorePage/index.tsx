@@ -23,7 +23,7 @@ import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import { MarketCardComponent } from "./components/market-card";
 export default function StorePage(): JSX.Element {
-  const { errorApiKey, hasApiKey } = useContext(StoreContext);
+  const { errorApiKey, hasApiKey, setHasApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -52,6 +52,7 @@ export default function StorePage(): JSX.Element {
     pageSize,
     filteredCategories,
     selectFilter,
+    hasApiKey,
   ]);
 
   function handleGetTags() {
@@ -70,12 +71,13 @@ export default function StorePage(): JSX.Element {
       tabActive === "All" ? null : tabActive === "Flows" ? false : true,
       pageOrder === "Popular" ? "-count(downloads)" : "name",
       filteredCategories,
-      selectFilter === "likedbyme" ? true : null,
+      selectFilter === "likedbyme" && hasApiKey ? true : null,
       null,
       searchText === "" ? null : searchText,
-      selectFilter === "createdbyme" ? true : null
+      selectFilter === "createdbyme" && hasApiKey ? true : null
     )
       .then((res) => {
+        setHasApiKey(res?.authorized ?? false);
         setLoading(false);
         setSearchData(res?.results ?? []);
         setTotalRowsCount(
