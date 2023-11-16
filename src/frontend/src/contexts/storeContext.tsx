@@ -1,6 +1,7 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { checkHasApiKey, checkHasStore } from "../controllers/API";
 import { storeContextType } from "../types/contexts/store";
+import { AuthContext } from "./authContext";
 
 //store context to share user components and update them
 const initialValue = {
@@ -21,6 +22,7 @@ export function StoreProvider({ children }) {
   const [hasApiKey, setHasApiKey] = useState(true);
   const [validApiKey, setValidApiKey] = useState(false);
   const [storeChecked, setStoreChecked] = useState(false);
+  const { apiKey } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchStoreData = async () => {
@@ -37,23 +39,22 @@ export function StoreProvider({ children }) {
     fetchStoreData();
   }, []);
 
-  useEffect(() => {
+  const fetchApiData = async () => {
     setLoadingApiKey(true);
-    const fetchStoreData = async () => {
-      try {
-        if (storeChecked) return;
-        const res = await checkHasApiKey();
-        console.log(res);
-        setHasApiKey(res?.has_api_key ?? false);
-        setValidApiKey(res?.is_valid ?? false);
-        setLoadingApiKey(false);
-      } catch (e) {
-        console.log(e);
-      }
-    };
+    try {
+      const res = await checkHasApiKey();
+      console.log(res);
+      setHasApiKey(res?.has_api_key ?? false);
+      setValidApiKey(res?.is_valid ?? false);
+      setLoadingApiKey(false);
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
-    fetchStoreData();
-  }, [storeChecked, validApiKey]);
+  useEffect(() => {
+    fetchApiData();
+  }, [storeChecked, validApiKey, apiKey]);
 
   return (
     <StoreContext.Provider
