@@ -61,6 +61,7 @@ export default function StorePage(): JSX.Element {
 
   useEffect(() => {
     handleGetComponents();
+    setValidApiKey(true);
   }, [
     tabActive,
     pageOrder,
@@ -97,6 +98,11 @@ export default function StorePage(): JSX.Element {
       filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
       .then((res) => {
+        if (res?.authorized === false && validApiKey === false) {
+          setValidApiKey(false);
+          return;
+        }
+
         setLoading(false);
         setSearchData(res?.results ?? []);
         setTotalRowsCount(
