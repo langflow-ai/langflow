@@ -163,46 +163,50 @@ export function updateIds(
 ) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((node: NodeType) => {
-    // Generate a unique node ID
-    let newId = getNodeId(node.data.node?.flow ? "GroupNode" : node.data.type);
-    idsMap[node.id] = newId;
-    node.id = newId;
-    node.data.id = newId;
-    // Add the new node to the list of nodes in state
-  });
+  if (newFlow.nodes)
+    newFlow.nodes.forEach((node: NodeType) => {
+      // Generate a unique node ID
+      let newId = getNodeId(
+        node.data.node?.flow ? "GroupNode" : node.data.type
+      );
+      idsMap[node.id] = newId;
+      node.id = newId;
+      node.data.id = newId;
+      // Add the new node to the list of nodes in state
+    });
 
-  newFlow.edges.forEach((edge: Edge) => {
-    edge.source = idsMap[edge.source];
-    edge.target = idsMap[edge.target];
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(
-      edge.sourceHandle!
-    );
-    edge.sourceHandle = scapedJSONStringfy({
-      ...sourceHandleObject,
-      id: edge.source,
+  if (newFlow.edges)
+    newFlow.edges.forEach((edge: Edge) => {
+      edge.source = idsMap[edge.source];
+      edge.target = idsMap[edge.target];
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      edge.sourceHandle = scapedJSONStringfy({
+        ...sourceHandleObject,
+        id: edge.source,
+      });
+      if (edge.data?.sourceHandle?.id) {
+        edge.data.sourceHandle.id = edge.source;
+      }
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      edge.targetHandle = scapedJSONStringfy({
+        ...targetHandleObject,
+        id: edge.target,
+      });
+      if (edge.data?.targetHandle?.id) {
+        edge.data.targetHandle.id = edge.target;
+      }
+      edge.id =
+        "reactflow__edge-" +
+        edge.source +
+        edge.sourceHandle +
+        "-" +
+        edge.target +
+        edge.targetHandle;
     });
-    if (edge.data?.sourceHandle?.id) {
-      edge.data.sourceHandle.id = edge.source;
-    }
-    const targetHandleObject: targetHandleType = scapeJSONParse(
-      edge.targetHandle!
-    );
-    edge.targetHandle = scapedJSONStringfy({
-      ...targetHandleObject,
-      id: edge.target,
-    });
-    if (edge.data?.targetHandle?.id) {
-      edge.data.targetHandle.id = edge.target;
-    }
-    edge.id =
-      "reactflow__edge-" +
-      edge.source +
-      edge.sourceHandle +
-      "-" +
-      edge.target +
-      edge.targetHandle;
-  });
   return idsMap;
 }
 
