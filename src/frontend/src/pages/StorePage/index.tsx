@@ -337,9 +337,23 @@ export default function StorePage(): JSX.Element {
                 </>
               )}
             </div>
+
+            {!loading && searchData?.length === 0 && (
+              <div className="mt-6 flex w-full items-center justify-center text-center">
+                <div className="flex-max-width h-full flex-col">
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="grid w-full gap-4">
+                      You haven't{" "}
+                      {selectFilter === "createdbyme" ? "crafted" : "liked"} any
+                      flows yet. Why not give it a shot and create one? :)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        {!loading && searchData.length !== 0 && (
+        {!loading && searchData.length > 0 && (
           <div className="relative my-6">
             <PaginatorComponent
               storeComponent={true}
