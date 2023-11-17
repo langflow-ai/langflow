@@ -4,6 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -13,7 +15,6 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -469,4 +470,6 @@ class StoreService(Service):
                 except Exception:
                     # If we get an error here, it means the user is not authorized
                     authorized = False
+            elif store_api_Key and not result:
+                authorized = True
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
