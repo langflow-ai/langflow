@@ -14,7 +14,7 @@ export default function StoreApiKeyModal({ children }: StoreApiKeyType) {
   const [open, setOpen] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { storeApiKey } = useContext(AuthContext);
-  const { hasApiKey, setHasApiKey, validApiKey } = useContext(StoreContext);
+  const { hasApiKey, validApiKey } = useContext(StoreContext);
   const [apiKeyValue, setApiKeyValue] = useState("");
 
   const handleSaveKey = () => {
@@ -25,7 +25,6 @@ export default function StoreApiKeyModal({ children }: StoreApiKeyType) {
             title: "Success! Your API Key has been saved.",
           });
           storeApiKey(apiKeyValue);
-          setHasApiKey(true);
           setOpen(false);
         },
         (error) => {

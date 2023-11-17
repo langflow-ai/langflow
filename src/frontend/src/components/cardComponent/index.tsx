@@ -251,7 +251,7 @@ export default function CollectionCardComponent({
                   content={authorized ? "Like" : "Please review your API key."}
                 >
                   <Button
-                    disabled={loadingLike || !authorized}
+                    disabled={loadingLike}
                     variant="ghost"
                     size="xs"
                     className={
@@ -282,11 +282,13 @@ export default function CollectionCardComponent({
                   }
                 >
                   <Button
+                    disabled={loading}
                     variant="ghost"
                     size="xs"
                     className={
                       "whitespace-nowrap" +
-                      (!authorized ? " cursor-not-allowed" : "")
+                      (!authorized ? " cursor-not-allowed" : "") +
+                      (!loading ? " p-0.5" : "")
                     }
                     onClick={() => {
                       if (loading || !authorized) {
@@ -298,7 +300,7 @@ export default function CollectionCardComponent({
                     <IconComponent
                       name={loading ? "Loader2" : "Plus"}
                       className={classNames(
-                        loading ? "h-5 w-5 animate-spin" : "h-6 w-6 p-0.5",
+                        loading ? "h-5 w-5 animate-spin" : "h-6 w-6",
                         !authorized ? " text-ring" : ""
                       )}
                     />
