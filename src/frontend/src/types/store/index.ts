@@ -2,7 +2,7 @@ export type storeComponent = {
   id: string;
   is_component: boolean;
   tags?: { id: string; name: string }[];
-  metadata?: {};
+  metadata?: any;
   downloads_count?: number;
   name: string;
   description: string;
