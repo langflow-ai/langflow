@@ -53,7 +53,7 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     fetchApiData();
-  }, [storeChecked, validApiKey, apiKey]);
+  }, [storeChecked, apiKey]);
 
   return (
     <StoreContext.Provider

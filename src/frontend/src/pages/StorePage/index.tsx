@@ -90,7 +90,7 @@ export default function StorePage(): JSX.Element {
   }
 
   function handleGetComponents() {
-    if (!hasApiKey) return;
+    if (!hasApiKey || loadingApiKey) return;
     setLoading(true);
     getStoreComponents({
       page: pageIndex,
