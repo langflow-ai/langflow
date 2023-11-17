@@ -4,7 +4,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -198,5 +197,6 @@ async def like_component(
             if exc.response.status_code == 403:
                 raise HTTPException(status_code=403, detail="Forbidden")
             elif exc.response.status_code == 401:
-                raise HTTPException(status_code=401, detail="Unauthorized")
+                # 403 to avoid falling into interceptor 401
+                raise HTTPException(status_code=403, detail="Unauthorized")
         raise HTTPException(status_code=500, detail=str(exc))
