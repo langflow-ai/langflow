@@ -55,13 +55,6 @@ export default function StorePage(): JSX.Element {
             "You don't have an API Key. Please add one to use the Langflow Store.",
           ],
         });
-      } else if (!validApiKey) {
-        setErrorData({
-          title: "API Key Error",
-          list: [
-            "Your API Key is not valid. Please add a valid API Key to use the Langflow Store.",
-          ],
-        });
       }
     }
   }, [loadingApiKey, validApiKey, hasApiKey]);
