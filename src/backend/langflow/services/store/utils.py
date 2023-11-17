@@ -46,3 +46,16 @@ def get_lf_version_from_pypi():
     if response.status_code != 200:
         return None
     return response.json()["info"]["version"]
+
+
+def process_component_data(nodes_list):
+    names = [node["id"].split("-")[0] for node in nodes_list]
+    metadata = {}
+    for name in names:
+        if name in metadata:
+            metadata[name]["count"] += 1
+        else:
+            metadata[name] = {"count": 1}
+    metadata["total"] = len(names)
+
+    return metadata

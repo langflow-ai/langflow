@@ -4,6 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -12,8 +14,11 @@ from langflow.services.store.schema import (
     ListComponentResponseModel,
     StoreComponentCreate,
 )
-from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
-from loguru import logger
+from langflow.services.store.utils import (
+    process_component_data,
+    process_tags_for_post,
+    update_components_with_user_data,
+)
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -32,9 +37,7 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
             user_data, _ = await store_service._get(
                 f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
             )
-            if isinstance(user_data, list):
-                user_data = user_data[0]
-            user_data_var.set(user_data)
+            user_data_var.set(user_data[0])
         except HTTPStatusError as exc:
             if exc.response.status_code == 403:
                 raise ValueError("Invalid API key")
@@ -83,9 +86,8 @@ class StoreService(Service):
         # If it is not, return False
         try:
             user_data, _ = await self._get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
-            if isinstance(user_data, list):
-                user_data = user_data[0]
-            return "id" in user_data
+
+            return "id" in user_data[0]
         except HTTPStatusError as exc:
             if exc.response.status_code in [403, 401]:
                 return False
@@ -135,7 +137,7 @@ class StoreService(Service):
             logger.debug(f"Webhook failed: {exc}")
 
     def build_tags_filter(self, tags: List[str]):
-        tags_filter = {"tags": {"_and": []}}
+        tags_filter: Dict[str, Any] = {"tags": {"_and": []}}
         for tag in tags:
             tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
         return tags_filter
@@ -159,7 +161,7 @@ class StoreService(Service):
     def build_search_filter_conditions(query: str):
         # instead of build the param ?search=query, we will build the filter
         # that will use _icontains (case insensitive)
-        conditions = {"_or": []}
+        conditions: Dict[str, Any] = {"_or": []}
         conditions["_or"].append({"name": {"_icontains": query}})
         conditions["_or"].append({"description": {"_icontains": query}})
         conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
@@ -249,11 +251,9 @@ class StoreService(Service):
         results, metadata = await self._get(self.components_url, api_key, params)
         if isinstance(results, dict):
             results = [results]
-        results_objects = [ListComponentResponse(**component) for component in results]
-        # Flatten the tags
-        # for component in results_objects:
-        #     if component.tags:
-        #         component.tags = [tags_id.tags_id for tags_id in component.tags]
+
+        results_objects = [ListComponentResponse(**result) for result in results]
+
         return results_objects, metadata
 
     async def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[str]:
@@ -303,10 +303,19 @@ class StoreService(Service):
             raise ValueError("DOWNLOAD_WEBHOOK_URL is not set")
         component, _ = await self._get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
-        if isinstance(component, list):
-            component = component[0]
+        if len(component) > 1:
+            raise ValueError("Something went wrong while downloading the component")
+        component_dict = component[0]
 
-        return DownloadComponentResponse(**component)
+        download_component = DownloadComponentResponse(**component_dict)
+        # Check if metadata is an empty dict
+        if download_component.metadata in [None, {}] and download_component.data is not None:
+            # If it is, we need to build the metadata
+            try:
+                download_component.metadata = process_component_data(download_component.data.get("nodes", []))
+            except KeyError:
+                raise ValueError("Invalid component data. No nodes found")
+        return download_component
 
     async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
@@ -405,8 +414,8 @@ class StoreService(Service):
         status: Optional[str] = None,
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
-        filter_by_user: Optional[bool] = False,
-        liked: Optional[bool] = False,
+        filter_by_user: bool = False,
+        liked: bool = False,
         store_api_Key: Optional[str] = None,
         sort: Optional[List[str]] = None,
         page: int = 1,
