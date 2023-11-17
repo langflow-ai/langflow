@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { alertContext } from "../../contexts/alertContext";
+import { AuthContext } from "../../contexts/authContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -25,6 +26,7 @@ import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
+  const { apiKey } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -75,6 +77,7 @@ export default function StorePage(): JSX.Element {
     selectFilter,
     validApiKey,
     hasApiKey,
+    apiKey,
   ]);
 
   function handleGetTags() {
