@@ -789,16 +789,6 @@ export async function getStoreTags() {
   }
 }
 
-export async function postLikeComponent(componentId: string) {
-  try {
-    const res = await api.post(
-      `${BASE_URL_API}store/users/likes/${componentId}`
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-  } catch (error) {
-    console.log("Error:", error);
-    throw error;
-  }
-}
+export const postLikeComponent = (componentId: string) => {
+  return api.post(`${BASE_URL_API}store/users/likes/${componentId}`);
+};

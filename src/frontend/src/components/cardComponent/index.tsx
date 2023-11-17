@@ -1,5 +1,4 @@
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
@@ -45,17 +44,22 @@ export default function CollectionCardComponent({
 
   const name = data.is_component ? "Component" : "Flow";
 
-  const navigate = useNavigate();
-
   function handleInstall() {
     setLoading(true);
     getComponent(data.id).then((res) => {
       const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-      addFlow(true, newFlow).then((id) => {
-        setSuccessData({ title: `${name} Installed` });
-        setLoading(false);
-        if (!data.is_component) navigate("/flow/" + id);
-      });
+      addFlow(true, newFlow)
+        .then((id) => {
+          setSuccessData({ title: `${name} Installed` });
+          setLoading(false);
+        })
+        .catch((error) => {
+          setLoading(false);
+          setErrorData({
+            title: `There was an error installing the ${name}`,
+            list: [error["response"]["data"]["detail"]],
+          });
+        });
     });
   }
 
@@ -70,26 +74,19 @@ export default function CollectionCardComponent({
       } else {
         setLikes_count((prev) => prev - 1);
       }
-      console.log(data.id);
       postLikeComponent(data.id)
         .then((response) => {
           setLoadingLike(false);
-          setLikes_count(response.likes_count);
-          setLiked_by_user(response.liked_by_user);
+          setLikes_count(response.data.likes_count);
+          setLiked_by_user(response.data.liked_by_user);
         })
         .catch((error) => {
           setLoadingLike(false);
           setLikes_count(tempNum);
           setLiked_by_user(temp);
-          if (error.response.status === 403 || error.response.status === 401) {
-            setValidApiKey(false);
-          } else {
-            console.error(error);
-            setErrorData({
-              title: `Error liking ${name}.`,
-              list: [error["response"]["data"]["detail"]],
-            });
-          }
+
+          setValidApiKey(false);
+          console.error(error);
         });
     }
   }

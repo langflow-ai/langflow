@@ -554,16 +554,17 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   };
 
   const updateEdges = (edges: Edge[]) => {
-    edges.forEach((edge) => {
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!
-      );
-      edge.className =
-        (targetHandleObject.type === "Text"
-          ? "stroke-gray-800 "
-          : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = targetHandleObject.type === "Text";
-    });
+    if (edges)
+      edges.forEach((edge) => {
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          edge.targetHandle!
+        );
+        edge.className =
+          (targetHandleObject.type === "Text"
+            ? "stroke-gray-800 "
+            : "stroke-gray-900 ") + " stroke-connection";
+        edge.animated = targetHandleObject.type === "Text";
+      });
   };
 
   const updateNodes = (nodes: Node[], edges: Edge[]) => {
