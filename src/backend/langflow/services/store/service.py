@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.schema import (
     CreateComponentResponse,
@@ -15,6 +13,7 @@ from langflow.services.store.schema import (
     StoreComponentCreate,
 )
 from langflow.services.store.utils import process_tags_for_post, update_components_with_user_data
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -460,16 +459,19 @@ class StoreService(Service):
                 elif exc.response.status_code == 401:
                     raise ValueError("You are not authorized to access this resource. Please check your API key.")
 
-            if store_api_Key and result:
+            if store_api_Key:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
-                try:
-                    updated_result = await update_components_with_user_data(result, self, store_api_Key, liked=liked)
+                if result:
+                    try:
+                        updated_result = await update_components_with_user_data(
+                            result, self, store_api_Key, liked=liked
+                        )
+                        authorized = True
+                        result = updated_result
+                    except Exception:
+                        # If we get an error here, it means the user is not authorized
+                        authorized = False
+                else:
                     authorized = True
-                    result = updated_result
-                except Exception:
-                    # If we get an error here, it means the user is not authorized
-                    authorized = False
-            elif store_api_Key and not result:
-                authorized = True
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
