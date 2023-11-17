@@ -61,7 +61,6 @@ export default function StorePage(): JSX.Element {
 
   useEffect(() => {
     handleGetComponents();
-    setValidApiKey(true);
   }, [
     tabActive,
     pageOrder,
