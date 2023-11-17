@@ -50,13 +50,13 @@ export default function CollectionCardComponent({
       const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
       addFlow(true, newFlow)
         .then((id) => {
-          setSuccessData({ title: `${name} Installed` });
+          setSuccessData({ title: `${name} Installed Successfully.` });
           setLoading(false);
         })
         .catch((error) => {
           setLoading(false);
           setErrorData({
-            title: `There was an error installing the ${name}`,
+            title: `Error installing the ${name}`,
             list: [error["response"]["data"]["detail"]],
           });
         });
@@ -84,9 +84,15 @@ export default function CollectionCardComponent({
           setLoadingLike(false);
           setLikes_count(tempNum);
           setLiked_by_user(temp);
-
-          setValidApiKey(false);
-          console.error(error);
+          if (error.response.status === 403) {
+            setValidApiKey(false);
+          } else {
+            console.error(error);
+            setErrorData({
+              title: `Error liking ${name}.`,
+              list: [error["response"]["data"]["detail"]],
+            });
+          }
         });
     }
   }
