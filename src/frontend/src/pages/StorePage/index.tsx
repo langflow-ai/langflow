@@ -55,6 +55,13 @@ export default function StorePage(): JSX.Element {
             "You don't have an API Key. Please add one to use the Langflow Store.",
           ],
         });
+      } else if (!validApiKey) {
+        setErrorData({
+          title: "API Key Error",
+          list: [
+            "Your API Key is not valid. Please add a valid API Key to use the Langflow Store.",
+          ],
+        });
       }
     }
   }, [loadingApiKey, validApiKey, hasApiKey]);
@@ -97,18 +104,21 @@ export default function StorePage(): JSX.Element {
       filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
       .then((res) => {
-        if (res?.authorized === false && validApiKey === false) {
+        if (!res?.authorized && validApiKey === true) {
           setValidApiKey(false);
-          return;
+          setSelectFilter("all");
+        } else {
+          if (res?.authorized) {
+            setValidApiKey(true);
+          }
+          setLoading(false);
+          setSearchData(res?.results ?? []);
+          setTotalRowsCount(
+            filteredCategories?.length === 0
+              ? Number(res?.count ?? 0)
+              : res?.results?.length ?? 0
+          );
         }
-
-        setLoading(false);
-        setSearchData(res?.results ?? []);
-        setTotalRowsCount(
-          filteredCategories?.length === 0
-            ? Number(res?.count ?? 0)
-            : res?.results?.length ?? 0
-        );
       })
       .catch((err) => {
         if (err.response.status === 403 || err.response.status === 401) {
@@ -344,8 +354,8 @@ export default function StorePage(): JSX.Element {
                   <div className="flex w-full flex-col gap-4">
                     <div className="grid w-full gap-4">
                       You haven't{" "}
-                      {selectFilter === "createdbyme" ? "crafted" : "liked"} any
-                      flows yet. Why not give it a shot and create one? :)
+                      {selectFilter === "createdbyme" ? "created" : "liked"} any
+                      flows yet.
                     </div>
                   </div>
                 </div>
