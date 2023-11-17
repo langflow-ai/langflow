@@ -175,7 +175,7 @@ export default function CollectionCardComponent({
               <ShadTooltip content={data.name}>
                 <div className="w-full truncate">{data.name}</div>
               </ShadTooltip>
-              {data?.metadata && (
+              {data?.metadata !== undefined && (
                 <div className="flex gap-3">
                   {!data.is_component && (
                     <ShadTooltip content="Components">
@@ -197,7 +197,7 @@ export default function CollectionCardComponent({
                   <ShadTooltip content="Downloads">
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <IconComponent name="DownloadCloud" className="h-4 w-4" />
-                      {data.downloads_count}
+                      {data.downloads_count ?? 0}
                     </span>
                   </ShadTooltip>
                 </div>
@@ -242,7 +242,7 @@ export default function CollectionCardComponent({
                   </Badge>
                 ))}
             </div>
-            {data.liked_by_count && (
+            {data.liked_by_count != undefined && (
               <div className="flex gap-0.5">
                 <ShadTooltip
                   content={authorized ? "Like" : "Please review your API key."}
