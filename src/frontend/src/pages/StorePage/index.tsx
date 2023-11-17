@@ -97,20 +97,13 @@ export default function StorePage(): JSX.Element {
       filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
       .then((res) => {
-        if (!res?.authorized && validApiKey === true) {
-          setValidApiKey(false);
-        } else {
-          if (res?.authorized) {
-            setValidApiKey(true);
-          }
-          setLoading(false);
-          setSearchData(res?.results ?? []);
-          setTotalRowsCount(
-            filteredCategories?.length === 0
-              ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0
-          );
-        }
+        setLoading(false);
+        setSearchData(res?.results ?? []);
+        setTotalRowsCount(
+          filteredCategories?.length === 0
+            ? Number(res?.count ?? 0)
+            : res?.results?.length ?? 0
+        );
       })
       .catch((err) => {
         if (err.response.status === 403 || err.response.status === 401) {
