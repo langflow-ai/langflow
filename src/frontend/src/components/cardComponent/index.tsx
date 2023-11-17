@@ -41,33 +41,48 @@ export default function CollectionCardComponent({
     data?.liked_by_user ?? false
   );
   const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
+  const [downloads_count, setDownloads_count] = useState(
+    data?.downloads_count ?? 0
+  );
 
   const name = data.is_component ? "Component" : "Flow";
 
   useEffect(() => {
     if (data) {
-      setLiked_by_user(data.liked_by_user ?? false);
-      setLikes_count(data.liked_by_count ?? 0);
+      setLiked_by_user(data?.liked_by_user ?? false);
+      setLikes_count(data?.liked_by_count ?? 0);
+      setDownloads_count(data?.downloads_count ?? 0);
     }
-  }, [data, data.liked_by_count, data.liked_by_user]);
+  }, [data, data.liked_by_count, data.liked_by_user, data.downloads_count]);
 
   function handleInstall() {
+    const temp = downloads_count;
+    setDownloads_count((old) => old + 1);
     setLoading(true);
-    getComponent(data.id).then((res) => {
-      const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-      addFlow(true, newFlow)
-        .then((id) => {
-          setSuccessData({ title: `${name} Installed Successfully.` });
-          setLoading(false);
-        })
-        .catch((error) => {
-          setLoading(false);
-          setErrorData({
-            title: `Error installing the ${name}`,
-            list: [error["response"]["data"]["detail"]],
+    getComponent(data.id)
+      .then((res) => {
+        const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
+        addFlow(true, newFlow)
+          .then((id) => {
+            setSuccessData({ title: `${name} Installed Successfully.` });
+            setLoading(false);
+          })
+          .catch((error) => {
+            setLoading(false);
+            setErrorData({
+              title: `Error installing the ${name}`,
+              list: [error["response"]["data"]["detail"]],
+            });
           });
+      })
+      .catch((err) => {
+        setLoading(false);
+        setErrorData({
+          title: `Error installing the ${name}`,
+          list: [err["response"]["data"]["detail"]],
         });
-    });
+        setDownloads_count(temp);
+      });
   }
 
   function handleLike() {
@@ -200,7 +215,7 @@ export default function CollectionCardComponent({
                   <ShadTooltip content="Downloads">
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <IconComponent name="DownloadCloud" className="h-4 w-4" />
-                      {data.downloads_count ?? 0}
+                      {downloads_count ?? 0}
                     </span>
                   </ShadTooltip>
                 </div>
