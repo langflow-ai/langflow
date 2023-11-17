@@ -136,7 +136,6 @@ async def get_components(
                 raise HTTPException(status_code=401, detail=str(exc))
             elif "filter by likes" in str(exc) or "filter your components" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc))
-            raise HTTPException(status_code=403, detail=str(exc))
 
         raise HTTPException(status_code=500, detail=str(exc))
 
