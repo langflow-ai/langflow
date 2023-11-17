@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
@@ -43,6 +43,13 @@ export default function CollectionCardComponent({
   const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
 
   const name = data.is_component ? "Component" : "Flow";
+
+  useEffect(() => {
+    if (data) {
+      setLiked_by_user(data.liked_by_user ?? false);
+      setLikes_count(data.liked_by_count ?? 0);
+    }
+  }, [data, data.liked_by_count, data.liked_by_user]);
 
   function handleInstall() {
     setLoading(true);
@@ -96,10 +103,6 @@ export default function CollectionCardComponent({
         });
     }
   }
-
-  const totalComponentsMetadata = () => {
-    return data?.metadata ? data.metadata["total"] : 0;
-  };
 
   return (
     <Card
@@ -181,7 +184,7 @@ export default function CollectionCardComponent({
                     <ShadTooltip content="Components">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <IconComponent name="ToyBrick" className="h-4 w-4" />
-                        {totalComponentsMetadata()}
+                        {data?.metadata?.total ?? 0}
                       </span>
                     </ShadTooltip>
                   )}
