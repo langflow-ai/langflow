@@ -3,6 +3,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { getComponent, postLikeComponent } from "../../controllers/API";
+import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
@@ -166,13 +167,17 @@ export default function CollectionCardComponent({
                 </div>
               )}
 
-              {onDelete && (
-                <button onClick={onDelete}>
+              {onDelete && !data.metadata && (
+                <DeleteConfirmationModal
+                  onConfirm={() => {
+                    onDelete();
+                  }}
+                >
                   <IconComponent
                     name="Trash2"
                     className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
                   />
-                </button>
+                </DeleteConfirmationModal>
               )}
             </CardTitle>
           </div>
@@ -207,36 +212,69 @@ export default function CollectionCardComponent({
             </div>
             {data.liked_by_count != undefined && (
               <div className="flex gap-0.5">
-                <ShadTooltip
-                  content={authorized ? "Like" : "Please review your API key."}
-                >
-                  <Button
-                    disabled={loadingLike}
-                    variant="ghost"
-                    size="xs"
-                    className={
-                      "whitespace-nowrap" +
-                      (!authorized ? " cursor-not-allowed" : "")
+                {onDelete && data.metadata ? (
+                  <ShadTooltip
+                    content={
+                      authorized ? "Delete" : "Please review your API key."
                     }
-                    onClick={() => {
-                      if (!authorized) {
-                        return;
-                      }
-                      handleLike();
-                    }}
                   >
-                    <IconComponent
-                      name="Heart"
-                      className={cn(
-                        "h-5 w-5",
-                        liked_by_user
-                          ? "fill-destructive stroke-destructive"
-                          : "",
-                        !authorized ? " text-ring" : ""
-                      )}
-                    />
-                  </Button>
-                </ShadTooltip>
+                    <DeleteConfirmationModal
+                      onConfirm={() => {
+                        onDelete();
+                      }}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className={
+                          "whitespace-nowrap" +
+                          (!authorized ? " cursor-not-allowed" : "")
+                        }
+                      >
+                        <IconComponent
+                          name="Trash2"
+                          className={cn(
+                            "h-5 w-5",
+                            !authorized ? " text-ring" : ""
+                          )}
+                        />
+                      </Button>
+                    </DeleteConfirmationModal>
+                  </ShadTooltip>
+                ) : (
+                  <ShadTooltip
+                    content={
+                      authorized ? "Like" : "Please review your API key."
+                    }
+                  >
+                    <Button
+                      disabled={loadingLike}
+                      variant="ghost"
+                      size="xs"
+                      className={
+                        "whitespace-nowrap" +
+                        (!authorized ? " cursor-not-allowed" : "")
+                      }
+                      onClick={() => {
+                        if (!authorized) {
+                          return;
+                        }
+                        handleLike();
+                      }}
+                    >
+                      <IconComponent
+                        name="Heart"
+                        className={cn(
+                          "h-5 w-5",
+                          liked_by_user
+                            ? "fill-destructive stroke-destructive"
+                            : "",
+                          !authorized ? " text-ring" : ""
+                        )}
+                      />
+                    </Button>
+                  </ShadTooltip>
+                )}
                 <ShadTooltip
                   content={
                     authorized
