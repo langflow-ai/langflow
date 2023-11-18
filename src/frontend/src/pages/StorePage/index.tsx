@@ -79,6 +79,7 @@ export default function StorePage(): JSX.Element {
     hasApiKey,
     apiKey,
     searchText,
+    loadingApiKey,
   ]);
 
   function handleGetTags() {
