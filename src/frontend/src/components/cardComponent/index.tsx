@@ -184,6 +184,16 @@ export default function CollectionCardComponent({
           {data.user_created && data.user_created.username && (
             <span className="text-sm text-primary">
               by <b>{data.user_created.username}</b>
+              {data.last_tested_version && (
+                <>
+                  {" "}
+                  |{" "}
+                  <span className="text-xs">
+                    {" "}
+                    ⛓︎ v{data.last_tested_version}
+                  </span>
+                </>
+              )}
             </span>
           )}
 
