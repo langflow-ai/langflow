@@ -1,3 +1,4 @@
+import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -39,7 +40,7 @@ export default function StorePage(): JSX.Element {
   const [pageOrder, setPageOrder] = useState("Popular");
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [tabActive, setTabActive] = useState("All");
-  const [searchText, setSearchText] = useState("");
+  const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function StorePage(): JSX.Element {
     validApiKey,
     hasApiKey,
     apiKey,
-    searchText,
+    searchNow,
     loadingApiKey,
   ]);
 
@@ -102,7 +103,7 @@ export default function StorePage(): JSX.Element {
       tags: filteredCategories,
       liked: selectFilter === "likedbyme" && validApiKey ? true : null,
       status: null,
-      search: searchText === "" ? null : searchText,
+      search: inputText === "" ? null : inputText,
       filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
       .then((res) => {
@@ -191,9 +192,8 @@ export default function StorePage(): JSX.Element {
                     setInputText(e.target.value);
                   }}
                   onKeyDown={(e) => {
-                    console.log(e);
                     if (e.key === "Enter") {
-                      setSearchText(inputText);
+                      setSearchNow(uniqueId());
                     }
                   }}
                   value={inputText}
@@ -202,7 +202,7 @@ export default function StorePage(): JSX.Element {
                   disabled={loading}
                   className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
                   onClick={() => {
-                    setSearchText(inputText);
+                    setSearchNow(uniqueId());
                   }}
                 >
                   <IconComponent
