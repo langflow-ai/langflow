@@ -83,10 +83,10 @@ export default function StorePage(): JSX.Element {
     if (scrollContainer) {
       scrollContainer.addEventListener("scroll", handleScroll);
       // Delay the initial scroll event dispatch to ensure correct calculation
-      setTimeout(() => scrollContainer.dispatchEvent(new Event("scroll")), 200);
+      scrollContainer.dispatchEvent(new Event("scroll"));
       return () => scrollContainer.removeEventListener("scroll", handleScroll);
     }
-  }, [divWidth]); // Depend on divWidth
+  }, [divWidth, loadingTags]); // Depend on divWidth
 
   useEffect(() => {
     handleGetTags();
