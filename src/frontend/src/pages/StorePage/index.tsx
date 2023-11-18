@@ -1,5 +1,5 @@
 import { uniqueId } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "../../components/PaginatorComponent";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CollectionCardComponent from "../../components/cardComponent";
@@ -23,7 +23,7 @@ import { StoreContext } from "../../contexts/storeContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
-import { classNames, cn } from "../../utils/utils";
+import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
@@ -42,6 +42,51 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fadeContainerRef = useRef<HTMLDivElement>(null);
+  const [divWidth, setDivWidth] = useState<number>(0);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (scrollContainerRef.current) {
+        setDivWidth(scrollContainerRef.current.clientWidth);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // call the function at start to get the initial width
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!scrollContainerRef.current || !fadeContainerRef.current) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } =
+        scrollContainerRef.current;
+      const atStart = scrollLeft === 0;
+      const atEnd = scrollLeft === scrollWidth - clientWidth;
+      const isScrollable = scrollWidth > clientWidth;
+
+      fadeContainerRef.current.classList.toggle(
+        "fade-left",
+        isScrollable && !atStart
+      );
+      fadeContainerRef.current.classList.toggle(
+        "fade-right",
+        isScrollable && !atEnd
+      );
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleScroll);
+      // Delay the initial scroll event dispatch to ensure correct calculation
+      setTimeout(() => scrollContainer.dispatchEvent(new Event("scroll")), 200);
+      return () => scrollContainer.removeEventListener("scroll", handleScroll);
+    }
+  }, [divWidth]); // Depend on divWidth
 
   useEffect(() => {
     handleGetTags();
@@ -131,7 +176,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(0);
           setLoading(false);
           setErrorData({
-            title: "Error to get components.",
+            title: "Error getting components.",
             list: [err["response"]["data"]["detail"]],
           });
         }
@@ -155,30 +200,32 @@ export default function StorePage(): JSX.Element {
     <>
       <Header />
 
-      <div className="community-page-arrangement">
+      <div className="flex h-full w-full flex-col justify-between overflow-auto bg-background px-16">
         <div>
-          <div className="community-page-nav-arrangement">
-            <span className="community-page-nav-title">
+          <div className="flex w-full justify-between py-8 pb-2">
+            <span className="flex items-center justify-center gap-2 text-2xl font-semibold">
               <IconComponent name="Store" className="w-6" />
               Langflow Store
             </span>
-            <div className="community-page-nav-button">
-              <StoreApiKeyModal disabled={loading}>
-                <Button
-                  disabled={loading}
-                  className={classNames(
-                    `${!validApiKey ? "animate-pulse border-error" : ""}`,
-                    loading ? "cursor-not-allowed" : ""
-                  )}
-                  variant="primary"
-                >
-                  <IconComponent name="Key" className="main-page-nav-button" />
-                  API Key
-                </Button>
-              </StoreApiKeyModal>
+            <div className="flex gap-2">
+              {StoreApiKeyModal && (
+                <StoreApiKeyModal disabled={loading}>
+                  <Button
+                    disabled={loading}
+                    className={cn(
+                      `${!validApiKey ? "animate-pulse border-error" : ""}`,
+                      loading ? "cursor-not-allowed" : ""
+                    )}
+                    variant="primary"
+                  >
+                    <IconComponent name="Key" className="mr-2 w-4" />
+                    API Key
+                  </Button>
+                </StoreApiKeyModal>
+              )}
             </div>
           </div>
-          <span className="community-page-description-text">
+          <span className="flex w-[70%] pb-8 text-muted-foreground">
             Search flows and components from the community.
           </span>
           <div className="flex w-full flex-col gap-4 p-0">
@@ -264,13 +311,13 @@ export default function StorePage(): JSX.Element {
               </div>
             </div>
 
-            <div className="flex h-6 items-center gap-2">
+            <div className="flex items-center gap-2">
               <Select
                 disabled={loading}
                 onValueChange={setSelectFilter}
                 value={selectFilter}
               >
-                <SelectTrigger className="mr-4 w-[160px]">
+                <SelectTrigger className="mr-4 w-[160px] flex-shrink-0">
                   <SelectValue placeholder="Filter Values" />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,31 +328,38 @@ export default function StorePage(): JSX.Element {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {!loadingTags &&
-                tags.map((tag, idx) => (
-                  <button
-                    disabled={loading}
-                    className={loading ? "cursor-not-allowed" : ""}
-                    onClick={() => {
-                      updateTags(tag.name);
-                    }}
-                  >
-                    <Badge
-                      key={idx}
-                      variant="outline"
-                      size="sq"
-                      className={cn(
-                        filteredCategories.some(
-                          (category) => category === tag.name
-                        )
-                          ? "bg-beta-foreground text-background hover:bg-beta-foreground"
-                          : ""
-                      )}
-                    >
-                      {tag.name}
-                    </Badge>
-                  </button>
-                ))}
+              <div ref={fadeContainerRef} className="fade-container">
+                <div
+                  ref={scrollContainerRef}
+                  className="scroll-container flex gap-2"
+                >
+                  {!loadingTags &&
+                    tags.map((tag, idx) => (
+                      <button
+                        disabled={loading}
+                        className={loading ? "cursor-not-allowed" : ""}
+                        onClick={() => {
+                          updateTags(tag.name);
+                        }}
+                      >
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          size="sq"
+                          className={cn(
+                            filteredCategories.some(
+                              (category) => category === tag.name
+                            )
+                              ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                              : ""
+                          )}
+                        >
+                          {tag.name}
+                        </Badge>
+                      </button>
+                    ))}
+                </div>
+              </div>
             </div>
             <div className="flex items-end justify-between">
               <span className="px-0.5 text-sm text-muted-foreground">
@@ -359,7 +413,7 @@ export default function StorePage(): JSX.Element {
 
             {!loading && searchData?.length === 0 && (
               <div className="mt-6 flex w-full items-center justify-center text-center">
-                <div className="flex-max-width h-full flex-col">
+                <div className="flex h-full w-full flex-col">
                   <div className="flex w-full flex-col gap-4">
                     <div className="grid w-full gap-4">
                       You haven't{" "}

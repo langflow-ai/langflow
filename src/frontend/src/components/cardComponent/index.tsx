@@ -31,11 +31,11 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   onDelete?: () => void;
 }) {
-  const [loading, setLoading] = useState(false);
   const { addFlow } = useContext(FlowsContext);
-  const [loadingLike, setLoadingLike] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { setValidApiKey } = useContext(StoreContext);
+  const [loading, setLoading] = useState(false);
+  const [loadingLike, setLoadingLike] = useState(false);
   const [liked_by_user, setLiked_by_user] = useState(
     data?.liked_by_user ?? false
   );
@@ -91,9 +91,9 @@ export default function CollectionCardComponent({
       const tempNum = likes_count;
       setLiked_by_user((prev) => !prev);
       if (!temp) {
-        setLikes_count((prev) => prev + 1);
+        setLikes_count((prev) => Number(prev) + 1);
       } else {
-        setLikes_count((prev) => prev - 1);
+        setLikes_count((prev) => Number(prev) - 1);
       }
       postLikeComponent(data.id)
         .then((response) => {
