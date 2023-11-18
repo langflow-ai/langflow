@@ -10,7 +10,11 @@ import { addApiKeyStore } from "../../controllers/API";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
 
-export default function StoreApiKeyModal({ children }: StoreApiKeyType) {
+export default function StoreApiKeyModal({
+  children,
+  disabled = false,
+}: StoreApiKeyType) {
+  if (disabled) return <>{children}</>;
   const [open, setOpen] = useState(false);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { storeApiKey } = useContext(AuthContext);
@@ -38,7 +42,7 @@ export default function StoreApiKeyModal({ children }: StoreApiKeyType) {
   };
 
   return (
-    <BaseModal size="small-h-full" open={open} setOpen={setOpen}>
+    <BaseModal size="small-h-full" open={open && !disabled} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={
