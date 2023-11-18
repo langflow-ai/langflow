@@ -11,7 +11,6 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
-import FlowsComponent from "./pages/MainPage/components/flows";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
@@ -37,8 +36,14 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="flows" element={<FlowsComponent />} />
-        <Route path="components" element={<ComponentsComponent />} />
+        <Route
+          path="flows"
+          element={<ComponentsComponent key="flows" is_component={false} />}
+        />
+        <Route
+          path="components"
+          element={<ComponentsComponent key="components" />}
+        />
       </Route>
       <Route
         path="/store"

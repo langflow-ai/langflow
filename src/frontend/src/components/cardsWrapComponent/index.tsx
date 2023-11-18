@@ -1,16 +1,13 @@
 import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import { SkeletonCardComponent } from "../skeletonCardComponent";
 
 export default function CardsWrapComponent({
   onFileDrop,
   children,
-  isLoading,
   dragMessage,
 }: {
   onFileDrop?: (e: any) => void;
   children: JSX.Element | JSX.Element[];
-  isLoading: boolean;
   dragMessage?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -59,17 +56,7 @@ export default function CardsWrapComponent({
           {dragMessage ? dragMessage : "Drop your file here"}
         </>
       ) : (
-        <div className="main-page-flows-display">
-          {isLoading ? (
-            <>
-              <SkeletonCardComponent />
-              <SkeletonCardComponent />
-              <SkeletonCardComponent />
-            </>
-          ) : (
-            children
-          )}
-        </div>
+        children
       )}
     </div>
   );
