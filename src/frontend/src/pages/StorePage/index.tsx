@@ -22,7 +22,7 @@ import { StoreContext } from "../../contexts/storeContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
-import { cn } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
@@ -161,11 +161,13 @@ export default function StorePage(): JSX.Element {
               Langflow Store
             </span>
             <div className="community-page-nav-button">
-              <StoreApiKeyModal>
+              <StoreApiKeyModal disabled={loading}>
                 <Button
-                  className={`${
-                    !validApiKey ? "animate-pulse border-error" : ""
-                  }`}
+                  disabled={loading}
+                  className={classNames(
+                    `${!validApiKey ? "animate-pulse border-error" : ""}`,
+                    loading ? "cursor-not-allowed" : ""
+                  )}
                   variant="primary"
                 >
                   <IconComponent name="Key" className="main-page-nav-button" />
@@ -261,7 +263,11 @@ export default function StorePage(): JSX.Element {
             </div>
 
             <div className="flex h-6 items-center gap-2">
-              <Select onValueChange={setSelectFilter} value={selectFilter}>
+              <Select
+                disabled={loading}
+                onValueChange={setSelectFilter}
+                value={selectFilter}
+              >
                 <SelectTrigger className="mr-4 w-[160px]">
                   <SelectValue placeholder="Filter Values" />
                 </SelectTrigger>
