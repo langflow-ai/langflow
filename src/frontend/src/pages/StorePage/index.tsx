@@ -361,8 +361,8 @@ export default function StorePage(): JSX.Element {
                   <div className="flex w-full flex-col gap-4">
                     <div className="grid w-full gap-4">
                       You haven't{" "}
-                      {selectFilter === "createdbyme" ? "created" : "liked"} any
-                      flows yet.
+                      {selectFilter === "createdbyme" ? "created" : "liked"}{" "}
+                      anything yet.
                     </div>
                   </div>
                 </div>
