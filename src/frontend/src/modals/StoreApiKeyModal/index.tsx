@@ -43,7 +43,7 @@ export default function StoreApiKeyModal({
 
   return (
     <BaseModal size="small-h-full" open={open && !disabled} setOpen={setOpen}>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={
           (hasApiKey && !validApiKey
