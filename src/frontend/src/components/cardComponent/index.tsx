@@ -56,7 +56,7 @@ export default function CollectionCardComponent({
 
   function handleInstall() {
     const temp = downloads_count;
-    setDownloads_count((old) => old + 1);
+    setDownloads_count((old) => Number(old) + 1);
     setLoading(true);
     getComponent(data.id)
       .then((res) => {
