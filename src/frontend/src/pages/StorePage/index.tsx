@@ -400,9 +400,19 @@ export default function StorePage(): JSX.Element {
               <div className="flex h-full w-full flex-col">
                 <div className="flex w-full flex-col gap-4">
                   <div className="grid w-full gap-4">
-                    You haven't{" "}
-                    {selectFilter === "createdbyme" ? "created" : "liked"}{" "}
-                    anything yet.
+                    {selectFilter != "all" ? (
+                      <>
+                        You haven't{" "}
+                        {selectFilter === "createdbyme" ? "created" : "liked"}{" "}
+                        anything with the selected filters yet.
+                      </>
+                    ) : (
+                      <>
+                        There are no{" "}
+                        {tabActive == "Flows" ? "Flows" : "Components"} with the
+                        selected filters.
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
