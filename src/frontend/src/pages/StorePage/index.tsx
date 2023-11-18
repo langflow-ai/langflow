@@ -191,6 +191,7 @@ export default function StorePage(): JSX.Element {
                     setInputText(e.target.value);
                   }}
                   onKeyDown={(e) => {
+                    console.log(e);
                     if (e.key === "Enter") {
                       setSearchText(inputText);
                     }
