@@ -7,7 +7,9 @@ import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -20,6 +22,7 @@ import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
+import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
@@ -198,21 +201,25 @@ export default function StorePage(): JSX.Element {
     <PageLayout
       title="Langflow Store"
       description="Search flows and components from the community."
-      /*       button={{StoreApiKeyModal && (
-        <StoreApiKeyModal disabled={loading}>
-          <Button
-            disabled={loading}
-            className={cn(
-              `${!validApiKey ? "animate-pulse border-error" : ""}`,
-              loading ? "cursor-not-allowed" : ""
-            )}
-            variant="primary"
-          >
-            <IconComponent name="Key" className="mr-2 w-4" />
-            API Key
-          </Button>
-        </StoreApiKeyModal>
-      )}} */
+      button={
+        <>
+          {StoreApiKeyModal && (
+            <StoreApiKeyModal disabled={loading}>
+              <Button
+                disabled={loading}
+                className={cn(
+                  `${!validApiKey ? "animate-pulse border-error" : ""}`,
+                  loading ? "cursor-not-allowed" : ""
+                )}
+                variant="primary"
+              >
+                <IconComponent name="Key" className="mr-2 w-4" />
+                API Key
+              </Button>
+            </StoreApiKeyModal>
+          )}
+        </>
+      }
     >
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4 p-0">
