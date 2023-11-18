@@ -1033,4 +1033,32 @@
   .input-invalid {
     @apply border-destructive focus:border-destructive  focus:ring-destructive;
   }
+
+  .fade-container {
+    @apply relative overflow-hidden;
+  }
+  
+  .fade-container::before,
+  .fade-container::after {
+    @apply absolute top-0 bottom-0 pointer-events-none;
+    content: '';
+    width: 50px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: linear-gradient(to right, white, transparent);
+  }
+  
+  .fade-container::after {
+    @apply right-0;
+    transform: rotate(180deg);
+  }
+  
+  .fade-container.fade-left::before,
+  .fade-container.fade-right::after {
+    opacity: 1;
+  }
+  
+  .scroll-container {
+    @apply flex overflow-x-scroll scrollbar-hide;
+  }
 }
