@@ -247,24 +247,17 @@ export default function NodeToolbarComponent({
               )}
             </SelectContent>
           </Select>
-
-          {showModalAdvanced && (
-            <EditNodeModal
-              data={data}
-              setData={setData}
-              nodeLength={nodeLength}
-              open={showModalAdvanced}
-              onClose={(modal) => {
-                setShowModalAdvanced(modal);
-              }}
-            >
-              <></>
-            </EditNodeModal>
-          )}
+          <EditNodeModal
+            data={data}
+            setData={setData}
+            nodeLength={nodeLength}
+            open={showModalAdvanced}
+            setOpen={setShowModalAdvanced}
+          />
           <ShareModal
             open={showconfirmShare}
             setOpen={setShowconfirmShare}
-            is_component={true}
+            is_component={false}
             component={flowComponent!}
           />
         </span>

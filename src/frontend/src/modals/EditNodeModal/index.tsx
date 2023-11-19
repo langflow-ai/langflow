@@ -1,12 +1,5 @@
 import { cloneDeep } from "lodash";
-import {
-  ReactNode,
-  forwardRef,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useContext, useEffect, useRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
@@ -51,20 +44,17 @@ const EditNodeModal = forwardRef(
       data,
       setData,
       nodeLength,
-      children,
       open,
-      onClose,
+      setOpen,
     }: {
       data: NodeDataType;
       setData: (data: NodeDataType) => void;
       nodeLength: number;
-      children: ReactNode;
-      open?: boolean;
-      onClose?: (close: boolean) => void;
+      open: boolean;
+      setOpen: (open: boolean) => void;
     },
     ref
   ) => {
-    const [modalOpen, setModalOpen] = useState(open ?? false);
     const updateNodeInternals = useUpdateNodeInternals();
 
     const myData = useRef(data);
@@ -89,11 +79,10 @@ const EditNodeModal = forwardRef(
     };
 
     useEffect(() => {
-      if (modalOpen) {
+      if (open) {
         myData.current = data; // reset data to what it is on node when opening modal
-        onClose!(modalOpen);
       }
-    }, [modalOpen]);
+    }, [open]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
     const [adv, setAdv] = useState<boolean | null>(null);
@@ -103,13 +92,15 @@ const EditNodeModal = forwardRef(
       <BaseModal
         key={data.id}
         size="large-h-full"
-        open={modalOpen}
-        setOpen={setModalOpen}
+        open={open}
+        setOpen={setOpen}
         onChangeOpenModal={(open) => {
           myData.current = data;
         }}
       >
-        <BaseModal.Trigger>{children}</BaseModal.Trigger>
+        <BaseModal.Trigger>
+          <></>
+        </BaseModal.Trigger>
         <BaseModal.Header description={myData.current.node?.description!}>
           <span className="pr-2">{myData.current.type}</span>
           <Badge variant="secondary">ID: {myData.current.id}</Badge>
@@ -551,7 +542,7 @@ const EditNodeModal = forwardRef(
                   },
                 };
               });
-              setModalOpen(false);
+              setOpen(false);
             }}
             type="submit"
           >
