@@ -40,8 +40,6 @@ export default function FlowSettingsModal({
           setInvalidName={setInvalidName}
           name={name}
           description={description}
-          flows={flows}
-          tabId={tabId}
           setName={setName}
           setDescription={setDescription}
         />

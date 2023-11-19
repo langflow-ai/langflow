@@ -12,8 +12,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   setInvalidName,
   description,
   maxLength = 50,
-  flows,
-  tabId,
   setName,
   setDescription,
 }: InputProps): JSX.Element => {

@@ -1,22 +1,16 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ReactFlowJsonObject } from "reactflow";
+import { useContext, useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
-import { TagsSelector } from "../../../../components/tagsSelectorComponent";
-import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
-import { getStoreTags, saveFlowStore } from "../../../../controllers/API";
 import ApiModal from "../../../../modals/ApiModal";
-import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import ExportModal from "../../../../modals/exportModal";
+import ShareModal from "../../../../modals/shareModal";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { FlowType } from "../../../../types/flow";
-import { getTagsIds } from "../../../../utils/storeUtils";
 import {
   nodeColors,
   nodeIconsLucide,
@@ -35,10 +29,9 @@ export default function ExtraSidebar(): JSX.Element {
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-  const [sharePublic, setSharePublic] = useState(true);
   const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
@@ -53,30 +46,6 @@ export default function ExtraSidebar(): JSX.Element {
     document.body.appendChild(crt);
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
-  }
-
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const tagListId = useRef<{ id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    getStoreTags().then((res) => {
-      tagListId.current = res;
-      let tags = res.map((tag) => tag.name);
-      setTags(tags);
-    });
-  }, []);
-
-  function handleTagSelection(tag: string) {
-    setSelectedTags((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(tag)) {
-        newSet.delete(tag);
-      } else {
-        newSet.add(tag);
-      }
-      return newSet;
-    });
   }
 
   // Handle showing components after use search input
@@ -172,39 +141,6 @@ export default function ExtraSidebar(): JSX.Element {
     }
   }, [getFilterEdge]);
 
-  const handleShareFlow = () => {
-    const reactFlow = reactFlowInstance
-      ? reactFlowInstance.toObject()
-      : (flow!.data as ReactFlowJsonObject);
-    const saveFlow: FlowType = {
-      name: flow!.name,
-      id: flow!.id,
-      description: flow!.description,
-      data: {
-        ...reactFlow,
-      },
-      is_component: false,
-      last_tested_version: version,
-    };
-    saveFlowStore(
-      saveFlow,
-      getTagsIds(Array.from(selectedTags), tagListId),
-      sharePublic
-    ).then(
-      () => {
-        setSuccessData({
-          title: "Flow shared successfully",
-        });
-      },
-      (err) => {
-        setErrorData({
-          title: "Error sharing flow",
-          list: [err["response"]["data"]["detail"]],
-        });
-      }
-    );
-  };
-
   useEffect(() => {
     if (getFilterEdge?.length > 0) {
       setFilterData((_) => {
@@ -244,63 +180,15 @@ export default function ExtraSidebar(): JSX.Element {
 
   const ModalMemo = useMemo(
     () => (
-      <ConfirmationModal
-        index={0}
-        modalContentTitle="Are you sure you want to share this flow?"
-        title="Share Flow"
-        confirmationText="Share"
-        icon="Share2"
-        size="small-h-full"
-        onConfirm={() => {
-          handleShareFlow();
-        }}
-        titleHeader=""
-        cancelText="Cancel"
-      >
-        <ConfirmationModal.Content>
-          <div className="flex h-full w-full flex-col gap-3">
-            <div className="flex justify-start pt-4 align-middle">
-              <ToggleShadComponent
-                disabled={false}
-                size="medium"
-                setEnabled={setSharePublic}
-                enabled={sharePublic}
-              />
-              <div
-                className="cursor-pointer pl-1"
-                onClick={() => {
-                  setSharePublic(!sharePublic);
-                }}
-              >
-                {sharePublic ? (
-                  <span>
-                    This flow will be avaliable <b>for everyone</b>
-                  </span>
-                ) : (
-                  <span>
-                    This flow will be avaliable <b>just for you</b>
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="w-full pt-2">
-              <span className="text-sm">Add some tags to your Flow</span>
-              <TagsSelector
-                tags={tags}
-                selectedTags={selectedTags}
-                setSelectedTags={handleTagSelection}
-              />
-            </div>
-          </div>
-        </ConfirmationModal.Content>
-        <ConfirmationModal.Trigger tolltipContent="Share" side="top">
+      <ShareModal is_component={false} component={flow!}>
+        <ShadTooltip content="Share" side="top">
           <div className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="Share2" className="side-bar-button-size" />
           </div>
-        </ConfirmationModal.Trigger>
-      </ConfirmationModal>
+        </ShadTooltip>
+      </ShareModal>
     ),
-    [sharePublic, tags, selectedTags]
+    []
   );
 
   const ExportMemo = useMemo(

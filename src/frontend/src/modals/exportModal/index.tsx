@@ -40,8 +40,6 @@ const ExportModal = forwardRef(
           <EditFlowSettings
             name={name}
             description={description}
-            flows={flows}
-            tabId={tabId}
             setName={setName}
             setDescription={setDescription}
           />
@@ -74,6 +72,7 @@ const ExportModal = forwardRef(
                     description,
                     name,
                     last_tested_version: version,
+                    is_component: false,
                   },
                   name!,
                   description
@@ -90,6 +89,7 @@ const ExportModal = forwardRef(
                     description,
                     name,
                     last_tested_version: version,
+                    is_component: false,
                   }),
                   name!,
                   description
