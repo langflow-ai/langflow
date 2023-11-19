@@ -1,29 +1,25 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
-import { TagsSelector } from "../../../../components/tagsSelectorComponent";
-import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
-import { getStoreTags, saveFlowStore } from "../../../../controllers/API";
-import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
+import ShareModal from "../../../../modals/shareModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
+import { FlowType } from "../../../../types/flow";
 import {
   createFlowComponent,
   downloadNode,
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { getTagsIds } from "../../../../utils/storeUtils";
 import { classNames } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
@@ -52,7 +48,6 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -70,53 +65,13 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
-  const [sharePublic, setSharePublic] = useState(true);
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const tagListId = useRef<{ id: string; name: string }[]>([]);
+
+  const [flowComponent, setFlowComponent] = useState<FlowType>();
 
   useEffect(() => {
-    getStoreTags().then((res) => {
-      tagListId.current = res;
-      let tags = res.map((tag) => tag.name);
-      setTags(tags);
-    });
-  }, []);
+    setFlowComponent(createFlowComponent(data, version));
+  }, [data]);
 
-  function handleTagSelection(tag: string) {
-    setSelectedTags((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(tag)) {
-        newSet.delete(tag);
-      } else {
-        newSet.add(tag);
-      }
-      return newSet;
-    });
-  }
-
-  function handleShareComponent() {
-    const componentFlow = cloneDeep(data);
-    saveComponent(componentFlow).then(() => {
-      saveFlowStore(
-        createFlowComponent(componentFlow, version),
-        getTagsIds(Array.from(selectedTags), tagListId),
-        sharePublic
-      ).then(
-        (_) => {
-          setSuccessData({
-            title: "Component shared successfully",
-          });
-        },
-        (err) => {
-          setErrorData({
-            title: "Error sharing component",
-            list: [err["response"]["data"]["detail"]],
-          });
-        }
-      );
-    });
-  }
   const handleSelectChange = (event) => {
     switch (event) {
       case "advanced":
@@ -306,57 +261,12 @@ export default function NodeToolbarComponent({
               <></>
             </EditNodeModal>
           )}
-          {showconfirmShare && (
-            <ConfirmationModal
-              key={data.id}
-              index={0}
-              size="smaller"
-              modalContentTitle="Are you sure you want to share this component?"
-              title="Share Component"
-              confirmationText="Share"
-              icon="Share2"
-              onConfirm={() => {
-                handleShareComponent();
-              }}
-              titleHeader=""
-              cancelText="Cancel"
-              open={showconfirmShare}
-              onClose={(modal) => {
-                setShowconfirmShare(modal);
-              }}
-            >
-              <ConfirmationModal.Content>
-                <div className="flex h-full w-full flex-col gap-7">
-                  <div className="flex justify-start align-middle">
-                    <ToggleShadComponent
-                      disabled={false}
-                      size="medium"
-                      setEnabled={setSharePublic}
-                      enabled={sharePublic}
-                    />
-                    <div>
-                      {sharePublic
-                        ? "This component will be avaliable for everyone"
-                        : "This component will be avaliable just for you"}
-                    </div>
-                  </div>
-                  <div className="w-full pt-2">
-                    <span className="text-sm">
-                      Add some tags to your component
-                    </span>
-                    <TagsSelector
-                      tags={tags}
-                      selectedTags={selectedTags}
-                      setSelectedTags={handleTagSelection}
-                    />
-                  </div>
-                </div>{" "}
-              </ConfirmationModal.Content>
-              <ConfirmationModal.Trigger>
-                <div></div>
-              </ConfirmationModal.Trigger>
-            </ConfirmationModal>
-          )}
+          <ShareModal
+            open={showconfirmShare}
+            setOpen={setShowconfirmShare}
+            is_component={true}
+            component={flowComponent!}
+          />
         </span>
       </div>
     </>
