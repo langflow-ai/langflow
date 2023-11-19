@@ -4,9 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
+from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
 from langflow.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
@@ -19,6 +18,7 @@ from langflow.services.store.utils import (
     process_tags_for_post,
     update_components_with_user_data,
 )
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -196,7 +196,7 @@ class StoreService(Service):
             liked_filter = self.build_liked_filter()
             filter_conditions.append(liked_filter)
         elif liked and not store_api_Key:
-            raise ValueError("You must provide an API key to filter by likes")
+            raise APIKeyError("You must provide an API key to filter by likes")
 
         if filter_by_user and store_api_Key:
             user_data = user_data_var.get()
@@ -204,7 +204,7 @@ class StoreService(Service):
                 raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
         elif filter_by_user and not store_api_Key:
-            raise ValueError("You must provide an API key to filter your components")
+            raise APIKeyError("You must provide an API key to filter your components")
         else:
             filter_conditions.append({"status": {"_in": ["public", "Public"]}})
 
@@ -256,7 +256,7 @@ class StoreService(Service):
 
         return results_objects, metadata
 
-    async def get_liked_by_user_components(self, component_ids: List[UUID], api_key: str) -> List[str]:
+    async def get_liked_by_user_components(self, component_ids: List[str], api_key: str) -> List[str]:
         # Get fields id
         # filter should be "id is in component_ids AND liked_by directus_users_id token is api_key"
         # return the ids
@@ -339,7 +339,7 @@ class StoreService(Service):
                 try:
                     errors = response.json()
                     message = errors["errors"][0]["message"]
-                    raise ValueError(message)
+                    raise FilterError(message)
                 except UnboundLocalError:
                     pass
             raise ValueError(f"Upload failed: {exc}")
@@ -447,9 +447,9 @@ class StoreService(Service):
                     comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ValueError("You are not authorized to access this public resource")
+                    raise ForbiddenError("You are not authorized to access this public resource")
                 elif exc.response.status_code == 401:
-                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
+                    raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
             try:
                 if result and not metadata:
                     if len(result) >= limit:
@@ -464,9 +464,9 @@ class StoreService(Service):
                     comp_count = 0
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ValueError("You are not authorized to access this public resource")
+                    raise ForbiddenError("You are not authorized to access this public resource")
                 elif exc.response.status_code == 401:
-                    raise ValueError("You are not authorized to access this resource. Please check your API key.")
+                    raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
 
             if store_api_Key:
                 # Now, from the result, we need to get the components
@@ -482,5 +482,5 @@ class StoreService(Service):
                         # If we get an error here, it means the user is not authorized
                         authorized = False
                 else:
-                    authorized = True
+                    authorized = await self.check_api_key(store_api_Key)
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
