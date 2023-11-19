@@ -201,7 +201,8 @@ const ShareModal = forwardRef(
             }}
             type="button"
           >
-            Share {nameComponent}
+            {props.is_component ? "Save and " : ""}Share{" "}
+            {!props.is_component ? "Flow" : ""}
           </Button>
         </BaseModal.Footer>
       </BaseModal>
