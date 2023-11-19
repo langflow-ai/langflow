@@ -9,7 +9,6 @@ import {
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
-import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
@@ -42,35 +41,28 @@ const ShareModal = forwardRef(
 
     const nameComponent = props.is_component ? "Component" : "Flow";
 
-    const [tags, setTags] = useState<string[]>([]);
+    const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+    const [loadingTags, setLoadingTags] = useState<boolean>(false);
     const [sharePublic, setSharePublic] = useState(true);
-    const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const tagListId = useRef<{ id: string; name: string }[]>([]);
 
     useEffect(() => {
-      getStoreTags().then((res) => {
-        tagListId.current = res;
-        let tags = res.map((tag) => tag.name);
-        setTags(tags);
-      });
+      handleGetTags();
     }, []);
+
+    function handleGetTags() {
+      setLoadingTags(true);
+      getStoreTags().then((res) => {
+        setTags(res);
+        setLoadingTags(false);
+      });
+    }
 
     useEffect(() => {
       setName(props.component?.name ?? "");
       setDescription(props.component?.description ?? "");
     }, [props.component]);
-
-    function handleTagSelection(tag: string) {
-      setSelectedTags((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(tag)) {
-          newSet.delete(tag);
-        } else {
-          newSet.add(tag);
-        }
-        return newSet;
-      });
-    }
 
     const handleShareComponent = () => {
       const saveFlow: FlowType = checked
@@ -92,7 +84,7 @@ const ShareModal = forwardRef(
           });
       saveFlowStore(
         saveFlow,
-        getTagsIds(Array.from(selectedTags), tagListId),
+        getTagsIds(selectedTags, tagListId),
         sharePublic
       ).then(
         () => {
@@ -138,6 +130,27 @@ const ShareModal = forwardRef(
             setName={setName}
             setDescription={setDescription}
           />
+          <div className="mt-3 flex h-8 w-full">
+            <TagsSelector
+              tags={tags}
+              loadingTags={loadingTags}
+              disabled={false}
+              selectedTags={selectedTags}
+              setSelectedTags={setSelectedTags}
+            />
+          </div>
+          <div className="mt-5 flex items-center space-x-2">
+            <Checkbox
+              id="terms"
+              checked={sharePublic}
+              onCheckedChange={(event: boolean) => {
+                setSharePublic(event);
+              }}
+            />
+            <label htmlFor="terms" className="export-modal-save-api text-sm ">
+              Make {nameComponent} Public
+            </label>
+          </div>
           <div className="mt-3 flex items-center space-x-2">
             <Checkbox
               id="terms"
@@ -154,42 +167,6 @@ const ShareModal = forwardRef(
             Caution: Uncheck this box only removes API keys from fields
             specifically designated for API keys.
           </span>
-          <div className="flex h-full w-full flex-col gap-3">
-            <div className="flex justify-start pt-4 align-middle">
-              <ToggleShadComponent
-                disabled={false}
-                size="medium"
-                setEnabled={setSharePublic}
-                enabled={sharePublic}
-              />
-              <div
-                className="cursor-pointer pl-1"
-                onClick={() => {
-                  setSharePublic(!sharePublic);
-                }}
-              >
-                {sharePublic ? (
-                  <span>
-                    This flow will be avaliable <b>for everyone</b>
-                  </span>
-                ) : (
-                  <span>
-                    This flow will be avaliable <b>just for you</b>
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="w-full pt-2">
-              <span className="text-sm">
-                Add some tags to your {nameComponent}
-              </span>
-              <TagsSelector
-                tags={tags}
-                selectedTags={selectedTags}
-                setSelectedTags={handleTagSelection}
-              />
-            </div>
-          </div>
         </BaseModal.Content>
 
         <BaseModal.Footer>
