@@ -257,7 +257,7 @@ export default function NodeToolbarComponent({
           <ShareModal
             open={showconfirmShare}
             setOpen={setShowconfirmShare}
-            is_component={false}
+            is_component={true}
             component={flowComponent!}
           />
         </span>
