@@ -4,9 +4,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from httpx import HTTPStatusError
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
+from langflow.services.store.exceptions import CustomException
 from langflow.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
@@ -127,17 +129,11 @@ async def get_components(
             limit=limit,
             store_api_Key=store_api_Key,
         )
-    except Exception as exc:
-        if isinstance(exc, HTTPStatusError):
-            if exc.response.status_code == 403:
-                raise HTTPException(status_code=403, detail="Forbidden")
-        elif isinstance(exc, ValueError):
-            if "Check your API key" in str(exc):
-                raise HTTPException(status_code=401, detail=str(exc))
-            elif "filter by likes" in str(exc) or "filter your components" in str(exc):
-                raise HTTPException(status_code=400, detail=str(exc))
+    except CustomException as exc:
+        if isinstance(exc, ValueError):
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
