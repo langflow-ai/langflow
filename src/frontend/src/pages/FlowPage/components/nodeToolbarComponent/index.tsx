@@ -43,7 +43,9 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "prompt" ||
           data.node.template[templateField].type === "file" ||
           data.node.template[templateField].type === "Any" ||
-          data.node.template[templateField].type === "int")
+          data.node.template[templateField].type === "int" ||
+          data.node.template[templateField].type === "dict" ||
+          data.node.template[templateField].type === "NestedDict")
     ).length
   );
   const updateNodeInternals = useUpdateNodeInternals();
