@@ -1,16 +1,26 @@
-FROM node:20-alpine as frontend_build
+#baseline
+FROM --platform=linux/amd64 node:19-bullseye-slim AS base
+RUN mkdir -p /home/node/app
+RUN chown -R node:node /home/node && chmod -R 770 /home/node
+RUN apt-get update && apt-get install -y jq
+WORKDIR /home/node/app
+
+# client build
+FROM base AS builder-client
 ARG BACKEND_URL
-WORKDIR /app
+ENV BACKEND_URL $BACKEND_URL
+RUN echo "BACKEND_URL: $BACKEND_URL"
 
-COPY ./package.json ./package-lock.json ./tsconfig.json ./vite.config.ts ./index.html ./tailwind.config.js ./postcss.config.js ./prettier.config.js /app/
-RUN npm install
-COPY ./src /app/src
-RUN npm run build
+WORKDIR /home/node/app
+COPY --chown=node:node . ./
 
-FROM nginx
-COPY --from=frontend_build /app/build/ /usr/share/nginx/html
-COPY /nginx.conf /etc/nginx/conf.d/default.conf
-COPY start-nginx.sh /start-nginx.sh
-RUN chmod +x /start-nginx.sh
-ENV BACKEND_URL=$BACKEND_URL
-CMD ["/start-nginx.sh"]
+COPY ./set_proxy.sh .
+RUN chmod +x set_proxy.sh && \
+    cat set_proxy.sh | tr -d '\r' > set_proxy_unix.sh && \
+    chmod +x set_proxy_unix.sh && \
+    ./set_proxy_unix.sh
+
+USER node
+
+RUN npm install --loglevel warn
+CMD ["npm", "run", "dev:docker"]
