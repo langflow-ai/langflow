@@ -732,7 +732,7 @@ export async function searchComponent(
 
 export async function checkHasApiKey() {
   try {
-    const res = await api.get(`${BASE_URL_API}/store/check/api_key`);
+    const res = await api.get(`${BASE_URL_API}store/check/api_key`);
     if (res?.status === 200) {
       return res.data;
     }

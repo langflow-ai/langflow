@@ -47,6 +47,7 @@ export function StoreProvider({ children }) {
       setValidApiKey(res?.is_valid ?? false);
       setLoadingApiKey(false);
     } catch (e) {
+      setLoadingApiKey(false);
       console.log(e);
     }
   };
