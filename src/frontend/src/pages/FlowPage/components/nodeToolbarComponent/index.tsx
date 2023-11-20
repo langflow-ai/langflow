@@ -187,15 +187,18 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
-              <SelectItem value={nodeLength == 0 ? "disabled" : "advanced"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Settings2"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Edit{" "}
-                </div>{" "}
-              </SelectItem>
+              {nodeLength > 0 && (
+                <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="Settings2"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Edit{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
+
               <SelectItem value={"SaveAll"}>
                 <div className="flex">
                   <IconComponent
