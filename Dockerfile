@@ -15,5 +15,4 @@ COPY ./ ./
 # Install dependencies
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
-RUN pip install langflow>==0.5.0 -U --user
-CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "--factory", "src.backend.langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860", "--reload", "--log-level", "debug"]
