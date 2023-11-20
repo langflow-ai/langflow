@@ -569,7 +569,7 @@ export async function saveFlowStore(
       is_component: newFlow.is_component,
       parent: newFlow.parent,
       tags: tags,
-      status: publicFlow ? "public" : "private",
+      status: publicFlow ? "Public" : "Private",
       last_tested_version: newFlow.last_tested_version,
     });
 
