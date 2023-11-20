@@ -101,7 +101,12 @@ jq = "^1.6.0"
 boto3 = "^1.28.63"
 numexpr = "^2.8.6"
 qianfan = "0.0.5"
+<<<<<<< HEAD
 pgvector = "^0.2.3"
+=======
+pymysql = "1.0.2"
+
+>>>>>>> ddce84dd (modify: poetory install pymysql)
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
