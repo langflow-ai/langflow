@@ -71,4 +71,4 @@ class StoreComponentCreate(BaseModel):
     parent: Optional[UUID] = None
     is_component: Optional[bool]
     last_tested_version: Optional[str] = None
-    public: Optional[bool] = False
+    private: Optional[bool] = True
