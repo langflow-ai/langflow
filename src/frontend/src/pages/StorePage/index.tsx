@@ -57,7 +57,7 @@ export default function StorePage(): JSX.Element {
             "You don't have an API Key. Please add one to use the Langflow Store.",
           ],
         });
-        setLoading(false)
+        setLoading(false);
       } else if (!validApiKey) {
         setErrorData({
           title: "API Key Error",
@@ -87,10 +87,15 @@ export default function StorePage(): JSX.Element {
 
   function handleGetTags() {
     setLoadingTags(true);
-    getStoreTags().then((res) => {
-      setTags(res);
-      setLoadingTags(false);
-    });
+    getStoreTags()
+      .then((res) => {
+        setTags(res);
+        setLoadingTags(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        setLoadingTags(false);
+      });
   }
 
   function handleGetComponents() {
