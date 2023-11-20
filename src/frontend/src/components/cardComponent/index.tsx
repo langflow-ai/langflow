@@ -144,6 +144,13 @@ export default function CollectionCardComponent({
               </ShadTooltip>
               {data?.metadata !== undefined && (
                 <div className="flex gap-3">
+                  {data.private && (
+                    <ShadTooltip content={data.private ? "Private" : "Public"}>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <IconComponent name="Lock" className="h-4 w-4" />
+                      </span>
+                    </ShadTooltip>
+                  )}
                   {!data.is_component && (
                     <ShadTooltip content="Components">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

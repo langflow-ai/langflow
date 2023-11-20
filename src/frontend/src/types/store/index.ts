@@ -10,6 +10,7 @@ export type storeComponent = {
   liked_by_user?: boolean;
   user_created?: { username: string };
   last_tested_version?: string;
+  private?: boolean;
 };
 
 export type StoreComponentResponse = {
