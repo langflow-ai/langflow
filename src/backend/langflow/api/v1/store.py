@@ -69,7 +69,7 @@ async def check_if_store_has_api_key(
 
 
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)
-async def create_component(
+async def share_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
@@ -105,7 +105,7 @@ async def create_component(
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(
     search: Annotated[Optional[str], Query()] = None,
-    status: Annotated[Optional[str], Query()] = None,
+    private: Annotated[Optional[bool], Query()] = None,
     is_component: Annotated[Optional[bool], Query()] = None,
     tags: Annotated[Optional[list[str]], Query()] = None,
     sort: Annotated[Union[list[str], None], Query()] = None,
@@ -119,7 +119,7 @@ async def get_components(
     try:
         return await store_service.get_list_component_response_model(
             search=search,
-            status=status,
+            private=private,
             is_component=is_component,
             tags=tags,
             sort=sort,

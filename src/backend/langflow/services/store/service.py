@@ -5,19 +5,16 @@ from uuid import UUID
 import httpx
 from httpx import HTTPError, HTTPStatusError
 from langflow.services.base import Service
-from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
-from langflow.services.store.schema import (
-    CreateComponentResponse,
-    DownloadComponentResponse,
-    ListComponentResponse,
-    ListComponentResponseModel,
-    StoreComponentCreate,
-)
-from langflow.services.store.utils import (
-    process_component_data,
-    process_tags_for_post,
-    update_components_with_user_data,
-)
+from langflow.services.store.exceptions import (APIKeyError, FilterError,
+                                                ForbiddenError)
+from langflow.services.store.schema import (CreateComponentResponse,
+                                            DownloadComponentResponse,
+                                            ListComponentResponse,
+                                            ListComponentResponseModel,
+                                            StoreComponentCreate)
+from langflow.services.store.utils import (process_component_data,
+                                           process_tags_for_post,
+                                           update_components_with_user_data)
 from loguru import logger
 
 if TYPE_CHECKING:
@@ -170,7 +167,7 @@ class StoreService(Service):
     def build_filter_conditions(
         self,
         search: Optional[str] = None,
-        status: Optional[str] = None,
+        private: Optional[bool] = None,
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         filter_by_user: Optional[bool] = False,
@@ -183,8 +180,8 @@ class StoreService(Service):
             search_conditions = self.build_search_filter_conditions(search)
             filter_conditions.append(search_conditions)
 
-        if status is not None:
-            filter_conditions.append({"status": {"_eq": status}})
+        if private is not None:
+            filter_conditions.append({"private": {"_eq": private}})
 
         if tags:
             tags_filter = self.build_tags_filter(tags)
@@ -206,7 +203,7 @@ class StoreService(Service):
         elif filter_by_user and not store_api_Key:
             raise APIKeyError("You must provide an API key to filter your components")
         else:
-            filter_conditions.append({"status": {"_in": ["public", "Public"]}})
+            filter_conditions.append({"private": {"_eq": False}})
 
         return filter_conditions
 
@@ -411,7 +408,7 @@ class StoreService(Service):
     async def get_list_component_response_model(
         self,
         search: Optional[str] = None,
-        status: Optional[str] = None,
+        private: Optional[bool] = None,
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
         filter_by_user: bool = False,
@@ -424,7 +421,7 @@ class StoreService(Service):
         async with user_data_context(api_key=store_api_Key, store_service=self):
             filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
                 search=search,
-                status=status,
+                private=private,
                 tags=tags,
                 is_component=is_component,
                 filter_by_user=filter_by_user,
