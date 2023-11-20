@@ -69,7 +69,7 @@ export default function NodeToolbarComponent({
   const [flowComponent, setFlowComponent] = useState<FlowType>();
 
   useEffect(() => {
-    setFlowComponent(createFlowComponent(data, version));
+    setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [data]);
 
   const handleSelectChange = (event) => {
