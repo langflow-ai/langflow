@@ -1,15 +1,15 @@
 import contextlib
 import json
-import orjson
 import os
-from shutil import copy2
-from typing import Optional, List
 from pathlib import Path
+from shutil import copy2
+from typing import List, Optional
 
+import orjson
 import yaml
+from loguru import logger
 from pydantic import field_validator, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from loguru import logger
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
@@ -54,9 +54,11 @@ class Settings(BaseSettings):
     LANGFUSE_HOST: Optional[str] = None
 
     STORE: Optional[bool] = True
-    STORE_URL: Optional[str] = None
-    DOWNLOAD_WEBHOOK_URL: Optional[str] = None
-    LIKE_WEBHOOK_URL: Optional[str] = None
+    STORE_URL: Optional[str] = "https://api.langflow.store"
+    DOWNLOAD_WEBHOOK_URL: Optional[
+        str
+    ] = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
