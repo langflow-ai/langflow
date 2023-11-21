@@ -224,7 +224,7 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/users", json=user_data.dict())
+    response = client.post("/api/v1/users", json=user_data.model_dump())
     assert response.status_code == 201
     return response.json()
 
@@ -269,7 +269,7 @@ def flow(client, json_flow: str, active_user):
         user_id=active_user.id,
         description="description",
     )
-    flow = Flow(**flow_data.dict())
+    flow = Flow(**flow_data.model_dump())
     with session_getter(get_db_service()) as session:
         session.add(flow)
         session.commit()
@@ -283,7 +283,7 @@ def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -295,7 +295,7 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     vector_store = orjson.loads(json_vector_store)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Vector Store", description="description", data=data)
-    response = client.post("api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
