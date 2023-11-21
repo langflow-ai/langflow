@@ -28,6 +28,9 @@ export class Network extends Construct {
 
   constructor(scope: Construct, id: string) {
     super(scope, id)
+    const alb_listen_port=80
+    const front_service_port=3000
+    const back_service_port=7860
 
     // VPC等リソースの作成
     this.vpc = new ec2.Vpc(scope, 'VPC', {
@@ -75,7 +78,7 @@ export class Network extends Construct {
       description: 'for alb',
       vpc: this.vpc,
     })
-    this.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80))
+    this.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(alb_listen_port))
 
     this.alb = new elb.ApplicationLoadBalancer(this,'alb',{
       internetFacing: true, //インターネットからのアクセスを許可するかどうか指定
@@ -84,10 +87,10 @@ export class Network extends Construct {
       vpc:this.vpc,   
     })
 
-    const listener = this.alb.addListener('Listener', { port: 80 });
+    const listener = this.alb.addListener('Listener', { port: alb_listen_port });
 
     this.targetGroup = listener.addTargets('targetGroup', {
-      port: 3000,
+      port: front_service_port,
       protocol: elb.ApplicationProtocol.HTTP,
       healthCheck: {
         enabled: true,
@@ -114,7 +117,7 @@ export class Network extends Construct {
       description: 'for langflow-back-ecs',
       vpc: this.vpc,
     })
-    this.ecsBackSG.addIngressRule(this.ecsFrontSG, ec2.Port.tcp(7860))
+    this.ecsBackSG.addIngressRule(this.ecsFrontSG, ec2.Port.tcp(back_service_port))
 
     // RDSに設定するセキュリティグループ
     this.dbSG = new ec2.SecurityGroup(scope, 'DBSecurityGroup', {
@@ -150,6 +153,9 @@ export class Network extends Construct {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
     this.backendTaskRole.addToPolicy(ECSExecPolicyStatement);
+    // KendraとBedrockのアクセス権付与
+    // this.backendTaskRole.addToPolicy();
+    
 
     this.frontendTaskRole = new iam.Role(this, 'FrontendTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
