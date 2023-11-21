@@ -318,46 +318,71 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  async function uploadFlow(
-    newProject: boolean,
-    file?: File
-  ): Promise<String | undefined> {
-    let id;
-    if (file) {
-      let text = await file.text();
-      let fileData = JSON.parse(text);
-      if (fileData.flows) {
-        fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(newProject, flow);
-        });
-      }
-      // parse the text into a JSON object
-      let flow: FlowType = JSON.parse(text);
-
-      id = await addFlow(newProject, flow);
-    } else {
-      // create a file input
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".json";
-      // add a change event listener to the file input
-      id = await new Promise((resolve) => {
+  async function uploadFlow({
+    newProject,
+    file,
+    isComponent = false,
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+  }): Promise<String | never> {
+    return new Promise(async (resolve, reject) => {
+      let id;
+      if (file) {
+        let text = await file.text();
+        let fileData = JSON.parse(text);
+        console.log(fileData);
+        if (fileData.is_component === undefined) {
+          reject("Your file doesn't have the is_component property.");
+        } else if (
+          fileData.is_component !== undefined &&
+          fileData.is_component !== isComponent
+        ) {
+          reject("You cannot upload a component as a flow or vice versa");
+        } else {
+          if (fileData.flows) {
+            fileData.flows.forEach((flow: FlowType) => {
+              id = addFlow(newProject, flow);
+            });
+            resolve("");
+          } else {
+            id = await addFlow(newProject, fileData);
+            resolve(id);
+          }
+        }
+      } else {
+        // create a file input
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        // add a change event listener to the file input
         input.onchange = async (e: Event) => {
           if (
             (e.target as HTMLInputElement).files![0].type === "application/json"
           ) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
-            let flow: FlowType = JSON.parse(text);
-            const flowId = await addFlow(newProject, flow);
-            resolve(flowId);
+            let fileData: FlowType = await JSON.parse(text);
+            console.log(isComponent, fileData);
+
+            if (fileData.is_component === undefined) {
+              reject("Your file doesn't have the is_component property.");
+            } else if (
+              fileData.is_component !== undefined &&
+              fileData.is_component !== isComponent
+            ) {
+              reject("You cannot upload a component as a flow or vice versa");
+            } else {
+              id = await addFlow(newProject, fileData);
+              resolve(id);
+            }
           }
         };
         // trigger the file input click event to open the file dialog
         input.click();
-      });
-    }
-    return id;
+      }
+    });
   }
 
   function uploadFlows() {
