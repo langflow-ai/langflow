@@ -182,7 +182,7 @@ def test_download_file(
     with session_getter(db_manager) as session:
         for flow in flow_list.flows:
             flow.user_id = active_user.id
-            db_flow = Flow.from_orm(flow)
+            db_flow = Flow.model_validate(flow)
             session.add(db_flow)
         session.commit()
     # Make request to endpoint

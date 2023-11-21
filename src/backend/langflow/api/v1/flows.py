@@ -1,6 +1,10 @@
 from typing import List
 from uuid import UUID
+
+import orjson
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from sqlmodel import Session
 
 from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
@@ -12,13 +16,7 @@ from langflow.services.database.models.flow import (
     FlowUpdate,
 )
 from langflow.services.database.models.user.user import User
-from langflow.services.deps import get_session
-from langflow.services.deps import get_settings_service
-import orjson
-from sqlmodel import Session
-from fastapi import APIRouter, Depends, HTTPException
-
-from fastapi import File, UploadFile
+from langflow.services.deps import get_session, get_settings_service
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -163,5 +161,5 @@ async def download_file(
     current_user: User = Depends(get_current_active_user),
 ):
     """Download all flows as a file."""
-    flows = read_flows(session=session, current_user=current_user)
+    flows = read_flows(current_user=current_user)
     return FlowListRead(flows=flows)
