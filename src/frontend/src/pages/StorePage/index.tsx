@@ -20,6 +20,7 @@ import {
 } from "../../components/ui/select";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -30,6 +31,7 @@ export default function StorePage(): JSX.Element {
     useContext(StoreContext);
   const { apiKey } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
+  const { setTabId } = useContext(FlowsContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
@@ -144,6 +146,11 @@ export default function StorePage(): JSX.Element {
         }
       });
   }
+
+  // Set a null id
+  useEffect(() => {
+    setTabId("");
+  }, []);
 
   return (
     <PageLayout
