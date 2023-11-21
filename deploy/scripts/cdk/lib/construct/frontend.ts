@@ -59,7 +59,6 @@ export class FrontEndCluster extends Construct {
       portMappings: [
           {
               name:frontendServiceName,
-              hostPort:80,
               containerPort: containerPort,
               protocol: ecs.Protocol.TCP,
               appProtocol:ecs.AppProtocol.http,
