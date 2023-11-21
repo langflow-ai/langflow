@@ -23,9 +23,12 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
+import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { postCustomComponentUpdate } from "../../../../controllers/API";
 import { ParameterComponentType } from "../../../../types/components";
+import { NodeDataType } from "../../../../types/flow";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -60,6 +63,7 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const { setErrorData } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, flows } = useContext(FlowsContext);
@@ -87,6 +91,25 @@ export default function ParameterComponent({
       .some((edge) => edge.targetHandle === scapedJSONStringfy(id)) ?? false;
 
   const { data: myData } = useContext(typesContext);
+
+  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+    const code = data.node?.template["code"]?.value;
+    if (!code) {
+      console.error("Code not found in the template");
+      return;
+    }
+
+    try {
+      const res = await postCustomComponentUpdate(code, name);
+      if (res.status === 200 && data.node?.template) {
+        let clone = cloneDeep(data);
+        clone.node!.template[name] = res.data.template[name];
+        setData(clone);
+      }
+    } catch (err) {
+      setErrorData(err as { title: string; list?: Array<string> });
+    }
+  };
 
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
@@ -411,6 +434,14 @@ export default function ParameterComponent({
               onSelect={handleOnNewValue}
               value={data.node.template[name].value ?? "Choose an option"}
             ></Dropdown>
+            <Button
+              className="mt-2 w-full"
+              onClick={() => {
+                handleUpdateValues(name, data);
+              }}
+            >
+              Refresh
+            </Button>
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
