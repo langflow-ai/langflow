@@ -428,20 +428,25 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
-            <Dropdown
-              options={data.node.template[name].options}
-              onSelect={handleOnNewValue}
-              value={data.node.template[name].value ?? "Choose an option"}
-            ></Dropdown>
-            <Button
-              className="mt-2 w-full"
-              onClick={() => {
-                handleUpdateValues(name, data);
-              }}
-            >
-              Refresh
-            </Button>
+          // TODO: Improve CSS
+          <div className="mt-2 flex w-full items-center">
+            <div className="w-5/6 flex-grow">
+              <Dropdown
+                options={data.node.template[name].options}
+                onSelect={handleOnNewValue}
+                value={data.node.template[name].value ?? "Choose an option"}
+              />
+            </div>
+            {data.node?.template[name].refresh && (
+              <button
+                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
+                onClick={() => {
+                  handleUpdateValues(name, data);
+                }}
+              >
+                <IconComponent name="RefreshCcw" />
+              </button>
+            )}
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
