@@ -360,6 +360,16 @@ export async function postCustomComponent(
   return await api.post(`${BASE_URL_API}custom_component`, { code });
 }
 
+export async function postCustomComponentUpdate(
+  code: string,
+  field: string
+): Promise<AxiosResponse<APIClassType>> {
+  return await api.post(`${BASE_URL_API}custom_component/update`, {
+    code,
+    field,
+  });
+}
+
 export async function onLogin(user: LoginType) {
   try {
     const response = await api.post(
