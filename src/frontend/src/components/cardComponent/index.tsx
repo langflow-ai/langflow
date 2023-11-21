@@ -134,8 +134,8 @@ export default function CollectionCardComponent({
                 className={cn(
                   "flex-shrink-0",
                   data.is_component
-                    ? "mx-0.5 h-6 w-6 text-indigo-500"
-                    : "h-7 w-7 flex-shrink-0 text-emerald-800"
+                    ? "mx-0.5 h-6 w-6 text-component-icon"
+                    : "h-7 w-7 flex-shrink-0 text-flow-icon"
                 )}
                 name={data.is_component ? "ToyBrick" : "Group"}
               />
