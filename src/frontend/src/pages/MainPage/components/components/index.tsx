@@ -16,7 +16,7 @@ export default function ComponentsComponent({
   is_component?: boolean;
 }) {
   const { flows, removeFlow, uploadFlow, isLoading } = useContext(FlowsContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
   const [allData, setAllData] = useState(
@@ -43,14 +43,24 @@ export default function ComponentsComponent({
     e.preventDefault();
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       if (e.dataTransfer.files.item(0).type === "application/json") {
-        try {
-          uploadFlow(true, e.dataTransfer.files.item(0)!);
-        } catch (error: any) {
-          setErrorData({
-            title: "Error uploading file",
-            list: [error.message],
+        uploadFlow({
+          newProject: true,
+          file: e.dataTransfer.files.item(0)!,
+          isComponent: is_component,
+        })
+          .then(() => {
+            setSuccessData({
+              title: `${
+                is_component ? "Component" : "Flow"
+              } uploaded successfully`,
+            });
+          })
+          .catch((error) => {
+            setErrorData({
+              title: "Error uploading file",
+              list: [error],
+            });
           });
-        }
       } else {
         setErrorData({
           title: "Invalid file type",

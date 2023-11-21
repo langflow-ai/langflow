@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
@@ -19,21 +19,32 @@ export default function HomePage(): JSX.Element {
     uploadFlow,
     isLoading,
   } = useContext(FlowsContext);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const location = useLocation();
+  const pathname = location.pathname;
+  const is_component = pathname === "/components";
   const dropdownOptions = [
     {
       name: "Import from JSON",
       onBtnClick: () => {
-        try {
-          uploadFlow(true).then((id) => {
-            navigate("/flow/" + id);
+        uploadFlow({
+          newProject: true,
+          isComponent: is_component,
+        })
+          .then((id) => {
+            setSuccessData({
+              title: `${
+                is_component ? "Component" : "Flow"
+              } uploaded successfully`,
+            });
+            if (!is_component) navigate("/flow/" + id);
+          })
+          .catch((error) => {
+            setErrorData({
+              title: "Error uploading file",
+              list: [error],
+            });
           });
-        } catch (error: any) {
-          setErrorData({
-            title: "Invalid file type",
-            list: [error],
-          });
-        }
       },
     },
   ];
