@@ -161,6 +161,7 @@ def run(
         remove_api_keys=remove_api_keys,
         cache=cache,
         components_path=components_path,
+        store=store,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
