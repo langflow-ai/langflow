@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.api.utils import get_new_key
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.agents.base import agent_creator
@@ -35,6 +33,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 # Used to get the base_classes list
@@ -216,29 +215,14 @@ def build_field_config(
 
         if update_field is not None:
             try:
-                field_dict = build_config[update_field]
-                # If "options" in field_dict, and it is a callable
-                # then call it to get the options
-                if "options" in field_dict and callable(field_dict["options"]):
-                    field_dict["options"] = field_dict["options"]()
-                elif "value" in field_dict and callable(field_dict["value"]):
-                    field_dict["value"] = field_dict["value"]()
-                # Now we need to update the build_config
-                # with the new field_dict
+                field_dict = build_config.get(update_field, {})
+                update_field_dict(field_dict)
                 build_config[update_field] = field_dict
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
         else:
-            # Update all the fields
             for field_name, field_dict in build_config.items():
-                # If "options" in field_dict, and it is a callable
-                # then call it to get the options
-                if "options" in field_dict and callable(field_dict["options"]):
-                    field_dict["options"] = field_dict["options"]()
-                elif "value" in field_dict and callable(field_dict["value"]):
-                    field_dict["value"] = field_dict["value"]()
-                # Now we need to update the build_config
-                # with the new field_dict
+                update_field_dict(field_dict)
                 build_config[field_name] = field_dict
 
         return build_config
@@ -246,6 +230,17 @@ def build_field_config(
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
         return {}
+
+
+def update_field_dict(field_dict):
+    """Update the field dictionary by calling options() or value() if they are callable"""
+    if "options" in field_dict and callable(field_dict["options"]):
+        field_dict["options"] = field_dict["options"]()
+        # Also update the "refresh" key
+        field_dict["refresh"] = True
+    elif "value" in field_dict and callable(field_dict["value"]):
+        field_dict["value"] = field_dict["value"]()
+        field_dict["refresh"] = True
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
