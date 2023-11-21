@@ -4,8 +4,6 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
 from langflow.services.store.schema import (
@@ -20,6 +18,7 @@ from langflow.services.store.utils import (
     process_tags_for_post,
     update_components_with_user_data,
 )
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -416,6 +415,7 @@ class StoreService(Service):
         private: Optional[bool] = None,
         tags: Optional[List[str]] = None,
         is_component: Optional[bool] = None,
+        fields: Optional[List[str]] = None,
         filter_by_user: bool = False,
         liked: bool = False,
         store_api_key: Optional[str] = None,
@@ -442,6 +442,7 @@ class StoreService(Service):
                     page=page,
                     limit=limit,
                     sort=sort,
+                    fields=fields,
                     filter_conditions=filter_conditions,
                     use_api_key=liked or filter_by_user,
                 )
