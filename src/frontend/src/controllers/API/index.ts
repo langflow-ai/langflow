@@ -600,7 +600,7 @@ export async function getStoreComponents({
   sort = "-count(liked_by)",
   tags = [] || null,
   liked = null,
-  status = null,
+  isPrivate = null,
   search = null,
   filterByUser = null,
 }: {
@@ -610,7 +610,7 @@ export async function getStoreComponents({
   sort?: string;
   tags?: string[] | null;
   liked?: boolean | null;
-  status?: string | null;
+  isPrivate?: boolean | null;
   search?: string | null;
   filterByUser?: boolean | null;
 }): Promise<StoreComponentResponse | undefined> {
@@ -620,8 +620,8 @@ export async function getStoreComponents({
     if (search !== undefined && search !== null) {
       queryParams.push(`search=${search}`);
     }
-    if (status !== undefined && status !== null) {
-      queryParams.push(`status=${status}`);
+    if (isPrivate !== undefined && isPrivate !== null) {
+      queryParams.push(`private=${isPrivate}`);
     }
     if (tags !== undefined && tags !== null && tags.length > 0) {
       queryParams.push(`tags=${tags.join(encodeURIComponent(","))}`);

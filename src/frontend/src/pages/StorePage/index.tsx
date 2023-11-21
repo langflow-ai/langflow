@@ -111,7 +111,7 @@ export default function StorePage(): JSX.Element {
       sort: pageOrder === "Popular" ? "-count(downloads)" : "name",
       tags: filteredCategories,
       liked: selectFilter === "likedbyme" && validApiKey ? true : null,
-      status: null,
+      isPrivate: null,
       search: inputText === "" ? null : inputText,
       filterByUser: selectFilter === "createdbyme" && validApiKey ? true : null,
     })
