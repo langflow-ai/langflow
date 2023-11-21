@@ -35,6 +35,7 @@ export default function CollectionCardComponent({
   const { addFlow } = useContext(FlowsContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { setValidApiKey } = useContext(StoreContext);
+  const isStore = false;
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
   const [liked_by_user, setLiked_by_user] = useState(
@@ -64,13 +65,19 @@ export default function CollectionCardComponent({
         const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
         addFlow(true, newFlow)
           .then((id) => {
-            setSuccessData({ title: `${name} Installed Successfully.` });
+            setSuccessData({
+              title: `${name} ${
+                isStore ? "Downloaded" : "Installed"
+              } Successfully.`,
+            });
             setLoading(false);
           })
           .catch((error) => {
             setLoading(false);
             setErrorData({
-              title: `Error installing the ${name}`,
+              title: `Error ${
+                isStore ? "downloading" : "installing"
+              } the ${name}`,
               list: [error["response"]["data"]["detail"]],
             });
           });
@@ -78,7 +85,7 @@ export default function CollectionCardComponent({
       .catch((err) => {
         setLoading(false);
         setErrorData({
-          title: `Error installing the ${name}`,
+          title: `Error ${isStore ? "downloading" : "installing"} the ${name}`,
           list: [err["response"]["data"]["detail"]],
         });
         setDownloads_count(temp);
@@ -134,8 +141,8 @@ export default function CollectionCardComponent({
                 className={cn(
                   "flex-shrink-0",
                   data.is_component
-                    ? "mx-0.5 h-6 w-6 text-component-icon"
-                    : "h-7 w-7 flex-shrink-0 text-flow-icon"
+                    ? "mx-0.5 h-6 w-6 text-indigo-500"
+                    : "h-7 w-7 flex-shrink-0 text-emerald-800"
                 )}
                 name={data.is_component ? "ToyBrick" : "Group"}
               />
@@ -179,7 +186,6 @@ export default function CollectionCardComponent({
                   onConfirm={() => {
                     onDelete();
                   }}
-                  description={name}
                 >
                   <IconComponent
                     name="Trash2"
@@ -240,7 +246,6 @@ export default function CollectionCardComponent({
                       onConfirm={() => {
                         onDelete();
                       }}
-                      description={name}
                     >
                       <Button
                         variant="ghost"
@@ -297,7 +302,9 @@ export default function CollectionCardComponent({
                 <ShadTooltip
                   content={
                     authorized
-                      ? "Install Locally"
+                      ? isStore
+                        ? "Download"
+                        : "Install Locally"
                       : "Please review your API key."
                   }
                 >
@@ -318,9 +325,9 @@ export default function CollectionCardComponent({
                     }}
                   >
                     <IconComponent
-                      name={loading ? "Loader2" : "Plus"}
+                      name={loading ? "Loader2" : isStore ? "Download" : "Plus"}
                       className={cn(
-                        loading ? "h-5 w-5 animate-spin" : "h-6 w-6",
+                        loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
                         !authorized ? " text-ring" : ""
                       )}
                     />
