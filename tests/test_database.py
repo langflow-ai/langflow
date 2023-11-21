@@ -233,7 +233,7 @@ def test_update_nonexistent_flow(client: TestClient, json_flow: str, active_user
         description="description",
         data=data,
     )
-    response = client.patch(f"api/v1/flows/{uuid}", json=updated_flow.dict(), headers=logged_in_headers)
+    response = client.patch(f"api/v1/flows/{uuid}", json=updated_flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 404
 
 
