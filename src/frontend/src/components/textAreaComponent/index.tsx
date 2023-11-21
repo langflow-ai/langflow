@@ -21,37 +21,41 @@ export default function TextAreaComponent({
 
   return (
     <div className="flex w-full items-center">
-        <GenericModal
-          type={TypeModal.TEXT}
-          buttonText="Finishing Editing"
-          modalTitle="Edit Text"
-          value={value}
-          setValue={(value: string) => {
-            onChange(value);
-          }}
-        >
-          <div className="flex w-full items-center">
-            <Input
-              id={id}
-              value={value}
-              disabled={disabled}
-              className={editNode ? "input-edit-node pointer-events-none " : " pointer-events-none"}
-              placeholder={"Type something..."}
-              onChange={(event) => {
-                onChange(event.target.value);
-              }}
+      <GenericModal
+        type={TypeModal.TEXT}
+        buttonText="Finishing Editing"
+        modalTitle="Edit Text"
+        value={value}
+        setValue={(value: string) => {
+          onChange(value);
+        }}
+      >
+        <div className="flex w-full items-center">
+          <Input
+            id={id}
+            value={value}
+            disabled={disabled}
+            className={
+              editNode
+                ? "input-edit-node pointer-events-none "
+                : " pointer-events-none"
+            }
+            placeholder={"Type something..."}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          />
+          {!editNode && (
+            <IconComponent
+              name="ExternalLink"
+              className={
+                "icons-parameters-comp" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
             />
-            {!editNode && (
-              <IconComponent
-                name="ExternalLink"
-                className={
-                  "icons-parameters-comp" +
-                  (disabled ? " text-ring" : " hover:text-accent-foreground")
-                }
-              />
-            )}
-          </div>
-        </GenericModal>
+          )}
+        </div>
+      </GenericModal>
     </div>
   );
 }
