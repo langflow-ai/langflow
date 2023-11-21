@@ -187,7 +187,15 @@ export default function Page({
         let updatedSeconds = prevSeconds + 1;
 
         if (updatedSeconds % 30 === 0) {
-          saveFlow(flow, true);
+          saveFlow(
+            {
+              ...flow!,
+              data: reactFlowInstance
+                ? reactFlowInstance!.toObject()
+                : flow!.data,
+            },
+            true
+          );
           updatedSeconds = 0;
         }
 
@@ -366,7 +374,10 @@ export default function Page({
   useEffect(() => {
     return () => {
       if (tabsState && tabsState[flow.id]?.isPending) {
-        saveFlow(flow);
+        saveFlow({
+          ...flow!,
+          data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
+        });
       }
     };
   }, []);

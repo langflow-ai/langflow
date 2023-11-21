@@ -250,7 +250,7 @@ export default function ExtraSidebar(): JSX.Element {
                   (isPending ? "" : "button-disable")
                 }
                 onClick={(event) => {
-                  saveFlow(flow!);
+                  saveFlow({ ...flow!, data: reactFlowInstance!.toObject() });
                 }}
               >
                 <IconComponent
