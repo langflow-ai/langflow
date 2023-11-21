@@ -67,6 +67,7 @@ import {
   Pencil,
   Plus,
   Redo,
+  RefreshCcw,
   Rocket,
   Save,
   SaveAll,
@@ -351,4 +352,5 @@ export const nodeIconsLucide: iconsType = {
   Heart,
   Link,
   ToyBrick,
+  RefreshCcw,
 };
