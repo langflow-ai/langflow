@@ -2,10 +2,8 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-from langflow.services.settings.constants import (DEFAULT_SUPERUSER,
-                                                  DEFAULT_SUPERUSER_PASSWORD)
-from langflow.services.settings.utils import (read_secret_from_file,
-                                              write_secret_to_file)
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, validator
