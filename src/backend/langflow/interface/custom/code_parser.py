@@ -1,8 +1,8 @@
 import ast
 import inspect
 import traceback
+from typing import Any, Dict, List, Type, Union
 
-from typing import Dict, Any, List, Type, Union
 from fastapi import HTTPException
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
@@ -104,7 +104,7 @@ class CodeParser:
         func.args = self.parse_function_args(node)
         func.body = self.parse_function_body(node)
 
-        return func.dict()
+        return func.model_dump()
 
     def parse_function_args(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
         """
@@ -233,7 +233,7 @@ class CodeParser:
                 else:
                     class_details.methods.append(method)
 
-        self.data["classes"].append(class_details.dict())
+        self.data["classes"].append(class_details.model_dump())
 
     def parse_global_vars(self, node: ast.Assign) -> None:
         """

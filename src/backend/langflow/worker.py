@@ -1,15 +1,15 @@
-from langflow.core.celery_app import celery_app
-from typing import Any, Dict, Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
+
+from langflow.core.celery_app import celery_app
 from langflow.processing.process import (
     Result,
     generate_result,
     process_inputs,
 )
-from langflow.services.manager import initialize_session_service
 from langflow.services.deps import get_session_service
+from langflow.services.manager import initialize_session_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -55,4 +55,4 @@ def process_graph_cached_task(
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (graph, artifacts))
 
-    return Result(result=result, session_id=session_id).dict()
+    return Result(result=result, session_id=session_id).model_dump()

@@ -1,20 +1,20 @@
-from collections import defaultdict
+import asyncio
 import uuid
+from collections import defaultdict
+from typing import Any, Dict, List
+
+import orjson
 from fastapi import WebSocket, status
-from starlette.websockets import WebSocketState
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
+from langflow.services import ServiceType, service_manager
 from langflow.services.base import Service
 from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
 from loguru import logger
+from starlette.websockets import WebSocketState
 
 from .cache import cache_service
-import asyncio
-from typing import Any, Dict, List
-
-from langflow.services import service_manager, ServiceType
-import orjson
 
 
 class ChatHistory(Subject):
@@ -104,7 +104,7 @@ class ChatService(Service):
 
     async def send_json(self, client_id: str, message: ChatMessage):
         websocket = self.active_connections[client_id]
-        await websocket.send_json(message.dict())
+        await websocket.send_json(message.model_dump())
 
     async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
@@ -191,7 +191,7 @@ class ChatService(Service):
         try:
             chat_history = self.chat_history.get_history(client_id)
             # iterate and make BaseModel into dict
-            chat_history = [chat.dict() for chat in chat_history]
+            chat_history = [chat.model_dump() for chat in chat_history]
             await websocket.send_json(chat_history)
 
             while True:

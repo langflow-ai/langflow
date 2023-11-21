@@ -205,7 +205,7 @@ class Settings(BaseSettings):
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
     with open(file_path, "w") as f:
-        settings_dict = settings.dict()
+        settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
 

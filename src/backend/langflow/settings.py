@@ -1,12 +1,13 @@
 import contextlib
 import json
 import os
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
 import yaml
-from pydantic import validator, model_validator
+from pydantic import model_validator, validator
 from pydantic_settings import BaseSettings
+
 from langflow.utils.logger import logger
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -141,7 +142,7 @@ class Settings(BaseSettings):
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
     with open(file_path, "w") as f:
-        settings_dict = settings.dict()
+        settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
 

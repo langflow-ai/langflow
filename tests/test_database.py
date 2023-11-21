@@ -29,7 +29,7 @@ def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_
     flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -45,13 +45,13 @@ def test_read_flows(client: TestClient, json_flow: str, active_user, logged_in_h
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
 
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -65,7 +65,7 @@ def test_read_flow(client: TestClient, json_flow: str, active_user, logged_in_he
     flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     flow_id = response.json()["id"]  # flow_id should be a UUID but is a string
     # turn it into a UUID
     flow_id = UUID(flow_id)
@@ -81,7 +81,7 @@ def test_update_flow(client: TestClient, json_flow: str, active_user, logged_in_
     data = flow["data"]
 
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
 
     flow_id = response.json()["id"]
     updated_flow = FlowUpdate(
@@ -89,7 +89,7 @@ def test_update_flow(client: TestClient, json_flow: str, active_user, logged_in_
         description="updated description",
         data=data,
     )
-    response = client.patch(f"api/v1/flows/{flow_id}", json=updated_flow.dict(), headers=logged_in_headers)
+    response = client.patch(f"api/v1/flows/{flow_id}", json=updated_flow.model_dump(), headers=logged_in_headers)
 
     assert response.status_code == 200
     assert response.json()["name"] == updated_flow.name
@@ -101,7 +101,7 @@ def test_delete_flow(client: TestClient, json_flow: str, active_user, logged_in_
     flow = orjson.loads(json_flow)
     data = flow["data"]
     flow = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     flow_id = response.json()["id"]
     response = client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     assert response.status_code == 200
@@ -119,7 +119,7 @@ def test_create_flows(client: TestClient, session: Session, json_flow: str, logg
         ]
     )
     # Make request to endpoint
-    response = client.post("api/v1/flows/batch/", json=flow_list.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/batch/", json=flow_list.model_dump(), headers=logged_in_headers)
     # Check response status code
     assert response.status_code == 201
     # Check response data
@@ -143,7 +143,7 @@ def test_upload_file(client: TestClient, session: Session, json_flow: str, logge
             FlowCreate(name="Flow 2", description="description", data=data),
         ]
     )
-    file_contents = orjson_dumps(flow_list.dict())
+    file_contents = orjson_dumps(flow_list.model_dump())
     response = client.post(
         "api/v1/flows/upload/",
         files={"file": ("examples.json", file_contents, "application/json")},
@@ -216,11 +216,11 @@ def test_update_flow_idempotency(client: TestClient, json_flow: str, active_user
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow_data = FlowCreate(name="Test Flow", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow_data.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow_data.model_dump(), headers=logged_in_headers)
     flow_id = response.json()["id"]
     updated_flow = FlowCreate(name="Updated Flow", description="description", data=data)
-    response1 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict(), headers=logged_in_headers)
-    response2 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.dict(), headers=logged_in_headers)
+    response1 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.model_dump(), headers=logged_in_headers)
+    response2 = client.put(f"api/v1/flows/{flow_id}", json=updated_flow.model_dump(), headers=logged_in_headers)
     assert response1.json() == response2.json()
 
 
