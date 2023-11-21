@@ -132,13 +132,13 @@ export default function ShareModal({
         </div>
         <div className="mt-5 flex items-center space-x-2">
           <Checkbox
-            id="terms"
+            id="public"
             checked={sharePublic}
             onCheckedChange={(event: boolean) => {
               setSharePublic(event);
             }}
           />
-          <label htmlFor="terms" className="export-modal-save-api text-sm ">
+          <label htmlFor="public" className="export-modal-save-api text-sm ">
             Make {nameComponent} Public
           </label>
         </div>
