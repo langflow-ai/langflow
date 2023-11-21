@@ -1,20 +1,17 @@
 from datetime import datetime, timedelta, timezone
+from typing import Annotated, Coroutine, Optional, Union
+from uuid import UUID
+
+from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
-from typing import Annotated, Coroutine, Optional, Union
-from uuid import UUID
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.user import User
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
 from langflow.services.deps import get_session, get_settings_service
 from sqlmodel import Session
-from cryptography.fernet import Fernet
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -77,7 +74,7 @@ async def get_current_user(
         if not query_param and not header_param:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key must be passed as query or header",
+                detail="An API key as query or header, or a JWT token must be passed",
             )
         user = await api_key_security(query_param, header_param, db)
         if user:
