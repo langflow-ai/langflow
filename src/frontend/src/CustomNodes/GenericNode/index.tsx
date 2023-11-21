@@ -417,7 +417,15 @@ export default function GenericNode({
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
-                .sort()
+                .sort((a, b) => {
+                  if (a.toLowerCase() === "code") {
+                    return -1;
+                  } else if (b.toLowerCase() === "code") {
+                    return 1;
+                  } else {
+                    return a.localeCompare(b);
+                  }
+                })
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&
