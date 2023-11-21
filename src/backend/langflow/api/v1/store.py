@@ -3,7 +3,6 @@ from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from httpx import HTTPStatusError
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
@@ -130,10 +129,9 @@ async def get_components(
             store_api_Key=store_api_Key,
         )
     except CustomException as exc:
-        if isinstance(exc, ValueError):
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/components/{component_id}", response_model=DownloadComponentResponse)
@@ -146,8 +144,10 @@ async def download_component(
 
     try:
         component = await store_service.download(store_api_Key, component_id)
-    except Exception as exc:
+    except CustomException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     if component is None:
         raise HTTPException(status_code=400, detail="Component not found")
@@ -161,6 +161,8 @@ async def get_tags(
 ):
     try:
         return await store_service.get_tags()
+    except CustomException as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -172,6 +174,8 @@ async def get_list_of_components_liked_by_user(
 ):
     try:
         return await store_service.get_user_likes(store_api_Key)
+    except CustomException as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -187,11 +191,7 @@ async def like_component(
         likes_count = await store_service.get_component_likes_count(str(component_id), store_api_Key)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
+    except CustomException as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
-        if isinstance(exc, HTTPStatusError):
-            if exc.response.status_code == 403:
-                raise HTTPException(status_code=403, detail="Forbidden")
-            elif exc.response.status_code == 401:
-                # 403 to avoid falling into interceptor 401
-                raise HTTPException(status_code=403, detail="Unauthorized")
         raise HTTPException(status_code=500, detail=str(exc))
