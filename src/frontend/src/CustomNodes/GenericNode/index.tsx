@@ -408,7 +408,7 @@ export default function GenericNode({
               />
             ) : (
               <div
-                className="generic-node-desc-text"
+                className="generic-node-desc-text break-all"
                 onDoubleClick={() => setInputDescription(true)}
               >
                 {data.node?.description}
