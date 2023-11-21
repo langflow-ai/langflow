@@ -4,6 +4,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
 from langflow.services.store.schema import (
@@ -18,7 +20,6 @@ from langflow.services.store.utils import (
     process_tags_for_post,
     update_components_with_user_data,
 )
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -73,6 +74,7 @@ class StoreService(Service):
             "count(downloads)",
             "metadata",
             "last_tested_version",
+            "private",
         ]
 
     # Create a context manager that will use the api key to
