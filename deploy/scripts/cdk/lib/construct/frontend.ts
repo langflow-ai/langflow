@@ -60,15 +60,16 @@ export class FrontEndCluster extends Construct {
           {
               containerPort: containerPort,
               protocol: ecs.Protocol.TCP,
+              appProtocol:ecs.AppProtocol.http,
           },
       ],
   });
-  const frontendServiceName = 'langflow-frontend-service'
+  const frontendServiceName = 'frontend'
   const frontendService = new ecs.FargateService(
       this,
       'FrontendService',
       {
-        serviceName: 'langflow-frontend-service',
+        serviceName: frontendServiceName,
         cluster: props.cluster,
         desiredCount: 1,
         assignPublicIp: false,

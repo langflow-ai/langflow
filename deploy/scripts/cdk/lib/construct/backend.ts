@@ -78,7 +78,7 @@ export class BackEndCluster extends Construct {
         "password": ecs.Secret.fromSecretsManager(secretsDB, 'password'),
       },
     });
-    this.backendServiceName = 'langflow-backend-service'
+    this.backendServiceName = 'backend'
     const backendService = new ecs.FargateService(this, 'BackEndService', {
       cluster: props.cluster,
       serviceName: this.backendServiceName,
