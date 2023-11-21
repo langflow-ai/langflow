@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, List
 
+import httpx
+
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
     from langflow.services.store.service import StoreService
@@ -40,12 +42,13 @@ async def update_components_with_user_data(
 
 # Get the latest released version of langflow (https://pypi.org/project/langflow/)
 def get_lf_version_from_pypi():
-    import requests
-
-    response = requests.get("https://pypi.org/pypi/langflow/json")
-    if response.status_code != 200:
+    try:
+        response = httpx.get("https://pypi.org/pypi/langflow/json")
+        if response.status_code != 200:
+            return None
+        return response.json()["info"]["version"]
+    except Exception:
         return None
-    return response.json()["info"]["version"]
 
 
 def process_component_data(nodes_list):

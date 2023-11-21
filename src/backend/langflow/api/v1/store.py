@@ -3,7 +3,6 @@ from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -140,8 +139,6 @@ async def download_component(
     store_service: StoreService = Depends(get_store_service),
     store_api_Key: str = Depends(get_user_store_api_key),
 ):
-    # If the component is from the store, we need to get it from the store
-
     try:
         component = await store_service.download(store_api_Key, component_id)
     except CustomException as exc:
