@@ -43,7 +43,7 @@ export class FrontEndCluster extends Construct {
           taskRole: props.frontendTaskRole,
       }
   );
-
+  const frontendServiceName = 'frontend'
   frontendTaskDefinition.addContainer('frontendContainer', {
       image: ecs.ContainerImage.fromEcrRepository(props.ecrFrontEndRepository, "latest"),
       containerName:'langflow-front-container',
@@ -58,13 +58,13 @@ export class FrontEndCluster extends Construct {
       }),
       portMappings: [
           {
+              name:frontendServiceName,
               containerPort: containerPort,
               protocol: ecs.Protocol.TCP,
               appProtocol:ecs.AppProtocol.http,
           },
       ],
   });
-  const frontendServiceName = 'frontend'
   const frontendService = new ecs.FargateService(
       this,
       'FrontendService',
