@@ -36,6 +36,8 @@ export default function IntComponent({
             event.key !== "c" &&
             event.key !== "v" &&
             event.key !== "a" &&
+            event.key !== "ArrowUp" &&
+            event.key !== "ArrowDown" &&
             !/^[-]?\d*$/.test(event.key)
           ) {
             event.preventDefault();
