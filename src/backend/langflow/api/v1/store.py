@@ -3,6 +3,7 @@ from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -125,7 +126,7 @@ async def get_components(
             filter_by_user=filter_by_user,
             page=page,
             limit=limit,
-            store_api_Key=store_api_Key,
+            store_api_key=store_api_Key,
         )
     except CustomException as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

@@ -416,12 +416,12 @@ class StoreService(Service):
         is_component: Optional[bool] = None,
         filter_by_user: bool = False,
         liked: bool = False,
-        store_api_Key: Optional[str] = None,
+        store_api_key: Optional[str] = None,
         sort: Optional[List[str]] = None,
         page: int = 1,
         limit: int = 15,
     ):
-        async with user_data_context(api_key=store_api_Key, store_service=self):
+        async with user_data_context(api_key=store_api_key, store_service=self):
             filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
                 search=search,
                 private=private,
@@ -429,14 +429,14 @@ class StoreService(Service):
                 is_component=is_component,
                 filter_by_user=filter_by_user,
                 liked=liked,
-                store_api_Key=store_api_Key,
+                store_api_Key=store_api_key,
             )
 
             result: List[ListComponentResponse] = []
             authorized = False
             try:
                 result, metadata = await self.query_components(
-                    api_key=store_api_Key,
+                    api_key=store_api_key,
                     page=page,
                     limit=limit,
                     sort=sort,
@@ -454,7 +454,7 @@ class StoreService(Service):
                 if result and not metadata:
                     if len(result) >= limit:
                         comp_count = await self.count_components(
-                            api_key=store_api_Key,
+                            api_key=store_api_key,
                             filter_conditions=filter_conditions,
                             use_api_key=liked or filter_by_user,
                         )
@@ -468,13 +468,13 @@ class StoreService(Service):
                 elif exc.response.status_code == 401:
                     raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
 
-            if store_api_Key:
+            if store_api_key:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
                 if result:
                     try:
                         updated_result = await update_components_with_user_data(
-                            result, self, store_api_Key, liked=liked
+                            result, self, store_api_key, liked=liked
                         )
                         authorized = True
                         result = updated_result
@@ -482,5 +482,5 @@ class StoreService(Service):
                         # If we get an error here, it means the user is not authorized
                         authorized = False
                 else:
-                    authorized = await self.check_api_key(store_api_Key)
+                    authorized = await self.check_api_key(store_api_key)
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
