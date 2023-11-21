@@ -179,6 +179,7 @@ export default function CollectionCardComponent({
                   onConfirm={() => {
                     onDelete();
                   }}
+                  description={name}
                 >
                   <IconComponent
                     name="Trash2"
@@ -239,6 +240,7 @@ export default function CollectionCardComponent({
                       onConfirm={() => {
                         onDelete();
                       }}
+                      description={name}
                     >
                       <Button
                         variant="ghost"

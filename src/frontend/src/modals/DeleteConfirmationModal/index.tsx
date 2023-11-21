@@ -4,7 +4,6 @@ import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -26,22 +25,27 @@ export default function DeleteConfirmationModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            <div className="flex">
-              Delete <Trash2 className="ml-3 h-4 w-4" strokeWidth={1.5} />
+            <div className="flex items-center">
+              <span className="pr-2">Delete</span>
+              <Trash2
+                className="h-6 w-6 pl-1 text-foreground"
+                strokeWidth={1.5}
+              />
             </div>
           </DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete this {description ?? "component"}?
-            <br></br>
-            This action cannot be undone.
-          </DialogDescription>
         </DialogHeader>
+        <span>
+          Are you sure you want to delete this {description ?? "component"}?
+          <br></br>
+          This action cannot be undone.
+        </span>
         <DialogFooter>
           <DialogClose>
             <Button className="mr-3">Cancel</Button>
 
             <Button
               type="submit"
+              variant="destructive"
               onClick={() => {
                 onConfirm();
               }}

@@ -43,7 +43,14 @@ export default function ComponentsComponent({
     e.preventDefault();
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       if (e.dataTransfer.files.item(0).type === "application/json") {
-        uploadFlow(true, e.dataTransfer.files.item(0)!);
+        try {
+          uploadFlow(true, e.dataTransfer.files.item(0)!);
+        } catch (error: any) {
+          setErrorData({
+            title: "Error uploading file",
+            list: [error.message],
+          });
+        }
       } else {
         setErrorData({
           title: "Invalid file type",
