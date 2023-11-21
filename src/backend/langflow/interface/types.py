@@ -343,7 +343,7 @@ def build_langchain_template_custom_component(
 
         update_attributes(frontend_node, template_config)
         logger.debug("Updated attributes")
-        field_config = build_field_config(custom_component, user_id=user_id)
+        field_config = build_field_config(custom_component, user_id=user_id, update_field=update_field)
         logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
@@ -527,3 +527,9 @@ def merge_nested_dicts(dict1, dict2):
         else:
             dict1[key] = value
     return dict1
+
+
+def create_and_validate_component(code: str) -> CustomComponent:
+    component = CustomComponent(code=code)
+    component.is_check_valid()
+    return component
