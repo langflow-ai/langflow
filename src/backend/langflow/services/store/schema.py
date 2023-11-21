@@ -34,6 +34,7 @@ class ListComponentResponse(BaseModel):
     tags: Optional[List[TagResponse]] = None
     downloads_count: Optional[int]
     last_tested_version: Optional[str]
+    private: Optional[bool] = None
 
     # tags comes as a TagsIdResponse but we want to return a list of TagResponse
     @validator("tags", pre=True)
