@@ -68,7 +68,8 @@ class JsonAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,  # type: ignore
         )
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -92,11 +93,7 @@ class CSVAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(
-        cls,
-        path: str,
-        llm: BaseLanguageModel,
-        pandas_kwargs: Optional[dict] = None,
-        **kwargs: Any
+        cls, path: str, llm: BaseLanguageModel, pandas_kwargs: Optional[dict] = None, **kwargs: Any
     ):
         import pandas as pd  # type: ignore
 
@@ -117,7 +114,9 @@ class CSVAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
@@ -141,9 +140,7 @@ class VectorStoreAgent(CustomAgentExecutor):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_toolkit_and_llm(
-        cls, llm: BaseLanguageModel, vectorstoreinfo: VectorStoreInfo, **kwargs: Any
-    ):
+    def from_toolkit_and_llm(cls, llm: BaseLanguageModel, vectorstoreinfo: VectorStoreInfo, **kwargs: Any):
         """Construct a vectorstore agent from an LLM and tools."""
 
         toolkit = VectorStoreToolkit(vectorstore_info=vectorstoreinfo, llm=llm)
@@ -156,11 +153,11 @@ class VectorStoreAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
-        return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
-        )
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)
@@ -181,9 +178,7 @@ class SQLAgent(CustomAgentExecutor):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_toolkit_and_llm(
-        cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any
-    ):
+    def from_toolkit_and_llm(cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any):
         """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
@@ -201,9 +196,7 @@ class SQLAgent(CustomAgentExecutor):
 
         llmchain = LLMChain(
             llm=llm,
-            prompt=PromptTemplate(
-                template=QUERY_CHECKER, input_variables=["query", "dialect"]
-            ),
+            prompt=PromptTemplate(template=QUERY_CHECKER, input_variables=["query", "dialect"]),
         )
 
         tools = [
@@ -226,7 +219,9 @@ class SQLAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}  # type: ignore
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
@@ -257,10 +252,7 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(
-        cls,
-        llm: BaseLanguageModel,
-        vectorstoreroutertoolkit: VectorStoreRouterToolkit,
-        **kwargs: Any
+        cls, llm: BaseLanguageModel, vectorstoreroutertoolkit: VectorStoreRouterToolkit, **kwargs: Any
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
@@ -276,11 +268,11 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
         )
         tool_names = {tool.name for tool in tools}
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
-        return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
-        )
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)

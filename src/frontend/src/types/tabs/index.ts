@@ -1,5 +1,5 @@
 import { tweakType } from "../components";
-import { FlowType } from "../flow";
+import { FlowType, NodeDataType } from "../flow";
 
 export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
@@ -36,6 +36,9 @@ export type FlowsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
+  saveComponent: (component: NodeDataType) => Promise<String | undefined>;
+  deleteComponent: (id: string, key: string) => void;
+  version: string;
 };
 
 export type FlowsState = {

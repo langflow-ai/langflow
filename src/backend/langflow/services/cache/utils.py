@@ -83,9 +83,7 @@ def clear_old_cache_files(max_cache_size: int = 3):
     cache_files = list(cache_dir.glob("*.dill"))
 
     if len(cache_files) > max_cache_size:
-        cache_files_sorted_by_mtime = sorted(
-            cache_files, key=lambda x: x.stat().st_mtime, reverse=True
-        )
+        cache_files_sorted_by_mtime = sorted(cache_files, key=lambda x: x.stat().st_mtime, reverse=True)
 
         for cache_file in cache_files_sorted_by_mtime[max_cache_size:]:
             with contextlib.suppress(OSError):

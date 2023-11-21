@@ -1,9 +1,10 @@
 import ast
 from typing import Any, ClassVar, Optional
+
 from fastapi import HTTPException
 
-from langflow.utils import validate
 from langflow.interface.custom.code_parser import CodeParser
+from langflow.utils import validate
 
 
 class ComponentCodeNullError(HTTPException):
@@ -16,9 +17,7 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class Component:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[
-        str
-    ] = "The name of the entrypoint function must be provided."
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"

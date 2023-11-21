@@ -6,9 +6,7 @@ from langflow.services.database.models.api_key import ApiKeyCreate
 def api_key(client, logged_in_headers, active_user):
     api_key = ApiKeyCreate(name="test-api-key")
 
-    response = client.post(
-        "api/v1/api_key", data=api_key.json(), headers=logged_in_headers
-    )
+    response = client.post("api/v1/api_key", data=api_key.json(), headers=logged_in_headers)
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -28,9 +26,7 @@ def test_get_api_keys(client, logged_in_headers, api_key):
 
 def test_create_api_key(client, logged_in_headers):
     api_key_name = "test-api-key"
-    response = client.post(
-        "api/v1/api_key", json={"name": api_key_name}, headers=logged_in_headers
-    )
+    response = client.post("api/v1/api_key", json={"name": api_key_name}, headers=logged_in_headers)
     assert response.status_code == 200
     data = response.json()
     assert "name" in data and data["name"] == api_key_name

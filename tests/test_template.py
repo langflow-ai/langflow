@@ -65,9 +65,7 @@ def test_build_template_from_function():
     assert "base_classes" in result
 
     # Test with add_function=True
-    result_with_function = build_template_from_function(
-        "ExampleClass1", type_to_loader_dict, add_function=True
-    )
+    result_with_function = build_template_from_function("ExampleClass1", type_to_loader_dict, add_function=True)
     assert result_with_function is not None
     assert "Callable" in result_with_function["base_classes"]
 

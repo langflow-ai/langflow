@@ -168,21 +168,40 @@ export default function ParameterComponent({
               </div>
               <span className="ps-2 text-xs text-foreground">
                 {nodeNames[item.family] ?? "Other"}{" "}
-                <span className="text-xs">
-                  {" "}
-                  {item.type === "" ? "" : " - "}
-                  {item.type.split(", ").length > 2
-                    ? item.type.split(", ").map((el, index) => (
-                        <React.Fragment key={el + index}>
-                          <span>
-                            {index === item.type.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
-                    : item.type}
-                </span>
+                {item?.display_name && item?.display_name?.length > 0 ? (
+                  <span className="text-xs">
+                    {" "}
+                    {item.display_name === "" ? "" : " - "}
+                    {item.display_name.split(", ").length > 2
+                      ? item.display_name.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index ===
+                              item.display_name.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.display_name}
+                  </span>
+                ) : (
+                  <span className="text-xs">
+                    {" "}
+                    {item.type === "" ? "" : " - "}
+                    {item.type.split(", ").length > 2
+                      ? item.type.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index === item.type.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.type}
+                  </span>
+                )}
               </span>
             </span>
           </div>

@@ -2,7 +2,7 @@ from sqlmodel import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from langflow.services.getters import get_session
+from langflow.services.deps import get_session
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -12,7 +12,7 @@ from langflow.services.auth.utils import (
     get_current_active_user,
 )
 
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Login"])
 
@@ -44,9 +44,7 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(
-    db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
-):
+async def auto_login(db: Session = Depends(get_session), settings_service=Depends(get_settings_service)):
     if settings_service.auth_settings.AUTO_LOGIN:
         return create_user_longterm_token(db)
 
@@ -60,9 +58,7 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(
-    token: str, current_user: Session = Depends(get_current_active_user)
-):
+async def refresh_token(token: str, current_user: Session = Depends(get_current_active_user)):
     if token:
         return create_refresh_token(token)
     else:

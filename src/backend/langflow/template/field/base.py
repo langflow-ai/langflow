@@ -60,7 +60,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
     def to_dict(self):
-        result = self.dict()
+        result = self.model_dump()
         # Remove key if it is None
         for key in list(result.keys()):
             if result[key] is None or result[key] == []:

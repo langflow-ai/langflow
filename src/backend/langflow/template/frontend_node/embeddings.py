@@ -70,9 +70,7 @@ class EmbeddingFrontendNode(FrontendNode):
             field.advanced = True
             split_name = field.name.split("_")
             title_name = " ".join([s.capitalize() for s in split_name])
-            field.display_name = title_name.replace("Openai", "OpenAI").replace(
-                "Api", "API"
-            )
+            field.display_name = title_name.replace("Openai", "OpenAI").replace("Api", "API")
 
         if "api_key" in field.name:
             field.password = True

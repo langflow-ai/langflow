@@ -4,9 +4,7 @@ from loguru import logger
 from uuid import UUID
 
 
-def build_sorted_vertices(
-    data_graph, user_id: Optional[Union[str, UUID]] = None
-) -> Tuple[Graph, Dict]:
+def build_sorted_vertices(data_graph, user_id: Optional[Union[str, UUID]] = None) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """

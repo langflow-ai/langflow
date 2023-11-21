@@ -41,9 +41,7 @@ def validate_code(code):
     # Evaluate the function definition
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(
-                ast.Module(body=[node], type_ignores=[]), "<string>", "exec"
-            )
+            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 exec(code_obj)
             except Exception as e:
@@ -63,8 +61,7 @@ def eval_function(function_string: str):
         (
             obj
             for name, obj in namespace.items()
-            if isinstance(obj, types.FunctionType)
-            and obj.__code__.co_filename == "<string>"
+            if isinstance(obj, types.FunctionType) and obj.__code__.co_filename == "<string>"
         ),
         None,
     )
@@ -88,23 +85,15 @@ def execute_function(code, function_name, *args, **kwargs):
                         exec_globals,
                         locals(),
                     )
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(
-                        alias.name
-                    )
+                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(
-                        f"Module {alias.name} not found. Please install it and try again."
-                    ) from e
+                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
 
     function_code = next(
-        node
-        for node in module.body
-        if isinstance(node, ast.FunctionDef) and node.name == function_name
+        node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
     )
     function_code.parent = None
-    code_obj = compile(
-        ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec"
-    )
+    code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
     try:
         exec(code_obj, exec_globals, locals())
     except Exception as exc:
@@ -131,23 +120,15 @@ def create_function(code, function_name):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(
-                        alias.name
-                    )
+                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(
-                        f"Module {alias.name} not found. Please install it and try again."
-                    ) from e
+                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
 
     function_code = next(
-        node
-        for node in module.body
-        if isinstance(node, ast.FunctionDef) and node.name == function_name
+        node for node in module.body if isinstance(node, ast.FunctionDef) and node.name == function_name
     )
     function_code.parent = None
-    code_obj = compile(
-        ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec"
-    )
+    code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
     with contextlib.suppress(Exception):
         exec(code_obj, exec_globals, locals())
     exec_globals[function_name] = locals()[function_name]
@@ -178,32 +159,20 @@ def create_class(code, class_name):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(
-                        alias.name
-                    )
+                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    raise ModuleNotFoundError(
-                        f"Module {alias.name} not found. Please install it and try again."
-                    ) from e
+                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
         elif isinstance(node, ast.ImportFrom):
             try:
                 imported_module = importlib.import_module(node.module)
                 for alias in node.names:
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
             except ModuleNotFoundError as e:
-                raise ModuleNotFoundError(
-                    f"Module {node.module} not found. Please install it and try again."
-                ) from e
+                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again.") from e
 
-    class_code = next(
-        node
-        for node in module.body
-        if isinstance(node, ast.ClassDef) and node.name == class_name
-    )
+    class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
     class_code.parent = None
-    code_obj = compile(
-        ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec"
-    )
+    code_obj = compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
     # This suppresses import errors
     # with contextlib.suppress(Exception):
     exec(code_obj, exec_globals, locals())

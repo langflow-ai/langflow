@@ -216,14 +216,13 @@ export type IconComponentProps = {
   className?: string;
   iconColor?: string;
   onClick?: () => void;
+  stroke?: string;
 };
 
 export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string; description: string }>;
-  tabId: string;
   invalidName?: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
@@ -246,8 +245,15 @@ export type LoadingComponentProps = {
   remSize: number;
 };
 
-export type ContentProps = { children: ReactNode };
+export type ContentProps = {
+  children: ReactNode;
+  tolltipContent?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+};
 export type HeaderProps = { children: ReactNode; description: string };
+export type TriggerProps = {
+  children: ReactNode;
+};
 
 export interface languageMap {
   [key: string]: string | undefined;
@@ -261,7 +267,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string | boolean;
+    value: string;
     name: string;
   };
 };
@@ -271,21 +277,35 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
+  storeComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
   asChild?: boolean;
-  modalContent: string;
   modalContentTitle: string;
   cancelText: string;
   confirmationText: string;
-  children: ReactElement;
+  children: [
+    React.ReactElement<ContentProps>,
+    React.ReactElement<TriggerProps>
+  ];
   icon: string;
-  data: any;
+  data?: any;
   index: number;
   onConfirm: (index, data) => void;
+  open?: boolean;
+  onClose?: (close: boolean) => void;
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
 };
 
 export type UserManagementType = {
@@ -332,12 +352,18 @@ export type ApiKeyType = {
   onCloseModal: () => void;
 };
 
-export type ApiKeyInputType = {
-  apikeyname: string;
+export type StoreApiKeyType = {
+  children: ReactElement;
+  disabled?: boolean;
 };
 export type groupedObjType = {
   family: string;
   type: string;
+};
+
+export type nodeGroupedObjType = {
+  displayName: string;
+  node: string[] | string;
 };
 
 type test = {
@@ -526,8 +552,7 @@ export type groupDataType = {
 };
 
 export type cardComponentPropsType = {
-  flow: FlowType;
-  id: string;
+  data: FlowType;
   onDelete?: () => void;
   button?: JSX.Element;
 };

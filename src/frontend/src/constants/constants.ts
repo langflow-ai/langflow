@@ -517,16 +517,19 @@ export const ADMIN_HEADER_TITLE = "Admin Page";
 export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
+export const BASE_URL_API = "/api/v1/";
+
 /**
  * URLs excluded from error retries.
  * @constant
  *
  */
 export const URL_EXCLUDED_FROM_ERROR_RETRIES = [
-  "/api/v1/validate/code",
-  "/api/v1/custom_component",
-  "/api/v1/validate/prompt",
-  "http://localhost:7860/login",
+  `${BASE_URL_API}validate/code`,
+  `${BASE_URL_API}custom_component`,
+  `${BASE_URL_API}validate/prompt`,
+  `http://localhost:7860/login`,
+  `${BASE_URL_API}api_key/store`,
 ];
 
 export const skipNodeUpdate = [
@@ -559,10 +562,6 @@ export const CONTROL_NEW_USER = {
   password: "",
   is_active: false,
   is_superuser: false,
-};
-
-export const CONTROL_NEW_API_KEY = {
-  apikeyname: "",
 };
 
 export const tabsCode = [];
@@ -648,8 +647,6 @@ export function tabsArray(codes: string[], method: number) {
 export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
 export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
-
-export const BASE_URL_API = "/api/v1/";
 
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 

@@ -72,7 +72,9 @@ class ConversationalAgent(CustomComponent):
             extra_prompt_messages=[MessagesPlaceholder(variable_name=memory_key)],
         )
         agent = OpenAIFunctionsAgent(
-            llm=llm, tools=tools, prompt=prompt  # type: ignore
+            llm=llm,
+            tools=tools,
+            prompt=prompt,  # type: ignore
         )
         return AgentExecutor(
             agent=agent,

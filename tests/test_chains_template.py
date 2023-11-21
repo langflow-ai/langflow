@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
 
-
 # def test_chains_settings(client: TestClient, logged_in_headers):
 #     response = client.get("api/v1/all", headers=logged_in_headers)
 #     assert response.status_code == 200
@@ -129,10 +128,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
     assert template["_type"] == "LLMMathChain"
 
     # Test the description object
-    assert (
-        chain["description"]
-        == "Chain that interprets a prompt and executes python code to do math."
-    )
+    assert chain["description"] == "Chain that interprets a prompt and executes python code to do math."
 
 
 def test_series_character_chain(client: TestClient, logged_in_headers):
@@ -238,10 +234,7 @@ def test_mid_journey_prompt_chain(client: TestClient, logged_in_headers):
         "info": "",
     }
     # Test the description object
-    assert (
-        chain["description"]
-        == "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
-    )
+    assert chain["description"] == "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
 
 
 def test_time_travel_guide_chain(client: TestClient, logged_in_headers):

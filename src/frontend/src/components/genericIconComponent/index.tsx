@@ -3,7 +3,7 @@ import { IconComponentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 
 const ForwardedIconComponent = forwardRef(
-  ({ name, className, iconColor }: IconComponentProps, ref) => {
+  ({ name, className, iconColor, stroke }: IconComponentProps, ref) => {
     const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
     return (
       <TargetIcon
@@ -11,6 +11,7 @@ const ForwardedIconComponent = forwardRef(
         className={className}
         style={iconColor ? { color: iconColor } : {}}
         ref={ref}
+        stroke={stroke ? stroke : "currentColor"}
       />
     );
   }
