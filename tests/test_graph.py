@@ -47,13 +47,7 @@ def sample_nodes():
     return [
         {
             "id": "node1",
-            "data": {
-                "node": {
-                    "template": {
-                        "some_field": {"show": True, "advanced": False, "name": "Name1"}
-                    }
-                }
-            },
+            "data": {"node": {"template": {"some_field": {"show": True, "advanced": False, "name": "Name1"}}}},
         },
         {
             "id": "node2",
@@ -71,11 +65,7 @@ def sample_nodes():
         },
         {
             "id": "node3",
-            "data": {
-                "node": {
-                    "template": {"unrelated_field": {"show": True, "advanced": True}}
-                }
-            },
+            "data": {"node": {"template": {"unrelated_field": {"show": True, "advanced": True}}}},
         },
     ]
 
@@ -158,15 +148,9 @@ def test_get_node_neighbors_basic(basic_graph):
     # Root Node is an Agent, it requires an LLMChain and tools
     # We need to check if there is a Chain in the one of the neighbors'
     # data attribute in the type key
-    assert any(
-        "ConversationBufferMemory" in neighbor.data["type"]
-        for neighbor, val in neighbors.items()
-        if val
-    )
+    assert any("ConversationBufferMemory" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
 
-    assert any(
-        "OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val
-    )
+    assert any("OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
 
 
 def test_get_node(basic_graph):
@@ -339,9 +323,7 @@ def test_find_last_node(grouped_chat_json_flow):
 
 def test_ungroup_node(grouped_chat_json_flow):
     grouped_chat_data = json.loads(grouped_chat_json_flow).get("data")
-    group_node = grouped_chat_data["nodes"][
-        2
-    ]  # Assuming the first node is a group node
+    group_node = grouped_chat_data["nodes"][2]  # Assuming the first node is a group node
     base_flow = copy.deepcopy(grouped_chat_data)
     ungroup_node(group_node["data"], base_flow)
     # after ungroup_node is called, the base_flow and grouped_chat_data should be different
@@ -393,14 +375,9 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     assert "edges" in processed_flow
 
     # Now get the node that has ChatOpenAI in its id
-    chat_openai_node = next(
-        (node for node in processed_flow["nodes"] if "ChatOpenAI" in node["id"]), None
-    )
+    chat_openai_node = next((node for node in processed_flow["nodes"] if "ChatOpenAI" in node["id"]), None)
     assert chat_openai_node is not None
-    assert (
-        chat_openai_node["data"]["node"]["template"]["openai_api_key"]["value"]
-        == "test"
-    )
+    assert chat_openai_node["data"]["node"]["template"]["openai_api_key"]["value"] == "test"
 
 
 def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
@@ -449,17 +426,11 @@ def test_update_template(sample_template, sample_nodes):
 
     assert node1_updated["data"]["node"]["template"]["some_field"]["show"] is True
     assert node1_updated["data"]["node"]["template"]["some_field"]["advanced"] is False
-    assert (
-        node1_updated["data"]["node"]["template"]["some_field"]["display_name"]
-        == "Name1"
-    )
+    assert node1_updated["data"]["node"]["template"]["some_field"]["display_name"] == "Name1"
 
     assert node2_updated["data"]["node"]["template"]["other_field"]["show"] is False
     assert node2_updated["data"]["node"]["template"]["other_field"]["advanced"] is True
-    assert (
-        node2_updated["data"]["node"]["template"]["other_field"]["display_name"]
-        == "DisplayName2"
-    )
+    assert node2_updated["data"]["node"]["template"]["other_field"]["display_name"] == "DisplayName2"
 
     # Ensure node3 remains unchanged
     assert node3_updated == sample_nodes[2]
@@ -490,9 +461,7 @@ def test_set_new_target_handle():
         "data": {
             "node": {
                 "flow": True,
-                "template": {
-                    "field_1": {"proxy": {"field": "new_field", "id": "new_id"}}
-                },
+                "template": {"field_1": {"proxy": {"field": "new_field", "id": "new_id"}}},
             }
         }
     }
@@ -512,9 +481,7 @@ def test_update_source_handle():
         "nodes": [{"id": "some_node"}, {"id": "last_node"}],
         "edges": [{"source": "some_node"}],
     }
-    updated_edge = update_source_handle(
-        new_edge, flow_data["nodes"], flow_data["edges"]
-    )
+    updated_edge = update_source_handle(new_edge, flow_data["nodes"], flow_data["edges"])
     assert updated_edge["source"] == "last_node"
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 

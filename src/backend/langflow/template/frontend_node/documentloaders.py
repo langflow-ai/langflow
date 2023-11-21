@@ -3,9 +3,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
 
-def build_file_field(
-    suffixes: list, fileTypes: list, name: str = "file_path"
-) -> TemplateField:
+def build_file_field(suffixes: list, fileTypes: list, name: str = "file_path") -> TemplateField:
     """Build a template field for a document loader."""
     return TemplateField(
         field_type="file",
@@ -27,32 +25,22 @@ class DocumentLoaderFrontNode(FrontendNode):
         "AirbyteJSONLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "CoNLLULoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),
         "CSVLoader": build_file_field(suffixes=[".csv"], fileTypes=["csv"]),
-        "UnstructuredEmailLoader": build_file_field(
-            suffixes=[".eml"], fileTypes=["eml"]
-        ),
+        "UnstructuredEmailLoader": build_file_field(suffixes=[".eml"], fileTypes=["eml"]),
         "EverNoteLoader": build_file_field(suffixes=[".xml"], fileTypes=["xml"]),
         "FacebookChatLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "BSHTMLLoader": build_file_field(suffixes=[".html"], fileTypes=["html"]),
-        "UnstructuredHTMLLoader": build_file_field(
-            suffixes=[".html"], fileTypes=["html"]
-        ),
+        "UnstructuredHTMLLoader": build_file_field(suffixes=[".html"], fileTypes=["html"]),
         "UnstructuredImageLoader": build_file_field(
             suffixes=[".jpg", ".jpeg", ".png", ".gif", ".bmp"],
             fileTypes=["jpg", "jpeg", "png", "gif", "bmp"],
         ),
-        "UnstructuredMarkdownLoader": build_file_field(
-            suffixes=[".md"], fileTypes=["md"]
-        ),
+        "UnstructuredMarkdownLoader": build_file_field(suffixes=[".md"], fileTypes=["md"]),
         "PyPDFLoader": build_file_field(suffixes=[".pdf"], fileTypes=["pdf"]),
-        "UnstructuredPowerPointLoader": build_file_field(
-            suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]
-        ),
+        "UnstructuredPowerPointLoader": build_file_field(suffixes=[".pptx", ".ppt"], fileTypes=["pptx", "ppt"]),
         "SRTLoader": build_file_field(suffixes=[".srt"], fileTypes=["srt"]),
         "TelegramChatLoader": build_file_field(suffixes=[".json"], fileTypes=["json"]),
         "TextLoader": build_file_field(suffixes=[".txt"], fileTypes=["txt"]),
-        "UnstructuredWordDocumentLoader": build_file_field(
-            suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]
-        ),
+        "UnstructuredWordDocumentLoader": build_file_field(suffixes=[".docx", ".doc"], fileTypes=["docx", "doc"]),
     }
 
     def add_extra_fields(self) -> None:

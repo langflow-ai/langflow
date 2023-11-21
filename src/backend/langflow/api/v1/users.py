@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.services.getters import get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
@@ -46,9 +46,7 @@ def add_user(
         session.refresh(new_user)
     except IntegrityError as e:
         session.rollback()
-        raise HTTPException(
-            status_code=400, detail="This username is unavailable."
-        ) from e
+        raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
 
@@ -96,14 +94,10 @@ def patch_user(
     Update an existing user's data.
     """
     if not user.is_superuser and user.id != user_id:
-        raise HTTPException(
-            status_code=403, detail="You don't have the permission to update this user"
-        )
+        raise HTTPException(status_code=403, detail="You don't have the permission to update this user")
     if user_update.password:
         if not user.is_superuser:
-            raise HTTPException(
-                status_code=400, detail="You can't change your password here"
-            )
+            raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_password_hash(user_update.password)
 
     if user_db := get_user_by_id(session, user_id):
@@ -123,16 +117,12 @@ def reset_password(
     Reset a user's password.
     """
     if user_id != user.id:
-        raise HTTPException(
-            status_code=400, detail="You can't change another user's password"
-        )
+        raise HTTPException(status_code=400, detail="You can't change another user's password")
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if verify_password(user_update.password, user.password):
-        raise HTTPException(
-            status_code=400, detail="You can't use your current password"
-        )
+        raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
     session.commit()
@@ -151,13 +141,9 @@ def delete_user(
     Delete a user from the database.
     """
     if current_user.id == user_id:
-        raise HTTPException(
-            status_code=400, detail="You can't delete your own user account"
-        )
+        raise HTTPException(status_code=400, detail="You can't delete your own user account")
     elif not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="You don't have the permission to delete this user"
-        )
+        raise HTTPException(status_code=403, detail="You don't have the permission to delete this user")
 
     user_db = session.query(User).filter(User.id == user_id).first()
     if not user_db:

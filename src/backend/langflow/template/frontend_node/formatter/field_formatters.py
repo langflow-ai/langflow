@@ -112,10 +112,7 @@ class PasswordFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
         key = field.name
         show = field.show
-        if (
-            any(text in key.lower() for text in {"password", "token", "api", "key"})
-            and show
-        ):
+        if any(text in key.lower() for text in {"password", "token", "api", "key"}) and show:
             field.password = True
 
 
@@ -157,9 +154,5 @@ class DictCodeFileFormatter(FieldFormatter):
             field.field_type = "file"
             field.suffixes = [".json", ".yaml", ".yml"]
             field.file_types = ["json", "yaml", "yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"

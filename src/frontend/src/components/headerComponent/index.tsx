@@ -6,6 +6,8 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { darkContext } from "../../contexts/darkContext";
+import { StoreContext } from "../../contexts/storeContext";
+
 import { FlowsContext } from "../../contexts/flowsContext";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
@@ -27,12 +29,13 @@ export default function Header(): JSX.Element {
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
+  const { hasStore } = useContext(StoreContext);
   const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
 
   return (
     <div className="header-arrangement">
-      <div className="header-start-display">
+      <div className="header-start-display lg:w-[30%]">
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -45,14 +48,19 @@ export default function Header(): JSX.Element {
         <Link to="/">
           <Button
             className="gap-2"
-            variant={location.pathname === "/" ? "primary" : "secondary"}
+            variant={
+              location.pathname === "/flows" ||
+              location.pathname === "/components"
+                ? "primary"
+                : "secondary"
+            }
             size="sm"
           >
             <IconComponent name="Home" className="h-4 w-4" />
-            <div className="flex-1">{USER_PROJECTS_HEADER}</div>
+            <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
-        <Link to="/community">
+        {/* <Link to="/community">
           <Button
             className="gap-2"
             variant={
@@ -63,18 +71,30 @@ export default function Header(): JSX.Element {
             <IconComponent name="Users2" className="h-4 w-4" />
             <div className="flex-1">Community Examples</div>
           </Button>
-        </Link>
+        </Link> */}
+        {hasStore && (
+          <Link to="/store">
+            <Button
+              className="gap-2"
+              variant={location.pathname === "/store" ? "primary" : "secondary"}
+              size="sm"
+            >
+              <IconComponent name="Store" className="h-4 w-4" />
+              <div className="flex-1">Store</div>
+            </Button>
+          </Link>
+        )}
       </div>
-      <div className="header-end-division">
+      <div className="header-end-division lg:w-[30%]">
         <div className="header-end-display">
           <a
             href="https://github.com/logspace-ai/langflow"
             target="_blank"
             rel="noreferrer"
-            className="header-github-link"
+            className="header-github-link gap-2"
           >
-            <FaGithub className="mr-2 h-5 w-5" />
-            Star
+            <FaGithub className="h-5 w-5" />
+            <div className="hidden lg:block">Star</div>
             <div className="header-github-display">{stars}</div>
           </a>
           <a

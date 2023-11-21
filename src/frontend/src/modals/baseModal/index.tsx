@@ -67,7 +67,8 @@ interface BaseModalProps {
     | "large"
     | "large-h-full"
     | "small-h-full"
-    | "medium-h-full";
+    | "medium-h-full"
+    | "smaller-h-full";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -103,6 +104,10 @@ function BaseModal({
     case "smaller":
       minWidth = "min-w-[40vw]";
       height = "h-[27vh]";
+      break;
+    case "smaller-h-full":
+      minWidth = "min-w-[40vw]";
+      height = "h-full";
       break;
     case "small":
       minWidth = "min-w-[40vw]";

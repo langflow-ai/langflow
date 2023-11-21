@@ -15,9 +15,7 @@ async def process_graph(
 
     if langchain_object is None:
         # Raise user facing error
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
+        raise ValueError("There was an error loading the langchain_object. Please, check all the nodes and try again.")
 
     # Generate result and thought
     try:

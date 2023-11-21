@@ -12,19 +12,16 @@ from langflow.services.database.models.user.crud import (
     get_user_by_username,
     update_user_last_login_at,
 )
-from langflow.services.getters import get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service
 from sqlmodel import Session
+from cryptography.fernet import Fernet
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
-api_key_query = APIKeyQuery(
-    name=API_KEY_NAME, scheme_name="API key query", auto_error=False
-)
-api_key_header = APIKeyHeader(
-    name=API_KEY_NAME, scheme_name="API key header", auto_error=False
-)
+api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
+api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -141,23 +138,17 @@ def get_current_active_user(current_user: Annotated[User, Depends(get_current_us
     return current_user
 
 
-def get_current_active_superuser(
-    current_user: Annotated[User, Depends(get_current_user)]
-) -> User:
+def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=401, detail="Inactive user")
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=400, detail="The user doesn't have enough privileges"
-        )
+        raise HTTPException(status_code=400, detail="The user doesn't have enough privileges")
     return current_user
 
 
 def verify_password(plain_password, hashed_password):
     settings_service = get_settings_service()
-    return settings_service.auth_settings.pwd_context.verify(
-        plain_password, hashed_password
-    )
+    return settings_service.auth_settings.pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password):
@@ -246,22 +237,16 @@ def get_user_id_from_token(token: str) -> UUID:
         return UUID(int=0)
 
 
-def create_user_tokens(
-    user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False
-) -> dict:
+def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
-    access_token_expires = timedelta(
-        minutes=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    access_token_expires = timedelta(minutes=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_token(
         data={"sub": str(user_id)},
         expires_delta=access_token_expires,
     )
 
-    refresh_token_expires = timedelta(
-        minutes=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES
-    )
+    refresh_token_expires = timedelta(minutes=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
         expires_delta=refresh_token_expires,
@@ -291,9 +276,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         token_type: str = payload.get("type")  # type: ignore
 
         if user_id is None or token_type is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         return create_user_tokens(user_id, db)
 
@@ -304,9 +287,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
         ) from e
 
 
-def authenticate_user(
-    username: str, password: str, db: Session = Depends(get_session)
-) -> Optional[User]:
+def authenticate_user(username: str, password: str, db: Session = Depends(get_session)) -> Optional[User]:
     user = get_user_by_username(db, username)
 
     if not user:
@@ -318,3 +299,33 @@ def authenticate_user(
         raise HTTPException(status_code=400, detail="Inactive user")
 
     return user if verify_password(password, user.password) else None
+
+
+def add_padding(s):
+    # Calculate the number of padding characters needed
+    padding_needed = 4 - len(s) % 4
+    return s + "=" * padding_needed
+
+
+def get_fernet(settings_service=Depends(get_settings_service)):
+    SECRET_KEY = settings_service.auth_settings.SECRET_KEY
+    # It's important that your secret key is 32 url-safe base64-encoded bytes
+    padded_secret_key = add_padding(SECRET_KEY)
+    fernet = Fernet(padded_secret_key)
+    return fernet
+
+
+def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)):
+    fernet = get_fernet(settings_service)
+    # Two-way encryption
+    encrypted_key = fernet.encrypt(api_key.encode())
+    return encrypted_key
+
+
+def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):
+    fernet = get_fernet(settings_service)
+    # Two-way decryption
+    if isinstance(encrypted_api_key, str):
+        encrypted_api_key = encrypted_api_key.encode()
+    decrypted_key = fernet.decrypt(encrypted_api_key).decode()
+    return decrypted_key

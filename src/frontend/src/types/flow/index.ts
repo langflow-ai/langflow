@@ -7,6 +7,10 @@ export type FlowType = {
   data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
+  is_component: boolean;
+  parent?: string;
+  date_created?: string;
+  last_tested_version?: string;
 };
 export type NodeType = {
   id: string;

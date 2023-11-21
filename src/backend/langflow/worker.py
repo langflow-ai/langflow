@@ -1,15 +1,15 @@
-from langflow.core.celery_app import celery_app
-from typing import Any, Dict, Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
+
+from langflow.core.celery_app import celery_app
 from langflow.processing.process import (
     Result,
     generate_result,
     process_inputs,
 )
+from langflow.services.deps import get_session_service
 from langflow.services.manager import initialize_session_service
-from langflow.services.getters import get_session_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -30,9 +30,7 @@ def build_vertex(self, vertex: "Vertex") -> "Vertex":
         vertex.build()
         return vertex
     except SoftTimeLimitExceeded as e:
-        raise self.retry(
-            exc=SoftTimeLimitExceeded("Task took too long"), countdown=2
-        ) from e
+        raise self.retry(exc=SoftTimeLimitExceeded("Task took too long"), countdown=2) from e
 
 
 @celery_app.task(acks_late=True)
@@ -47,9 +45,7 @@ def process_graph_cached_task(
     if clear_cache:
         session_service.clear_session(session_id)
     if session_id is None:
-        session_id = session_service.generate_key(
-            session_id=session_id, data_graph=data_graph
-        )
+        session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
     graph, artifacts = session_service.load_session(session_id, data_graph)
     built_object = graph.build()
@@ -59,4 +55,4 @@ def process_graph_cached_task(
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (graph, artifacts))
 
-    return Result(result=result, session_id=session_id).dict()
+    return Result(result=result, session_id=session_id).model_dump()

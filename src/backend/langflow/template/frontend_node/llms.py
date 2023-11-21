@@ -54,9 +54,9 @@ class LLMFrontendNode(FrontendNode):
     @staticmethod
     def format_openai_field(field: TemplateField):
         if "openai" in field.name.lower():
-            field.display_name = (
-                field.name.title().replace("Openai", "OpenAI").replace("_", " ")
-            ).replace("Api", "API")
+            field.display_name = (field.name.title().replace("Openai", "OpenAI").replace("_", " ")).replace(
+                "Api", "API"
+            )
 
         if "key" not in field.name.lower() and "token" not in field.name.lower():
             field.password = False
@@ -109,10 +109,7 @@ class LLMFrontendNode(FrontendNode):
         if field.name in SHOW_FIELDS:
             field.show = True
 
-        if "api" in field.name and (
-            "key" in field.name
-            or ("token" in field.name and "tokens" not in field.name)
-        ):
+        if "api" in field.name and ("key" in field.name or ("token" in field.name and "tokens" not in field.name)):
             field.password = True
             field.show = True
             # Required should be False to support

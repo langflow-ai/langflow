@@ -1,17 +1,16 @@
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
+
+import yaml
 from fastapi import HTTPException
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.services.getters import get_db_service
 from langflow.interface.custom.utils import extract_inner_type, extract_union_types
-
-from langflow.utils import validate
-
-from langflow.services.database.utils import session_getter
 from langflow.services.database.models.flow import Flow
-import yaml
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
+from langflow.utils import validate
 
 
 class CustomComponent(Component):
@@ -54,9 +53,9 @@ class CustomComponent(Component):
         reader = DirectoryReader("", False)
 
         for type_hint in TYPE_HINT_LIST:
-            if reader._is_type_hint_used_in_args(
+            if reader._is_type_hint_used_in_args(type_hint, code) and not reader._is_type_hint_imported(
                 type_hint, code
-            ) and not reader._is_type_hint_imported(type_hint, code):
+            ):
                 error_detail = {
                     "error": "Type hint Error",
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
@@ -75,20 +74,14 @@ class CustomComponent(Component):
             return ""
         tree = self.get_code_tree(self.code)
 
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return ""
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         if not build_methods:
@@ -104,8 +97,7 @@ class CustomComponent(Component):
                     detail={
                         "error": "Type hint Error",
                         "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
+                            "Prompt type is not supported in the build method." " Try using PromptTemplate instead."
                         ),
                     },
                 )
@@ -120,20 +112,14 @@ class CustomComponent(Component):
             return []
         tree = self.get_code_tree(self.code)
 
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return []
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         if not build_methods:
@@ -191,8 +177,7 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices
-        from langflow.processing.process import process_tweaks
+        from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
@@ -229,11 +214,7 @@ class CustomComponent(Component):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = (
-                    session.query(Flow)
-                    .filter(Flow.name == flow_name)
-                    .filter(Flow.user_id == self.user_id)
-                ).first()
+                flow = (session.query(Flow).filter(Flow.name == flow_name).filter(Flow.user_id == self.user_id)).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 

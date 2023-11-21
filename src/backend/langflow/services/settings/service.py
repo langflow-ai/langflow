@@ -30,9 +30,7 @@ class SettingsService(Service):
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
                     raise KeyError(f"Key {key} not found in settings")
-                logger.debug(
-                    f"Loading {len(settings_dict[key])} {key} from {file_path}"
-                )
+                logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
         settings = Settings(**settings_dict)
         if not settings.CONFIG_DIR:

@@ -1,4 +1,4 @@
-from langflow.services.chat.manager import ChatService
+from langflow.services.chat.service import ChatService
 from langflow.services.factory import ServiceFactory
 
 
