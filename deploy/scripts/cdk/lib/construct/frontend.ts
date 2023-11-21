@@ -63,7 +63,7 @@ export class FrontEndCluster extends Construct {
           },
       ],
   });
-
+  const frontendServiceName = 'langflow-frontend-service'
   const frontendService = new ecs.FargateService(
       this,
       'FrontendService',
@@ -75,11 +75,18 @@ export class FrontEndCluster extends Construct {
         taskDefinition: frontendTaskDefinition,
         enableExecuteCommand: true,
         securityGroups: [props.ecsFrontSG],
-        // healthCheckGracePeriod: Duration.seconds(300),
+        cloudMapOptions: {
+          cloudMapNamespace: props.cloudmapNamespace,
+          containerPort: containerPort,
+          dnsRecordType: servicediscovery.DnsRecordType.A,
+          dnsTtl: Duration.seconds(10),
+          name: frontendServiceName
+        },
+        healthCheckGracePeriod: Duration.seconds(1000),
       }
   );
 
-  // props.targetGroup.addTarget(frontendService);
+  props.targetGroup.addTarget(frontendService);
 
     // // Create ALB and ECS Fargate Service
     // const frontService = new ecs_patterns.ApplicationLoadBalancedFargateService(
