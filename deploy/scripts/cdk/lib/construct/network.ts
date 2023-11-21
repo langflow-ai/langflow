@@ -148,13 +148,32 @@ export class Network extends Construct {
         'logs:PutLogEvents',
       ],
     });
+    // Bedrock roll
+    const BedrockPolicyStatement = new iam.PolicyStatement({
+      sid: 'allowBedrockAccess',
+      resources: ['*'],
+      actions: [
+        'bedrock:*',
+      ],
+    });
+    // Kendra roll
+    const KendraPolicyStatement = new iam.PolicyStatement({
+      sid: 'allowKendraAccess',
+      resources: ['*'],
+      actions: [
+        'kendra:*'
+      ],
+    });
 
     this.backendTaskRole = new iam.Role(this, 'BackendTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
     });
+    // ECS Exec Policyの付与
     this.backendTaskRole.addToPolicy(ECSExecPolicyStatement);
     // KendraとBedrockのアクセス権付与
-    // this.backendTaskRole.addToPolicy();
+    this.backendTaskRole.addToPolicy(KendraPolicyStatement);
+    this.backendTaskRole.addToPolicy(BedrockPolicyStatement);
+
     
 
     this.frontendTaskRole = new iam.Role(this, 'FrontendTaskRole', {
