@@ -53,8 +53,7 @@ export default function SidebarDraggableComponent({
         break;
       case "delete":
         deleteComponent(
-          autoLogin ? "auto" : userData?.id!,
-          removeCountFromString(itemName)
+          display_name
         );
         break;
     }

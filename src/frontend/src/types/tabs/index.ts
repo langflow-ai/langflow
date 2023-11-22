@@ -45,7 +45,7 @@ export type FlowsContextType = {
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
   saveComponent: (component: NodeDataType) => Promise<String | undefined>;
-  deleteComponent: (id: string, key: string) => void;
+  deleteComponent: (key: string) => void;
   version: string;
 };
 
