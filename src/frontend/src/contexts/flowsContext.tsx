@@ -548,7 +548,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         newFlow.id = id;
 
         // Add the new flow to the list of flows.
-        addFlowToLocalState(newFlow);
+        refreshFlows();
 
         // Return the id
         return id;
