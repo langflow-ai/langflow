@@ -3,6 +3,7 @@ from uuid import UUID
 
 import yaml
 from fastapi import HTTPException
+
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -21,14 +22,20 @@ class CustomComponent(Component):
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
-    return_type_valid_list: List[str] = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
+    status: Optional[str] = None
 
     def __init__(self, **data):
         super().__init__(**data)
 
+    @property
+    def return_type_valid_list(self):
+        return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+
     def custom_repr(self):
+        if self.status:
+            self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
