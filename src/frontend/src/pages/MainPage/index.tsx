@@ -17,6 +17,7 @@ export default function HomePage(): JSX.Element {
     addFlow,
     removeFlow,
     uploadFlow,
+    refreshFlows,
     isLoading,
   } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
@@ -62,6 +63,7 @@ export default function HomePage(): JSX.Element {
   // Set a null id
   useEffect(() => {
     setTabId("");
+    refreshFlows();
   }, []);
   const navigate = useNavigate();
 
