@@ -43,8 +43,6 @@ import {
   createRandomKey,
   getRandomDescription,
   getRandomName,
-  getSetFromObject,
-  removeCountFromString,
 } from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
@@ -504,27 +502,22 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       let flowData = flow
         ? processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
- 
- 
+
       // Create a new flow with a default name if no flow is provided.
 
       const newFlow = createNewFlow(flowData, flow!);
- 
- 
+
       const newName = addVersionToDuplicates(newFlow, flows);
- 
- 
+
       newFlow.name = newName;
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
         newFlow.id = id;
- 
- 
+
         // Add the new flow to the list of flows.
         addFlowToLocalState(newFlow);
- 
- 
+
         // Return the id
         return id;
       } catch (error) {
@@ -607,6 +600,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
+    if (newFlow?.data?.nodes?.length === 0) return;
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
@@ -652,8 +646,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   function deleteComponent(key: string) {
     let componentFlow = flows.find(
       (componentFlow) =>
-        componentFlow.is_component &&
-        componentFlow.name === key
+        componentFlow.is_component && componentFlow.name === key
     );
 
     if (componentFlow) {
