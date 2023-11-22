@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
-from langflow.services.database.models.base import SQLModelSerializable
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship
+
+from langflow.services.database.models.base import SQLModelSerializable
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -45,7 +46,7 @@ class FlowBase(SQLModelSerializable):
     @field_validator("updated_at")
     def validate_dt(cls, v):
         if v is None:
-            return datetime.utcnow()
+            return v
         elif isinstance(v, datetime):
             return v
 
