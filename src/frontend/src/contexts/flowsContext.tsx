@@ -10,7 +10,6 @@ import {
 } from "react";
 import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { skipNodeUpdate } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
@@ -101,8 +100,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
-  const { templates, reactFlowInstance, setData, data } =
-    useContext(typesContext);
+  const { reactFlowInstance, setData, data } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;
@@ -123,27 +121,25 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
-    if (Object.keys(templates).length > 0) {
-      setIsLoading(true);
-      getTabsDataFromDB().then((DbData) => {
-        if (DbData) {
-          try {
-            processFlows(DbData, false);
-            updateStateWithDbData(DbData);
-            setIsLoading(false);
-          } catch (e) {}
-        }
-      });
-    }
+    setIsLoading(true);
+    getTabsDataFromDB().then((DbData) => {
+      if (DbData) {
+        try {
+          processFlows(DbData, false);
+          updateStateWithDbData(DbData);
+          setIsLoading(false);
+        } catch (e) {}
+      }
+    });
   }
 
   useEffect(() => {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (getAuthentication() === true && Object.keys(templates).length > 0) {
+    if (getAuthentication() === true) {
       // get data from db
       refreshFlows();
     }
-  }, [getAuthentication(), templates, tabId]);
+  }, [getAuthentication(), tabId]);
 
   function getTabsDataFromDB() {
     //get tabs from db
@@ -174,12 +170,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       }
     });
     setData((prev) => {
-      let newData = _.cloneDeep(prev);
-
-      const customComponent = newData["custom_components"]["CustomComponent"];
-      newData["custom_components"] = cloneDeep(storeComponents);
-      newData["custom_components"]["CustomComponent"] = customComponent;
-      return newData;
+      prev["saved_components"] = cloneDeep(storeComponents);
+      return prev;
     });
   }
 
@@ -202,27 +194,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   function updateNodeDocumentation(node: NodeType, template: APIClassType) {
     node.data.node!.documentation = template["documentation"];
-  }
-
-  function processFlowNodes(flow: FlowType) {
-    if (!flow.data || !flow.data.nodes) return;
-    flow.data.nodes.forEach((node: NodeType) => {
-      if (node.data.node?.flow) return;
-      if (skipNodeUpdate.includes(node.data.type)) return;
-      const template = templates[node.data.type];
-      if (!template) {
-        return;
-      }
-      if (Object.keys(template["template"]).length > 0) {
-        updateDisplay_name(node, template);
-        updateNodeBaseClasses(node, template);
-        //update baseclasses in edges
-        updateNodeEdges(flow, node, template);
-        updateNodeDescription(node, template);
-        updateNodeTemplate(node, template);
-        updateNodeDocumentation(node, template);
-      }
-    });
   }
 
   function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
@@ -590,36 +561,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             : "stroke-gray-900 ") + " stroke-connection";
         edge.animated = targetHandleObject.type === "Text";
       });
-  };
-
-  const updateNodes = (nodes: Node[], edges: Edge[]) => {
-    nodes.forEach((node) => {
-      if (node.data.node?.flow) return;
-      if (skipNodeUpdate.includes(node.data.type)) return;
-      const template = templates[node.data.type];
-      if (!template) {
-        setErrorData({ title: `Unknown node type: ${node.data.type}` });
-        return;
-      }
-      if (Object.keys(template["template"]).length > 0) {
-        node.data.node.base_classes = template["base_classes"];
-        edges.forEach((edge) => {
-          let sourceHandleObject: sourceHandleType = scapeJSONParse(
-            edge.sourceHandle!
-          );
-          if (edge.source === node.id) {
-            let newSourceHandle = sourceHandleObject;
-            newSourceHandle.baseClasses.concat(template["base_classes"]);
-            edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-          }
-        });
-        node.data.node.description = template["description"];
-        node.data.node.template = updateTemplate(
-          template["template"] as unknown as APITemplateType,
-          node.data.node.template as APITemplateType
-        );
-      }
-    });
   };
 
   const createNewFlow = (
