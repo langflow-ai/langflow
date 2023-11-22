@@ -51,7 +51,6 @@ export default function ComponentsComponent({
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
     setData(allData.slice(start, end));
-    console.log(allData);
   }, [pageIndex, pageSize, allData]);
 
   const [data, setData] = useState<FlowType[]>([]);

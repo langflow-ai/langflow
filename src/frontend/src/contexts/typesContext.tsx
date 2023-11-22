@@ -42,7 +42,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
   const { setLoading } = useContext(alertContext);
-  const { getAuthentication, autoLogin, userData } = useContext(AuthContext);
+  const { getAuthentication } = useContext(AuthContext);
   const [getFilterEdge, setFilterEdge] = useState([]);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     if (getAuthentication() === true) {
       getTypes();
     }
-  }, [getAuthentication(), autoLogin, userData]);
+  }, [getAuthentication()]);
 
   async function getTypes(): Promise<void> {
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
