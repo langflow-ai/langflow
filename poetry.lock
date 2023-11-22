@@ -555,13 +555,13 @@ files = [
 
 [[package]]
 name = "celery"
-version = "5.3.5"
+version = "5.3.6"
 description = "Distributed Task Queue."
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "celery-5.3.5-py3-none-any.whl", hash = "sha256:30b75ac60fb081c2d9f8881382c148ed7c9052031a75a1e8743ff4b4b071f184"},
-    {file = "celery-5.3.5.tar.gz", hash = "sha256:6b65d8dd5db499dd6190c45aa6398e171b99592f2af62c312f7391587feb5458"},
+    {file = "celery-5.3.6-py3-none-any.whl", hash = "sha256:9da4ea0118d232ce97dff5ed4974587fb1c0ff5c10042eb15278487cdd27d1af"},
+    {file = "celery-5.3.6.tar.gz", hash = "sha256:870cc71d737c0200c397290d730344cc991d13a057534353d124c9380267aab9"},
 ]
 
 [package.dependencies]
@@ -570,7 +570,7 @@ click = ">=8.1.2,<9.0"
 click-didyoumean = ">=0.3.0"
 click-plugins = ">=1.1.1"
 click-repl = ">=0.2.0"
-kombu = ">=5.3.3,<6.0"
+kombu = ">=5.3.4,<6.0"
 python-dateutil = ">=2.8.2"
 redis = {version = ">=4.5.2,<4.5.5 || >4.5.5,<6.0.0", optional = true, markers = "extra == \"redis\""}
 tzdata = ">=2022.7"
@@ -588,7 +588,7 @@ couchbase = ["couchbase (>=3.0.0)"]
 couchdb = ["pycouchdb (==1.14.2)"]
 django = ["Django (>=2.2.28)"]
 dynamodb = ["boto3 (>=1.26.143)"]
-elasticsearch = ["elastic-transport (<=8.10.0)", "elasticsearch (<=8.10.1)"]
+elasticsearch = ["elastic-transport (<=8.10.0)", "elasticsearch (<=8.11.0)"]
 eventlet = ["eventlet (>=0.32.0)"]
 gevent = ["gevent (>=1.5.0)"]
 librabbitmq = ["librabbitmq (>=2.0.0)"]
@@ -3559,13 +3559,13 @@ six = "*"
 
 [[package]]
 name = "langfuse"
-version = "1.7.2"
+version = "1.7.4"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langfuse-1.7.2-py3-none-any.whl", hash = "sha256:3d8f11ebd6be41ac1037e4266467f81e17b7957ff83d215dd11bd63512c0a107"},
-    {file = "langfuse-1.7.2.tar.gz", hash = "sha256:066e30143a8a8dc3aeff81ce69551303299ded94bf7d0510f0ee54df6a5fb48b"},
+    {file = "langfuse-1.7.4-py3-none-any.whl", hash = "sha256:f5f1e19eac2d01e9854f567f0946f47dac3be59ee40f335e616355b3545018f3"},
+    {file = "langfuse-1.7.4.tar.gz", hash = "sha256:5813d2f43e7ba106ae58f048d81c7091fd681be73b35d87d53ac321f999738ae"},
 ]
 
 [package.dependencies]
@@ -4581,13 +4581,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.3.4"
+version = "1.3.5"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.3.4-py3-none-any.whl", hash = "sha256:a8daed9553bbfc9e6d6a74615a2d48e4ff293d74d51f75b45ff18a9edbe61ce3"},
-    {file = "openai-1.3.4.tar.gz", hash = "sha256:9fd7a8d9efbff4c35b4026266432e49372ca0da653a5d12dac3e4330f7e29b88"},
+    {file = "openai-1.3.5-py3-none-any.whl", hash = "sha256:9437458978fb502e61336c3082e02b09c49feebe0e8516a2b8fb4563e6e4af4e"},
+    {file = "openai-1.3.5.tar.gz", hash = "sha256:163e7ece4af76e961f58b75ea20a42b0d0c2a240c2f81b41a3d1c5962463cdf8"},
 ]
 
 [package.dependencies]
@@ -9078,4 +9078,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "9b3613f72520ed7343b4719404a0a5e49939b31f30861caafdbd30cdf7c04258"
+content-hash = "8335fd767d4ff476b3caf2a9e05fcce1f353d4b3a2e181585080a618099669fa"
