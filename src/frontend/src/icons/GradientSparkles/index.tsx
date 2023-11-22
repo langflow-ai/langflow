@@ -1,7 +1,7 @@
 import { InfinityIcon } from "lucide-react";
 import { forwardRef } from "react";
 
-export const GradientSparkles = forwardRef<
+export const GradientInfinity = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {

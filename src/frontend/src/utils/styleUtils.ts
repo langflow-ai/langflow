@@ -110,7 +110,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
-import { GradientSparkles } from "../icons/GradientSparkles";
+import { GradientInfinity } from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -269,7 +269,7 @@ export const nodeIconsLucide: iconsType = {
   unknown: HelpCircle,
   WikipediaQueryRun: SvgWikipedia,
   WolframAlphaQueryRun: SvgWolfram,
-  custom_components: GradientSparkles,
+  custom_components: GradientInfinity,
   custom: Edit,
   Trash2,
   Boxes,
