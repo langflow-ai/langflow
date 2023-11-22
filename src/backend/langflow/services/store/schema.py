@@ -23,17 +23,17 @@ class TagsIdResponse(BaseModel):
 
 
 class ListComponentResponse(BaseModel):
-    id: UUID
-    name: Optional[str]
-    description: Optional[str]
-    liked_by_count: Optional[int]
+    id: Optional[UUID] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    liked_by_count: Optional[int] = None
     liked_by_user: Optional[bool] = None
-    is_component: Optional[bool]
-    metadata: Optional[dict]
-    user_created: Optional[dict]
+    is_component: Optional[bool] = None
+    metadata: Optional[dict] = {}
+    user_created: Optional[dict] = {}
     tags: Optional[List[TagResponse]] = None
-    downloads_count: Optional[int]
-    last_tested_version: Optional[str]
+    downloads_count: Optional[int] = None
+    last_tested_version: Optional[str] = None
     private: Optional[bool] = None
 
     # tags comes as a TagsIdResponse but we want to return a list of TagResponse
