@@ -61,7 +61,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       if (isMounted && result?.status === 200) {
         setLoading(false);
         let { data } = _.cloneDeep(result);
-        setData(data);
+        setData((old) => ({ ...old, ...data }));
         setTemplates(
           Object.keys(data).reduce((acc, curr) => {
             Object.keys(data[curr]).forEach((c: keyof APIKindType) => {

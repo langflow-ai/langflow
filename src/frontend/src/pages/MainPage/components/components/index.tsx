@@ -34,9 +34,9 @@ export default function ComponentsComponent({
               new Date(a?.updated_at!).getTime()
             );
           } else if (a?.updated_at && !b?.updated_at) {
-            return -1;
-          } else if (!a?.updated_at && b?.updated_at) {
             return 1;
+          } else if (!a?.updated_at && b?.updated_at) {
+            return -1;
           } else {
             return (
               new Date(b?.date_created!).getTime() -
