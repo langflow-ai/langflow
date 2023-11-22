@@ -485,7 +485,12 @@ class StoreService(Service):
             if store_api_key:
                 # Now, from the result, we need to get the components
                 # the user likes and set the liked_by_user to True
-                if result:
+                # if any of the components does not have an id, it means
+                # we should not update the components
+
+                if not result or any(component.id is None for component in result):
+                    authorized = await self.check_api_key(store_api_key)
+                else:
                     try:
                         updated_result = await update_components_with_user_data(
                             result, self, store_api_key, liked=liked
@@ -495,6 +500,4 @@ class StoreService(Service):
                     except Exception:
                         # If we get an error here, it means the user is not authorized
                         authorized = False
-                else:
-                    authorized = await self.check_api_key(store_api_key)
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
