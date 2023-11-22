@@ -45,11 +45,11 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
 
   useEffect(() => {
-    if (open) {
+    if (open || internalOpen) {
       handleGetTags();
       handleGetNames();
     }
-  }, [open]);
+  }, [open, internalOpen]);
 
   function handleGetTags() {
     setLoadingTags(true);
