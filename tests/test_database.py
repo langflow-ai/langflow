@@ -35,7 +35,7 @@ def test_create_flow(client: TestClient, json_flow: str, active_user, logged_in_
     assert response.json()["data"] == flow.data
     # flow is optional so we can create a flow without a flow
     flow = FlowCreate(name="Test Flow", description="description")
-    response = client.post("api/v1/flows/", json=flow.dict(exclude_unset=True), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(exclude_unset=True), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
