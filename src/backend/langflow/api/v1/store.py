@@ -102,6 +102,7 @@ async def share_component(
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(
+    component_id: Annotated[Optional[str], Query()] = None,
     search: Annotated[Optional[str], Query()] = None,
     private: Annotated[Optional[bool], Query()] = None,
     is_component: Annotated[Optional[bool], Query()] = None,
@@ -117,6 +118,7 @@ async def get_components(
 ):
     try:
         return await store_service.get_list_component_response_model(
+            component_id=component_id,
             search=search,
             private=private,
             is_component=is_component,

@@ -55,6 +55,16 @@ const Router = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/store/:id/"
+        element={
+          <ProtectedRoute>
+            <StoreGuard>
+              <StorePage />
+            </StoreGuard>
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/flow/:id/">
         <Route
