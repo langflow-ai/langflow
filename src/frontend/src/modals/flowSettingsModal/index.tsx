@@ -4,7 +4,9 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
+import { readFlowsFromDatabase } from "../../controllers/API";
 import { FlowSettingsPropsType } from "../../types/components";
+import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
@@ -19,7 +21,6 @@ export default function FlowSettingsModal({
   }, [flow!.name, flow!.description]);
   const [name, setName] = useState(flow!.name);
   const [description, setDescription] = useState(flow!.description);
-  const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
     let savedFlow = flows.find((flow) => flow.id === tabId);
@@ -28,6 +29,18 @@ export default function FlowSettingsModal({
     saveFlow(savedFlow!);
     setOpen(false);
   }
+
+  const [nameLists, setNameList] = useState<string[]>([]);
+  useEffect(() => {
+    const tempNameList: string[] = [];
+    readFlowsFromDatabase().then((flows) => {
+      flows.forEach((flow: FlowType) => {
+        tempNameList.push(flow.name);
+      });
+      setNameList(tempNameList.filter((name) => name !== flow!.name));
+    });
+  }, []);
+
   return (
     <BaseModal open={open} setOpen={setOpen} size="smaller">
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
@@ -36,8 +49,7 @@ export default function FlowSettingsModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
-          invalidName={invalidName}
-          setInvalidName={setInvalidName}
+          invalidNameList={nameLists}
           name={name}
           description={description}
           setName={setName}
@@ -46,7 +58,11 @@ export default function FlowSettingsModal({
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <Button disabled={invalidName} onClick={handleClick} type="submit">
+        <Button
+          disabled={nameLists.includes(name) && name !== flow!.name}
+          onClick={handleClick}
+          type="submit"
+        >
           Save
         </Button>
       </BaseModal.Footer>

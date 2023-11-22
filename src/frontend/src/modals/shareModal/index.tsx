@@ -6,7 +6,11 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { getStoreTags, saveFlowStore } from "../../controllers/API";
+import {
+  getStoreComponents,
+  getStoreTags,
+  saveFlowStore,
+} from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
@@ -38,10 +42,12 @@ export default function ShareModal({
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
   const tagListId = useRef<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     handleGetTags();
+    handleGetNames();
   }, []);
 
   function handleGetTags() {
@@ -49,6 +55,16 @@ export default function ShareModal({
     getStoreTags().then((res) => {
       setTags(res);
       setLoadingTags(false);
+    });
+  }
+  function handleGetNames() {
+    const unavaliableNames: Array<string> = [];
+    getStoreComponents({ fields: ["name"], filterByUser: true }).then((res) => {
+      res?.results?.forEach((element: any) => {
+        unavaliableNames.push(element.name);
+      });
+      console.log(unavaliableNames);
+      setUnavaliableNames(unavaliableNames);
     });
   }
 
@@ -117,6 +133,7 @@ export default function ShareModal({
       <BaseModal.Content>
         <EditFlowSettings
           name={name}
+          invalidNameList={unavaliableNames}
           description={description}
           setName={setName}
           setDescription={setDescription}
@@ -162,6 +179,7 @@ export default function ShareModal({
 
       <BaseModal.Footer>
         <Button
+          disabled={unavaliableNames.includes(name)}
           onClick={() => {
             handleShareComponent();
             if (setOpen) setOpen(false);

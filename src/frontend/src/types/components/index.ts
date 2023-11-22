@@ -223,10 +223,9 @@ export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  invalidName?: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
-  setInvalidName?: (invalidName: boolean) => void;
+  invalidNameList?: string[];
 };
 
 export type TooltipProps = {

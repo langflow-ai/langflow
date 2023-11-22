@@ -603,6 +603,7 @@ export async function getStoreComponents({
   isPrivate = null,
   search = null,
   filterByUser = null,
+  fields = null,
 }: {
   page?: number;
   limit?: number;
@@ -613,6 +614,7 @@ export async function getStoreComponents({
   isPrivate?: boolean | null;
   search?: string | null;
   filterByUser?: boolean | null;
+  fields?: Array<string> | null;
 }): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
@@ -625,6 +627,9 @@ export async function getStoreComponents({
     }
     if (tags !== undefined && tags !== null && tags.length > 0) {
       queryParams.push(`tags=${tags.join(encodeURIComponent(","))}`);
+    }
+    if (fields !== undefined && fields !== null && fields.length > 0) {
+      queryParams.push(`fields=${fields.join(encodeURIComponent(","))}`);
     }
 
     if (sort !== undefined && sort !== null) {
