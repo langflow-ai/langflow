@@ -594,6 +594,7 @@ export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
 }
 
 export async function getStoreComponents({
+  component_id = null,
   page = 1,
   limit = 9999999,
   is_component = null,
@@ -605,6 +606,7 @@ export async function getStoreComponents({
   filterByUser = null,
   fields = null,
 }: {
+  component_id?: string | null;
   page?: number;
   limit?: number;
   is_component?: boolean | null;
@@ -619,6 +621,9 @@ export async function getStoreComponents({
   try {
     let url = `${BASE_URL_API}store/components/`;
     const queryParams: any = [];
+    if (component_id !== undefined && component_id !== null) {
+      queryParams.push(`component_id=${component_id}`);
+    }
     if (search !== undefined && search !== null) {
       queryParams.push(`search=${search}`);
     }

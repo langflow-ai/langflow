@@ -9,7 +9,9 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
+import { Link, useParams } from "react-router-dom";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
+import { Badge } from "../../components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -27,6 +29,7 @@ import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
+  const { id } = useParams();
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
   const { apiKey } = useContext(AuthContext);
@@ -85,6 +88,7 @@ export default function StorePage(): JSX.Element {
     apiKey,
     searchNow,
     loadingApiKey,
+    id,
   ]);
 
   function handleGetTags() {
@@ -104,6 +108,7 @@ export default function StorePage(): JSX.Element {
     if (!hasApiKey || loadingApiKey) return;
     setLoading(true);
     getStoreComponents({
+      component_id: id,
       page: pageIndex,
       limit: pageSize,
       is_component:
@@ -275,13 +280,27 @@ export default function StorePage(): JSX.Element {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <TagsSelector
-              tags={tags}
-              loadingTags={loadingTags}
-              disabled={loading}
-              selectedTags={filteredCategories}
-              setSelectedTags={setFilterCategories}
-            />
+            {id === undefined ? (
+              <TagsSelector
+                tags={tags}
+                loadingTags={loadingTags}
+                disabled={loading}
+                selectedTags={filteredCategories}
+                setSelectedTags={setFilterCategories}
+              />
+            ) : (
+              <Badge
+                key="id"
+                variant="outline"
+                size="sq"
+                className="gap-2 bg-beta-foreground text-background hover:bg-beta-foreground"
+              >
+                <Link to={"/store"} className="cursor-pointer">
+                  <IconComponent name="X" className="h-4 w-4" />
+                </Link>
+                {id}
+              </Badge>
+            )}
           </div>
           <div className="flex items-end justify-between">
             <span className="px-0.5 text-sm text-muted-foreground">

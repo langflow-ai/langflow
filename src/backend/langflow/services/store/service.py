@@ -171,6 +171,7 @@ class StoreService(Service):
 
     def build_filter_conditions(
         self,
+        component_id: Optional[str] = None,
         search: Optional[str] = None,
         private: Optional[bool] = None,
         tags: Optional[List[str]] = None,
@@ -191,7 +192,8 @@ class StoreService(Service):
         if tags:
             tags_filter = self.build_tags_filter(tags)
             filter_conditions.append(tags_filter)
-
+        if component_id is not None:
+            filter_conditions.append({"id": {"_eq": component_id}})
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
         if liked and store_api_Key:
@@ -412,6 +414,7 @@ class StoreService(Service):
 
     async def get_list_component_response_model(
         self,
+        component_id: Optional[str] = None,
         search: Optional[str] = None,
         private: Optional[bool] = None,
         tags: Optional[List[str]] = None,
@@ -426,6 +429,7 @@ class StoreService(Service):
     ):
         async with user_data_context(api_key=store_api_key, store_service=self):
             filter_conditions: List[Dict[str, Any]] = self.build_filter_conditions(
+                component_id=component_id,
                 search=search,
                 private=private,
                 tags=tags,
