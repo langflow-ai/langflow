@@ -7,7 +7,6 @@ export type FlowsContextType = {
   isLoading: boolean;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
-  refreshFlows: () => void;
   removeFlow: (id: string) => void;
   addFlow: (
     newProject: boolean,
