@@ -4,10 +4,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
-from sqlmodel import JSON, Column, Field, Relationship
-
 from langflow.services.database.models.base import SQLModelSerializable
+from pydantic import field_serializer, field_validator
+from sqlmodel import JSON, Column, Field, Relationship
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -35,6 +34,22 @@ class FlowBase(SQLModelSerializable):
             raise ValueError("Flow must have edges")
 
         return v
+
+    # updated_at can be serialized to JSON
+    @field_serializer("updated_at")
+    def serialize_dt(self, dt: datetime, _info):
+        if dt is None:
+            return None
+        return dt.isoformat()
+
+    @field_validator("updated_at")
+    def validate_dt(cls, v):
+        if v is None:
+            return datetime.utcnow()
+        elif isinstance(v, datetime):
+            return v
+
+        return datetime.fromisoformat(v)
 
 
 class Flow(FlowBase, table=True):
