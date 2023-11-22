@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { ReactNode, useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -43,7 +43,6 @@ export default function ShareModal({
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
-  const tagListId = useRef<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     handleGetTags();
@@ -91,11 +90,7 @@ export default function ShareModal({
           last_tested_version: version,
           is_component: is_component,
         });
-    saveFlowStore(
-      saveFlow,
-      getTagsIds(selectedTags, tagListId),
-      sharePublic
-    ).then(
+    saveFlowStore(saveFlow, getTagsIds(selectedTags, tags), sharePublic).then(
       () => {
         if (is_component) {
           addFlow(true, saveFlow);

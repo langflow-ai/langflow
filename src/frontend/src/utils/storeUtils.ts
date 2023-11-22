@@ -15,9 +15,11 @@ export default function cloneFLowWithParent(
 
 export function getTagsIds(
   tags: string[],
-  tagListId: { current: { name: string; id: string }[] }
+  tagListId: { name: string; id: string }[]
 ) {
+  console.log(tags);
+  console.log(tagListId);
   return tags
-    .map((tag) => tagListId.current.find((tagObj) => tagObj.name === tag))!
+    .map((tag) => tagListId.find((tagObj) => tagObj.name === tag))!
     .map((tag) => tag!.id);
 }
