@@ -343,6 +343,10 @@ class StoreService(Service):
                 try:
                     errors = response.json()
                     message = errors["errors"][0]["message"]
+                    if message == "An unexpected error occurred.":
+                        # This is a bug in Directus that returns this error
+                        # when an error was thrown in the flow
+                        message = "You already have a component with this name. Please choose a different name."
                     raise FilterError(message)
                 except UnboundLocalError:
                     pass
@@ -458,6 +462,8 @@ class StoreService(Service):
                     raise ForbiddenError("You are not authorized to access this public resource")
                 elif exc.response.status_code == 401:
                     raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
+            except Exception as exc:
+                raise ValueError(f"Unexpected error: {exc}")
             try:
                 if result and not metadata:
                     if len(result) >= limit:
