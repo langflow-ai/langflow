@@ -27,6 +27,7 @@ export default function ComponentsComponent({
 
   useEffect(() => {
     setAllData(flows.filter((f) => f.is_component === is_component));
+    console.log(allData);
   }, [flows]);
 
   useEffect(() => {
@@ -80,11 +81,23 @@ export default function ComponentsComponent({
           <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
             {!isLoading || data?.length > 0 ? (
               data
-                ?.sort(
-                  (a, b) =>
-                    new Date(b?.date_created!).getTime() -
-                    new Date(a?.date_created!).getTime()
-                )
+                ?.sort((a, b) => {
+                  if (a?.updated_at && b?.updated_at) {
+                    return (
+                      new Date(b?.updated_at!).getTime() -
+                      new Date(a?.updated_at!).getTime()
+                    );
+                  } else if (a?.updated_at && !b?.updated_at) {
+                    return -1;
+                  } else if (!a?.updated_at && b?.updated_at) {
+                    return 1;
+                  } else {
+                    return (
+                      new Date(b?.date_created!).getTime() -
+                      new Date(a?.date_created!).getTime()
+                    );
+                  }
+                })
                 .map((item, idx) => (
                   <CollectionCardComponent
                     onDelete={() => {
