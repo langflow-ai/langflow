@@ -81,7 +81,7 @@ const FlowsContextInitialValue: FlowsContextType = {
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
   saveComponent: async (component: NodeDataType) => "",
-  deleteComponent: (id: string, key: string) => {},
+  deleteComponent: (key: string) => {},
   version: "",
 };
 
@@ -147,7 +147,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   function processFlows(DbData: FlowType[], skipUpdate = true) {
-    let storeComponents: { [key: string]: APIClassType } = {};
+    let savedComponents: { [key: string]: APIClassType } = {};
     DbData.forEach((flow: FlowType) => {
       try {
         if (!flow.data) {
@@ -156,7 +156,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         if (flow.data && flow.is_component) {
           (flow.data.nodes[0].data as NodeDataType).node!.display_name =
             flow.name;
-          storeComponents[
+          savedComponents[
             createRandomKey(
               (flow.data.nodes[0].data as NodeDataType).type,
               uid()
@@ -170,7 +170,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       }
     });
     setData((prev) => {
-      prev["saved_components"] = cloneDeep(storeComponents);
+      prev["saved_components"] = cloneDeep(savedComponents);
       return prev;
     });
   }
@@ -504,22 +504,27 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       let flowData = flow
         ? processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
-
+ 
+ 
       // Create a new flow with a default name if no flow is provided.
+
       const newFlow = createNewFlow(flowData, flow!);
-
-      const flowName = addVersionToDuplicates(newFlow, flows);
-
-      newFlow.name = flowName;
-
+ 
+ 
+      const newName = addVersionToDuplicates(newFlow, flows);
+ 
+ 
+      newFlow.name = newName;
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
         newFlow.id = id;
-
+ 
+ 
         // Add the new flow to the list of flows.
-        refreshFlows();
-
+        addFlowToLocalState(newFlow);
+ 
+ 
         // Return the id
         return id;
       } catch (error) {
@@ -641,39 +646,16 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   function saveComponent(component: NodeDataType) {
     component.node!.official = false;
-    let key = component.type;
-    if (data["custom_components"][key] !== undefined) {
-      let increment: number;
-      component.type = createRandomKey(key, uid());
-      let componentNodes: { [key: string]: APIClassType } = {};
-      Object.keys(data["custom_components"]).forEach((key) => {
-        componentNodes[key] = data["custom_components"][key];
-      });
-      const display_nameSet = getSetFromObject(componentNodes, "display_name");
-      if (display_nameSet.has(component.node?.display_name!)) {
-        increment = 1;
-        while (
-          display_nameSet.has(
-            removeCountFromString(component.node?.display_name!) +
-              ` (${increment})`
-          )
-        ) {
-          increment++;
-        }
-        component.node!.display_name =
-          removeCountFromString(component.node?.display_name!) +
-          ` (${increment})`;
-      }
-    }
     return addFlow(true, createFlowComponent(component, version));
   }
 
-  function deleteComponent(id: string, key: string) {
+  function deleteComponent(key: string) {
     let componentFlow = flows.find(
       (componentFlow) =>
         componentFlow.is_component &&
-        (componentFlow.data?.nodes[0].data as NodeDataType).type === key
+        componentFlow.name === key
     );
+
     if (componentFlow) {
       removeFlow(componentFlow.id);
     }
