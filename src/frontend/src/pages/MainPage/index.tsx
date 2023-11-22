@@ -9,17 +9,8 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 export default function HomePage(): JSX.Element {
-  const {
-    flows,
-    setTabId,
-    downloadFlows,
-    uploadFlows,
-    addFlow,
-    removeFlow,
-    uploadFlow,
-    refreshFlows,
-    isLoading,
-  } = useContext(FlowsContext);
+  const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
+    useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const location = useLocation();
   const pathname = location.pathname;
@@ -63,7 +54,6 @@ export default function HomePage(): JSX.Element {
   // Set a null id
   useEffect(() => {
     setTabId("");
-    refreshFlows();
   }, [pathname]);
 
   const navigate = useNavigate();

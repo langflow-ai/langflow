@@ -362,6 +362,11 @@ export default function Page({
             newProject: false,
             isComponent: false,
             file: event.dataTransfer.files.item(0)!,
+          }).catch((error) => {
+            setErrorData({
+              title: "Error uploading file",
+              list: [error],
+            });
           });
         } else {
           setErrorData({

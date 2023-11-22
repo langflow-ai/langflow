@@ -58,7 +58,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   setTabId: (index: string) => {},
   isLoading: true,
   flows: [],
-  refreshFlows: () => {},
   removeFlow: (id: string) => {},
   addFlow: async (newProject: boolean, flowData?: FlowType) => "",
   updateFlow: (newFlow: FlowType) => {},
@@ -98,7 +97,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const [tabId, setTabId] = useState("");
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -124,25 +123,27 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   function refreshFlows() {
-    setIsLoading(true);
-    getTabsDataFromDB().then((DbData) => {
-      if (DbData && Object.keys(templates).length > 0) {
-        try {
-          processFlows(DbData, false);
-          updateStateWithDbData(DbData);
-          setIsLoading(false);
-        } catch (e) {}
-      }
-    });
+    if (Object.keys(templates).length > 0) {
+      setIsLoading(true);
+      getTabsDataFromDB().then((DbData) => {
+        if (DbData) {
+          try {
+            processFlows(DbData, false);
+            updateStateWithDbData(DbData);
+            setIsLoading(false);
+          } catch (e) {}
+        }
+      });
+    }
   }
 
   useEffect(() => {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (getAuthentication() === true) {
+    if (getAuthentication() === true && Object.keys(templates).length > 0) {
       // get data from db
       refreshFlows();
     }
-  }, [templates, getAuthentication()]);
+  }, [getAuthentication(), templates, tabId]);
 
   function getTabsDataFromDB() {
     //get tabs from db
@@ -333,7 +334,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       if (file) {
         let text = await file.text();
         let fileData = JSON.parse(text);
-        console.log(fileData);
         if (fileData.is_component === undefined) {
           reject("Your file doesn't have the is_component property.");
         } else if (
@@ -761,7 +761,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         tabId,
         setTabId,
         flows,
-        refreshFlows,
         incrementNodeId,
         removeFlow,
         addFlow,

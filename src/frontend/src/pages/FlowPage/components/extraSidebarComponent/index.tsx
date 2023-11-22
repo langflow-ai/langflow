@@ -212,7 +212,14 @@ export default function ExtraSidebar(): JSX.Element {
             <button
               className="extra-side-bar-buttons"
               onClick={() => {
-                uploadFlow({ newProject: false, isComponent: false });
+                uploadFlow({ newProject: false, isComponent: false }).catch(
+                  (error) => {
+                    setErrorData({
+                      title: "Error uploading file",
+                      list: [error],
+                    });
+                  }
+                );
               }}
             >
               <IconComponent name="FileUp" className="side-bar-button-size " />
