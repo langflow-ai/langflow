@@ -29,7 +29,6 @@ import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
-  const { id } = useParams();
   const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
     useContext(StoreContext);
   const { apiKey } = useContext(AuthContext);
@@ -37,6 +36,7 @@ export default function StorePage(): JSX.Element {
   const { setTabId } = useContext(FlowsContext);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
+  const { id } = useParams();
   const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const [inputText, setInputText] = useState<string>("");
   const [searchData, setSearchData] = useState<storeComponent[]>([]);
