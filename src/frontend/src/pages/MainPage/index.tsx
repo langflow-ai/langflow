@@ -64,7 +64,8 @@ export default function HomePage(): JSX.Element {
   useEffect(() => {
     setTabId("");
     refreshFlows();
-  }, []);
+  }, [pathname]);
+
   const navigate = useNavigate();
 
   // Personal flows display

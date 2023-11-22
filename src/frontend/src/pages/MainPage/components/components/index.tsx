@@ -19,15 +19,32 @@ export default function ComponentsComponent({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
-  const [allData, setAllData] = useState(
-    flows.filter((f) => f.is_component === is_component)
-  );
+  const [allData, setAllData] = useState(flows);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    setAllData(flows.filter((f) => f.is_component === is_component));
-    console.log(allData);
+    setAllData(
+      flows
+        .filter((f) => f.is_component === is_component)
+        .sort((a, b) => {
+          if (a?.updated_at && b?.updated_at) {
+            return (
+              new Date(b?.updated_at!).getTime() -
+              new Date(a?.updated_at!).getTime()
+            );
+          } else if (a?.updated_at && !b?.updated_at) {
+            return -1;
+          } else if (!a?.updated_at && b?.updated_at) {
+            return 1;
+          } else {
+            return (
+              new Date(b?.date_created!).getTime() -
+              new Date(a?.date_created!).getTime()
+            );
+          }
+        })
+    );
   }, [flows]);
 
   useEffect(() => {
@@ -80,54 +97,36 @@ export default function ComponentsComponent({
         <div className="flex w-full flex-col gap-4">
           <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
             {!isLoading || data?.length > 0 ? (
-              data
-                ?.sort((a, b) => {
-                  if (a?.updated_at && b?.updated_at) {
-                    return (
-                      new Date(b?.updated_at!).getTime() -
-                      new Date(a?.updated_at!).getTime()
-                    );
-                  } else if (a?.updated_at && !b?.updated_at) {
-                    return -1;
-                  } else if (!a?.updated_at && b?.updated_at) {
-                    return 1;
-                  } else {
-                    return (
-                      new Date(b?.date_created!).getTime() -
-                      new Date(a?.date_created!).getTime()
-                    );
+              data?.map((item, idx) => (
+                <CollectionCardComponent
+                  onDelete={() => {
+                    removeFlow(item.id);
+                  }}
+                  key={idx}
+                  data={item}
+                  disabled={isLoading}
+                  button={
+                    !is_component ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="whitespace-nowrap "
+                        onClick={() => {
+                          navigate("/flow/" + item.id);
+                        }}
+                      >
+                        <IconComponent
+                          name="ExternalLink"
+                          className="main-page-nav-button"
+                        />
+                        Edit Flow
+                      </Button>
+                    ) : (
+                      <></>
+                    )
                   }
-                })
-                .map((item, idx) => (
-                  <CollectionCardComponent
-                    onDelete={() => {
-                      removeFlow(item.id);
-                    }}
-                    key={idx}
-                    data={item}
-                    disabled={isLoading}
-                    button={
-                      !is_component ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="whitespace-nowrap "
-                          onClick={() => {
-                            navigate("/flow/" + item.id);
-                          }}
-                        >
-                          <IconComponent
-                            name="ExternalLink"
-                            className="main-page-nav-button"
-                          />
-                          Edit Flow
-                        </Button>
-                      ) : (
-                        <></>
-                      )
-                    }
-                  />
-                ))
+                />
+              ))
             ) : !isLoading && data?.length === 0 ? (
               <>You haven't created {name}s yet.</>
             ) : (
