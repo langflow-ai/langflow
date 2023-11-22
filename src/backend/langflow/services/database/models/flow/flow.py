@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
-from langflow.services.database.models.base import SQLModelSerializable
 from pydantic import field_validator
 from sqlmodel import JSON, Column, Field, Relationship
+
+from langflow.services.database.models.base import SQLModelSerializable
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -17,7 +18,7 @@ class FlowBase(SQLModelSerializable):
     description: Optional[str] = Field(index=True, nullable=True, default=None)
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=True)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=True)
     folder: Optional[str] = Field(default=None, nullable=True)
 
     @field_validator("data")
