@@ -56,10 +56,11 @@ export class Network extends Construct {
       ],
       natGateways: 1,
     })
-
+    // Cluster
     this.cluster = new ecs.Cluster(this, 'EcsCluster', {
       clusterName: 'langflow-cluster',
       vpc: this.vpc,
+      enableFargateCapacityProviders: true,
     });
 
     // Private DNS
