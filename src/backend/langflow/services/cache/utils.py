@@ -7,7 +7,7 @@ import tempfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
-from appdirs import user_cache_dir
+from platformdirs import user_cache_dir
 from fastapi import UploadFile
 from langflow.api.v1.schemas import BuildStatus
 from langflow.services.database.models.base import orjson_dumps
@@ -83,9 +83,7 @@ def clear_old_cache_files(max_cache_size: int = 3):
     cache_files = list(cache_dir.glob("*.dill"))
 
     if len(cache_files) > max_cache_size:
-        cache_files_sorted_by_mtime = sorted(
-            cache_files, key=lambda x: x.stat().st_mtime, reverse=True
-        )
+        cache_files_sorted_by_mtime = sorted(cache_files, key=lambda x: x.stat().st_mtime, reverse=True)
 
         for cache_file in cache_files_sorted_by_mtime[max_cache_size:]:
             with contextlib.suppress(OSError):

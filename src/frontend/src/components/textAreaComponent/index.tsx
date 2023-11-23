@@ -10,6 +10,7 @@ export default function TextAreaComponent({
   onChange,
   disabled,
   editNode = false,
+  id = "",
 }: TextAreaComponentType): JSX.Element {
   // Clear text area
   useEffect(() => {
@@ -20,25 +21,30 @@ export default function TextAreaComponent({
 
   return (
     <div className="flex w-full items-center">
-      <Input
+      <GenericModal
+        type={TypeModal.TEXT}
+        buttonText="Finishing Editing"
+        modalTitle="Edit Text"
         value={value}
-        disabled={disabled}
-        className={editNode ? "input-edit-node" : ""}
-        placeholder={"Type something..."}
-        onChange={(event) => {
-          onChange(event.target.value);
+        setValue={(value: string) => {
+          onChange(value);
         }}
-      />
-      <div>
-        <GenericModal
-          type={TypeModal.TEXT}
-          buttonText="Finishing Editing"
-          modalTitle="Edit Text"
-          value={value}
-          setValue={(value: string) => {
-            onChange(value);
-          }}
-        >
+      >
+        <div className="flex w-full items-center">
+          <Input
+            id={id}
+            value={value}
+            disabled={disabled}
+            className={
+              editNode
+                ? "input-edit-node pointer-events-none "
+                : " pointer-events-none"
+            }
+            placeholder={"Type something..."}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          />
           {!editNode && (
             <IconComponent
               name="ExternalLink"
@@ -48,8 +54,8 @@ export default function TextAreaComponent({
               }
             />
           )}
-        </GenericModal>
-      </div>
+        </div>
+      </GenericModal>
     </div>
   );
 }

@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from langchain import retrievers
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
 from loguru import logger
@@ -14,7 +14,10 @@ from langflow.utils.util import build_template_from_method, build_template_from_
 class RetrieverCreator(LangChainTypeCreator):
     type_name: str = "retrievers"
 
-    from_method_nodes = {"MultiQueryRetriever": "from_llm", "ZepRetriever": "__init__"}
+    from_method_nodes: ClassVar[Dict] = {
+        "MultiQueryRetriever": "from_llm",
+        "ZepRetriever": "__init__",
+    }
 
     @property
     def frontend_node_class(self) -> Type[RetrieverFrontendNode]:
@@ -39,9 +42,7 @@ class RetrieverCreator(LangChainTypeCreator):
                     method_name=self.from_method_nodes[name],
                 )
             else:
-                return build_template_from_class(
-                    name, type_to_cls_dict=self.type_to_loader_dict
-                )
+                return build_template_from_class(name, type_to_cls_dict=self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError(f"Retriever {name} not found") from exc
         except AttributeError as exc:
@@ -53,8 +54,7 @@ class RetrieverCreator(LangChainTypeCreator):
         return [
             retriever
             for retriever in self.type_to_loader_dict.keys()
-            if retriever in settings_service.settings.RETRIEVERS
-            or settings_service.settings.DEV
+            if retriever in settings_service.settings.RETRIEVERS or settings_service.settings.DEV
         ]
 
 

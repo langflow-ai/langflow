@@ -7,9 +7,9 @@ import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
-import { TabsContext } from "../../../contexts/tabsContext";
+import { FlowsContext } from "../../../contexts/flowsContext";
 import { parsedDataType } from "../../../types/components";
-import { TabsState } from "../../../types/tabs";
+import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -26,7 +26,7 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState } = useContext(TabsContext);
+  const { setTabsState, saveFlow } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -76,7 +76,11 @@ export default function BuildTrigger({
   }
   async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
-    const response = await postBuildInit(flow);
+    const id = saveFlow({ ...flow, data: reactFlowInstance!.toObject() }, true);
+    const response = await postBuildInit({
+      ...flow,
+      data: reactFlowInstance!.toObject(),
+    });
     const { flowId } = response.data;
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults: boolean[] = [];
@@ -99,7 +103,7 @@ export default function BuildTrigger({
           setSuccessData({ title: parsedData.log });
         } else if (parsedData.input_keys !== undefined) {
           //@ts-ignore
-          setTabsState((old: TabsState) => {
+          setTabsState((old: FlowsState) => {
             return {
               ...old,
               [flowId]: {

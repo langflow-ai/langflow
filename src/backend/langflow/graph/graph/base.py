@@ -1,18 +1,15 @@
 from typing import Dict, Generator, List, Type, Union
 
+from langchain.chains.base import Chain
+from loguru import logger
+
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    FileToolVertex,
-    LLMVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
-from loguru import logger
-from langchain.chains.base import Chain
 
 
 class Graph:
@@ -31,8 +28,8 @@ class Graph:
         for node in self._nodes:
             if node_id := node.get("id"):
                 self.top_level_nodes.append(node_id)
-
         self._graph_data = process_flow(self.raw_graph_data)
+
         self._nodes = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self._build_graph()
@@ -104,9 +101,7 @@ class Graph:
             return
         for node in self.nodes:
             if not self._validate_node(node):
-                raise ValueError(
-                    f"{node.vertex_type} is not connected to any other components"
-                )
+                raise ValueError(f"{node.vertex_type} is not connected to any other components")
 
     def _validate_node(self, node: Vertex) -> bool:
         """Validates a node."""
@@ -119,18 +114,16 @@ class Graph:
 
     def get_nodes_with_target(self, node: Vertex) -> List[Vertex]:
         """Returns the nodes connected to a node."""
-        connected_nodes: List[Vertex] = [
-            edge.source for edge in self.edges if edge.target == node
-        ]
+        connected_nodes: List[Vertex] = [edge.source for edge in self.edges if edge.target == node]
         return connected_nodes
 
-    def build(self) -> Chain:
+    async def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
         if root_node is None:
             raise ValueError("No root node found")
-        return root_node.build()
+        return await root_node.build()
 
     def topological_sort(self) -> List[Vertex]:
         """
@@ -149,9 +142,7 @@ class Graph:
         def dfs(node):
             if state[node] == 1:
                 # We have a cycle
-                raise ValueError(
-                    "Graph contains a cycle, cannot perform topological sort"
-                )
+                raise ValueError("Graph contains a cycle, cannot perform topological sort")
             if state[node] == 0:
                 state[node] = 1
                 for edge in node.edges:
@@ -245,7 +236,5 @@ class Graph:
 
     def __repr__(self):
         node_ids = [node.id for node in self.nodes]
-        edges_repr = "\n".join(
-            [f"{edge.source.id} --> {edge.target.id}" for edge in self.edges]
-        )
+        edges_repr = "\n".join([f"{edge.source.id} --> {edge.target.id}" for edge in self.edges])
         return f"Graph:\nNodes: {node_ids}\nConnections:\n{edges_repr}"

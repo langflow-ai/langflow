@@ -1,33 +1,30 @@
 from http import HTTPStatus
 from typing import Annotated, Optional, Union
-from langflow.services.auth.utils import api_key_security, get_current_active_user
 
-
-from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow import Flow
-from langflow.processing.process import process_graph_cached, process_tweaks
-from langflow.services.database.models.user.user import User
-from langflow.services.getters import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-)
-from loguru import logger
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
-from langflow.interface.custom.custom_component import CustomComponent
-
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from loguru import logger
 
 from langflow.api.v1.schemas import (
+    CustomComponentCode,
     ProcessResponse,
     TaskResponse,
     TaskStatusResponse,
     UploadFileResponse,
-    CustomComponentCode,
 )
-
-
-from langflow.services.getters import get_session
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.user.user import User
+from langflow.services.deps import (
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -39,8 +36,7 @@ except ImportError:
 
 from sqlmodel import Session
 
-
-from langflow.services.task.manager import TaskService
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -92,12 +88,7 @@ async def process(
             )
 
         # Get the flow that matches the flow_id and belongs to the user
-        flow = (
-            session.query(Flow)
-            .filter(Flow.id == flow_id)
-            .filter(Flow.user_id == api_key_user.id)
-            .first()
-        )
+        flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
 
@@ -111,9 +102,7 @@ async def process(
                 logger.error(f"Error processing tweaks: {exc}")
         if sync:
             task_id, result = await task_service.launch_and_await_task(
-                process_graph_cached_task
-                if task_service.use_celery
-                else process_graph_cached,
+                process_graph_cached_task if task_service.use_celery else process_graph_cached,
                 graph_data,
                 inputs,
                 clear_cache,
@@ -133,13 +122,9 @@ async def process(
             )
             if session_id is None:
                 # Generate a session ID
-                session_id = get_session_service().generate_key(
-                    session_id=session_id, data_graph=graph_data
-                )
+                session_id = get_session_service().generate_key(session_id=session_id, data_graph=graph_data)
             task_id, task = await task_service.launch_task(
-                process_graph_cached_task
-                if task_service.use_celery
-                else process_graph_cached,
+                process_graph_cached_task if task_service.use_celery else process_graph_cached,
                 graph_data,
                 inputs,
                 clear_cache,
@@ -162,18 +147,12 @@ async def process(
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as e:
         # Log stack trace
         logger.exception(e)
@@ -227,12 +206,32 @@ def get_version():
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
     raw_code: CustomComponentCode,
+    user: User = Depends(get_current_active_user),
 ):
     from langflow.interface.types import (
         build_langchain_template_custom_component,
     )
 
     extractor = CustomComponent(code=raw_code.code)
-    extractor.is_check_valid()
+    extractor.validate()
 
-    return build_langchain_template_custom_component(extractor)
+    return build_langchain_template_custom_component(extractor, user_id=user.id)
+
+
+@router.post("/custom_component/reload", status_code=HTTPStatus.OK)
+async def reload_custom_component(path: str):
+    from langflow.interface.types import (
+        build_langchain_template_custom_component,
+    )
+
+    try:
+        reader = DirectoryReader("")
+        valid, content = reader.process_file(path)
+        if not valid:
+            raise ValueError(content)
+
+        extractor = CustomComponent(code=content)
+        extractor.validate()
+        return build_langchain_template_custom_component(extractor, user_id=user.id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

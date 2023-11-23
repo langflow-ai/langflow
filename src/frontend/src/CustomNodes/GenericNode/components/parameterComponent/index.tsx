@@ -22,11 +22,10 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { ParameterComponentType } from "../../../../types/components";
-import { TabsState } from "../../../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -55,13 +54,14 @@ export default function ParameterComponent({
   info = "",
   proxy,
   showNode,
+  index = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows } = useContext(TabsContext);
+  const { setTabsState, tabId, flows } = useContext(FlowsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -83,7 +83,11 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance
       ?.getEdges()
-      .some((edge) => edge.targetHandle === scapedJSONStringfy(id)) ?? false;
+      .some(
+        (edge) =>
+          edge.targetHandle ===
+          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+      ) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
@@ -168,21 +172,40 @@ export default function ParameterComponent({
               </div>
               <span className="ps-2 text-xs text-foreground">
                 {nodeNames[item.family] ?? "Other"}{" "}
-                <span className="text-xs">
-                  {" "}
-                  {item.type === "" ? "" : " - "}
-                  {item.type.split(", ").length > 2
-                    ? item.type.split(", ").map((el, index) => (
-                        <React.Fragment key={el + index}>
-                          <span>
-                            {index === item.type.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
-                    : item.type}
-                </span>
+                {item?.display_name && item?.display_name?.length > 0 ? (
+                  <span className="text-xs">
+                    {" "}
+                    {item.display_name === "" ? "" : " - "}
+                    {item.display_name.split(", ").length > 2
+                      ? item.display_name.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index ===
+                              item.display_name.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.display_name}
+                  </span>
+                ) : (
+                  <span className="text-xs">
+                    {" "}
+                    {item.type === "" ? "" : " - "}
+                    {item.type.split(", ").length > 2
+                      ? item.type.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index === item.type.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.type}
+                  </span>
+                )}
               </span>
             </span>
           </div>
@@ -351,9 +374,11 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
+                id={"textarea-" + index}
               />
             ) : (
               <InputComponent
+                id={"input-" + index}
                 disabled={disabled}
                 password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
@@ -364,6 +389,7 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2 w-full">
             <ToggleShadComponent
+              id={"toggle-" + index}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
               setEnabled={(isEnabled) => {
@@ -406,6 +432,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"code-input-" + index}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -427,16 +454,13 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"int-input-" + index}
             />
           </div>
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
-              readonly={
-                data.node?.flow && data.node.template[name].dynamic
-                  ? true
-                  : false
-              }
+              readonly={data.node?.flow ? true : false}
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
@@ -447,6 +471,7 @@ export default function ParameterComponent({
               onChange={(e) => {
                 handleOnNewValue(e);
               }}
+              id={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (

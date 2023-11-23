@@ -1,22 +1,27 @@
 DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
-
+from typing import Optional, List, Dict, Union
 from langflow.field_typing import (
-    Tool,
-    PromptTemplate,
-    Chain,
+    AgentExecutor,
     BaseChatMemory,
+    BaseLanguageModel,
     BaseLLM,
     BaseLoader,
     BaseMemory,
     BaseOutputParser,
+    BasePromptTemplate,
     BaseRetriever,
-    VectorStore,
-    Embeddings,
-    TextSplitter,
-    Document,
-    AgentExecutor,
-    NestedDict,
+    Callable,
+    Chain,
+    ChatPromptTemplate,
     Data,
+    Document,
+    Embeddings,
+    NestedDict,
+    Object,
+    PromptTemplate,
+    TextSplitter,
+    Tool,
+    VectorStore,
 )
 
 
