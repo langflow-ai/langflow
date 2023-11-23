@@ -3,8 +3,6 @@ import { Construct } from 'constructs'
 import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
-  aws_dynamodb as dynamodb,
-  aws_iam as iam,
   aws_logs as logs,
   aws_servicediscovery as servicediscovery,
   aws_elasticloadbalancingv2 as elb,
@@ -20,9 +18,6 @@ export class Network extends Construct {
   readonly ecsBackSG: ec2.SecurityGroup;
   readonly dbSG: ec2.SecurityGroup;
   readonly albSG: ec2.SecurityGroup;
-  readonly backendTaskRole: iam.Role;
-  readonly TaskExecutionRole: iam.Role;
-  readonly frontendTaskRole: iam.Role;
   readonly backendLogGroup: logs.LogGroup;
   readonly frontendLogGroup: logs.LogGroup;
 
@@ -129,68 +124,6 @@ export class Network extends Construct {
     })
     // AppRunnerSecurityGroupからのポート3306:mysql(5432:postgres)のインバウンドを許可
     this.dbSG.addIngressRule(this.ecsBackSG, ec2.Port.tcp(3306))
-    
-    // ECS Policy State
-    const ECSExecPolicyStatement = new iam.PolicyStatement({
-      sid: 'allowECSExec',
-      resources: ['*'],
-      actions: [
-        'ecr:GetAuthorizationToken',
-        'ecr:BatchCheckLayerAvailability',
-        'ecr:GetDownloadUrlForLayer',
-        'ecr:BatchGetImage',
-        'ssmmessages:CreateControlChannel',
-        'ssmmessages:CreateDataChannel',
-        'ssmmessages:OpenControlChannel',
-        'ssmmessages:OpenDataChannel',
-        'logs:CreateLogStream',
-        'logs:DescribeLogGroups',
-        'logs:DescribeLogStreams',
-        'logs:PutLogEvents',
-      ],
-    });
-    // Bedrock roll
-    const BedrockPolicyStatement = new iam.PolicyStatement({
-      sid: 'allowBedrockAccess',
-      resources: ['*'],
-      actions: [
-        'bedrock:*',
-      ],
-    });
-    // Kendra roll
-    const KendraPolicyStatement = new iam.PolicyStatement({
-      sid: 'allowKendraAccess',
-      resources: ['*'],
-      actions: [
-        'kendra:*'
-      ],
-    });
-
-    this.backendTaskRole = new iam.Role(this, 'BackendTaskRole', {
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-    });
-    // ECS Exec Policyの付与
-    this.backendTaskRole.addToPolicy(ECSExecPolicyStatement);
-    // KendraとBedrockのアクセス権付与
-    this.backendTaskRole.addToPolicy(KendraPolicyStatement);
-    this.backendTaskRole.addToPolicy(BedrockPolicyStatement);
-
-    
-
-    this.frontendTaskRole = new iam.Role(this, 'FrontendTaskRole', {
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-    });
-    this.frontendTaskRole.addToPolicy(ECSExecPolicyStatement);
-
-    this.TaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      managedPolicies: [
-        {
-          managedPolicyArn:
-            'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
-        },
-      ],
-    });
 
     // Create CloudWatch Log Group
     this.backendLogGroup = new logs.LogGroup(this, 'backendLogGroup', {
