@@ -1,43 +1,38 @@
 import ast
 import contextlib
-from typing import Any, List, Union, Optional
+import re
+import traceback
+import warnings
+from typing import Any, List, Optional, Union
 from uuid import UUID
+
+from fastapi import HTTPException
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.interface.custom.base import custom_component_creator
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.importing.utils import get_function_custom
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
+from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.prompts.base import prompt_creator
+from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
-from langflow.interface.output_parsers.base import output_parser_creator
-from langflow.interface.custom.base import custom_component_creator
-from langflow.interface.custom.custom_component import CustomComponent
-
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
-from langflow.template.frontend_node.custom_components import (
-    CustomComponentFrontendNode,
-)
-from langflow.interface.retrievers.base import retriever_creator
-
-from langflow.interface.custom.directory_reader import DirectoryReader
-from loguru import logger
+from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-
-import re
-import warnings
-import traceback
-from fastapi import HTTPException
+from loguru import logger
 
 
 # Used to get the base_classes list
@@ -210,13 +205,25 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
         custom_class = get_function_custom(custom_component.code)
     except Exception as exc:
         logger.error(f"Error while getting custom function: {str(exc)}")
-        return {}
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": ("Invalid type convertion. Please check your code and try again."),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
 
     try:
         return custom_class(user_id=user_id).build_config()
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
-        return {}
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": ("Invalid type convertion. Please check your code and try again."),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
@@ -260,19 +267,16 @@ def get_field_properties(extra_field):
 
 def add_base_classes(frontend_node, return_types: List[str]):
     """Add base classes to the frontend node"""
-    for return_type in return_types:
-        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+    for return_type_instance in return_types:
+        if return_type_instance is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": (
-                        "Invalid return type should be one of: " f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
-                    ),
+                    "error": ("Invalid return type. Please check your code and try again."),
                     "traceback": traceback.format_exc(),
                 },
             )
 
-        return_type_instance = CUSTOM_COMPONENT_SUPPORTED_TYPES.get(return_type)
         base_classes = get_base_classes(return_type_instance)
 
         for base_class in base_classes:
@@ -283,16 +287,20 @@ def add_base_classes(frontend_node, return_types: List[str]):
 def add_output_types(frontend_node, return_types: List[str]):
     """Add output types to the frontend node"""
     for return_type in return_types:
-        if return_type not in CUSTOM_COMPONENT_SUPPORTED_TYPES or return_type is None:
+        if return_type is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": (
-                        "Invalid return type should be one of: " f"{list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())}"
-                    ),
+                    "error": ("Invalid return type. Please check your code and try again."),
                     "traceback": traceback.format_exc(),
                 },
             )
+        if hasattr(return_type, "__name__"):
+            return_type = return_type.__name__
+        elif hasattr(return_type, "__class__"):
+            return_type = return_type.__class__.__name__
+        else:
+            return_type = str(return_type)
 
         frontend_node.get("output_types").append(return_type)
 
