@@ -411,17 +411,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.29.5"
+version = "1.29.6"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.29.5-py3-none-any.whl", hash = "sha256:030b0f0faf8d44f97e67a5411644243482f33ebf1c45338bb40662239a16dda4"},
-    {file = "boto3-1.29.5.tar.gz", hash = "sha256:76fc6a17781c27558c526e899579ccf530df10eb279261fe7800540f0043917e"},
+    {file = "boto3-1.29.6-py3-none-any.whl", hash = "sha256:f4d19e01d176c3a5a05e4af733185ff1891b08a3c38d4a439800fa132aa6e9be"},
+    {file = "boto3-1.29.6.tar.gz", hash = "sha256:d1d0d979a70bf9b0b13ae3b017f8523708ad953f62d16f39a602d67ee9b25554"},
 ]
 
 [package.dependencies]
-botocore = ">=1.32.5,<1.33.0"
+botocore = ">=1.32.6,<1.33.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.7.0,<0.8.0"
 
@@ -430,13 +430,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.32.5"
+version = "1.32.6"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.32.5-py3-none-any.whl", hash = "sha256:b8960c955ba275915bf022c54c896c2dac1038289d8a5ace92d1431257c0a439"},
-    {file = "botocore-1.32.5.tar.gz", hash = "sha256:75a68f942cd87baff83b3a20dfda11b3aeda48aad32e4dcd6fe8992c0cb0e7db"},
+    {file = "botocore-1.32.6-py3-none-any.whl", hash = "sha256:4454f967a4d1a01e3e6205c070455bc4e8fd53b5b0753221581ae679c55a9dfd"},
+    {file = "botocore-1.32.6.tar.gz", hash = "sha256:ecec876103783b5efe6099762dda60c2af67e45f7c0ab4568e8265d11c6c449b"},
 ]
 
 [package.dependencies]
@@ -3488,13 +3488,13 @@ zookeeper = ["kazoo (>=2.8.0)"]
 
 [[package]]
 name = "langchain"
-version = "0.0.339"
+version = "0.0.340"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.339-py3-none-any.whl", hash = "sha256:fec250074a6fbb3711a51423d830006d69f34aedb67604df39c642be80852cbb"},
-    {file = "langchain-0.0.339.tar.gz", hash = "sha256:34eb4d7987d979663e361da435479c6f0648a170dae3eb1e9f0f7417f033a2c1"},
+    {file = "langchain-0.0.340-py3-none-any.whl", hash = "sha256:f80f40b52ef82424e38e894db8b8048b6505da100679e72613316f8d8b0243fb"},
+    {file = "langchain-0.0.340.tar.gz", hash = "sha256:1a6bd2511bbb81e42d2a3d7291ee03de180accab851181ee9fdbb7fbaef6c57c"},
 ]
 
 [package.dependencies]
@@ -3559,13 +3559,13 @@ six = "*"
 
 [[package]]
 name = "langfuse"
-version = "1.7.4"
+version = "1.7.5"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langfuse-1.7.4-py3-none-any.whl", hash = "sha256:f5f1e19eac2d01e9854f567f0946f47dac3be59ee40f335e616355b3545018f3"},
-    {file = "langfuse-1.7.4.tar.gz", hash = "sha256:5813d2f43e7ba106ae58f048d81c7091fd681be73b35d87d53ac321f999738ae"},
+    {file = "langfuse-1.7.5-py3-none-any.whl", hash = "sha256:ebbcc52f454a9c7cfc9f382e66fddafddb0219f9233598317bbcb66c215b39b6"},
+    {file = "langfuse-1.7.5.tar.gz", hash = "sha256:99fc5a30b157a16cc3dcb82e84af13fabc2fd0d192be32ef2ad6d9a7fe27d130"},
 ]
 
 [package.dependencies]
@@ -3936,13 +3936,13 @@ typing-extensions = "*"
 
 [[package]]
 name = "metaphor-python"
-version = "0.1.20"
+version = "0.1.21"
 description = "A Python package for the Metaphor API."
 optional = false
 python-versions = "*"
 files = [
-    {file = "metaphor-python-0.1.20.tar.gz", hash = "sha256:a1ee7a3b21ff8644553a73bc08a4d475abed182d9a1a0a72c729910837081d50"},
-    {file = "metaphor_python-0.1.20-py3-none-any.whl", hash = "sha256:ac06b5bf86f6fb1b2371b8be6589766da8eccd6876d56e94b738654dea9adc9a"},
+    {file = "metaphor-python-0.1.21.tar.gz", hash = "sha256:72604c45c7bf447613f9cdf713c6c57612f1790ead2e78b13c65588e5d7aa279"},
+    {file = "metaphor_python-0.1.21-py3-none-any.whl", hash = "sha256:b17099f6c37e26a77fbb77a242163fa6b64aad487687264f4ec6c9d16665c5a8"},
 ]
 
 [package.dependencies]
@@ -6142,6 +6142,24 @@ tomli = {version = ">=1.0.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
 testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
+
+[[package]]
+name = "pytest-asyncio"
+version = "0.21.1"
+description = "Pytest support for asyncio"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pytest-asyncio-0.21.1.tar.gz", hash = "sha256:40a7eae6dded22c7b604986855ea48400ab15b069ae38116e8c01238e9eeb64d"},
+    {file = "pytest_asyncio-0.21.1-py3-none-any.whl", hash = "sha256:8666c1c8ac02631d7c51ba282e0c69a8a452b211ffedf2599099845da5c5c37b"},
+]
+
+[package.dependencies]
+pytest = ">=7.0.0"
+
+[package.extras]
+docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
+testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy (>=0.931)", "pytest-trio (>=0.7.0)"]
 
 [[package]]
 name = "pytest-cov"
@@ -9078,4 +9096,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "8335fd767d4ff476b3caf2a9e05fcce1f353d4b3a2e181585080a618099669fa"
+content-hash = "62e47482eefda134f0801744360624549d7024861380f51f280f60450d768615"

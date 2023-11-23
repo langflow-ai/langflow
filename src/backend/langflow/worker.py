@@ -1,13 +1,9 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
-
 from langflow.core.celery_app import celery_app
-from langflow.processing.process import (
-    Result,
-    generate_result,
-    process_inputs,
-)
+from langflow.processing.process import Result, generate_result, process_inputs
 from langflow.services.deps import get_session_service
 from langflow.services.manager import initialize_session_service
 
@@ -27,7 +23,7 @@ def build_vertex(self, vertex: "Vertex") -> "Vertex":
     """
     try:
         vertex.task_id = self.request.id
-        vertex.build()
+        async_to_sync(vertex.build)()
         return vertex
     except SoftTimeLimitExceeded as e:
         raise self.retry(exc=SoftTimeLimitExceeded("Task took too long"), countdown=2) from e
@@ -47,7 +43,7 @@ def process_graph_cached_task(
     if session_id is None:
         session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
-    graph, artifacts = session_service.load_session(session_id, data_graph)
+    graph, artifacts = async_to_sync(session_service.load_session)(session_id, data_graph)
     built_object = graph.build()
     processed_inputs = process_inputs(inputs, artifacts)
     result = generate_result(built_object, processed_inputs)
