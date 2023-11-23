@@ -34,7 +34,7 @@ export class FrontEndCluster extends Construct {
       'FrontendTaskDef',
       {
           memoryLimitMiB: 3072,
-          cpu: 512,
+          cpu: 1024,
           executionRole: props.frontendTaskExecutionRole,
           runtimePlatform:{
             operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
