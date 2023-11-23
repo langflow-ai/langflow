@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import _get_default_system_message
@@ -25,7 +25,7 @@ class ConversationalAgent(CustomComponent):
             "gpt-4-32k",
         ]
         return {
-            "tools": {"is_list": True, "display_name": "Tools"},
+            "tools": {"display_name": "Tools"},
             "memory": {"display_name": "Memory"},
             "system_message": {"display_name": "System Message"},
             "max_token_limit": {"display_name": "Max Token Limit"},
@@ -41,7 +41,7 @@ class ConversationalAgent(CustomComponent):
         self,
         model_name: str,
         openai_api_key: str,
-        tools: Tool,
+        tools: List[Tool],
         openai_api_base: Optional[str] = None,
         memory: Optional[BaseMemory] = None,
         system_message: Optional[SystemMessagePromptTemplate] = None,
