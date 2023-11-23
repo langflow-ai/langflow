@@ -374,7 +374,7 @@ def build_valid_menu(valid_components):
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = {}
-
+        menu_path = menu_item["path"]
         for component in menu_item["components"]:
             logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
             try:
@@ -383,10 +383,12 @@ def build_valid_menu(valid_components):
                 component_output_types = component["output_types"]
 
                 component_extractor = CustomComponent(code=component_code)
-                component_extractor.is_check_valid()
+                component_extractor.validate()
 
                 component_template = build_langchain_template_custom_component(component_extractor)
                 component_template["output_types"] = component_output_types
+                full_path = f"{menu_path}/{component.get('file')}"
+                component_template["full_path"] = full_path
                 if len(component_output_types) == 1:
                     component_name = component_output_types[0]
                 else:
