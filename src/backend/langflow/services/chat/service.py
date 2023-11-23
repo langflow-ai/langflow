@@ -161,23 +161,6 @@ class ChatService(Service):
                     file_responses.append(msg)
                 if msg.type == "start":
                     break
-        if "source_documents" in raw_output:
-            markdown_table = ""
-            doc_dicts = []
-            for doc in raw_output["source_documents"]:
-                doc_dict = doc.dict()
-                metadata = doc_dict.pop("metadata", {})
-                metadata["page_content"] = doc.page_content
-                doc_dicts.append(metadata)
-            markdown_table = list_of_dicts_to_markdown_table(doc_dicts)
-            file_responses.append(
-                FileResponse(
-                    message=None,
-                    type="file",
-                    data=markdown_table,
-                    data_type="Document",
-                )
-            )
 
         response = ChatResponse(
             message=result,
