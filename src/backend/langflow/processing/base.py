@@ -95,4 +95,4 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
     except Exception as exc:
         logger.exception(exc)
         raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
+    return result, thought, output
