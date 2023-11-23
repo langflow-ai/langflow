@@ -445,6 +445,8 @@ class StoreService(Service):
 
             result: List[ListComponentResponse] = []
             authorized = False
+            metadata = {}
+            comp_count = 0
             try:
                 result, metadata = await self.query_components(
                     api_key=store_api_key,
