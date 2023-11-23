@@ -95,6 +95,7 @@ export class BackEndCluster extends Construct {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
     });
 
+    // Secrets ManagerからのSecret取得ロール
     const ecsBackEndExecutionRole = iam.Role.fromRoleArn(
       this,
       "ecsBackEndExecutionRole",
