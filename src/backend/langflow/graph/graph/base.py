@@ -1,18 +1,14 @@
 from typing import Dict, Generator, List, Type, Union
 
+from langchain.chains.base import Chain
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    FileToolVertex,
-    LLMVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from loguru import logger
-from langchain.chains.base import Chain
 
 
 class Graph:
@@ -31,8 +27,8 @@ class Graph:
         for node in self._nodes:
             if node_id := node.get("id"):
                 self.top_level_nodes.append(node_id)
-
         self._graph_data = process_flow(self.raw_graph_data)
+
         self._nodes = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self._build_graph()
