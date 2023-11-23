@@ -22,11 +22,11 @@ def extract_inner_type_from_generic_alias(return_type: GenericAlias) -> Any:
     return return_type
 
 
-def extract_union_types_from_generic_alias(return_type: GenericAlias) -> tuple:
+def extract_union_types_from_generic_alias(return_type: GenericAlias) -> list:
     """
     Extracts the inner type from a type hint that is a Union.
     """
-    return return_type.__args__
+    return list(return_type.__args__)
 
 
 def extract_union_types(return_type: str) -> list[str]:

@@ -145,16 +145,46 @@ def create_function(code, function_name):
 
 
 def create_class(code, class_name):
+    """
+    Dynamically create a class from a string of code and a specified class name.
+
+    :param code: String containing the Python code defining the class
+    :param class_name: Name of the class to be created
+    :return: A function that, when called, returns an instance of the created class
+    """
     if not hasattr(ast, "TypeIgnore"):
-
-        class TypeIgnore(ast.AST):
-            _fields = ()
-
-        ast.TypeIgnore = TypeIgnore
+        ast.TypeIgnore = create_type_ignore_class()
 
     module = ast.parse(code)
-    exec_globals = globals().copy()
+    exec_globals = prepare_global_scope(module)
 
+    class_code = extract_class_code(module, class_name)
+    compiled_class = compile_class_code(class_code)
+
+    return build_class_constructor(compiled_class, exec_globals, class_name)
+
+
+def create_type_ignore_class():
+    """
+    Create a TypeIgnore class for AST module if it doesn't exist.
+
+    :return: TypeIgnore class
+    """
+
+    class TypeIgnore(ast.AST):
+        _fields = ()
+
+    return TypeIgnore
+
+
+def prepare_global_scope(module):
+    """
+    Prepares the global scope with necessary imports from the provided code module.
+
+    :param module: AST parsed module
+    :return: Dictionary representing the global scope with imported modules
+    """
+    exec_globals = globals().copy()
     for node in module.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -169,17 +199,47 @@ def create_class(code, class_name):
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
             except ModuleNotFoundError as e:
                 raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again.") from e
+    return exec_globals
 
+
+def extract_class_code(module, class_name):
+    """
+    Extracts the AST node for the specified class from the module.
+
+    :param module: AST parsed module
+    :param class_name: Name of the class to extract
+    :return: AST node of the specified class
+    """
     class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
     class_code.parent = None
+    return class_code
+
+
+def compile_class_code(class_code):
+    """
+    Compiles the AST node of a class into a code object.
+
+    :param class_code: AST node of the class
+    :return: Compiled code object of the class
+    """
     code_obj = compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
-    # This suppresses import errors
-    # with contextlib.suppress(Exception):
-    exec(code_obj, exec_globals, locals())
+    return code_obj
+
+
+def build_class_constructor(compiled_class, exec_globals, class_name):
+    """
+    Builds a constructor function for the dynamically created class.
+
+    :param compiled_class: Compiled code object of the class
+    :param exec_globals: Global scope with necessary imports
+    :param class_name: Name of the class
+    :return: Constructor function for the class
+    """
+    exec(compiled_class, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
-    def build_my_class(*args, **kwargs):
+    def build_custom_class(*args, **kwargs):
         for module_name, module in exec_globals.items():
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
@@ -187,9 +247,13 @@ def create_class(code, class_name):
         instance = exec_globals[class_name](*args, **kwargs)
         return instance
 
-    build_my_class.__globals__.update(exec_globals)
+    build_custom_class.__globals__.update(exec_globals)
+    return build_custom_class
 
-    return build_my_class
+
+# Example usage:
+# class_builder = create_class("class MyClass: pass", "MyClass")
+# my_instance = class_builder()
 
 
 def extract_function_name(code):

@@ -21,6 +21,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
+import { StoreContext } from "../../../../contexts/storeContext";
 
 export default function NodeToolbarComponent({
   data,
@@ -50,6 +51,7 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
+  const {hasApiKey} = useContext(StoreContext)
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -87,7 +89,7 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data), version));
         break;
       case "Share":
-        setShowconfirmShare(true);
+        if(hasApiKey) setShowconfirmShare(true);
         break;
       case "SaveAll":
         saveComponent(cloneDeep(data));
@@ -211,7 +213,7 @@ export default function NodeToolbarComponent({
                   Save{" "}
                 </div>{" "}
               </SelectItem>
-              <SelectItem value={"Share"}>
+              {hasApiKey && <SelectItem value={"Share"}>
                 <div className="flex">
                   <IconComponent
                     name="Share2"
@@ -219,7 +221,7 @@ export default function NodeToolbarComponent({
                   />{" "}
                   Share{" "}
                 </div>{" "}
-              </SelectItem>
+              </SelectItem>}
               <SelectItem value={"Download"}>
                 <div className="flex">
                   <IconComponent

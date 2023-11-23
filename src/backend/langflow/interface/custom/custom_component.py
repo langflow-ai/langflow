@@ -1,7 +1,9 @@
+import operator
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
 import yaml
+from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
@@ -30,6 +32,7 @@ class CustomComponent(Component):
     status: Optional[str] = None
 
     def __init__(self, **data):
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
 
     @property
@@ -71,33 +74,19 @@ class CustomComponent(Component):
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
                 }
                 raise HTTPException(status_code=400, detail=error_detail)
+        return True
 
-    def is_check_valid(self) -> bool:
+    def validate(self) -> bool:
         return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
         return super().get_code_tree(code)
 
     @property
-    def get_function_entrypoint_args(self) -> str:
-        if not self.code:
-            return ""
-        tree = self.get_code_tree(self.code)
-
-        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
-        if not component_classes:
-            return ""
-
-        # Assume the first Component class is the one we're interested in
-        component_class = component_classes[0]
-        build_methods = [
-            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
-        ]
-
-        if not build_methods:
-            return ""
-
-        build_method = build_methods[0]
+    def get_function_entrypoint_args(self) -> list:
+        build_method = self.get_build_method()
+        if not build_method:
+            return []
 
         args = build_method["args"]
         for arg in args:
@@ -111,13 +100,13 @@ class CustomComponent(Component):
                         ),
                     },
                 )
-            elif not arg.get("type"):
+            elif not arg.get("type") and arg.get("name") != "self":
                 # Set the type to Data
                 arg["type"] = "Data"
         return args
 
-    @property
-    def get_function_entrypoint_return_type(self) -> List[str]:
+    @cachedmethod(operator.attrgetter("cache"))
+    def get_build_method(self):
         if not self.code:
             return []
         tree = self.get_code_tree(self.code)
@@ -135,7 +124,13 @@ class CustomComponent(Component):
         if not build_methods:
             return []
 
-        build_method = build_methods[0]
+        return build_methods[0]
+
+    @property
+    def get_function_entrypoint_return_type(self) -> List[Any]:
+        build_method = self.get_build_method()
+        if not build_method:
+            return build_method
         return_type = build_method["return_type"]
         if not return_type:
             return []
@@ -156,13 +151,15 @@ class CustomComponent(Component):
 
     @property
     def get_main_class_name(self):
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         base_name = self.code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
-        for item in tree.get("classes"):
+        for item in tree.get("classes", []):
             if base_name in item["bases"]:
                 method_names = [method["name"] for method in item["methods"]]
                 if method_name in method_names:
@@ -173,11 +170,13 @@ class CustomComponent(Component):
 
     @property
     def build_template_config(self):
+        if not self.code:
+            return {}
         tree = self.get_code_tree(self.code)
 
         attributes = [
             main_class["attributes"]
-            for main_class in tree.get("classes")
+            for main_class in tree.get("classes", [])
             if main_class["name"] == self.get_main_class_name
         ]
         # Get just the first item
@@ -189,7 +188,7 @@ class CustomComponent(Component):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
+    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
         from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
@@ -199,7 +198,7 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices(graph_data, self.user_id)
+        return await build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self.user_id:
@@ -213,7 +212,7 @@ class CustomComponent(Component):
         except Exception as e:
             raise ValueError("Session is invalid") from e
 
-    def get_flow(
+    async def get_flow(
         self,
         *,
         flow_name: Optional[str] = None,
@@ -233,7 +232,7 @@ class CustomComponent(Component):
 
         if not flow:
             raise ValueError(f"Flow {flow_name or flow_id} not found")
-        return self.load_flow(flow.id, tweaks)
+        return await self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError

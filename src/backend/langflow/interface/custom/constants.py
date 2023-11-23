@@ -1,5 +1,5 @@
 DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
-
+from typing import Optional, List, Dict, Union
 from langflow.field_typing import (
     AgentExecutor,
     BaseChatMemory,

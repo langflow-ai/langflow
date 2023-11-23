@@ -15,6 +15,7 @@ import { FlowType } from "../../types/flow";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
 import BaseModal from "../baseModal";
+import { StoreContext } from "../../contexts/storeContext";
 
 export default function ShareModal({
   component,
@@ -22,14 +23,17 @@ export default function ShareModal({
   children,
   open,
   setOpen,
+  disabled
 }: {
   children?: ReactNode;
   is_component: boolean;
   component: FlowType;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  disabled?: boolean;
 }): JSX.Element {
   const { version, addFlow } = useContext(FlowsContext);
+  const {hasApiKey} = useContext(StoreContext)
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [checked, setChecked] = useState(true);
   const [name, setName] = useState(component?.name ?? "");
@@ -46,10 +50,12 @@ export default function ShareModal({
 
   useEffect(() => {
     if (open || internalOpen) {
-      handleGetTags();
-      handleGetNames();
+      if(hasApiKey){
+        handleGetTags();
+        handleGetNames();
+      }
     }
-  }, [open, internalOpen]);
+  }, [open, internalOpen,hasApiKey]);
 
   function handleGetTags() {
     setLoadingTags(true);
@@ -113,7 +119,7 @@ export default function ShareModal({
   return (
     <BaseModal
       size="smaller-h-full"
-      open={open ?? internalOpen}
+      open={(!disabled && open) ?? internalOpen}
       setOpen={setOpen ?? internalSetOpen}
     >
       <BaseModal.Trigger>{children ? children : <></>}</BaseModal.Trigger>

@@ -1,8 +1,8 @@
 import ast
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.vertex.base import Vertex
 from langflow.graph.utils import flatten_list
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
@@ -34,18 +34,18 @@ class AgentVertex(Vertex):
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             self._set_tools_and_chains()
             # First, build the tools
             for tool_node in self.tools:
-                tool_node.build(user_id=user_id)
+                await tool_node.build(user_id=user_id)
 
             # Next, build the chains and the rest
             for chain_node in self.chains:
-                chain_node.build(tools=self.tools, user_id=user_id)
+                await chain_node.build(tools=self.tools, user_id=user_id)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
 
         return self._built_object
 
@@ -62,13 +62,13 @@ class LLMVertex(Vertex):
     def __init__(self, data: Dict, params: Optional[Dict] = None):
         super().__init__(data, base_type="llms", params=params)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
         # or time to load. So we only load them when we need them.ß
         if self.vertex_type == self.built_node_type:
             return self.class_built_object
         if not self._built or force:
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
             self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
         # Avoid deepcopying the LLM
@@ -90,11 +90,11 @@ class WrapperVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
         return self._built_object
 
 
@@ -193,7 +193,7 @@ class ChainVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
-    def build(
+    async def build(
         self,
         force: bool = False,
         user_id=None,
@@ -212,9 +212,9 @@ class ChainVertex(Vertex):
                 if isinstance(value, PromptVertex):
                     # Build the PromptVertex, passing the tools if available
                     tools = kwargs.get("tools", None)
-                    self.params[key] = value.build(tools=tools, force=force)
+                    self.params[key] = await value.build(tools=tools, force=force)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
 
         return self._built_object
 
@@ -223,7 +223,7 @@ class PromptVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
 
-    def build(
+    async def build(
         self,
         force: bool = False,
         user_id=None,
@@ -236,7 +236,7 @@ class PromptVertex(Vertex):
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = [tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
+                tools = [await tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
@@ -257,7 +257,7 @@ class PromptVertex(Vertex):
             elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
         return self._built_object
 
     def _built_object_repr(self):

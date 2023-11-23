@@ -6,7 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse import LangfuseInstance
@@ -32,7 +31,7 @@ def create_app():
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
-        flattened = []
+        flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
             flattened.extend((key, entry) for entry in value.split(","))
 
@@ -100,7 +99,6 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 
 if __name__ == "__main__":
     import uvicorn
-
     from langflow.__main__ import get_number_of_workers
 
     configure()

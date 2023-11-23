@@ -1,6 +1,8 @@
 from typing import Dict, Generator, List, Type, Union
 
 from langchain.chains.base import Chain
+from loguru import logger
+
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
@@ -8,7 +10,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
-from loguru import logger
 
 
 class Graph:
@@ -116,13 +117,13 @@ class Graph:
         connected_nodes: List[Vertex] = [edge.source for edge in self.edges if edge.target == node]
         return connected_nodes
 
-    def build(self) -> Chain:
+    async def build(self) -> Chain:
         """Builds the graph."""
         # Get root node
         root_node = payload.get_root_node(self)
         if root_node is None:
             raise ValueError("No root node found")
-        return root_node.build()
+        return await root_node.build()
 
     def topological_sort(self) -> List[Vertex]:
         """
