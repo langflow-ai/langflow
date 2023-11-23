@@ -305,7 +305,15 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort()
+          .sort((a, b) => {
+            if (a.toLowerCase() === "saved_components") {
+              return -1;
+            } else if (b.toLowerCase() === "saved_components") {
+              return 1;
+            } else {
+              return a.localeCompare(b);
+            }
+          })
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
