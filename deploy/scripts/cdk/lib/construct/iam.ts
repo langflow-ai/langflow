@@ -1,6 +1,5 @@
 import { RemovalPolicy, Duration } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
-import { Props } from '../../cdk.out/asset.a565eb91ccb4c3ed87fd8f7d890173b077c2d2aa3a9837e3e4ecc8349b6a3483/src/frontend/src/types/components/index';
 import {
   aws_rds as rds,
   aws_iam as iam,
