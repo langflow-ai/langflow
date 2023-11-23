@@ -1,17 +1,19 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import sqlalchemy as sa
+from alembic import command
+from alembic.config import Config
 from langflow.services.base import Service
+from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.getters import get_settings_service
-from sqlalchemy import inspect
-import sqlalchemy as sa
-from sqlalchemy.exc import OperationalError
-from sqlmodel import SQLModel, Session, create_engine
+from langflow.services.utils import teardown_superuser
 from loguru import logger
-from alembic.config import Config
-from alembic import command
-from langflow.services.database import models  # noqa
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -225,14 +227,8 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            if settings_service.auth_settings.AUTO_LOGIN:
-                logger.debug("Removing default superuser")
-                username = settings_service.auth_settings.SUPERUSER
-                with Session(self.engine) as session:
-                    user = get_user_by_username(session, username)
-                    session.delete(user)
-                    session.commit()
-                    logger.debug("Default superuser removed")
+            with Session(self.engine) as session:
+                teardown_superuser(settings_service, session)
 
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")
