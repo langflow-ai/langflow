@@ -93,11 +93,11 @@ export default function SidebarDraggableComponent({
           >
             <span className="side-bar-components-text">{display_name}</span>
             <div>
-              <SelectTrigger>
-                <IconComponent
+            <IconComponent
                   name="Menu"
                   className="side-bar-components-icon "
                 />
+              <SelectTrigger>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={"download"}>
