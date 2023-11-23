@@ -491,30 +491,32 @@ export default function GenericNode({
               >
                 {" "}
               </div>
-              <ParameterComponent
-                key={scapedJSONStringfy({
-                  baseClasses: data.node!.base_classes,
-                  id: data.id,
-                  dataType: data.type,
-                })}
-                data={data}
-                setData={setData}
-                color={nodeColors[types[data.type]] ?? nodeColors.unknown}
-                title={
-                  data.node?.output_types && data.node.output_types.length > 0
-                    ? data.node.output_types.join("|")
-                    : data.type
-                }
-                tooltipTitle={data.node?.base_classes.join("\n")}
-                id={{
-                  baseClasses: data.node!.base_classes,
-                  id: data.id,
-                  dataType: data.type,
-                }}
-                type={data.node?.base_classes.join("|")}
-                left={false}
-                showNode={showNode}
-              />
+              {data.node!.base_classes.length > 0 && (
+                <ParameterComponent
+                  key={scapedJSONStringfy({
+                    baseClasses: data.node!.base_classes,
+                    id: data.id,
+                    dataType: data.type,
+                  })}
+                  data={data}
+                  setData={setData}
+                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  title={
+                    data.node?.output_types && data.node.output_types.length > 0
+                      ? data.node.output_types.join("|")
+                      : data.type
+                  }
+                  tooltipTitle={data.node?.base_classes.join("\n")}
+                  id={{
+                    baseClasses: data.node!.base_classes,
+                    id: data.id,
+                    dataType: data.type,
+                  }}
+                  type={data.node?.base_classes.join("|")}
+                  left={false}
+                  showNode={showNode}
+                />
+              )}
             </>
           </div>
         )}
