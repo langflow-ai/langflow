@@ -11,6 +11,12 @@ class CodeSyntaxError(HTTPException):
     pass
 
 
+def get_data_type():
+    from langflow.field_typing import Data
+
+    return Data
+
+
 class CodeParser:
     """
     A parser for Python source code, extracting code details.
@@ -132,11 +138,7 @@ class CodeParser:
                 pass
 
         func = CallableCodeDetails(
-            name=node.name,
-            doc=ast.get_docstring(node),
-            args=[],
-            body=[],
-            return_type=return_type,
+            name=node.name, doc=ast.get_docstring(node), args=[], body=[], return_type=return_type or get_data_type()
         )
 
         func.args = self.parse_function_args(node)
