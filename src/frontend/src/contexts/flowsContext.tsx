@@ -595,14 +595,16 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         newFlows[index].data = newFlow.data;
         newFlows[index].name = newFlow.name;
       }
+      newFlow = {
+        ...newFlow,
+      };
       return newFlows;
     });
   }
 
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
-    console.log(newFlow);
-
     if (newFlow?.data?.nodes?.length === 0) return;
+
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
@@ -615,14 +617,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           const newFlows = [...prevState];
           const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
           if (index !== -1) {
-            newFlows[index] = {
-              ...newFlows[index],
-              description: updatedFlow.description,
-              data: updatedFlow.data,
-              name: updatedFlow.name,
-            };
+            newFlows[index].description = newFlow.description ?? "";
+            newFlows[index].data = newFlow.data;
+            newFlows[index].name = newFlow.name;
           }
-
           return newFlows;
         });
         //update tabs state
