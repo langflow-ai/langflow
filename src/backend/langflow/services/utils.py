@@ -1,3 +1,6 @@
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
@@ -6,19 +9,18 @@ from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
 )
-from sqlmodel import Session
+
 from .getters import get_db_service, get_session, get_settings_service
-from loguru import logger
 
 
 def get_factories_and_deps():
-    from langflow.services.database import factory as database_factory
+    from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
-    from langflow.services.settings import factory as settings_factory
-    from langflow.services.auth import factory as auth_factory
-    from langflow.services.task import factory as task_factory
+    from langflow.services.database import factory as database_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.settings import factory as settings_factory
+    from langflow.services.task import factory as task_factory
 
     return [
         (settings_factory.SettingsServiceFactory(), []),
@@ -130,10 +132,10 @@ def teardown_superuser(settings_service, session):
     # If AUTO_LOGIN is True, we will remove the default superuser
     # from the database.
 
-    if settings_service.auth_settings.AUTO_LOGIN:
+    if not settings_service.auth_settings.AUTO_LOGIN:
         try:
-            logger.debug("AUTO_LOGIN is set to True. Removing default superuser.")
-            username = settings_service.auth_settings.SUPERUSER
+            logger.debug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
+            username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.user import User
 
             user = session.query(User).filter(User.username == username).first()
@@ -175,8 +177,8 @@ def initialize_session_service():
     """
     Initialize the session manager.
     """
-    from langflow.services.session import factory as session_service_factory  # type: ignore
     from langflow.services.cache import factory as cache_factory
+    from langflow.services.session import factory as session_service_factory  # type: ignore
 
     initialize_settings_service()
 
