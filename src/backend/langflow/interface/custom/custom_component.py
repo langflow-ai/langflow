@@ -3,6 +3,7 @@ from uuid import UUID
 
 import yaml
 from fastapi import HTTPException
+
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -212,7 +213,7 @@ class CustomComponent(Component):
         except Exception as e:
             raise ValueError("Session is invalid") from e
 
-    def get_flow(
+    async def get_flow(
         self,
         *,
         flow_name: Optional[str] = None,
@@ -232,7 +233,7 @@ class CustomComponent(Component):
 
         if not flow:
             raise ValueError(f"Flow {flow_name or flow_id} not found")
-        return self.load_flow(flow.id, tweaks)
+        return await self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
