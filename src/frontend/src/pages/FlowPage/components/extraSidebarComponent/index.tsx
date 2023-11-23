@@ -184,7 +184,7 @@ export default function ExtraSidebar(): JSX.Element {
 
   const ModalMemo = useMemo(
     () => (
-      <ShareModal is_component={false} component={flow!}>
+      <ShareModal is_component={false} component={flow!} disabled={!hasApiKey}>
         <ShadTooltip content="Share" side="top">
           <div className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="Share2" className="side-bar-button-size" />
@@ -192,7 +192,7 @@ export default function ExtraSidebar(): JSX.Element {
         </ShadTooltip>
       </ShareModal>
     ),
-    []
+    [hasApiKey]
   );
 
   const ExportMemo = useMemo(
