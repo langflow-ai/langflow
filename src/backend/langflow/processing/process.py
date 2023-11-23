@@ -1,19 +1,15 @@
+import asyncio
 import json
 from pathlib import Path
-from langchain.schema import AgentAction
-from langflow.interface.run import (
-    build_sorted_vertices,
-    get_memory_key,
-    update_memory_keys,
-)
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from langchain.chains.base import Chain
+from langchain.schema import AgentAction, Document
+from langchain.vectorstores.base import VectorStore
+from langflow.graph import Graph
+from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
 from loguru import logger
-from langflow.graph import Graph
-from langchain.chains.base import Chain
-from langchain.vectorstores.base import VectorStore
-from typing import Any, Dict, List, Optional, Tuple, Union
-from langchain.schema import Document
-
 from pydantic import BaseModel
 
 
@@ -164,8 +160,8 @@ async def process_graph_cached(
     if session_id is None:
         session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
-    graph, artifacts = session_service.load_session(session_id, data_graph)
-    built_object = graph.build()
+    graph, artifacts = await session_service.load_session(session_id, data_graph)
+    built_object = await graph.build()
     processed_inputs = process_inputs(inputs, artifacts)
     result = generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
@@ -202,7 +198,7 @@ def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = N
     graph = Graph(nodes, edges)
 
     if build:
-        langchain_object = graph.build()
+        langchain_object = asyncio.run(graph.build())
 
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True

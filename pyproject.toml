@@ -104,6 +104,7 @@ qianfan = "0.0.5"
 pgvector = "^0.2.3"
 
 [tool.poetry.group.dev.dependencies]
+pytest-asyncio = "^0.21.1"
 types-redis = "^4.6.0.5"
 ipykernel = "^6.21.2"
 mypy = "^1.1.1"

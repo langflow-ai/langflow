@@ -1,32 +1,30 @@
 import copy
 import json
 import os
-from pathlib import Path
 import pickle
+from pathlib import Path
 from typing import Type, Union
-from langflow.graph.edge.base import Edge
-from langflow.graph.vertex.base import Vertex
-from langchain.agents import AgentExecutor
+
 import pytest
+from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
 from langflow.graph import Graph
-from langflow.graph.vertex.types import (
-    FileToolVertex,
-    LLMVertex,
-    ToolkitVertex,
-)
-from langflow.processing.process import get_result_and_thought
-from langflow.utils.payload import get_root_node
+from langflow.graph.edge.base import Edge
 from langflow.graph.graph.utils import (
     find_last_node,
+    process_flow,
     set_new_target_handle,
     ungroup_node,
-    process_flow,
     update_source_handle,
     update_target_handle,
     update_template,
 )
+from langflow.graph.utils import UnbuiltObject
+from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
+from langflow.processing.process import get_result_and_thought
+from langflow.utils.payload import get_root_node
 
 # Test cases for the graph module
 
@@ -232,29 +230,32 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-def test_build(basic_graph):
+@pytest.mark.asyncio
+async def test_build(basic_graph):
     """Test Node's build method"""
-    assert_agent_was_built(basic_graph)
+    await assert_agent_was_built(basic_graph)
 
 
-def assert_agent_was_built(graph):
+async def assert_agent_was_built(graph):
     """Assert that the agent was built"""
     assert isinstance(graph, Graph)
     # Now we test the build method
     # Build the Agent
-    result = graph.build()
+    result = await graph.build()
     # The agent should be a AgentExecutor
     assert isinstance(result, Chain)
 
 
-def test_llm_node_build(basic_graph):
+@pytest.mark.asyncio
+async def test_llm_node_build(basic_graph):
     llm_node = get_node_by_type(basic_graph, LLMVertex)
     assert llm_node is not None
-    built_object = llm_node.build()
-    assert built_object is not None
+    built_object = await llm_node.build()
+    assert built_object is not UnbuiltObject()
 
 
-def test_toolkit_node_build(client, openapi_graph):
+@pytest.mark.asyncio
+async def test_toolkit_node_build(client, openapi_graph):
     # Write a file to the disk
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
@@ -262,36 +263,31 @@ def test_toolkit_node_build(client, openapi_graph):
 
     toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
     assert toolkit_node is not None
-    built_object = toolkit_node.build()
-    assert built_object is not None
+    built_object = await toolkit_node.build()
+    assert built_object is not UnbuiltObject
     # Remove the file
     os.remove(file_path)
     assert not Path(file_path).exists()
 
 
-def test_file_tool_node_build(client, openapi_graph):
+@pytest.mark.asyncio
+async def test_file_tool_node_build(client, openapi_graph):
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
         f.write("openapi: 3.0.0")
 
     assert Path(file_path).exists()
     file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
-    assert file_tool_node is not None
-    built_object = file_tool_node.build()
-    assert built_object is not None
+    assert file_tool_node is not UnbuiltObject
+    built_object = await file_tool_node.build()
+    assert built_object is not UnbuiltObject
     # Remove the file
     os.remove(file_path)
     assert not Path(file_path).exists()
 
 
-# def test_wrapper_node_build(openapi_graph):
-#     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
-#     assert wrapper_node is not None
-#     built_object = wrapper_node.build()
-#     assert built_object is not None
-
-
-def test_get_result_and_thought(basic_graph):
+@pytest.mark.asyncio
+async def test_get_result_and_thought(basic_graph):
     """Test the get_result_and_thought method"""
     responses = [
         "Final Answer: I am a response",
@@ -303,7 +299,7 @@ def test_get_result_and_thought(basic_graph):
     assert llm_node is not None
     llm_node._built_object = FakeListLLM(responses=responses)
     llm_node._built = True
-    langchain_object = basic_graph.build()
+    langchain_object = await basic_graph.build()
     # assert all nodes are built
     assert all(node._built for node in basic_graph.nodes)
     # now build again and check if FakeListLLM was used
@@ -486,27 +482,29 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
-def test_pickle_graph(json_vector_store):
+@pytest.mark.asyncio
+async def test_pickle_graph(json_vector_store):
     loaded_json = json.loads(json_vector_store)
     graph = Graph.from_payload(loaded_json)
     assert isinstance(graph, Graph)
-    first_result = graph.build()
+    first_result = await graph.build()
     assert isinstance(first_result, AgentExecutor)
     pickled = pickle.dumps(graph)
-    assert pickled is not None
+    assert pickled is not UnbuiltObject
     unpickled = pickle.loads(pickled)
-    assert unpickled is not None
-    result = unpickled.build()
+    assert unpickled is not UnbuiltObject
+    result = await unpickled.build()
     assert isinstance(result, AgentExecutor)
 
 
-def test_pickle_each_vertex(json_vector_store):
+@pytest.mark.asyncio
+async def test_pickle_each_vertex(json_vector_store):
     loaded_json = json.loads(json_vector_store)
     graph = Graph.from_payload(loaded_json)
     assert isinstance(graph, Graph)
     for vertex in graph.nodes:
-        vertex.build()
+        await vertex.build()
         pickled = pickle.dumps(vertex)
-        assert pickled is not None
+        assert pickled is not UnbuiltObject
         unpickled = pickle.loads(pickled)
-        assert unpickled is not None
+        assert unpickled is not UnbuiltObject

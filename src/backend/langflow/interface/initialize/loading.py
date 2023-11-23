@@ -1,3 +1,4 @@
+import inspect
 import json
 from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 
@@ -11,7 +12,7 @@ from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import get_function, get_function_custom, import_by_type
+from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
 from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer
@@ -35,7 +36,7 @@ def build_vertex_in_params(params: Dict) -> Dict:
     return {key: value.build() if isinstance(value, Vertex) else value for key, value in params.items()}
 
 
-def instantiate_class(node_type: str, base_type: str, params: Dict, user_id=None) -> Any:
+async def instantiate_class(node_type: str, base_type: str, params: Dict, user_id=None) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
@@ -47,7 +48,7 @@ def instantiate_class(node_type: str, base_type: str, params: Dict, user_id=None
             return custom_node(**params)
     logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
-    return instantiate_based_on_type(class_object, base_type, node_type, params, user_id=user_id)
+    return await instantiate_based_on_type(class_object, base_type, node_type, params, user_id=user_id)
 
 
 def convert_params_to_sets(params):
@@ -74,7 +75,7 @@ def convert_kwargs(params):
     return params
 
 
-def instantiate_based_on_type(class_object, base_type, node_type, params, user_id):
+async def instantiate_based_on_type(class_object, base_type, node_type, params, user_id):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -108,20 +109,28 @@ def instantiate_based_on_type(class_object, base_type, node_type, params, user_i
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return instantiate_custom_component(node_type, class_object, params, user_id)
+        return await instantiate_custom_component(node_type, class_object, params, user_id)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def instantiate_custom_component(node_type, class_object, params, user_id):
-    # we need to make a copy of the params because we will be
-    # modifying it
+async def instantiate_custom_component(node_type, class_object, params, user_id):
     params_copy = params.copy()
-    class_object: "CustomComponent" = get_function_custom(params_copy.pop("code"))
+    class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
     custom_component = class_object(user_id=user_id)
-    built_object = custom_component.build(**params_copy)
+
+    # Determine if the build method is asynchronous
+    is_async = inspect.iscoroutinefunction(custom_component.build)
+
+    if is_async:
+        # Await the build method directly if it's async
+        built_object = await custom_component.build(**params_copy)
+    else:
+        # Call the build method directly if it's sync
+        built_object = custom_component.build(**params_copy)
+
     return built_object, {"repr": custom_component.custom_repr()}
 
 

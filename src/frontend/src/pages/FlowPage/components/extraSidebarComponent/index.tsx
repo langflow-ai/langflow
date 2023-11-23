@@ -23,12 +23,14 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { StoreContext } from "../../../../contexts/storeContext";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge, reactFlowInstance } =
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
+  const {hasApiKey} = useContext(StoreContext)
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -47,6 +49,8 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
+
+  
 
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
@@ -180,7 +184,7 @@ export default function ExtraSidebar(): JSX.Element {
 
   const ModalMemo = useMemo(
     () => (
-      <ShareModal is_component={false} component={flow!}>
+      <ShareModal is_component={false} component={flow!} disabled={!hasApiKey}>
         <ShadTooltip content="Share" side="top">
           <div className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="Share2" className="side-bar-button-size" />
@@ -188,16 +192,16 @@ export default function ExtraSidebar(): JSX.Element {
         </ShadTooltip>
       </ShareModal>
     ),
-    []
+    [hasApiKey]
   );
 
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
         <ShadTooltip content="Export" side="top">
-          <div className={classNames("extra-side-bar-buttons")}>
+          <button disabled={!hasApiKey} className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="FileDown" className="side-bar-button-size" />
-          </div>
+          </button>
         </ShadTooltip>
       </ExportModal>
     ),
@@ -305,7 +309,15 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort()
+          .sort((a, b) => {
+            if (a.toLowerCase() === "saved_components") {
+              return -1;
+            } else if (b.toLowerCase() === "saved_components") {
+              return 1;
+            } else {
+              return a.localeCompare(b);
+            }
+          })
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent

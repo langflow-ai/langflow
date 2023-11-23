@@ -1,9 +1,12 @@
 import ast
 import inspect
+import operator
 import traceback
 from typing import Any, Dict, List, Type, Union
 
+from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
+
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -17,6 +20,13 @@ def get_data_type():
     return Data
 
 
+def imports_key(*args, **kwargs):
+    imports = kwargs.pop("imports")
+    key = keys.methodkey(*args, **kwargs)
+    key += tuple(imports)
+    return key
+
+
 class CodeParser:
     """
     A parser for Python source code, extracting code details.
@@ -26,6 +36,7 @@ class CodeParser:
         """
         Initializes the parser with the provided code.
         """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
                 raise ValueError("The provided code must be a class.")
@@ -101,13 +112,14 @@ class CodeParser:
             arg_dict["type"] = ast.unparse(arg.annotation)
         return arg_dict
 
-    def construct_eval_env(self, return_type_str: str) -> dict:
+    @cachedmethod(operator.attrgetter("cache"))
+    def construct_eval_env(self, return_type_str: str, imports) -> dict:
         """
         Constructs an evaluation environment with the necessary imports for the return type,
         taking into account module aliases.
         """
-        eval_env = {}
-        for import_entry in self.data["imports"]:
+        eval_env: dict = {}
+        for import_entry in imports:
             if isinstance(import_entry, tuple):  # from module import name
                 module, name = import_entry
                 if name in return_type_str:
@@ -122,6 +134,7 @@ class CodeParser:
                     exec(f"import {module} as {alias if alias else module}", eval_env)
         return eval_env
 
+    @cachedmethod(cache=operator.attrgetter("cache"))
     def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """
         Extracts details from a single function or method node.
@@ -129,7 +142,7 @@ class CodeParser:
         return_type = None
         if node.returns:
             return_type_str = ast.unparse(node.returns)
-            eval_env = self.construct_eval_env(return_type_str)
+            eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
             try:
                 return_type = eval(return_type_str, eval_env)
@@ -266,7 +279,7 @@ class CodeParser:
             elif isinstance(stmt, ast.AnnAssign):
                 if attr := self.parse_ann_assign(stmt):
                     class_details.attributes.append(attr)
-            elif isinstance(stmt, ast.FunctionDef):
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 method, is_init = self.parse_function_def(stmt)
                 if is_init:
                     class_details.init = method

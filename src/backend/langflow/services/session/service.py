@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
 from langflow.services.cache.utils import compute_dict_hash
@@ -14,7 +15,7 @@ class SessionService(Service):
     def __init__(self, cache_service):
         self.cache_service: "BaseCacheService" = cache_service
 
-    def load_session(self, key, data_graph):
+    async def load_session(self, key, data_graph):
         # Check if the data is cached
         if key in self.cache_service:
             return self.cache_service.get(key)
@@ -23,7 +24,7 @@ class SessionService(Service):
             key = self.generate_key(session_id=None, data_graph=data_graph)
 
         # If not cached, build the graph and cache it
-        graph, artifacts = build_sorted_vertices(data_graph)
+        graph, artifacts = await build_sorted_vertices(data_graph)
 
         self.cache_service.set(key, (graph, artifacts))
 

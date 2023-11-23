@@ -6,7 +6,10 @@ import warnings
 from typing import Any, List, Optional, Union
 from uuid import UUID
 
+from cachetools import LRUCache, cached
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -16,7 +19,7 @@ from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
-from langflow.interface.importing.utils import get_function_custom
+from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.output_parsers.base import output_parser_creator
@@ -32,7 +35,6 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 # Used to get the base_classes list
@@ -48,6 +50,7 @@ def get_type_list():
     return all_types
 
 
+@cached(LRUCache(maxsize=1))
 def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     """Build a dictionary of all langchain types"""
     all_types = {}
@@ -202,9 +205,14 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
     """Build the field configuration for a custom component"""
 
     try:
-        custom_class = get_function_custom(custom_component.code)
+        if custom_component.code is None:
+            return {}
+        elif isinstance(custom_component.code, str):
+            custom_class = eval_custom_component_code(custom_component.code)
+        else:
+            raise ValueError("Invalid code type")
     except Exception as exc:
-        logger.error(f"Error while getting custom function: {str(exc)}")
+        logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
             status_code=400,
             detail={
@@ -228,7 +236,7 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
 
 def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
-    if function_args is None or function_args == "":
+    if not function_args:
         return
 
     # sort function_args which is a list of dicts
@@ -368,7 +376,7 @@ def build_valid_menu(valid_components):
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = {}
-
+        menu_path = menu_item["path"]
         for component in menu_item["components"]:
             logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
             try:
@@ -377,10 +385,12 @@ def build_valid_menu(valid_components):
                 component_output_types = component["output_types"]
 
                 component_extractor = CustomComponent(code=component_code)
-                component_extractor.is_check_valid()
+                component_extractor.validate()
 
                 component_template = build_langchain_template_custom_component(component_extractor)
                 component_template["output_types"] = component_output_types
+                full_path = f"{menu_path}/{component.get('file')}"
+                component_template["full_path"] = full_path
                 if len(component_output_types) == 1:
                     component_name = component_output_types[0]
                 else:
