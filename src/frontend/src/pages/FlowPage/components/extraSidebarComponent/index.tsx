@@ -23,12 +23,14 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { StoreContext } from "../../../../contexts/storeContext";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge, reactFlowInstance } =
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
+  const {hasApiKey} = useContext(StoreContext)
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -47,6 +49,8 @@ export default function ExtraSidebar(): JSX.Element {
     event.dataTransfer.setDragImage(crt, 0, 0);
     event.dataTransfer.setData("nodedata", JSON.stringify(data));
   }
+
+  
 
   // Handle showing components after use search input
   function handleSearchInput(e: string) {
@@ -195,9 +199,9 @@ export default function ExtraSidebar(): JSX.Element {
     () => (
       <ExportModal>
         <ShadTooltip content="Export" side="top">
-          <div className={classNames("extra-side-bar-buttons")}>
+          <button disabled={!hasApiKey} className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="FileDown" className="side-bar-button-size" />
-          </div>
+          </button>
         </ShadTooltip>
       </ExportModal>
     ),
