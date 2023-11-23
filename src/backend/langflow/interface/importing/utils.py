@@ -3,15 +3,16 @@
 import importlib
 from typing import Any, Type
 
-from langchain.prompts import PromptTemplate
 from langchain.agents import Agent
 from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
 from langchain.chat_models.base import BaseChatModel
+from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
+
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.utils import validate
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.utils import validate
 
 
 def import_module(module_path: str) -> Any:
@@ -180,6 +181,7 @@ def get_function(code):
     return validate.create_function(code, function_name)
 
 
-def get_function_custom(code):
+def eval_custom_component_code(code: str) -> CustomComponent:
+    """Evaluate custom component code"""
     class_name = validate.extract_class_name(code)
     return validate.create_class(code, class_name)
