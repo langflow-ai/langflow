@@ -170,7 +170,6 @@ export default function Page({
     setEdges(flow?.data?.edges ?? []);
     if (reactFlowInstance) {
       setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
-      reactFlowInstance.fitView();
     }
   }, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
   //set extra sidebar
