@@ -10,8 +10,11 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
+from loguru import logger
+from pydantic import ValidationError
+
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import get_function, get_function_custom, import_by_type
+from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
 from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer
@@ -21,8 +24,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
-from loguru import logger
-from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -119,7 +120,7 @@ def instantiate_custom_component(node_type, class_object, params, user_id):
     # we need to make a copy of the params because we will be
     # modifying it
     params_copy = params.copy()
-    class_object: "CustomComponent" = get_function_custom(params_copy.pop("code"))
+    class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
     custom_component = class_object(user_id=user_id)
     built_object = custom_component.build(**params_copy)
     return built_object, {"repr": custom_component.custom_repr()}
