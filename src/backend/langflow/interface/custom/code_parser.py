@@ -1,8 +1,10 @@
 import ast
 import inspect
+import operator
 import traceback
 from typing import Any, Dict, List, Type, Union
 
+from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
@@ -27,6 +29,7 @@ class CodeParser:
         """
         Initializes the parser with the provided code.
         """
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
                 raise ValueError("The provided code must be a class.")
@@ -123,6 +126,7 @@ class CodeParser:
                     exec(f"import {module} as {alias if alias else module}", eval_env)
         return eval_env
 
+    @cachedmethod(operator.attrgetter("cache"))
     def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """
         Extracts details from a single function or method node.
@@ -267,7 +271,7 @@ class CodeParser:
             elif isinstance(stmt, ast.AnnAssign):
                 if attr := self.parse_ann_assign(stmt):
                     class_details.attributes.append(attr)
-            elif isinstance(stmt, ast.FunctionDef):
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 method, is_init = self.parse_function_def(stmt)
                 if is_init:
                     class_details.init = method
