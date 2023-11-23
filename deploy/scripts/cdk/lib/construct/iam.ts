@@ -1,18 +1,22 @@
 import { RemovalPolicy, Duration } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
+import { Props } from '../../cdk.out/asset.a565eb91ccb4c3ed87fd8f7d890173b077c2d2aa3a9837e3e4ecc8349b6a3483/src/frontend/src/types/components/index';
 import {
-  aws_ec2 as ec2,
-  aws_ecs as ecs,
+  aws_rds as rds,
   aws_iam as iam,
-  aws_logs as logs,
 } from 'aws-cdk-lib';
 
-export class EcsIAM extends Construct {
-  readonly backendTaskRole: iam.Role;
-  readonly TaskExecutionRole: iam.Role;
-  readonly frontendTaskRole: iam.Role;
+interface IAMProps {
+  rdsCluster:rds.DatabaseCluster
+}
 
-  constructor(scope: Construct, id: string) {
+export class EcsIAM extends Construct {
+  readonly frontendTaskRole: iam.Role;
+  readonly frontendTaskExecutionRole: iam.Role;
+  readonly backendTaskRole: iam.Role;
+  readonly backendTaskExecutionRole: iam.Role;
+
+  constructor(scope: Construct, id: string, props:IAMProps) {
     super(scope, id)
 
     // Policy Statements
@@ -60,8 +64,8 @@ export class EcsIAM extends Construct {
     this.backendTaskRole.addToPolicy(KendraPolicyStatement);
     this.backendTaskRole.addToPolicy(BedrockPolicyStatement);
 
-    // Task ExecutionRole -> ここは共通
-    this.TaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+    // FrontEnd Task ExecutionRole 
+    this.frontendTaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [
         {
@@ -70,5 +74,26 @@ export class EcsIAM extends Construct {
         },
       ],
     });
+
+    // Secrets ManagerからDB認証情報を取ってくる
+    const secretsDB = props.rdsCluster.secret!;
+
+    // BackEnd Task ExecutionRole 
+    this.backendTaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        {
+          managedPolicyArn:
+            'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+        },
+      ],
+    });
+  
+    this.backendTaskExecutionRole.attachInlinePolicy(new iam.Policy(this, 'SMGetPolicy', {
+      statements: [new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [secretsDB.secretArn],
+      })],
+    }));
   }
 }
