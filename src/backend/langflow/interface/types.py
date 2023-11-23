@@ -7,6 +7,8 @@ from typing import Any, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -16,7 +18,7 @@ from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import extract_inner_type
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
-from langflow.interface.importing.utils import get_function_custom
+from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.output_parsers.base import output_parser_creator
@@ -32,7 +34,6 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 # Used to get the base_classes list
@@ -202,7 +203,7 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
     """Build the field configuration for a custom component"""
 
     try:
-        custom_class = get_function_custom(custom_component.code)
+        custom_class = eval_custom_component_code(custom_component.code)
     except Exception as exc:
         logger.error(f"Error while getting custom function: {str(exc)}")
         raise HTTPException(
