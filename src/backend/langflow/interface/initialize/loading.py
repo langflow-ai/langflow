@@ -10,21 +10,10 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
-from loguru import logger
-from pydantic import ValidationError
-
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import (
-    get_function,
-    get_function_custom,
-    import_by_type,
-)
+from langflow.interface.importing.utils import get_function, get_function_custom, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import (
-    handle_format_kwargs,
-    handle_node_type,
-    handle_partial_variables,
-)
+from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
@@ -32,6 +21,8 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
+from loguru import logger
+from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -276,6 +267,9 @@ def instantiate_embedding(node_type, class_object, params: Dict):
 
     if "VertexAI" in node_type:
         return initialize_vertexai(class_object=class_object, params=params)
+
+    if "OpenAIEmbedding" in node_type:
+        params["disallowed_special"] = ()
 
     try:
         return class_object(**params)
