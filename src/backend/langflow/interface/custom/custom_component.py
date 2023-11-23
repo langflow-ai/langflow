@@ -5,6 +5,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -73,8 +74,9 @@ class CustomComponent(Component):
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
                 }
                 raise HTTPException(status_code=400, detail=error_detail)
+        return True
 
-    def is_check_valid(self) -> bool:
+    def validate(self) -> bool:
         return self._class_template_validation(self.code) if self.code else False
 
     def get_code_tree(self, code: str):
@@ -125,7 +127,7 @@ class CustomComponent(Component):
         return build_methods[0]
 
     @property
-    def get_function_entrypoint_return_type(self) -> List[str]:
+    def get_function_entrypoint_return_type(self) -> List[Any]:
         build_method = self.get_build_method()
         if not build_method:
             return build_method
@@ -149,13 +151,15 @@ class CustomComponent(Component):
 
     @property
     def get_main_class_name(self):
+        if not self.code:
+            return ""
         tree = self.get_code_tree(self.code)
 
         base_name = self.code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
-        for item in tree.get("classes"):
+        for item in tree.get("classes", []):
             if base_name in item["bases"]:
                 method_names = [method["name"] for method in item["methods"]]
                 if method_name in method_names:
@@ -166,11 +170,13 @@ class CustomComponent(Component):
 
     @property
     def build_template_config(self):
+        if not self.code:
+            return {}
         tree = self.get_code_tree(self.code)
 
         attributes = [
             main_class["attributes"]
-            for main_class in tree.get("classes")
+            for main_class in tree.get("classes", [])
             if main_class["name"] == self.get_main_class_name
         ]
         # Get just the first item
