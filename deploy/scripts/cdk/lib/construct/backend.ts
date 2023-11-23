@@ -38,8 +38,8 @@ export class BackEndCluster extends Construct {
       this,
       'BackEndTaskDef',
       {
-          memoryLimitMiB: 512,
-          cpu: 256,
+          memoryLimitMiB: 3072,
+          cpu: 512,
           executionRole: props.backendTaskExecutionRole,
           runtimePlatform:{
             operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
