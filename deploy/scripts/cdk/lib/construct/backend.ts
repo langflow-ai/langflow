@@ -57,9 +57,9 @@ export class BackEndCluster extends Construct {
       }),
       environment:{
         // user:pass@endpoint:port/dbname
-        // "LANGFLOW_DATABASE_URL" : `mysql+pymysql://${ecs.Secret.fromSecretsManager(secretsDB, 'username')}:${ecs.Secret.fromSecretsManager(secretsDB, 'password')}@${ecs.Secret.fromSecretsManager(secretsDB, 'host')}:3306/${ecs.Secret.fromSecretsManager(secretsDB, 'dbname')}`,
-        "LANGFLOW_DATABASE_URL" : "sqlite:///./langflow.db",
-        "LANGFLOW_LANGCHAIN_CACHE" : "SQLiteCache",
+        // "LANGFLOW_DATABASE_URL" : `mysql+pymysql://${username}:${password}@${host}:3306/${dbname}`,
+        // "LANGFLOW_DATABASE_URL" : "sqlite:///./langflow.db",
+        // "LANGFLOW_LANGCHAIN_CACHE" : "SQLiteCache",
         "LANGFLOW_AUTO_LOGIN" : "false",
         "LANGFLOW_SUPERUSER" : "admin",
         "LANGFLOW_SUPERUSER_PASSWORD" : "1234567"
