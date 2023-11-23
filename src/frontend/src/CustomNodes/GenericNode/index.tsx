@@ -188,7 +188,6 @@ export default function GenericNode({
                   {data.node?.flow && inputName ? (
                     <div>
                       <InputComponent
-                        autoFocus
                         onBlur={() => {
                           setInputName(false);
                           if (nodeName.trim() !== "") {
