@@ -134,7 +134,9 @@ def teardown_superuser(settings_service, session):
 
     if not settings_service.auth_settings.AUTO_LOGIN:
         try:
-            logger.debug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
+            logger.debug(
+                "AUTO_LOGIN is set to False. Removing default superuser if exists."
+            )
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.user import User
 
