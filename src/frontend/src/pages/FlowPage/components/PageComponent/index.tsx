@@ -70,6 +70,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
+    flows,
   } = useContext(FlowsContext);
   const {
     types,
@@ -182,6 +183,8 @@ export default function Page({
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
+    const index = flows.findIndex((flowId) => flowId.id === flow.id);
+
     const interval = setInterval(() => {
       setSeconds((prevSeconds) => {
         let updatedSeconds = prevSeconds + 1;
@@ -189,7 +192,7 @@ export default function Page({
         if (updatedSeconds % 30 === 0) {
           saveFlow(
             {
-              ...flow!,
+              ...flows[index]!,
               data: reactFlowInstance
                 ? reactFlowInstance!.toObject()
                 : flow!.data,
