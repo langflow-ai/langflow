@@ -13,9 +13,6 @@ export class LangflowAppStack extends cdk.Stack {
 
     // VPC
     const { vpc, cluster, alb, targetGroup, cloudmapNamespace, ecsFrontSG, ecsBackSG, dbSG, albSG, backendLogGroup, frontendLogGroup} = new Network(this, 'Network')
-    
-    // IAM
-    const { backendTaskRole, TaskExecutionRole, frontendTaskRole } = new EcsIAM(this, 'EcsIAM')
 
     // ECR
     const { ecrFrontEndRepository,ecrBackEndRepository} = new EcrRepository(this, 'Ecr', {
@@ -27,12 +24,17 @@ export class LangflowAppStack extends cdk.Stack {
     // VPCとSGのリソース情報をPropsとして引き渡す
     const { rdsCluster } = new Rds(this, 'Rds', { vpc, dbSG })
 
+    // IAM
+    const { frontendTaskRole, frontendTaskExecutionRole, backendTaskRole, backendTaskExecutionRole } = new EcsIAM(this, 'EcsIAM',{
+      rdsCluster:rdsCluster
+    })
+
     const backendService = new BackEndCluster(this, 'backend', {
       cluster:cluster,
       ecsBackSG:ecsBackSG,
       ecrBackEndRepository:ecrBackEndRepository,
       backendTaskRole:backendTaskRole,
-      backendTaskExecutionRole:TaskExecutionRole,
+      backendTaskExecutionRole:backendTaskExecutionRole,
       backendLogGroup:backendLogGroup,
       cloudmapNamespace:cloudmapNamespace,
       rdsCluster:rdsCluster,
@@ -47,7 +49,7 @@ export class LangflowAppStack extends cdk.Stack {
       targetGroup: targetGroup,
       backendServiceName: backendService.backendServiceName,
       frontendTaskRole: frontendTaskRole,
-      frontendTaskExecutionRole: TaskExecutionRole,
+      frontendTaskExecutionRole: frontendTaskExecutionRole,
       frontendLogGroup: frontendLogGroup,
       cloudmapNamespace: cloudmapNamespace,
       arch:arch 
