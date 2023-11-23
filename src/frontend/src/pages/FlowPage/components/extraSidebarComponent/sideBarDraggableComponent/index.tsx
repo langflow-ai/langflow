@@ -52,9 +52,7 @@ export default function SidebarDraggableComponent({
         );
         break;
       case "delete":
-        deleteComponent(
-          display_name
-        );
+        deleteComponent(display_name);
         break;
     }
   }

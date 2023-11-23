@@ -84,7 +84,11 @@ export default function ParameterComponent({
   let disabled =
     reactFlowInstance
       ?.getEdges()
-      .some((edge) => edge.targetHandle === scapedJSONStringfy(id)) ?? false;
+      .some(
+        (edge) =>
+          edge.targetHandle ===
+          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+      ) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
