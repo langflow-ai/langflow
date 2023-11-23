@@ -133,7 +133,7 @@ class ChatService(Service):
         try:
             logger.debug("Generating result and thought")
 
-            result, intermediate_steps = await process_graph(
+            result, intermediate_steps, raw_output = await process_graph(
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
                 client_id=client_id,
@@ -161,6 +161,23 @@ class ChatService(Service):
                     file_responses.append(msg)
                 if msg.type == "start":
                     break
+        if "source_documents" in raw_output:
+            markdown_table = ""
+            doc_dicts = []
+            for doc in raw_output["source_documents"]:
+                doc_dict = doc.dict()
+                metadata = doc_dict.pop("metadata", {})
+                metadata["page_content"] = doc.page_content
+                doc_dicts.append(metadata)
+            markdown_table = list_of_dicts_to_markdown_table(doc_dicts)
+            file_responses.append(
+                FileResponse(
+                    message=None,
+                    type="file",
+                    data=markdown_table,
+                    data_type="Document",
+                )
+            )
 
         response = ChatResponse(
             message=result,
@@ -234,3 +251,26 @@ class ChatService(Service):
             except Exception as exc:
                 logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)
+
+
+def dict_to_markdown_table(my_dict):
+    markdown_table = "| Key | Value |\n|---|---|\n"
+    for key, value in my_dict.items():
+        markdown_table += f"| {key} | {value} |\n"
+    return markdown_table
+
+
+def list_of_dicts_to_markdown_table(dict_list):
+    if not dict_list:
+        return "No data provided."
+
+    # Extract headers from the keys of the first dictionary
+    headers = dict_list[0].keys()
+    markdown_table = "| " + " | ".join(headers) + " |\n"
+    markdown_table += "| " + " | ".join("---" for _ in headers) + " |\n"
+
+    for row_dict in dict_list:
+        row = [str(row_dict.get(header, "")) for header in headers]
+        markdown_table += "| " + " | ".join(row) + " |\n"
+
+    return markdown_table
