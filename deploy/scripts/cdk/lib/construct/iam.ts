@@ -64,7 +64,7 @@ export class EcsIAM extends Construct {
     this.backendTaskRole.addToPolicy(BedrockPolicyStatement);
 
     // FrontEnd Task ExecutionRole 
-    this.frontendTaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+    this.frontendTaskExecutionRole = new iam.Role(this, 'frontendTaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [
         {
@@ -78,7 +78,7 @@ export class EcsIAM extends Construct {
     const secretsDB = props.rdsCluster.secret!;
 
     // BackEnd Task ExecutionRole 
-    this.backendTaskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
+    this.backendTaskExecutionRole = new iam.Role(this, 'backendTaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [
         {
