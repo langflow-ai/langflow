@@ -13,6 +13,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
@@ -215,3 +216,22 @@ async def custom_component(
     extractor.validate()
 
     return build_langchain_template_custom_component(extractor, user_id=user.id)
+
+
+@router.post("/custom_component/reload", status_code=HTTPStatus.OK)
+async def reload_custom_component(path: str):
+    from langflow.interface.types import (
+        build_langchain_template_custom_component,
+    )
+
+    try:
+        reader = DirectoryReader("")
+        valid, content = reader.process_file(path)
+        if not valid:
+            raise ValueError(content)
+
+        extractor = CustomComponent(code=content)
+        extractor.validate()
+        return build_langchain_template_custom_component(extractor, user_id=user.id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
