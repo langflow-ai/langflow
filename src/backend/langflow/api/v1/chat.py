@@ -8,21 +8,20 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
-
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import (
     get_current_active_user,
     get_current_user_by_jwt,
 )
-from langflow.services.cache.utils import update_build_status
-from loguru import logger
-from langflow.services.deps import get_chat_service, get_session, get_cache_service
-from sqlmodel import Session
-from langflow.services.chat.service import ChatService
 from langflow.services.cache.service import BaseCacheService
-
+from langflow.services.cache.utils import update_build_status
+from langflow.services.chat.service import ChatService
+from langflow.services.deps import get_cache_service, get_chat_service, get_session
 
 router = APIRouter(tags=["Chat"])
 
@@ -164,9 +163,9 @@ async def stream_build(
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     if vertex.is_task:
-                        vertex = try_running_celery_task(vertex, user_id)
+                        vertex = await try_running_celery_task(vertex, user_id)
                     else:
-                        vertex.build(user_id=user_id)
+                        await vertex.build(user_id=user_id)
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
@@ -193,7 +192,7 @@ async def stream_build(
 
                     yield str(StreamData(event="message", data=response))
 
-            langchain_object = graph.build()
+            langchain_object = await graph.build()
             # Now we  need to check the input_keys to send them to the client
             if hasattr(langchain_object, "input_keys"):
                 input_keys_response = build_input_keys_response(langchain_object, artifacts)
@@ -224,7 +223,7 @@ async def stream_build(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-def try_running_celery_task(vertex, user_id):
+async def try_running_celery_task(vertex, user_id):
     # Try running the task in celery
     # and set the task_id to the local vertex
     # if it fails, run the task locally
@@ -236,5 +235,5 @@ def try_running_celery_task(vertex, user_id):
     except Exception as exc:
         logger.debug(f"Error running task in celery: {exc}")
         vertex.task_id = None
-        vertex.build(user_id=user_id)
+        await vertex.build(user_id=user_id)
     return vertex

@@ -3,7 +3,6 @@ from uuid import UUID
 
 import yaml
 from fastapi import HTTPException
-
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -189,7 +188,7 @@ class CustomComponent(Component):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
+    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
         from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
@@ -199,7 +198,7 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices(graph_data, self.user_id)
+        return await build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self.user_id:
