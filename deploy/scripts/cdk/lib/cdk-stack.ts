@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 
-import { Network, EcrRepository, FrontEndCluster, BackEndCluster, Rds } from './construct';
+import { Network, EcrRepository, FrontEndCluster, BackEndCluster, Rds, EcsIAM } from './construct';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class LangflowAppStack extends cdk.Stack {
@@ -12,7 +12,11 @@ export class LangflowAppStack extends cdk.Stack {
     const arch = ecs.CpuArchitecture.X86_64
 
     // VPC
-    const { vpc, cluster, alb, targetGroup, cloudmapNamespace, ecsFrontSG, ecsBackSG, dbSG, albSG, backendTaskRole, TaskExecutionRole, frontendTaskRole, backendLogGroup, frontendLogGroup} = new Network(this, 'Network')
+    const { vpc, cluster, alb, targetGroup, cloudmapNamespace, ecsFrontSG, ecsBackSG, dbSG, albSG, backendLogGroup, frontendLogGroup} = new Network(this, 'Network')
+    
+    // IAM
+    const { backendTaskRole, TaskExecutionRole, frontendTaskRole } = new EcsIAM(this, 'EcsIAM')
+
     // ECR
     const { ecrFrontEndRepository,ecrBackEndRepository} = new EcrRepository(this, 'Ecr', {
       cloudmapNamespace:cloudmapNamespace,
