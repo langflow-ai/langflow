@@ -203,9 +203,14 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
     """Build the field configuration for a custom component"""
 
     try:
-        custom_class = eval_custom_component_code(custom_component.code)
+        if custom_component.code is None:
+            return {}
+        elif isinstance(custom_component.code, str):
+            custom_class = eval_custom_component_code(custom_component.code)
+        else:
+            raise ValueError("Invalid code type")
     except Exception as exc:
-        logger.error(f"Error while getting custom function: {str(exc)}")
+        logger.error(f"Error while evaluating custom component code: {str(exc)}")
         raise HTTPException(
             status_code=400,
             detail={
