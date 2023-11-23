@@ -1,15 +1,13 @@
+import secrets
 from pathlib import Path
 from typing import Optional
-import secrets
-from langflow.services.settings.constants import (
-    DEFAULT_SUPERUSER,
-    DEFAULT_SUPERUSER_PASSWORD,
-)
-from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
-from pydantic import BaseSettings, Field, validator
-from passlib.context import CryptContext
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 from loguru import logger
+from passlib.context import CryptContext
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 
 
 class AuthSettings(BaseSettings):
@@ -18,17 +16,14 @@ class AuthSettings(BaseSettings):
     SECRET_KEY: str = Field(
         default="",
         description="Secret key for JWT. If not provided, a random one will be generated.",
-        env="LANGFLOW_SECRET_KEY",
-        allow_mutation=False,
+        frozen=False,
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12 * 7
 
     # API Key to execute /process endpoint
-    API_KEY_SECRET_KEY: Optional[
-        str
-    ] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
+    API_KEY_SECRET_KEY: Optional[str] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
@@ -39,7 +34,7 @@ class AuthSettings(BaseSettings):
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     class Config:
         validate_assignment = True

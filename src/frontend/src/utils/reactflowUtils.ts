@@ -25,8 +25,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase } from "./utils";
-const uid = new ShortUniqueId({ length: 5 });
+import { getFieldTitle, toTitleCase } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -164,46 +163,51 @@ export function updateIds(
 ) {
   let idsMap = {};
 
-  newFlow.nodes.forEach((node: NodeType) => {
-    // Generate a unique node ID
-    let newId = getNodeId(node.data.node?.flow ? "GroupNode" : node.data.type);
-    idsMap[node.id] = newId;
-    node.id = newId;
-    node.data.id = newId;
-    // Add the new node to the list of nodes in state
-  });
+  if (newFlow.nodes)
+    newFlow.nodes.forEach((node: NodeType) => {
+      // Generate a unique node ID
+      let newId = getNodeId(
+        node.data.node?.flow ? "GroupNode" : node.data.type
+      );
+      idsMap[node.id] = newId;
+      node.id = newId;
+      node.data.id = newId;
+      // Add the new node to the list of nodes in state
+    });
 
-  newFlow.edges.forEach((edge: Edge) => {
-    edge.source = idsMap[edge.source];
-    edge.target = idsMap[edge.target];
-    const sourceHandleObject: sourceHandleType = scapeJSONParse(
-      edge.sourceHandle!
-    );
-    edge.sourceHandle = scapedJSONStringfy({
-      ...sourceHandleObject,
-      id: edge.source,
+  if (newFlow.edges)
+    newFlow.edges.forEach((edge: Edge) => {
+      edge.source = idsMap[edge.source];
+      edge.target = idsMap[edge.target];
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      edge.sourceHandle = scapedJSONStringfy({
+        ...sourceHandleObject,
+        id: edge.source,
+      });
+      if (edge.data?.sourceHandle?.id) {
+        edge.data.sourceHandle.id = edge.source;
+      }
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      edge.targetHandle = scapedJSONStringfy({
+        ...targetHandleObject,
+        id: edge.target,
+      });
+      if (edge.data?.targetHandle?.id) {
+        edge.data.targetHandle.id = edge.target;
+      }
+      edge.id =
+        "reactflow__edge-" +
+        edge.source +
+        edge.sourceHandle +
+        "-" +
+        edge.target +
+        edge.targetHandle;
     });
-    if (edge.data?.sourceHandle?.id) {
-      edge.data.sourceHandle.id = edge.source;
-    }
-    const targetHandleObject: targetHandleType = scapeJSONParse(
-      edge.targetHandle!
-    );
-    edge.targetHandle = scapedJSONStringfy({
-      ...targetHandleObject,
-      id: edge.target,
-    });
-    if (edge.data?.targetHandle?.id) {
-      edge.data.targetHandle.id = edge.target;
-    }
-    edge.id =
-      "reactflow__edge-" +
-      edge.source +
-      edge.sourceHandle +
-      "-" +
-      edge.target +
-      edge.targetHandle;
-  });
+  return idsMap;
 }
 
 export function buildTweaks(flow: FlowType) {
@@ -240,11 +244,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
             node.id
       )
     ) {
-      errors.push(
-        `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
-        }.`
-      );
+      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
@@ -255,15 +255,14 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) contains duplicate keys with the same values.`
+          `${type} (${getFieldTitle(
+            template,
+            t
+          )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) field must not be empty.`
+          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
         );
     }
     return errors;
@@ -436,8 +435,8 @@ export function convertValuesToNumbers(arr) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         let value = obj[key];
-        if (/\s/g.test(value)) {
-          value = value.trim();
+        if (/^\d+$/.test(value)) {
+          value = value?.toString().trim();
         }
         newObj[key] =
           value === "" || isNaN(value) ? value.toString() : Number(value);
@@ -512,7 +511,7 @@ export function generateFlow(
   name: string
 ): generateFlowType {
   const newFlowData = reactFlowInstance.toObject();
-
+  const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
 		in future we can save this edges to when ungrouping reconect to the old nodes
 	*/
@@ -525,6 +524,7 @@ export function generateFlow(
 
   const newFlow: FlowType = {
     data: newFlowData,
+    is_component: false,
     name: name,
     description: "",
     //generating local id instead of using the id from the server, can change in the future
@@ -702,7 +702,6 @@ function isHandleConnected(
   /*
 		this function receives a flow and a handleId and check if there is a connection with this handle
 	*/
-  scapedJSONStringfy({ type: field.type, fieldName: key, id: nodeId });
   if (field.proxy) {
     if (
       edges.some(
@@ -875,7 +874,7 @@ export function ungroupNode(
     let { field, id } = template[key].proxy!;
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
-      let display_name: string;
+      let display_name: string | undefined;
       let show = gNodes[nodeIndex].data.node!.template[field].show;
       let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
       if (gNodes[nodeIndex].data.node!.template[field].display_name) {
@@ -906,16 +905,43 @@ export function ungroupNode(
   BaseFlow.edges = edges;
 }
 
+function updateProxyIdsOnTemplate(
+  template: APITemplateType,
+  idsMap: { [key: string]: string }
+) {
+  Object.keys(template).forEach((key) => {
+    if (template[key].proxy && idsMap[template[key].proxy!.id]) {
+      template[key].proxy!.id = idsMap[template[key].proxy!.id];
+    }
+  });
+}
+
+function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
+  edges.forEach((edge) => {
+    let targetHandle: targetHandleType = edge.data.targetHandle;
+    if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
+      targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
+    }
+    edge.data.targetHandle = targetHandle;
+    edge.targetHandle = scapedJSONStringfy(targetHandle);
+  });
+}
+
 export function expandGroupNode(
   groupNode: NodeDataType,
-  ReactFlowInstance: ReactFlowInstance
+  ReactFlowInstance: ReactFlowInstance,
+  getNodeId: (type: string) => string
 ) {
   const { template, flow } = _.cloneDeep(groupNode.node!);
+  const idsMap = updateIds(flow!.data!, getNodeId);
+  updateProxyIdsOnTemplate(template, idsMap);
+  let flowEdges = ReactFlowInstance.getEdges();
+  updateEdgesIds(flowEdges, idsMap);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
-  ReactFlowInstance.getEdges().forEach((edge) => {
+  flowEdges.forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
     if (newEdge.target === groupNode.id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
@@ -964,7 +990,7 @@ export function expandGroupNode(
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
       let proxy: { id: string; field: string } | undefined;
-      let display_name: string;
+      let display_name: string | undefined;
       let show = gNodes[nodeIndex].data.node!.template[field].show;
       let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
       if (gNodes[nodeIndex].data.node!.template[field].display_name) {
@@ -980,7 +1006,8 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node!.template[field].show = show;
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-      gNodes[nodeIndex].selected = false;
+      // keep the nodes selected after ungrouping
+      // gNodes[nodeIndex].selected = false;
       if (proxy) {
         gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
       } else {
@@ -1033,3 +1060,45 @@ export function getGroupStatus(
   });
   return status;
 }
+
+export function createFlowComponent(
+  nodeData: NodeDataType,
+  version: string
+): FlowType {
+  nodeData.node!.official = false;
+  const flowNode: FlowType = {
+    data: {
+      edges: [],
+      nodes: [
+        {
+          data: nodeData,
+          id: nodeData.id,
+          position: { x: 0, y: 0 },
+          type: "genericNode",
+        },
+      ],
+      viewport: { x: 1, y: 1, zoom: 1 },
+    },
+    description: nodeData.node?.description || "",
+    name: nodeData.node?.display_name || nodeData.type || "",
+    id: nodeData.id || "",
+    is_component: true,
+    last_tested_version: version,
+  };
+  return flowNode;
+}
+
+export function downloadNode(NodeFLow: FlowType) {
+  const element = document.createElement("a");
+  const file = new Blob([JSON.stringify(NodeFLow)], {
+    type: "application/json",
+  });
+  element.href = URL.createObjectURL(file);
+  element.download = `${NodeFLow.name}.json`;
+  element.click();
+}
+
+export function updateComponentNameAndType(
+  data: any,
+  component: NodeDataType
+) {}

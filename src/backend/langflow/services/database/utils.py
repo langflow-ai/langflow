@@ -6,16 +6,14 @@ from alembic.util.exc import CommandError
 from sqlmodel import Session
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
+    from langflow.services.database.service import DatabaseService
 
 
 def initialize_database():
     logger.debug("Initializing database")
     from langflow.services import service_manager, ServiceType
 
-    database_service: "DatabaseService" = service_manager.get(
-        ServiceType.DATABASE_SERVICE
-    )
+    database_service: "DatabaseService" = service_manager.get(ServiceType.DATABASE_SERVICE)
     try:
         database_service.create_db_and_tables()
     except Exception as exc:
@@ -41,9 +39,7 @@ def initialize_database():
         # This means there's wrong revision in the DB
         # We need to delete the alembic_version table
         # and run the migrations again
-        logger.warning(
-            "Wrong revision in DB, deleting alembic_version table and running migrations again"
-        )
+        logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
         with session_getter(database_service) as session:
             session.execute("DROP TABLE alembic_version")
         database_service.run_migrations()

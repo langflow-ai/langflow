@@ -19,6 +19,7 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
   blurOnEnter?: boolean;
 };
 export type ToggleComponentType = {
@@ -51,6 +52,7 @@ export type ParameterComponentType = {
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
+  index?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -65,8 +67,6 @@ export type KeyPairListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   duplicateKey?: boolean;
-  advanced?: boolean | null;
-  dataValue?: any;
 };
 
 export type DictComponentType = {
@@ -84,6 +84,7 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -96,6 +97,7 @@ export type PromptAreaComponentType = {
   value: string;
   readonly?: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type CodeAreaComponentType = {
@@ -106,6 +108,7 @@ export type CodeAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   dynamic?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -137,6 +140,7 @@ export type FloatComponentType = {
   disabled?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TooltipComponentType = {
@@ -209,18 +213,16 @@ export type IconComponentProps = {
   className?: string;
   iconColor?: string;
   onClick?: () => void;
+  stroke?: string;
 };
 
 export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string; description: string }>;
-  tabId: string;
-  invalidName?: boolean;
   setName: (name: string) => void;
   setDescription: (description: string) => void;
-  setInvalidName?: (invalidName: boolean) => void;
+  invalidNameList?: string[];
 };
 
 export type TooltipProps = {
@@ -239,8 +241,15 @@ export type LoadingComponentProps = {
   remSize: number;
 };
 
-export type ContentProps = { children: ReactNode };
+export type ContentProps = {
+  children: ReactNode;
+  tolltipContent?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+};
 export type HeaderProps = { children: ReactNode; description: string };
+export type TriggerProps = {
+  children: ReactNode;
+};
 
 export interface languageMap {
   [key: string]: string | undefined;
@@ -254,7 +263,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string | boolean;
+    value: string;
     name: string;
   };
 };
@@ -264,21 +273,35 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
+  storeComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
   title: string;
   titleHeader: string;
   asChild?: boolean;
-  modalContent: string;
   modalContentTitle: string;
   cancelText: string;
   confirmationText: string;
-  children: ReactElement;
+  children: [
+    React.ReactElement<ContentProps>,
+    React.ReactElement<TriggerProps>
+  ];
   icon: string;
-  data: any;
+  data?: any;
   index: number;
   onConfirm: (index, data) => void;
+  open?: boolean;
+  onClose?: (close: boolean) => void;
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
 };
 
 export type UserManagementType = {
@@ -325,12 +348,18 @@ export type ApiKeyType = {
   onCloseModal: () => void;
 };
 
-export type ApiKeyInputType = {
-  apikeyname: string;
+export type StoreApiKeyType = {
+  children: ReactElement;
+  disabled?: boolean;
 };
 export type groupedObjType = {
   family: string;
   type: string;
+};
+
+export type nodeGroupedObjType = {
+  displayName: string;
+  node: string[] | string;
 };
 
 type test = {
@@ -493,6 +522,7 @@ export type genericModalPropsType = {
   nodeClass?: APIClassType;
   setNodeClass?: (Class: APIClassType) => void;
   children: ReactNode;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -517,8 +547,7 @@ export type groupDataType = {
 };
 
 export type cardComponentPropsType = {
-  flow: FlowType;
-  id: string;
+  data: FlowType;
   onDelete?: () => void;
   button?: JSX.Element;
 };

@@ -1,8 +1,8 @@
 import ast
 from typing import Any, Dict, List, Optional, Union
 
-from langflow.graph.vertex.base import Vertex
 from langflow.graph.utils import flatten_list
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
@@ -34,18 +34,18 @@ class AgentVertex(Vertex):
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             self._set_tools_and_chains()
             # First, build the tools
             for tool_node in self.tools:
-                tool_node.build(user_id=user_id)
+                await tool_node.build(user_id=user_id)
 
             # Next, build the chains and the rest
             for chain_node in self.chains:
-                chain_node.build(tools=self.tools, user_id=user_id)
+                await chain_node.build(tools=self.tools, user_id=user_id)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
 
         return self._built_object
 
@@ -62,13 +62,13 @@ class LLMVertex(Vertex):
     def __init__(self, data: Dict, params: Optional[Dict] = None):
         super().__init__(data, base_type="llms", params=params)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
         # or time to load. So we only load them when we need them.ß
         if self.vertex_type == self.built_node_type:
             return self.class_built_object
         if not self._built or force:
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
             self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
         # Avoid deepcopying the LLM
@@ -90,11 +90,11 @@ class WrapperVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="wrappers")
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
         return self._built_object
 
 
@@ -107,11 +107,9 @@ class DocumentLoaderVertex(Vertex):
         # show how many documents are in the list?
 
         if self._built_object:
-            avg_length = sum(
-                len(doc.page_content)
-                for doc in self._built_object
-                if hasattr(doc, "page_content")
-            ) / len(self._built_object)
+            avg_length = sum(len(doc.page_content) for doc in self._built_object if hasattr(doc, "page_content")) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
@@ -184,9 +182,7 @@ class TextSplitterVertex(Vertex):
         # show how many documents are in the list?
 
         if self._built_object:
-            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
-                self._built_object
-            )
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             \nDocuments: {self._built_object[:3]}..."""
@@ -197,7 +193,7 @@ class ChainVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="chains")
 
-    def build(
+    async def build(
         self,
         force: bool = False,
         user_id=None,
@@ -205,14 +201,20 @@ class ChainVertex(Vertex):
         **kwargs,
     ) -> Any:
         if not self._built or force:
+            # Temporarily remove the code from the params
+            self.params.pop("code", None)
             # Check if the chain requires a PromptVertex
+
+            # Temporarily remove "code" from the params
+            self.params.pop("code", None)
+
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
                     # Build the PromptVertex, passing the tools if available
                     tools = kwargs.get("tools", None)
-                    self.params[key] = value.build(tools=tools, force=force)
+                    self.params[key] = await value.build(tools=tools, force=force)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
 
         return self._built_object
 
@@ -221,7 +223,7 @@ class PromptVertex(Vertex):
     def __init__(self, data: Dict):
         super().__init__(data, base_type="prompts")
 
-    def build(
+    async def build(
         self,
         force: bool = False,
         user_id=None,
@@ -230,27 +232,18 @@ class PromptVertex(Vertex):
         **kwargs,
     ) -> Any:
         if not self._built or force:
-            if (
-                "input_variables" not in self.params
-                or self.params["input_variables"] is None
-            ):
+            if "input_variables" not in self.params or self.params["input_variables"] is None:
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = (
-                    [tool_node.build(user_id=user_id) for tool_node in tools]
-                    if tools is not None
-                    else []
-                )
+                tools = [await tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
                     tools = flatten_list(tools)
                 self.params["tools"] = tools
                 prompt_params = [
-                    key
-                    for key, value in self.params.items()
-                    if isinstance(value, str) and key != "format_instructions"
+                    key for key, value in self.params.items() if isinstance(value, str) and key != "format_instructions"
                 ]
             else:
                 prompt_params = ["template"]
@@ -260,21 +253,15 @@ class PromptVertex(Vertex):
                     prompt_text = self.params[param]
                     variables = extract_input_variables_from_prompt(prompt_text)
                     self.params["input_variables"].extend(variables)
-                self.params["input_variables"] = list(
-                    set(self.params["input_variables"])
-                )
+                self.params["input_variables"] = list(set(self.params["input_variables"]))
             elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
         return self._built_object
 
     def _built_object_repr(self):
-        if (
-            not self.artifacts
-            or self._built_object is None
-            or not hasattr(self._built_object, "format")
-        ):
+        if not self.artifacts or self._built_object is None or not hasattr(self._built_object, "format"):
             return super()._built_object_repr()
         # We'll build the prompt with the artifacts
         # to show the user what the prompt looks like
@@ -284,9 +271,7 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            if not hasattr(self._built_object, "template") and hasattr(
-                self._built_object, "prompt"
-            ):
+            if not hasattr(self._built_object, "template") and hasattr(self._built_object, "prompt"):
                 template = self._built_object.prompt.template
             else:
                 template = self._built_object.template
@@ -294,11 +279,7 @@ class PromptVertex(Vertex):
                 if value:
                     replace_key = "{" + key + "}"
                     template = template.replace(replace_key, value)
-            return (
-                template
-                if isinstance(template, str)
-                else f"{self.vertex_type}({template})"
-            )
+            return template if isinstance(template, str) else f"{self.vertex_type}({template})"
         except KeyError:
             return str(self._built_object)
 

@@ -46,34 +46,26 @@ toolkit_type_to_cls_dict: dict[str, Any] = {
 
 # Memories
 memory_type_to_cls_dict: dict[str, Any] = {
-    memory_name: import_class(f"langchain.memory.{memory_name}")
-    for memory_name in memory.__all__
+    memory_name: import_class(f"langchain.memory.{memory_name}") for memory_name in memory.__all__
 }
 
 # Wrappers
-wrapper_type_to_cls_dict: dict[str, Any] = {
-    wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]
-}
+wrapper_type_to_cls_dict: dict[str, Any] = {wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]}
 
 # Embeddings
 embedding_type_to_cls_dict: dict[str, Any] = {
-    embedding_name: import_class(f"langchain.embeddings.{embedding_name}")
-    for embedding_name in embeddings.__all__
+    embedding_name: import_class(f"langchain.embeddings.{embedding_name}") for embedding_name in embeddings.__all__
 }
 
 
 # Document Loaders
 documentloaders_type_to_cls_dict: dict[str, Any] = {
-    documentloader_name: import_class(
-        f"langchain.document_loaders.{documentloader_name}"
-    )
+    documentloader_name: import_class(f"langchain.document_loaders.{documentloader_name}")
     for documentloader_name in document_loaders.__all__
 }
 
 # Text Splitters
-textsplitter_type_to_cls_dict: dict[str, Any] = dict(
-    inspect.getmembers(text_splitter, inspect.isclass)
-)
+textsplitter_type_to_cls_dict: dict[str, Any] = dict(inspect.getmembers(text_splitter, inspect.isclass))
 
 # merge CUSTOM_AGENTS and CUSTOM_CHAINS
 CUSTOM_NODES = {**CUSTOM_AGENTS, **CUSTOM_CHAINS}  # type: ignore

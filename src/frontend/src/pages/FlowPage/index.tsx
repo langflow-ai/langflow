@@ -1,26 +1,17 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../components/headerComponent";
-import { TabsContext } from "../../contexts/tabsContext";
-import { getVersion } from "../../controllers/API";
+import { FlowsContext } from "../../contexts/flowsContext";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {
-  const { flows, tabId, setTabId } = useContext(TabsContext);
+  const { flows, tabId, setTabId, version } = useContext(FlowsContext);
   const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {
     setTabId(id!);
   }, [id]);
-
-  // Initialize state variable for the version
-  const [version, setVersion] = useState("");
-  useEffect(() => {
-    getVersion().then((data) => {
-      setVersion(data.version);
-    });
-  }, []);
 
   return (
     <>
@@ -29,7 +20,7 @@ export default function FlowPage(): JSX.Element {
         {flows.length > 0 &&
           tabId !== "" &&
           flows.findIndex((flow) => flow.id === tabId) !== -1 && (
-            <Page flow={flows.find((flow) => flow.id === tabId)!} />
+            <Page key={id} flow={flows.find((flow) => flow.id === tabId)!} />
           )}
         <a
           target={"_blank"}

@@ -1,19 +1,17 @@
 import ast
+import inspect
 import pickle
+import types
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from loguru import logger
+
 from langflow.graph.utils import UnbuiltObject
 from langflow.graph.vertex.utils import is_basic_type
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
-from loguru import logger
 from langflow.utils.util import sync_to_async
-
-
-import inspect
-import types
-from typing import Any, Dict, List, Optional
-from typing import TYPE_CHECKING
-
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
@@ -51,9 +49,7 @@ class Vertex:
                     self.params.pop(target_param, None)
                     continue
 
-                if target_param in self.params and not is_basic_type(
-                    self.params[target_param]
-                ):
+                if target_param in self.params and not is_basic_type(self.params[target_param]):
                     # edge.source.params = {}
                     edge.source._build_params()
                     edge.source._built_object = UnbuiltObject()
@@ -99,29 +95,17 @@ class Vertex:
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
-        template_dicts = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
+        template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
 
         self.required_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
-            if value["required"]
+            template_dicts[key]["type"] for key, value in template_dicts.items() if value["required"]
         ]
         self.optional_inputs = [
-            template_dicts[key]["type"]
-            for key, value in template_dicts.items()
-            if not value["required"]
+            template_dicts[key]["type"] for key, value in template_dicts.items() if not value["required"]
         ]
         # Add the template_dicts[key]["input_types"] to the optional_inputs
         self.optional_inputs.extend(
-            [
-                input_type
-                for value in template_dicts.values()
-                for input_type in value.get("input_types", [])
-            ]
+            [input_type for value in template_dicts.values() for input_type in value.get("input_types", [])]
         )
 
         template_dict = self.data["node"]["template"]
@@ -160,11 +144,7 @@ class Vertex:
         # and use that as the value for the param
         # If the type is "str", then we need to get the value of the "value" key
         # and use that as the value for the param
-        template_dict = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
+        template_dict = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
         params = self.params.copy() if self.params else {}
 
         for edge in self.edges:
@@ -209,11 +189,7 @@ class Vertex:
                     # before passing it to the build method
                     _value = value.get("value")
                     if isinstance(_value, list):
-                        params[key] = {
-                            k: v
-                            for item in value.get("value", [])
-                            for k, v in item.items()
-                        }
+                        params[key] = {k: v for item in value.get("value", []) for k, v in item.items()}
                     elif isinstance(_value, dict):
                         params[key] = _value
                 elif value.get("type") == "int" and value.get("value") is not None:
@@ -238,18 +214,18 @@ class Vertex:
         self._raw_params = params
         self.params = params
 
-    def _build(self, user_id=None):
+    async def _build(self, user_id=None):
         """
         Initiate the build process.
         """
         logger.debug(f"Building {self.vertex_type}")
-        self._build_each_node_in_params_dict(user_id)
-        self._get_and_instantiate_class(user_id)
+        await self._build_each_node_in_params_dict(user_id)
+        await self._get_and_instantiate_class(user_id)
         self._validate_built_object()
 
         self._built = True
 
-    def _build_each_node_in_params_dict(self, user_id=None):
+    async def _build_each_node_in_params_dict(self, user_id=None):
         """
         Iterates over each node in the params dictionary and builds it.
         """
@@ -258,9 +234,9 @@ class Vertex:
                 if value == self:
                     del self.params[key]
                     continue
-                self._build_node_and_update_params(key, value, user_id)
+                await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
-                self._build_list_of_nodes_and_update_params(key, value, user_id)
+                await self._build_list_of_nodes_and_update_params(key, value, user_id)
 
     def _is_node(self, value):
         """
@@ -274,7 +250,7 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    def get_result(self, user_id=None, timeout=None) -> Any:
+    async def get_result(self, user_id=None, timeout=None) -> Any:
         # Check if the Vertex was built already
         if self._built:
             return self._built_object
@@ -290,29 +266,27 @@ class Vertex:
                 pass
 
         # If there's no task_id, build the vertex locally
-        self.build(user_id)
+        await self.build(user_id)
         return self._built_object
 
-    def _build_node_and_update_params(self, key, node, user_id=None):
+    async def _build_node_and_update_params(self, key, node, user_id=None):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
 
-        result = node.get_result(user_id)
+        result = await node.get_result(user_id)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
 
-    def _build_list_of_nodes_and_update_params(
-        self, key, nodes: List["Vertex"], user_id=None
-    ):
+    async def _build_list_of_nodes_and_update_params(self, key, nodes: List["Vertex"], user_id=None):
         """
         Iterates over a list of nodes, builds each and updates the params dictionary.
         """
         self.params[key] = []
         for node in nodes:
-            built = node.get_result(user_id)
+            built = await node.get_result(user_id)
             if isinstance(built, list):
                 if key not in self.params:
                     self.params[key] = []
@@ -342,14 +316,14 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    def _get_and_instantiate_class(self, user_id=None):
+    async def _get_and_instantiate_class(self, user_id=None):
         """
         Gets the class from a dictionary and instantiates it with the params.
         """
         if self.base_type is None:
             raise ValueError(f"Base type for node {self.vertex_type} not found")
         try:
-            result = loading.instantiate_class(
+            result = await loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
@@ -358,9 +332,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
-            raise ValueError(
-                f"Error building node {self.vertex_type}: {str(exc)}"
-            ) from exc
+            raise ValueError(f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -384,9 +356,9 @@ class Vertex:
 
             raise ValueError(message)
 
-    def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
-            self._build(user_id, *args, **kwargs)
+            await self._build(user_id, *args, **kwargs)
 
         return self._built_object
 
@@ -408,8 +380,4 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return (
-            "Built sucessfully ✨"
-            if self._built_object is not None
-            else "Failed to build 😵‍💫"
-        )
+        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"

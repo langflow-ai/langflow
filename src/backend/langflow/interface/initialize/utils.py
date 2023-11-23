@@ -30,9 +30,7 @@ def check_tools_in_params(params: Dict):
 
 
 def instantiate_from_template(class_object, params: Dict):
-    from_template_params = {
-        "template": params.pop("prompt", params.pop("template", ""))
-    }
+    from_template_params = {"template": params.pop("prompt", params.pop("template", ""))}
     if not from_template_params.get("template"):
         raise ValueError("Prompt template is required")
     return class_object.from_template(**from_template_params)
@@ -48,9 +46,7 @@ def handle_format_kwargs(prompt, params: Dict):
 
 def handle_partial_variables(prompt, format_kwargs: Dict):
     partial_variables = format_kwargs.copy()
-    partial_variables = {
-        key: value for key, value in partial_variables.items() if value
-    }
+    partial_variables = {key: value for key, value in partial_variables.items() if value}
     # Remove handle_keys otherwise LangChain raises an error
     partial_variables.pop("handle_keys", None)
     if partial_variables and hasattr(prompt, "partial"):
@@ -62,9 +58,7 @@ def handle_variable(params: Dict, input_variable: str, format_kwargs: Dict):
     variable = params[input_variable]
     if isinstance(variable, str):
         format_kwargs[input_variable] = variable
-    elif isinstance(variable, BaseOutputParser) and hasattr(
-        variable, "get_format_instructions"
-    ):
+    elif isinstance(variable, BaseOutputParser) and hasattr(variable, "get_format_instructions"):
         format_kwargs[input_variable] = variable.get_format_instructions()
     elif is_instance_of_list_or_document(variable):
         format_kwargs = format_document(variable, input_variable, format_kwargs)
@@ -107,8 +101,7 @@ def try_to_load_json(content):
 
 def needs_handle_keys(variable):
     return is_instance_of_list_or_document(variable) or (
-        isinstance(variable, BaseOutputParser)
-        and hasattr(variable, "get_format_instructions")
+        isinstance(variable, BaseOutputParser) and hasattr(variable, "get_format_instructions")
     )
 
 

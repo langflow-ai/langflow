@@ -1,4 +1,4 @@
-from langflow.services.task.manager import TaskService
+from langflow.services.task.service import TaskService
 from langflow.services.factory import ServiceFactory
 
 

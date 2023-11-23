@@ -47,10 +47,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
             **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
             **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
-            **{
-                t: types.CustomComponentVertex
-                for t in custom_component_creator.to_list()
-            },
+            **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
         }
 
