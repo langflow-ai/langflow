@@ -1,33 +1,29 @@
 from http import HTTPStatus
 from typing import Annotated, Optional, Union
-from langflow.services.auth.utils import api_key_security, get_current_active_user
 
-
-from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow import Flow
-from langflow.processing.process import process_graph_cached, process_tweaks
-from langflow.services.database.models.user.user import User
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-)
-from loguru import logger
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, Body, status
 import sqlalchemy as sa
-from langflow.interface.custom.custom_component import CustomComponent
-
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from loguru import logger
 
 from langflow.api.v1.schemas import (
+    CustomComponentCode,
     ProcessResponse,
     TaskResponse,
     TaskStatusResponse,
     UploadFileResponse,
-    CustomComponentCode,
 )
-
-
-from langflow.services.deps import get_session
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.processing.process import process_graph_cached, process_tweaks
+from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.user.user import User
+from langflow.services.deps import (
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -38,7 +34,6 @@ except ImportError:
 
 
 from sqlmodel import Session
-
 
 from langflow.services.task.service import TaskService
 
@@ -217,6 +212,6 @@ async def custom_component(
     )
 
     extractor = CustomComponent(code=raw_code.code)
-    extractor.is_check_valid()
+    extractor.validate()
 
     return build_langchain_template_custom_component(extractor, user_id=user.id)
