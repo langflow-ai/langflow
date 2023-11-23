@@ -6,12 +6,13 @@ from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
+from sqlmodel import Session
+
 from langflow.services.database.models.api_key.api_key import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.user import User
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -323,6 +324,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     fernet = get_fernet(settings_service)
     # Two-way decryption
     if isinstance(encrypted_api_key, str):
-        encrypted_api_key = encrypted_api_key.encode()
-    decrypted_key = fernet.decrypt(encrypted_api_key).decode()
+        encoded_bytes = encrypted_api_key.encode()
+    else:
+        encoded_bytes = encrypted_api_key
+    decrypted_key = fernet.decrypt(encoded_bytes).decode()
     return decrypted_key
