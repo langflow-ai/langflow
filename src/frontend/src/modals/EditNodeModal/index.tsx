@@ -57,7 +57,7 @@ const EditNodeModal = forwardRef(
   ) => {
     const updateNodeInternals = useUpdateNodeInternals();
 
-    const myData = useRef(data);
+    let myData = useRef(data);
 
     const { setTabsState, tabId } = useContext(FlowsContext);
     const { reactFlowInstance } = useContext(typesContext);
@@ -69,6 +69,10 @@ const EditNodeModal = forwardRef(
     function changeAdvanced(n) {
       myData.current.node!.template[n].advanced =
         !myData.current.node!.template[n].advanced;
+
+      myData.current = {
+        ...myData.current,
+      };
       setAdv(!adv);
     }
 
