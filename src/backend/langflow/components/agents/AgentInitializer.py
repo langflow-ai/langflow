@@ -6,6 +6,10 @@ from langflow.field_typing import BaseChatMemory, BaseLanguageModel, Tool
 
 
 class AgentInitializerComponent(CustomComponent):
+    display_name: str = "Agent Initializer"
+    description: str = f"Initialize an agent of type: {types.AGENT_TO_CLASS.keys()}"
+    documentation: str = "https://python.langchain.com/docs/modules/agents/agent_types/"
+
     def build_config(self):
         agents = list(types.AGENT_TO_CLASS.keys())
         # field_type and required are optional
