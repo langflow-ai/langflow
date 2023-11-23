@@ -13,7 +13,7 @@ test("FloatComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="sideLlamaCpp"]')
+    .locator('//*[@id="llmsLlamaCpp"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -41,7 +41,7 @@ test("FloatComponent", async ({ page }) => {
       '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]/div'
     )
     .click();
-  await page.locator('//*[@id="editAdvancedIcon"]').click();
+  await page.getByTestId("more-options-modal").click();
 
   await page.locator('//*[@id="showcache"]').click();
   expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();

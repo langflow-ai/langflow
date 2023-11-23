@@ -173,6 +173,7 @@ export default function NodeToolbarComponent({
               <SelectTrigger>
                 <div>
                   <div
+                    data-testid="more-options-modal"
                     className={classNames(
                       "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
                         (nodeLength == 0
