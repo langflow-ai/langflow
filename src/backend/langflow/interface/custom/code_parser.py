@@ -4,8 +4,9 @@ import operator
 import traceback
 from typing import Any, Dict, List, Type, Union
 
-from cachetools import TTLCache, cachedmethod
+from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
+
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -17,6 +18,13 @@ def get_data_type():
     from langflow.field_typing import Data
 
     return Data
+
+
+def imports_key(*args, **kwargs):
+    imports = kwargs.pop("imports")
+    key = keys.methodkey(*args, **kwargs)
+    key += tuple(imports)
+    return key
 
 
 class CodeParser:
@@ -105,8 +113,7 @@ class CodeParser:
         return arg_dict
 
     @cachedmethod(operator.attrgetter("cache"))
-    @staticmethod
-    def construct_eval_env(return_type_str: str, imports) -> dict:
+    def construct_eval_env(self, return_type_str: str, imports) -> dict:
         """
         Constructs an evaluation environment with the necessary imports for the return type,
         taking into account module aliases.
@@ -127,7 +134,7 @@ class CodeParser:
                     exec(f"import {module} as {alias if alias else module}", eval_env)
         return eval_env
 
-    @cachedmethod(operator.attrgetter("cache"))
+    @cachedmethod(cache=operator.attrgetter("cache"))
     def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """
         Extracts details from a single function or method node.
@@ -135,7 +142,7 @@ class CodeParser:
         return_type = None
         if node.returns:
             return_type_str = ast.unparse(node.returns)
-            eval_env = self.construct_eval_env(return_type_str, self.data["imports"])
+            eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
             try:
                 return_type = eval(return_type_str, eval_env)
