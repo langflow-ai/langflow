@@ -6,6 +6,7 @@ import warnings
 from typing import Any, List, Optional, Union
 from uuid import UUID
 
+from cachetools import LRUCache, cached
 from fastapi import HTTPException
 from loguru import logger
 
@@ -49,6 +50,7 @@ def get_type_list():
     return all_types
 
 
+@cached(LRUCache(maxsize=1))
 def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     """Build a dictionary of all langchain types"""
     all_types = {}
