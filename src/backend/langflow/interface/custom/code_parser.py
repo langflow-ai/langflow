@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -105,13 +104,15 @@ class CodeParser:
             arg_dict["type"] = ast.unparse(arg.annotation)
         return arg_dict
 
-    def construct_eval_env(self, return_type_str: str) -> dict:
+    @cachedmethod(operator.attrgetter("cache"))
+    @staticmethod
+    def construct_eval_env(return_type_str: str, imports) -> dict:
         """
         Constructs an evaluation environment with the necessary imports for the return type,
         taking into account module aliases.
         """
         eval_env: dict = {}
-        for import_entry in self.data["imports"]:
+        for import_entry in imports:
             if isinstance(import_entry, tuple):  # from module import name
                 module, name = import_entry
                 if name in return_type_str:
@@ -134,7 +135,7 @@ class CodeParser:
         return_type = None
         if node.returns:
             return_type_str = ast.unparse(node.returns)
-            eval_env = self.construct_eval_env(return_type_str)
+            eval_env = self.construct_eval_env(return_type_str, self.data["imports"])
 
             try:
                 return_type = eval(return_type_str, eval_env)
