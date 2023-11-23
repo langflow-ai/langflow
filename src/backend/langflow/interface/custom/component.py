@@ -1,6 +1,8 @@
 import ast
+import operator
 from typing import Any, ClassVar, Optional
 
+from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
 from langflow.interface.custom.code_parser import CodeParser
@@ -24,9 +26,11 @@ class Component:
     field_config: dict = {}
 
     def __init__(self, **data):
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             setattr(self, key, value)
 
+    @cachedmethod(operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
         parser = CodeParser(code)
         return parser.parse_code()
