@@ -4,6 +4,7 @@ import traceback
 from typing import Any, Dict, List, Type, Union
 
 from fastapi import HTTPException
+
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -106,7 +107,7 @@ class CodeParser:
         Constructs an evaluation environment with the necessary imports for the return type,
         taking into account module aliases.
         """
-        eval_env = {}
+        eval_env: dict = {}
         for import_entry in self.data["imports"]:
             if isinstance(import_entry, tuple):  # from module import name
                 module, name = import_entry
