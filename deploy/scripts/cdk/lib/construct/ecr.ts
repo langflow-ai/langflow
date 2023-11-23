@@ -49,7 +49,7 @@ export class EcrRepository extends Construct {
     const dockerFrontEndImageAsset = new DockerImageAsset(this, "DockerFrontEndImageAsset", {
       directory: frontendPath,
       buildArgs:{
-        "BACKEND_URL":`http://${props.cloudmapNamespace.namespaceName}:7860`
+        "BACKEND_URL":`http://backend.${props.cloudmapNamespace.namespaceName}:7860`
       },
       exclude: excludeDir,
       platform: imagePlatform,
