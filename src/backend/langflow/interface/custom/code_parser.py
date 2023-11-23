@@ -65,14 +65,20 @@ class CodeParser:
 
     def parse_imports(self, node: Union[ast.Import, ast.ImportFrom]) -> None:
         """
-        Extracts "imports" from the code.
+        Extracts "imports" from the code, including aliases.
         """
         if isinstance(node, ast.Import):
             for alias in node.names:
-                self.data["imports"].append(alias.name)
+                if alias.asname:
+                    self.data["imports"].append(f"{alias.name} as {alias.asname}")
+                else:
+                    self.data["imports"].append(alias.name)
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
-                self.data["imports"].append((node.module, alias.name))
+                if alias.asname:
+                    self.data["imports"].append((node.module, f"{alias.name} as {alias.asname}"))
+                else:
+                    self.data["imports"].append((node.module, alias.name))
 
     def parse_functions(self, node: ast.FunctionDef) -> None:
         """
@@ -89,16 +95,48 @@ class CodeParser:
             arg_dict["type"] = ast.unparse(arg.annotation)
         return arg_dict
 
+    def construct_eval_env(self, return_type_str: str) -> dict:
+        """
+        Constructs an evaluation environment with the necessary imports for the return type,
+        taking into account module aliases.
+        """
+        eval_env = {}
+        for import_entry in self.data["imports"]:
+            if isinstance(import_entry, tuple):  # from module import name
+                module, name = import_entry
+                if name in return_type_str:
+                    exec(f"import {module}", eval_env)
+                    exec(f"from {module} import {name}", eval_env)
+            else:  # import module
+                module = import_entry
+                alias = None
+                if " as " in module:
+                    module, alias = module.split(" as ")
+                if module in return_type_str or (alias and alias in return_type_str):
+                    exec(f"import {module} as {alias if alias else module}", eval_env)
+        return eval_env
+
     def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """
         Extracts details from a single function or method node.
         """
+        return_type = None
+        if node.returns:
+            return_type_str = ast.unparse(node.returns)
+            eval_env = self.construct_eval_env(return_type_str)
+
+            try:
+                return_type = eval(return_type_str, eval_env)
+            except NameError:
+                # Handle cases where the type is not found in the constructed environment
+                pass
+
         func = CallableCodeDetails(
             name=node.name,
             doc=ast.get_docstring(node),
             args=[],
             body=[],
-            return_type=ast.unparse(node.returns) if node.returns else None,
+            return_type=return_type,
         )
 
         func.args = self.parse_function_args(node)
