@@ -1,13 +1,14 @@
-from typing import List
+from typing import Callable, List, Union
 
 from langchain.agents import AgentExecutor, AgentType, initialize_agent, types
+
 from langflow import CustomComponent
 from langflow.field_typing import BaseChatMemory, BaseLanguageModel, Tool
 
 
 class AgentInitializerComponent(CustomComponent):
     display_name: str = "Agent Initializer"
-    description: str = f"Initialize an agent of type: {types.AGENT_TO_CLASS.keys()}"
+    description: str = "Initialize a Langchain Agent."
     documentation: str = "https://python.langchain.com/docs/modules/agents/agent_types/"
 
     def build_config(self):
@@ -23,7 +24,7 @@ class AgentInitializerComponent(CustomComponent):
 
     def build(
         self, agent: str, llm: BaseLanguageModel, memory: BaseChatMemory, tools: List[Tool], max_iterations: int
-    ) -> AgentExecutor:
+    ) -> Union[AgentExecutor, Callable]:
         agent = AgentType(agent)
         return initialize_agent(
             tools=tools,
