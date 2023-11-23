@@ -1,17 +1,15 @@
-from langflow import CustomComponent
 from typing import Optional
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.tools import Tool
-from langchain.schema.memory import BaseMemory
-from langchain.chat_models import ChatOpenAI
 
 from langchain.agents.agent import AgentExecutor
+from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import _get_default_system_message
 from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
+from langchain.chat_models import ChatOpenAI
 from langchain.memory.token_buffer import ConversationTokenBufferMemory
+from langchain.prompts import SystemMessagePromptTemplate
 from langchain.prompts.chat import MessagesPlaceholder
-from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import (
-    _get_default_system_message,
-)
+from langchain.schema.memory import BaseMemory
+from langchain.tools import Tool
+from langflow import CustomComponent
 
 
 class ConversationalAgent(CustomComponent):
@@ -51,8 +49,8 @@ class ConversationalAgent(CustomComponent):
     ) -> AgentExecutor:
         llm = ChatOpenAI(
             model=model_name,
-            openai_api_key=openai_api_key,
-            openai_api_base=openai_api_base,
+            api_key=openai_api_key,
+            base_url=openai_api_base,
         )
         if not memory:
             memory_key = "chat_history"
