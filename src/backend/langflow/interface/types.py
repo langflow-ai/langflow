@@ -234,7 +234,7 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
 
 def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
-    if function_args is None or function_args == "":
+    if not function_args:
         return
 
     # sort function_args which is a list of dicts
