@@ -1,7 +1,9 @@
+import operator
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
 import yaml
+from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
@@ -29,6 +31,7 @@ class CustomComponent(Component):
     status: Optional[str] = None
 
     def __init__(self, **data):
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
 
     @property
@@ -78,25 +81,10 @@ class CustomComponent(Component):
         return super().get_code_tree(code)
 
     @property
-    def get_function_entrypoint_args(self) -> str:
-        if not self.code:
-            return ""
-        tree = self.get_code_tree(self.code)
-
-        component_classes = [cls for cls in tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
-        if not component_classes:
-            return ""
-
-        # Assume the first Component class is the one we're interested in
-        component_class = component_classes[0]
-        build_methods = [
-            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
-        ]
-
-        if not build_methods:
-            return ""
-
-        build_method = build_methods[0]
+    def get_function_entrypoint_args(self) -> list:
+        build_method = self.get_build_method()
+        if not build_method:
+            return []
 
         args = build_method["args"]
         for arg in args:
@@ -115,8 +103,8 @@ class CustomComponent(Component):
                 arg["type"] = "Data"
         return args
 
-    @property
-    def get_function_entrypoint_return_type(self) -> List[str]:
+    @cachedmethod(operator.attrgetter("cache"))
+    def get_build_method(self):
         if not self.code:
             return []
         tree = self.get_code_tree(self.code)
@@ -134,7 +122,13 @@ class CustomComponent(Component):
         if not build_methods:
             return []
 
-        build_method = build_methods[0]
+        return build_methods[0]
+
+    @property
+    def get_function_entrypoint_return_type(self) -> List[str]:
+        build_method = self.get_build_method()
+        if not build_method:
+            return build_method
         return_type = build_method["return_type"]
         if not return_type:
             return []
