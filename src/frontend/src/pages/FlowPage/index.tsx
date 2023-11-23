@@ -20,7 +20,7 @@ export default function FlowPage(): JSX.Element {
         {flows.length > 0 &&
           tabId !== "" &&
           flows.findIndex((flow) => flow.id === tabId) !== -1 && (
-            <Page key={id} flow={flows.find((flow) => flow.id === tabId)!} />
+            <Page flow={flows.find((flow) => flow.id === tabId)!} />
           )}
         <a
           target={"_blank"}
