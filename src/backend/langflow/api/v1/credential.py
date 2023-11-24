@@ -2,12 +2,12 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 from sqlmodel import Session
-from langflow.services.auth import utils as auth_utils
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 
@@ -22,6 +22,15 @@ def create_credential(
 ):
     """Create a new credential."""
     try:
+        # check if credential name already exists
+        credential_exists = (
+            session.query(Credential)
+            .filter(Credential.name == credential.name, Credential.user_id == current_user.id)
+            .first()
+        )
+        if credential_exists:
+            raise HTTPException(status_code=400, detail="Credential name already exists")
+
         db_credential = Credential.model_validate(credential, from_attributes=True)
         if not db_credential.value:
             raise HTTPException(status_code=400, detail="Credential value cannot be empty")
@@ -33,6 +42,8 @@ def create_credential(
         session.refresh(db_credential)
         return db_credential
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
