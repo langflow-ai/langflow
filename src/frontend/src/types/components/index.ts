@@ -70,6 +70,7 @@ export type KeyPairListComponentType = {
   duplicateKey?: boolean;
   advanced?: boolean | null;
   dataValue?: any;
+  editNodeModal?: boolean;
 };
 
 export type DictComponentType = {

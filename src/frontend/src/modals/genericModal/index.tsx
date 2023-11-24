@@ -308,6 +308,7 @@ export default function GenericModal({
               )}
             </div>
             <Button
+              data-testid="genericModalBtnSave"
               id="genericModalBtnSave"
               disabled={readonly}
               onClick={() => {
