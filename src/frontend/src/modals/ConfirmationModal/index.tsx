@@ -36,9 +36,14 @@ function ConfirmationModal({
   size,
   open,
   onClose,
+  onCancel,
 }: ConfirmationModalType) {
   const Icon: any = nodeIconsLucide[icon];
   const [modalOpen, setModalOpen] = useState(open ?? false);
+
+  useEffect(() => {
+    if (open) setModalOpen(open);
+  }, [open]);
 
   useEffect(() => {
     if (onClose) onClose!(modalOpen);
@@ -86,6 +91,7 @@ function ConfirmationModal({
           className="mt-5"
           variant="outline"
           onClick={() => {
+            if (onCancel) onCancel();
             setModalOpen(false);
           }}
         >

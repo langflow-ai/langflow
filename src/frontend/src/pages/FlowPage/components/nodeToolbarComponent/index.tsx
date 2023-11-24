@@ -10,6 +10,8 @@ import {
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
 import { FlowsContext } from "../../../../contexts/flowsContext";
+import { StoreContext } from "../../../../contexts/storeContext";
+import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
 import { nodeToolbarPropsType } from "../../../../types/components";
@@ -21,7 +23,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
-import { StoreContext } from "../../../../contexts/storeContext";
 
 export default function NodeToolbarComponent({
   data,
@@ -51,7 +52,7 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
-  const {hasApiKey} = useContext(StoreContext)
+  const { hasApiKey } = useContext(StoreContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -64,17 +65,23 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent, version } = useContext(FlowsContext);
+  const { paste, saveComponent, version, flows } = useContext(FlowsContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
 
   const [flowComponent, setFlowComponent] = useState<FlowType>();
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [data]);
+
+  function onOverrideModalConfirmation(override: boolean): void {
+    if (override) saveComponent(cloneDeep(data), true);
+    saveComponent(cloneDeep(data), false);
+  }
 
   const handleSelectChange = (event) => {
     switch (event) {
@@ -89,10 +96,10 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data), version));
         break;
       case "Share":
-        if(hasApiKey) setShowconfirmShare(true);
+        if (hasApiKey) setShowconfirmShare(true);
         break;
       case "SaveAll":
-        saveComponent(cloneDeep(data));
+        saveComponent(cloneDeep(data), false);
         break;
       case "disabled":
         break;
@@ -100,8 +107,15 @@ export default function NodeToolbarComponent({
         updateFlowPosition(position, data.node?.flow!);
         expandGroupNode(data, reactFlowInstance, getNodeId);
         break;
+      case "override":
+        setShowOverrideModal(true);
+        break;
     }
   };
+
+  const isSaved = flows.some((flow) =>
+    Object.values(flow).includes(data.node?.display_name!)
+  );
 
   return (
     <>
@@ -204,24 +218,38 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem value={"SaveAll"}>
-                <div className="flex">
-                  <IconComponent
-                    name="SaveAll"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Save{" "}
-                </div>{" "}
-              </SelectItem>
-              {hasApiKey && <SelectItem value={"Share"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Share2"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Share{" "}
-                </div>{" "}
-              </SelectItem>}
+              {isSaved ? (
+                <SelectItem value={"override"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="SaveAll"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Save{" "}
+                  </div>{" "}
+                </SelectItem>
+              ) : (
+                <SelectItem value={"SaveAll"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="SaveAll"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Save{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
+              {hasApiKey && (
+                <SelectItem value={"Share"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="Share2"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Share{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
               <SelectItem value={"Download"}>
                 <div className="flex">
                   <IconComponent
@@ -255,6 +283,32 @@ export default function NodeToolbarComponent({
               )}
             </SelectContent>
           </Select>
+
+          <ConfirmationModal
+            asChild
+            open={showOverrideModal}
+            title={`Replace ${data.node?.display_name}`}
+            titleHeader={`Please, confirm your save actions`}
+            modalContentTitle="Attention!"
+            cancelText="New"
+            confirmationText="Replace"
+            icon={"SaveAll"}
+            index={6}
+            onConfirm={(index, user) => {
+              saveComponent(cloneDeep(data), true);
+            }}
+            onClose={setShowOverrideModal}
+            onCancel={() => saveComponent(cloneDeep(data), false)}
+          >
+            <ConfirmationModal.Content>
+              <span>
+                It seems {data.node?.display_name} already exists. Replacing it
+                will switch the current component. Proceed with replacement?
+              </span>
+            </ConfirmationModal.Content>
+            <ConfirmationModal.Trigger>
+            </ConfirmationModal.Trigger>
+          </ConfirmationModal>
           <EditNodeModal
             data={data}
             setData={setData}

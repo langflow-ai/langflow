@@ -9,7 +9,10 @@ import {
   XYPosition,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { LANGFLOW_SUPPORTED_TYPES, specialCharsRegex } from "../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  specialCharsRegex,
+} from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
   FlowType,

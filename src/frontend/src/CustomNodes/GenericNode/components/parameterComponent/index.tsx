@@ -22,7 +22,10 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import { LANGFLOW_SUPPORTED_TYPES, TOOLTIP_EMPTY } from "../../../../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  TOOLTIP_EMPTY,
+} from "../../../../constants/constants";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -222,9 +225,7 @@ export default function ParameterComponent({
   }, [tooltipTitle, flow]);
 
   return !showNode ? (
-    left &&
-    (LANGFLOW_SUPPORTED_TYPES.has(type??"")) &&
-    !optionalHandle ? (
+    left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
       <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -297,9 +298,7 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
-        {left &&
-        (LANGFLOW_SUPPORTED_TYPES.has(type??"")) &&
-        !optionalHandle ? (
+        {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">

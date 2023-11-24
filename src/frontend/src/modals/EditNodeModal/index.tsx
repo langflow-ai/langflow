@@ -25,7 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { LANGFLOW_SUPPORTED_TYPES, limitScrollFieldsModal } from "../../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  limitScrollFieldsModal,
+} from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -145,7 +148,9 @@ const EditNodeModal = forwardRef(
                           (templateParam) =>
                             templateParam.charAt(0) !== "_" &&
                             myData.current.node?.template[templateParam].show &&
-                            (LANGFLOW_SUPPORTED_TYPES.has(myData.current.node.template[templateParam].type))
+                            LANGFLOW_SUPPORTED_TYPES.has(
+                              myData.current.node.template[templateParam].type
+                            )
                         )
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
