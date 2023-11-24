@@ -22,7 +22,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES, TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { ParameterComponentType } from "../../../../types/components";
@@ -223,15 +223,7 @@ export default function ParameterComponent({
 
   return !showNode ? (
     left &&
-    (type === "str" ||
-      type === "bool" ||
-      type === "float" ||
-      type === "code" ||
-      type === "prompt" ||
-      type === "file" ||
-      type === "int" ||
-      type === "dict" ||
-      type === "NestedDict") &&
+    (LANGFLOW_SUPPORTED_TYPES.has(type??"")) &&
     !optionalHandle ? (
       <></>
     ) : (
@@ -306,15 +298,7 @@ export default function ParameterComponent({
           </div>
         </div>
         {left &&
-        (type === "str" ||
-          type === "bool" ||
-          type === "float" ||
-          type === "code" ||
-          type === "prompt" ||
-          type === "file" ||
-          type === "int" ||
-          type === "dict" ||
-          type === "NestedDict") &&
+        (LANGFLOW_SUPPORTED_TYPES.has(type??"")) &&
         !optionalHandle ? (
           <></>
         ) : (

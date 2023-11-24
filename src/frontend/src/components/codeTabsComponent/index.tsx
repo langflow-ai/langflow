@@ -40,6 +40,7 @@ import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import KeypairListComponent from "../keypairListComponent";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
 
 export default function CodeTabsComponent({
   flow,
@@ -218,126 +219,68 @@ export default function CodeTabsComponent({
                       {tweaks?.tweaksList!.current.includes(
                         node["data"]["id"]
                       ) && (
-                        <AccordionComponent
-                          trigger={node["data"]["id"]}
-                          open={openAccordion}
-                          keyValue={node["data"]["id"]}
-                        >
-                          <div className="api-modal-table-arrangement">
-                            <Table className="table-fixed bg-muted outline-1">
-                              <TableHeader className="h-10 border-input text-xs font-medium text-ring">
-                                <TableRow className="dark:border-b-muted">
-                                  <TableHead className="h-7 text-center">
-                                    PARAM
-                                  </TableHead>
-                                  <TableHead className="h-7 p-0 text-center">
-                                    VALUE
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody className="p-0">
-                                {Object.keys(node["data"]["node"]["template"])
-                                  .filter(
-                                    (templateField) =>
-                                      templateField.charAt(0) !== "_" &&
-                                      node.data.node.template[templateField]
-                                        .show &&
-                                      (node.data.node.template[templateField]
-                                        .type === "str" ||
+                          <AccordionComponent
+                            trigger={node["data"]["id"]}
+                            open={openAccordion}
+                            keyValue={node["data"]["id"]}
+                          >
+                            <div className="api-modal-table-arrangement">
+                              <Table className="table-fixed bg-muted outline-1">
+                                <TableHeader className="h-10 border-input text-xs font-medium text-ring">
+                                  <TableRow className="dark:border-b-muted">
+                                    <TableHead className="h-7 text-center">
+                                      PARAM
+                                    </TableHead>
+                                    <TableHead className="h-7 p-0 text-center">
+                                      VALUE
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody className="p-0">
+                                  {Object.keys(node["data"]["node"]["template"])
+                                    .filter(
+                                      (templateField) =>
+                                        templateField.charAt(0) !== "_" &&
                                         node.data.node.template[templateField]
-                                          .type === "bool" ||
-                                        node.data.node.template[templateField]
-                                          .type === "float" ||
-                                        node.data.node.template[templateField]
-                                          .type === "code" ||
-                                        node.data.node.template[templateField]
-                                          .type === "prompt" ||
-                                        node.data.node.template[templateField]
-                                          .type === "file" ||
-                                        node.data.node.template[templateField]
-                                          .type === "int" ||
-                                        node.data.node.template[templateField]
-                                          .type === "dict" ||
-                                        node.data.node.template[templateField]
-                                          .type === "NestedDict")
-                                  )
-                                  .map((templateField, indx) => {
-                                    return (
-                                      <TableRow
-                                        key={indx}
-                                        className="h-10 dark:border-b-muted"
-                                      >
-                                        <TableCell className="p-0 text-center text-sm text-foreground">
-                                          {templateField}
-                                        </TableCell>
-                                        <TableCell className="p-0 text-xs text-foreground">
-                                          <div className="m-auto w-[250px]">
-                                            {node.data.node.template[
-                                              templateField
-                                            ].type === "str" &&
-                                            !node.data.node.template[
-                                              templateField
-                                            ].options ? (
-                                              <div className="mx-auto">
-                                                {node.data.node.template[
+                                          .show &&
+                                        (LANGFLOW_SUPPORTED_TYPES.has(node.data.node.template[templateField].type))
+                                    )
+                                    .map((templateField, indx) => {
+                                      return (
+                                        <TableRow
+                                          key={indx}
+                                          className="h-10 dark:border-b-muted"
+                                        >
+                                          <TableCell className="p-0 text-center text-sm text-foreground">
+                                            {templateField}
+                                          </TableCell>
+                                          <TableCell className="p-0 text-xs text-foreground">
+                                            <div className="m-auto w-[250px]">
+                                              {node.data.node.template[
+                                                templateField
+                                              ].type === "str" &&
+                                                !node.data.node.template[
                                                   templateField
-                                                ].list ? (
-                                                  <InputListComponent
-                                                    editNode={true}
-                                                    disabled={false}
-                                                    value={
-                                                      !node.data.node.template[
-                                                        templateField
-                                                      ].value ||
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].value === ""
-                                                        ? [""]
-                                                        : node.data.node
+                                                ].options ? (
+                                                <div className="mx-auto">
+                                                  {node.data.node.template[
+                                                    templateField
+                                                  ].list ? (
+                                                    <InputListComponent
+                                                      editNode={true}
+                                                      disabled={false}
+                                                      value={
+                                                        !node.data.node.template[
+                                                          templateField
+                                                        ].value ||
+                                                          node.data.node.template[
+                                                            templateField
+                                                          ].value === ""
+                                                          ? [""]
+                                                          : node.data.node
                                                             .template[
                                                             templateField
                                                           ].value
-                                                    }
-                                                    onChange={(target) => {
-                                                      setData((old) => {
-                                                        let newInputList =
-                                                          cloneDeep(old);
-                                                        newInputList![
-                                                          i
-                                                        ].data.node.template[
-                                                          templateField
-                                                        ].value = target;
-                                                        return newInputList;
-                                                      });
-                                                      tweaks.buildTweakObject!(
-                                                        node["data"]["id"],
-                                                        target,
-                                                        node.data.node.template[
-                                                          templateField
-                                                        ]
-                                                      );
-                                                    }}
-                                                  />
-                                                ) : node.data.node.template[
-                                                    templateField
-                                                  ].multiline ? (
-                                                  <div>
-                                                    <TextAreaComponent
-                                                      disabled={false}
-                                                      editNode={true}
-                                                      value={
-                                                        !node.data.node
-                                                          .template[
-                                                          templateField
-                                                        ].value ||
-                                                        node.data.node.template[
-                                                          templateField
-                                                        ].value === ""
-                                                          ? ""
-                                                          : node.data.node
-                                                              .template[
-                                                              templateField
-                                                            ].value
                                                       }
                                                       onChange={(target) => {
                                                         setData((old) => {
@@ -353,35 +296,183 @@ export default function CodeTabsComponent({
                                                         tweaks.buildTweakObject!(
                                                           node["data"]["id"],
                                                           target,
-                                                          node.data.node
-                                                            .template[
-                                                            templateField
+                                                          node.data.node.template[
+                                                          templateField
                                                           ]
                                                         );
                                                       }}
                                                     />
-                                                  </div>
-                                                ) : (
-                                                  <InputComponent
-                                                    editNode={true}
-                                                    disabled={false}
-                                                    password={
+                                                  ) : node.data.node.template[
+                                                    templateField
+                                                  ].multiline ? (
+                                                    <div>
+                                                      <TextAreaComponent
+                                                        disabled={false}
+                                                        editNode={true}
+                                                        value={
+                                                          !node.data.node
+                                                            .template[
+                                                            templateField
+                                                          ].value ||
+                                                            node.data.node.template[
+                                                              templateField
+                                                            ].value === ""
+                                                            ? ""
+                                                            : node.data.node
+                                                              .template[
+                                                              templateField
+                                                            ].value
+                                                        }
+                                                        onChange={(target) => {
+                                                          setData((old) => {
+                                                            let newInputList =
+                                                              cloneDeep(old);
+                                                            newInputList![
+                                                              i
+                                                            ].data.node.template[
+                                                              templateField
+                                                            ].value = target;
+                                                            return newInputList;
+                                                          });
+                                                          tweaks.buildTweakObject!(
+                                                            node["data"]["id"],
+                                                            target,
+                                                            node.data.node
+                                                              .template[
+                                                            templateField
+                                                            ]
+                                                          );
+                                                        }}
+                                                      />
+                                                    </div>
+                                                  ) : (
+                                                    <InputComponent
+                                                      editNode={true}
+                                                      disabled={false}
+                                                      password={
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].password ?? false
+                                                      }
+                                                      value={
+                                                        !node.data.node.template[
+                                                          templateField
+                                                        ].value ||
+                                                          node.data.node.template[
+                                                            templateField
+                                                          ].value === ""
+                                                          ? ""
+                                                          : node.data.node
+                                                            .template[
+                                                            templateField
+                                                          ].value
+                                                      }
+                                                      onChange={(target) => {
+                                                        setData((old) => {
+                                                          let newInputList =
+                                                            cloneDeep(old);
+                                                          newInputList![
+                                                            i
+                                                          ].data.node.template[
+                                                            templateField
+                                                          ].value = target;
+                                                          return newInputList;
+                                                        });
+                                                        tweaks.buildTweakObject!(
+                                                          node["data"]["id"],
+                                                          target,
+                                                          node.data.node.template[
+                                                          templateField
+                                                          ]
+                                                        );
+                                                      }}
+                                                    />
+                                                  )}
+                                                </div>
+                                              ) : node.data.node.template[
+                                                templateField
+                                              ].type === "bool" ? (
+                                                <div className="ml-auto">
+                                                  {" "}
+                                                  <ToggleShadComponent
+                                                    enabled={
                                                       node.data.node.template[
                                                         templateField
-                                                      ].password ?? false
+                                                      ].value
                                                     }
+                                                    setEnabled={(e) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = e;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        e,
+                                                        node.data.node.template[
+                                                        templateField
+                                                        ]
+                                                      );
+                                                    }}
+                                                    size="small"
+                                                    disabled={false}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
+                                                templateField
+                                              ].type === "file" ? (
+                                                <div className="mx-auto">
+                                                  <InputFileComponent
+                                                    editNode={true}
+                                                    disabled={false}
+                                                    value={
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].value ?? ""
+                                                    }
+                                                    onChange={(target: any) => { }}
+                                                    fileTypes={
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].fileTypes
+                                                    }
+                                                    suffixes={
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].suffixes
+                                                    }
+                                                    onFileChange={(
+                                                      value: any
+                                                    ) => {
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].file_path = value;
+                                                    }}
+                                                  ></InputFileComponent>
+                                                </div>
+                                              ) : node.data.node.template[
+                                                templateField
+                                              ].type === "float" ? (
+                                                <div className="mx-auto">
+                                                  <FloatComponent
+                                                    disabled={false}
+                                                    editNode={true}
                                                     value={
                                                       !node.data.node.template[
                                                         templateField
                                                       ].value ||
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].value === ""
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].value === ""
                                                         ? ""
-                                                        : node.data.node
-                                                            .template[
-                                                            templateField
-                                                          ].value
+                                                        : node.data.node.template[
+                                                          templateField
+                                                        ].value
                                                     }
                                                     onChange={(target) => {
                                                       setData((old) => {
@@ -398,418 +489,311 @@ export default function CodeTabsComponent({
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
-                                                          templateField
+                                                        templateField
                                                         ]
                                                       );
                                                     }}
                                                   />
-                                                )}
-                                              </div>
-                                            ) : node.data.node.template[
-                                                templateField
-                                              ].type === "bool" ? (
-                                              <div className="ml-auto">
-                                                {" "}
-                                                <ToggleShadComponent
-                                                  enabled={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value
-                                                  }
-                                                  setEnabled={(e) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
-                                                        templateField
-                                                      ].value = e;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      e,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                  size="small"
-                                                  disabled={false}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
-                                                templateField
-                                              ].type === "file" ? (
-                                              <div className="mx-auto">
-                                                <InputFileComponent
-                                                  editNode={true}
-                                                  disabled={false}
-                                                  value={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value ?? ""
-                                                  }
-                                                  onChange={(target: any) => {}}
-                                                  fileTypes={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].fileTypes
-                                                  }
-                                                  suffixes={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].suffixes
-                                                  }
-                                                  onFileChange={(
-                                                    value: any
-                                                  ) => {
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].file_path = value;
-                                                  }}
-                                                ></InputFileComponent>
-                                              </div>
-                                            ) : node.data.node.template[
-                                                templateField
-                                              ].type === "float" ? (
-                                              <div className="mx-auto">
-                                                <FloatComponent
-                                                  disabled={false}
-                                                  editNode={true}
-                                                  value={
-                                                    !node.data.node.template[
-                                                      templateField
-                                                    ].value ||
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value === ""
-                                                      ? ""
-                                                      : node.data.node.template[
-                                                          templateField
-                                                        ].value
-                                                  }
-                                                  onChange={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
-                                                        templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "str" &&
-                                              node.data.node.template[
-                                                templateField
-                                              ].options ? (
-                                              <div className="mx-auto">
-                                                <Dropdown
-                                                  editNode={true}
-                                                  apiModal={true}
-                                                  options={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].options
-                                                  }
-                                                  onSelect={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
-                                                        templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
+                                                node.data.node.template[
+                                                  templateField
+                                                ].options ? (
+                                                <div className="mx-auto">
+                                                  <Dropdown
+                                                    editNode={true}
+                                                    apiModal={true}
+                                                    options={
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                  value={
-                                                    !node.data.node.template[
-                                                      templateField
-                                                    ].value ||
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value === ""
-                                                      ? ""
-                                                      : node.data.node.template[
+                                                      ].options
+                                                    }
+                                                    onSelect={(target) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
+                                                        templateField
+                                                        ]
+                                                      );
+                                                    }}
+                                                    value={
+                                                      !node.data.node.template[
+                                                        templateField
+                                                      ].value ||
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].value === ""
+                                                        ? ""
+                                                        : node.data.node.template[
                                                           templateField
                                                         ].value
-                                                  }
-                                                ></Dropdown>
-                                              </div>
-                                            ) : node.data.node.template[
+                                                    }
+                                                  ></Dropdown>
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "int" ? (
-                                              <div className="mx-auto">
-                                                <IntComponent
-                                                  disabled={false}
-                                                  editNode={true}
-                                                  value={
-                                                    !node.data.node.template[
-                                                      templateField
-                                                    ].value ||
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value === ""
-                                                      ? ""
-                                                      : node.data.node.template[
+                                                <div className="mx-auto">
+                                                  <IntComponent
+                                                    disabled={false}
+                                                    editNode={true}
+                                                    value={
+                                                      !node.data.node.template[
+                                                        templateField
+                                                      ].value ||
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].value === ""
+                                                        ? ""
+                                                        : node.data.node.template[
                                                           templateField
                                                         ].value
-                                                  }
-                                                  onChange={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
+                                                    }
+                                                    onChange={(target) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
                                                         templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                        ]
+                                                      );
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "prompt" ? (
-                                              <div className="mx-auto">
-                                                <PromptAreaComponent
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
-                                                  editNode={true}
-                                                  disabled={false}
-                                                  value={
-                                                    !node.data.node.template[
-                                                      templateField
-                                                    ].value ||
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value === ""
-                                                      ? ""
-                                                      : node.data.node.template[
+                                                <div className="mx-auto">
+                                                  <PromptAreaComponent
+                                                    readonly={
+                                                      node.data.node?.flow &&
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].dynamic
+                                                        ? true
+                                                        : false
+                                                    }
+                                                    editNode={true}
+                                                    disabled={false}
+                                                    value={
+                                                      !node.data.node.template[
+                                                        templateField
+                                                      ].value ||
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].value === ""
+                                                        ? ""
+                                                        : node.data.node.template[
                                                           templateField
                                                         ].value
-                                                  }
-                                                  onChange={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
+                                                    }
+                                                    onChange={(target) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
                                                         templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                        ]
+                                                      );
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "code" ? (
-                                              <div className="mx-auto">
-                                                <CodeAreaComponent
-                                                  disabled={false}
-                                                  editNode={true}
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
-                                                  value={
-                                                    !node.data.node.template[
-                                                      templateField
-                                                    ].value ||
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].value === ""
-                                                      ? ""
-                                                      : node.data.node.template[
+                                                <div className="mx-auto">
+                                                  <CodeAreaComponent
+                                                    disabled={false}
+                                                    editNode={true}
+                                                    readonly={
+                                                      node.data.node?.flow &&
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].dynamic
+                                                        ? true
+                                                        : false
+                                                    }
+                                                    value={
+                                                      !node.data.node.template[
+                                                        templateField
+                                                      ].value ||
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ].value === ""
+                                                        ? ""
+                                                        : node.data.node.template[
                                                           templateField
                                                         ].value
-                                                  }
-                                                  onChange={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
+                                                    }
+                                                    onChange={(target) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
                                                         templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                        ]
+                                                      );
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "dict" ? (
-                                              <div className="mx-auto overflow-auto custom-scroll">
-                                                <KeypairListComponent
-                                                  disabled={false}
-                                                  editNode={true}
-                                                  value={
-                                                    node.data.node!.template[
-                                                      templateField
-                                                    ].value?.length === 0 ||
-                                                    !node.data.node!.template[
-                                                      templateField
-                                                    ].value
-                                                      ? [{ "": "" }]
-                                                      : convertObjToArray(
+                                                <div className="mx-auto overflow-auto custom-scroll">
+                                                  <KeypairListComponent
+                                                    disabled={false}
+                                                    editNode={true}
+                                                    value={
+                                                      node.data.node!.template[
+                                                        templateField
+                                                      ].value?.length === 0 ||
+                                                        !node.data.node!.template[
+                                                          templateField
+                                                        ].value
+                                                        ? [{ "": "" }]
+                                                        : convertObjToArray(
                                                           node.data.node!
                                                             .template[
                                                             templateField
                                                           ].value
                                                         )
-                                                  }
-                                                  duplicateKey={
-                                                    errorDuplicateKey
-                                                  }
-                                                  onChange={(target) => {
-                                                    const valueToNumbers =
-                                                      convertValuesToNumbers(
-                                                        target
+                                                    }
+                                                    duplicateKey={
+                                                      errorDuplicateKey
+                                                    }
+                                                    onChange={(target) => {
+                                                      const valueToNumbers =
+                                                        convertValuesToNumbers(
+                                                          target
+                                                        );
+                                                      node.data.node!.template[
+                                                        templateField
+                                                      ].value = valueToNumbers;
+                                                      setErrorDuplicateKey(
+                                                        hasDuplicateKeys(
+                                                          valueToNumbers
+                                                        )
                                                       );
-                                                    node.data.node!.template[
-                                                      templateField
-                                                    ].value = valueToNumbers;
-                                                    setErrorDuplicateKey(
-                                                      hasDuplicateKeys(
-                                                        valueToNumbers
-                                                      )
-                                                    );
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
                                                         templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                        ]
+                                                      );
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "NestedDict" ? (
-                                              <div className="mx-auto">
-                                                <DictComponent
-                                                  disabled={false}
-                                                  editNode={true}
-                                                  value={
-                                                    node.data.node!.template[
-                                                      templateField
-                                                    ].value.toString() === "{}"
-                                                      ? {
+                                                <div className="mx-auto">
+                                                  <DictComponent
+                                                    disabled={false}
+                                                    editNode={true}
+                                                    value={
+                                                      node.data.node!.template[
+                                                        templateField
+                                                      ].value.toString() === "{}"
+                                                        ? {
                                                           yourkey: "value",
                                                         }
-                                                      : node.data.node!
+                                                        : node.data.node!
                                                           .template[
                                                           templateField
                                                         ].value
-                                                  }
-                                                  onChange={(target) => {
-                                                    setData((old) => {
-                                                      let newInputList =
-                                                        cloneDeep(old);
-                                                      newInputList![
-                                                        i
-                                                      ].data.node.template[
+                                                    }
+                                                    onChange={(target) => {
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        target,
+                                                        node.data.node.template[
                                                         templateField
-                                                      ].value = target;
-                                                      return newInputList;
-                                                    });
-                                                    tweaks.buildTweakObject!(
-                                                      node["data"]["id"],
-                                                      target,
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ]
-                                                    );
-                                                  }}
-                                                />
-                                              </div>
-                                            ) : node.data.node.template[
+                                                        ]
+                                                      );
+                                                    }}
+                                                  />
+                                                </div>
+                                              ) : node.data.node.template[
                                                 templateField
                                               ].type === "Any" ? (
-                                              "-"
-                                            ) : (
-                                              <div className="hidden"></div>
-                                            )}
-                                          </div>
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </AccordionComponent>
-                      )}
+                                                "-"
+                                              ) : (
+                                                <div className="hidden"></div>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </AccordionComponent>
+                        )}
 
                       {tweaks?.tweaksList!.current.length === 0 && (
                         <>
