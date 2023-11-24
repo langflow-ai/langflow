@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { limitScrollFieldsModal } from "../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES, limitScrollFieldsModal } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -145,24 +145,7 @@ const EditNodeModal = forwardRef(
                           (templateParam) =>
                             templateParam.charAt(0) !== "_" &&
                             myData.current.node?.template[templateParam].show &&
-                            (myData.current.node.template[templateParam]
-                              .type === "str" ||
-                              myData.current.node.template[templateParam]
-                                .type === "bool" ||
-                              myData.current.node.template[templateParam]
-                                .type === "float" ||
-                              myData.current.node.template[templateParam]
-                                .type === "code" ||
-                              myData.current.node.template[templateParam]
-                                .type === "prompt" ||
-                              myData.current.node.template[templateParam]
-                                .type === "file" ||
-                              myData.current.node.template[templateParam]
-                                .type === "int" ||
-                              myData.current.node.template[templateParam]
-                                .type === "dict" ||
-                              myData.current.node.template[templateParam]
-                                .type === "NestedDict")
+                            (LANGFLOW_SUPPORTED_TYPES.has(myData.current.node.template[templateParam].type))
                         )
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
