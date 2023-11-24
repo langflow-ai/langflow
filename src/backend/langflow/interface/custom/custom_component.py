@@ -5,7 +5,6 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -15,7 +14,7 @@ from langflow.interface.custom.utils import (
 )
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_credential_service, get_db_service
 from langflow.utils import validate
 
 
@@ -183,6 +182,19 @@ class CustomComponent(Component):
         attributes = next(iter(attributes), [])
 
         return super().build_template_config(attributes)
+
+    @property
+    def keys(self):
+        def get_credential(name: str):
+            if not self.user_id:
+                raise ValueError(f"User id is not set for {self.__class__.__name__}")
+            credential_service = get_credential_service()  # Get service instance
+            # Retrieve and decrypt the credential by name for the current user
+            db_service = get_db_service()
+            with session_getter(db_service) as session:
+                return credential_service.get_credential(user_id=self.user_id, name=name, session=session)
+
+        return get_credential
 
     @property
     def get_function(self):
