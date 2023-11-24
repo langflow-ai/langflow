@@ -1,4 +1,3 @@
-from sqlmodel import SQLModel
 import orjson
 
 
