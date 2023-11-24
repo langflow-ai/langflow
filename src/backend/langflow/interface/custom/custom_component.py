@@ -197,7 +197,6 @@ class CustomComponent(Component):
 
         return get_credential
 
-    @property
     def list_key_names(self):
         if hasattr(self, "_user_id") and not self._user_id:
             raise ValueError(f"User id is not set for {self.__class__.__name__}")
@@ -205,6 +204,16 @@ class CustomComponent(Component):
         db_service = get_db_service()
         with session_getter(db_service) as session:
             return credential_service.list_credentials(user_id=self._user_id, session=session)
+
+    def index(self, value: int = 0):
+        """Returns a function that returns the value at the given index in the iterable."""
+
+        def get_index(iterable: List[Any]):
+            if iterable:
+                return iterable[value]
+            return iterable
+
+        return get_index
 
     @property
     def get_function(self):
