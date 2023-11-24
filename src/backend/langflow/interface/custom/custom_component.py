@@ -186,13 +186,13 @@ class CustomComponent(Component):
     @property
     def keys(self):
         def get_credential(name: str):
-            if not self.user_id:
+            if hasattr(self, "_user_id") and not self._user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
             credential_service = get_credential_service()  # Get service instance
             # Retrieve and decrypt the credential by name for the current user
             db_service = get_db_service()
             with session_getter(db_service) as session:
-                return credential_service.get_credential(user_id=self.user_id, name=name, session=session)
+                return credential_service.get_credential(user_id=self._user_id, name=name, session=session)
 
         return get_credential
 

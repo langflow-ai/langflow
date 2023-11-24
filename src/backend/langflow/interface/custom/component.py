@@ -28,10 +28,13 @@ class Component:
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
-            setattr(self, key, value)
+            if key == "user_id":
+                setattr(self, "_user_id", value)
+            else:
+                setattr(self, key, value)
 
     def __setattr__(self, key, value):
-        if key == "user_id" and hasattr(self, key):
+        if key == "_user_id" and hasattr(self, "_user_id"):
             warnings.warn("Modification of user_id is not allowed")
         else:
             super().__setattr__(key, value)
