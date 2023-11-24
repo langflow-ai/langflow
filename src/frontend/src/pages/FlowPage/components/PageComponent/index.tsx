@@ -145,7 +145,6 @@ export default function Page({
       document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [position, lastCopiedSelection, lastSelection]);
-
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
