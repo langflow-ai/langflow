@@ -225,17 +225,14 @@ def build_field_config(
     try:
         build_config: Dict = custom_class(user_id=user_id).build_config()
 
-        if update_field is not None:
+        for field_name, field_dict in build_config.items():
+            if update_field is not None and field_name != update_field:
+                continue
             try:
-                field_dict = build_config.get(update_field, {})
-                update_field_dict(field_dict)
-                build_config[update_field] = field_dict
-            except Exception as exc:
-                logger.error(f"Error while getting build_config: {str(exc)}")
-        else:
-            for field_name, field_dict in build_config.items():
                 update_field_dict(field_dict)
                 build_config[field_name] = field_dict
+            except Exception as exc:
+                logger.error(f"Error while getting build_config: {str(exc)}")
 
         return build_config
 
@@ -256,8 +253,9 @@ def update_field_dict(field_dict):
         field_dict["options"] = field_dict["options"]()
         # Also update the "refresh" key
         field_dict["refresh"] = True
-    elif "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"]()
+
+    if "value" in field_dict and callable(field_dict["value"]):
+        field_dict["value"] = field_dict["value"](field_dict.get("options", []))
         field_dict["refresh"] = True
 
 
