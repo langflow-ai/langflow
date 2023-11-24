@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Optional
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser import CodeParser
 from langflow.utils import validate
 
@@ -28,6 +29,11 @@ class Component:
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+        if key == "user_id" and hasattr(self, key):
+            raise AttributeError("Modification of user_id is not allowed")
+        super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
