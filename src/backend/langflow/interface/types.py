@@ -8,8 +8,6 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -35,6 +33,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 # Used to get the base_classes list
@@ -548,5 +547,5 @@ def merge_nested_dicts(dict1, dict2):
 
 def create_and_validate_component(code: str) -> CustomComponent:
     component = CustomComponent(code=code)
-    component.is_check_valid()
+    component.validate()
     return component
