@@ -2,12 +2,11 @@ from typing import TYPE_CHECKING, Union
 from uuid import UUID
 
 from fastapi import Depends
-from sqlmodel import Session
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.credential.model import Credential
 from langflow.services.deps import get_session
+from sqlmodel import Session
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -27,3 +26,7 @@ class CredentialService(Service):
             raise ValueError(f"{name} credential not found.")
         decrypted = auth_utils.decrypt_api_key(credential.value, settings_service=self.settings_service)
         return decrypted
+
+    def list_credentials(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Credential]:
+        credentials = session.query(Credential).filter(Credential.user_id == user_id).all()
+        return [credential.name for credential in credentials]
