@@ -2,9 +2,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from langflow.services.database.models.credential.schema import CredentialType
 from sqlmodel import Field, Relationship, SQLModel
-
-from langflow.services.database.models.credential.schema import AcceptedProviders
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -14,11 +13,11 @@ class CredentialBase(SQLModel):
     name: Optional[str] = Field(None, description="Name of the credential")
     value: Optional[str] = Field(None, description="Encrypted value of the credential")
     provider: Optional[str] = Field(None, description="Provider of the credential (e.g OpenAI)")
-    user_id: UUID = Field(description="User ID associated with this credential")
 
 
 class Credential(CredentialBase, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True, description="Unique ID for the credential")
+    # name is unique per user
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation time of the credential")
     updated_at: Optional[datetime] = Field(None, description="Last update time of the credential")
     # foreign key to user table
@@ -31,7 +30,7 @@ class Credential(CredentialBase, table=True):
 
 class CredentialCreate(CredentialBase):
     # AcceptedProviders is a custom Enum
-    provider: AcceptedProviders = Field(description="Provider of the credential (e.g OpenAI)")
+    provider: CredentialType = Field(description="Provider of the credential (e.g OpenAI)")
 
 
 class CredentialRead(SQLModel):
