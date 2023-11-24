@@ -1,8 +1,8 @@
 from enum import Enum
 
 
-class AcceptedProviders(str, Enum):
-    """Accepted providers for credentials."""
+class CredentialType(str, Enum):
+    """CredentialType is an Enum of the accepted providers"""
 
-    openai = "openai"
-    anthropic = "anthropic"
+    OPENAI_API_KEY = "OPENAI_API_KEY"
+    ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY"
