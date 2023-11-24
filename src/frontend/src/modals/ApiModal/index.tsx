@@ -13,7 +13,10 @@ import {
 // import "ace-builds/webpack-resolver";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { EXPORT_CODE_DIALOG, LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
+import {
+  EXPORT_CODE_DIALOG,
+  LANGFLOW_SUPPORTED_TYPES,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { TemplateVariableType } from "../../types/api";
@@ -99,7 +102,9 @@ const ApiModal = forwardRef(
             (templateField) =>
               templateField.charAt(0) !== "_" &&
               node.data.node.template[templateField].show &&
-              (LANGFLOW_SUPPORTED_TYPES.has(node.data.node.template[templateField].type))
+              LANGFLOW_SUPPORTED_TYPES.has(
+                node.data.node.template[templateField].type
+              )
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);

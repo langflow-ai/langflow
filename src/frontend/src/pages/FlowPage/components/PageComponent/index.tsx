@@ -324,7 +324,7 @@ export default function Page({
         // Calculate the position where the node should be created
         const position = reactFlowInstance!.screenToFlowPosition({
           x: event.clientX,
-          y: event.clientY
+          y: event.clientY,
         });
 
         // Generate a unique node ID

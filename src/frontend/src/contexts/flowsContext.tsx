@@ -56,7 +56,11 @@ const FlowsContextInitialValue: FlowsContextType = {
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: async (newProject: boolean, flowData?: FlowType) => "",
+  addFlow: async (
+    newProject: boolean,
+    flowData?: FlowType,
+    override?: boolean
+  ) => "",
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
@@ -78,7 +82,7 @@ const FlowsContextInitialValue: FlowsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
-  saveComponent: async (component: NodeDataType) => "",
+  saveComponent: async (component: NodeDataType, override: boolean) => "",
   deleteComponent: (key: string) => {},
   version: "",
 };
@@ -496,7 +500,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const addFlow = async (
     newProject: Boolean,
-    flow?: FlowType
+    flow?: FlowType,
+    override?: boolean
   ): Promise<String | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -504,6 +509,15 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
+
+      if (override) {
+        deleteComponent(flow!.name);
+        const newFlow = createNewFlow(flowData, flow!);
+        const { id } = await saveFlowToDatabase(newFlow);
+        newFlow.id = id;
+        addFlowToLocalState(newFlow);
+        return;
+      }
 
       const newFlow = createNewFlow(flowData, flow!);
 
@@ -642,9 +656,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function saveComponent(component: NodeDataType) {
+  function saveComponent(component: NodeDataType, override: boolean) {
     component.node!.official = false;
-    return addFlow(true, createFlowComponent(component, version));
+    return addFlow(true, createFlowComponent(component, version), override);
   }
 
   function deleteComponent(key: string) {

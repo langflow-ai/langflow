@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
+import { StoreContext } from "../../contexts/storeContext";
 import {
   getStoreComponents,
   getStoreTags,
@@ -15,7 +16,6 @@ import { FlowType } from "../../types/flow";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
 import BaseModal from "../baseModal";
-import { StoreContext } from "../../contexts/storeContext";
 
 export default function ShareModal({
   component,
@@ -23,7 +23,7 @@ export default function ShareModal({
   children,
   open,
   setOpen,
-  disabled
+  disabled,
 }: {
   children?: ReactNode;
   is_component: boolean;
@@ -33,7 +33,7 @@ export default function ShareModal({
   disabled?: boolean;
 }): JSX.Element {
   const { version, addFlow } = useContext(FlowsContext);
-  const {hasApiKey} = useContext(StoreContext)
+  const { hasApiKey } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [checked, setChecked] = useState(true);
   const [name, setName] = useState(component?.name ?? "");
@@ -50,12 +50,12 @@ export default function ShareModal({
 
   useEffect(() => {
     if (open || internalOpen) {
-      if(hasApiKey){
+      if (hasApiKey) {
         handleGetTags();
         handleGetNames();
       }
     }
-  }, [open, internalOpen,hasApiKey]);
+  }, [open, internalOpen, hasApiKey]);
 
   function handleGetTags() {
     setLoadingTags(true);

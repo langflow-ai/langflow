@@ -280,6 +280,7 @@ export type PaginatorComponentType = {
 };
 
 export type ConfirmationModalType = {
+  onCancel?: () => void;
   title: string;
   titleHeader: string;
   asChild?: boolean;
