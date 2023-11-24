@@ -1,4 +1,4 @@
-from .user import User, UserCreate, UserRead, UserUpdate
+from .model import User, UserCreate, UserRead, UserUpdate
 
 __all__ = [
     "User",

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Union
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
-from langflow.services.database.models.user.user import User, UserUpdate
+from langflow.services.database.models.user.model import User, UserUpdate
 from langflow.services.deps import get_session
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session

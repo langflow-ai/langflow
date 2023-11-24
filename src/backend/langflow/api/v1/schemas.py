@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
-from langflow.services.database.models.api_key.api_key import ApiKeyRead
+from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.database.models.base import orjson_dumps

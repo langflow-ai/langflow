@@ -12,6 +12,11 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
+    from langflow.services.credentials.service import CredentialService
+
+
+def get_credential_service() -> "CredentialService":
+    return service_manager.get(ServiceType.CREDENTIAL_SERVICE)
 
 
 def get_settings_service() -> "SettingsService":

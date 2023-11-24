@@ -11,7 +11,7 @@ from langflow.api.utils import remove_api_keys
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.user.user import User
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
 # build router
