@@ -3,7 +3,7 @@ import contextlib
 import re
 import traceback
 import warnings
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from cachetools import LRUCache, cached
@@ -201,7 +201,9 @@ def update_attributes(frontend_node, template_config):
             frontend_node[attribute] = template_config[attribute]
 
 
-def build_field_config(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
+def build_field_config(
+    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None, update_field=None
+):
     """Build the field configuration for a custom component"""
 
     try:
@@ -222,7 +224,22 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
         ) from exc
 
     try:
-        return custom_class(user_id=user_id).build_config()
+        build_config: Dict = custom_class(user_id=user_id).build_config()
+
+        if update_field is not None:
+            try:
+                field_dict = build_config.get(update_field, {})
+                update_field_dict(field_dict)
+                build_config[update_field] = field_dict
+            except Exception as exc:
+                logger.error(f"Error while getting build_config: {str(exc)}")
+        else:
+            for field_name, field_dict in build_config.items():
+                update_field_dict(field_dict)
+                build_config[field_name] = field_dict
+
+        return build_config
+
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
         raise HTTPException(
@@ -232,6 +249,17 @@ def build_field_config(custom_component: CustomComponent, user_id: Optional[Unio
                 "traceback": traceback.format_exc(),
             },
         ) from exc
+
+
+def update_field_dict(field_dict):
+    """Update the field dictionary by calling options() or value() if they are callable"""
+    if "options" in field_dict and callable(field_dict["options"]):
+        field_dict["options"] = field_dict["options"]()
+        # Also update the "refresh" key
+        field_dict["refresh"] = True
+    elif "value" in field_dict and callable(field_dict["value"]):
+        field_dict["value"] = field_dict["value"]()
+        field_dict["refresh"] = True
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
@@ -314,7 +342,9 @@ def add_output_types(frontend_node, return_types: List[str]):
 
 
 def build_langchain_template_custom_component(
-    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
+    custom_component: CustomComponent,
+    user_id: Optional[Union[str, UUID]] = None,
+    update_field: Optional[str] = None,
 ):
     """Build a custom component template for the langchain"""
     try:
@@ -328,7 +358,7 @@ def build_langchain_template_custom_component(
 
         update_attributes(frontend_node, template_config)
         logger.debug("Updated attributes")
-        field_config = build_field_config(custom_component, user_id=user_id)
+        field_config = build_field_config(custom_component, user_id=user_id, update_field=update_field)
         logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
@@ -514,3 +544,9 @@ def merge_nested_dicts(dict1, dict2):
         else:
             dict1[key] = value
     return dict1
+
+
+def create_and_validate_component(code: str) -> CustomComponent:
+    component = CustomComponent(code=code)
+    component.is_check_valid()
+    return component
