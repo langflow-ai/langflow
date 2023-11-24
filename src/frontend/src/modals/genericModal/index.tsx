@@ -213,6 +213,7 @@ export default function GenericModal({
             {type === TypeModal.PROMPT && isEdit && !readonly ? (
               <Textarea
                 id={"modal-" + id}
+                data-testid={"modal-" + id}
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
@@ -252,6 +253,8 @@ export default function GenericModal({
                   handleKeyDown(e, value, "");
                 }}
                 readOnly={readonly}
+                id={"text-area-modal"}
+                data-testid={"text-area-modal"}
               />
             ) : (
               <></>

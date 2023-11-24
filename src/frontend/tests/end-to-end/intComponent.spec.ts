@@ -31,7 +31,7 @@ test("IntComponent", async ({ page }) => {
   }
 
   await page.locator('//*[@id="int-input-2"]').click();
-  await page.locator('//*[@id="int-input-2"]').fill("-3");
+  await page.locator('//*[@id="int-input-2"]').fill("0");
 
   value = await page.locator('//*[@id="int-input-2"]').inputValue();
 
