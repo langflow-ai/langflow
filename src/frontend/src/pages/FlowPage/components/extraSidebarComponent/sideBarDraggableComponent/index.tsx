@@ -88,6 +88,7 @@ export default function SidebarDraggableComponent({
           }}
         >
           <div
+            data-testid={sectionName + display_name}
             id={sectionName + display_name}
             className="side-bar-components-div-form"
           >

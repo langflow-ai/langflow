@@ -208,7 +208,7 @@ export default function NodeToolbarComponent({
             <SelectContent>
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <div className="flex">
+                  <div className="flex" data-testid="edit-button-modal">
                     <IconComponent
                       name="Settings2"
                       className="relative top-0.5 mr-2 h-4 w-4"
@@ -307,6 +307,7 @@ export default function NodeToolbarComponent({
               </span>
             </ConfirmationModal.Content>
             <ConfirmationModal.Trigger>
+              <></>
             </ConfirmationModal.Trigger>
           </ConfirmationModal>
           <EditNodeModal
