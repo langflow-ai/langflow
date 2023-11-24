@@ -46,6 +46,17 @@ export class EcsIAM extends Construct {
         'kendra:*'
       ],
     });
+    // Create Rag Policy
+    const RagAccessPolicy = new iam.Policy(this, 'RAGFullAccess', {
+      statements: [KendraPolicyStatement,BedrockPolicyStatement],
+    })
+    // Secrets ManagerからDB認証情報を取ってくるためのPolicy
+    const SecretsManagerPolicy = new iam.Policy(this, 'SMGetPolicy', {
+      statements: [new iam.PolicyStatement({
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [props.rdsCluster.secret!.secretArn],
+      })],
+    })
 
     // FrontEnd Task Role
     this.frontendTaskRole = new iam.Role(this, 'FrontendTaskRole', {
@@ -60,8 +71,7 @@ export class EcsIAM extends Construct {
     // ECS Exec Policyの付与
     this.backendTaskRole.addToPolicy(ECSExecPolicyStatement);
     // KendraとBedrockのアクセス権付与
-    this.backendTaskRole.addToPolicy(KendraPolicyStatement);
-    this.backendTaskRole.addToPolicy(BedrockPolicyStatement);
+    this.backendTaskRole.attachInlinePolicy(RagAccessPolicy);
 
     // FrontEnd Task ExecutionRole 
     this.frontendTaskExecutionRole = new iam.Role(this, 'frontendTaskExecutionRole', {
@@ -74,9 +84,6 @@ export class EcsIAM extends Construct {
       ],
     });
 
-    // Secrets ManagerからDB認証情報を取ってくる
-    const secretsDB = props.rdsCluster.secret!;
-
     // BackEnd Task ExecutionRole 
     this.backendTaskExecutionRole = new iam.Role(this, 'backendTaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -88,11 +95,7 @@ export class EcsIAM extends Construct {
       ],
     });
   
-    this.backendTaskExecutionRole.attachInlinePolicy(new iam.Policy(this, 'SMGetPolicy', {
-      statements: [new iam.PolicyStatement({
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: [secretsDB.secretArn],
-      })],
-    }));
+    this.backendTaskExecutionRole.attachInlinePolicy(SecretsManagerPolicy);
+    this.backendTaskExecutionRole.attachInlinePolicy(RagAccessPolicy);
   }
 }
