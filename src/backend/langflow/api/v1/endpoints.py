@@ -14,6 +14,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.interface.types import build_langchain_template_custom_component, create_and_validate_component
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
@@ -208,9 +209,7 @@ async def custom_component(
     raw_code: CustomComponentCode,
     user: User = Depends(get_current_active_user),
 ):
-    from langflow.interface.types import (
-        build_langchain_template_custom_component,
-    )
+    component = create_and_validate_component(raw_code.code)
 
     extractor = CustomComponent(code=raw_code.code)
     extractor.validate()
@@ -235,3 +234,15 @@ async def reload_custom_component(path: str):
         return build_langchain_template_custom_component(extractor, user_id=user.id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/custom_component/update", status_code=HTTPStatus.OK)
+async def custom_component_update(
+    raw_code: CustomComponentCode,
+    user: User = Depends(get_current_active_user),
+):
+    component = create_and_validate_component(raw_code.code)
+
+    component_node = build_langchain_template_custom_component(component, user_id=user.id, update_field=raw_code.field)
+    # Update the field
+    return component_node
