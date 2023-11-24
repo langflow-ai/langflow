@@ -1,11 +1,11 @@
-from typing import Optional
-from loguru import logger
-from pathlib import Path
-from rich.logging import RichHandler
-from platformdirs import user_cache_dir
 import os
-import orjson
+from pathlib import Path
+from typing import Optional
 
+import orjson
+from loguru import logger
+from platformdirs import user_cache_dir
+from rich.logging import RichHandler
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -66,4 +66,4 @@ def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
 
     logger.debug(f"Logger set up with log level: {log_level}")
     if log_file:
-        logger.info(f"Log file: {log_file}")
+        logger.debug(f"Log file: {log_file}")
