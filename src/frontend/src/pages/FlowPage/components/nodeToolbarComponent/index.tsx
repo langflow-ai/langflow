@@ -76,12 +76,7 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
-  }, [data]);
-
-  function onOverrideModalConfirmation(override: boolean): void {
-    if (override) saveComponent(cloneDeep(data), true);
-    saveComponent(cloneDeep(data), false);
-  }
+  }, [data, showModalAdvanced]);
 
   const handleSelectChange = (event) => {
     switch (event) {
