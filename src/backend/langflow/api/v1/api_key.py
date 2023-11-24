@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends
 from langflow.api.v1.schemas import ApiKeysResponse, ApiKeyCreateRequest
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.api_key.api_key import (
+from langflow.services.database.models.api_key.model import (
     ApiKeyCreate,
     UnmaskedApiKeyRead,
 )
@@ -13,7 +13,7 @@ from langflow.services.database.models.api_key.crud import (
     create_api_key,
     delete_api_key,
 )
-from langflow.services.database.models.user.user import User
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_session,
     get_settings_service,

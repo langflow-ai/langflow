@@ -18,7 +18,7 @@ from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.user.user import User
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_session,
     get_session_service,
