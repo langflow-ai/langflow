@@ -546,7 +546,7 @@ files = [
 name = "cachetools"
 version = "5.3.2"
 description = "Extensible memoizing collections and decorators"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "cachetools-5.3.2-py3-none-any.whl", hash = "sha256:861f35a13a451f94e301ce2bec7cac63e881232ccce7ed67fab9b5df4d3beaa1"},
@@ -2888,13 +2888,13 @@ files = [
 
 [[package]]
 name = "idna"
-version = "3.5"
+version = "3.6"
 description = "Internationalized Domain Names in Applications (IDNA)"
 optional = false
 python-versions = ">=3.5"
 files = [
-    {file = "idna-3.5-py3-none-any.whl", hash = "sha256:79b8f0ac92d2351be5f6122356c9a592c96d81c9a79e4b488bf2a6a15f88057a"},
-    {file = "idna-3.5.tar.gz", hash = "sha256:27009fe2735bf8723353582d48575b23c533cc2c2de7b5a68908d91b5eb18d08"},
+    {file = "idna-3.6-py3-none-any.whl", hash = "sha256:c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f"},
+    {file = "idna-3.6.tar.gz", hash = "sha256:9ecdbbd083b06798ae1e86adcbfe8ab1479cf864e4ee30fe4e46a003d12491ca"},
 ]
 
 [[package]]
@@ -3558,13 +3558,13 @@ six = "*"
 
 [[package]]
 name = "langfuse"
-version = "1.8.2"
+version = "1.9.2"
 description = "A client library for accessing langfuse"
 optional = true
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langfuse-1.8.2-py3-none-any.whl", hash = "sha256:3a3140396fb020f693d2231c01e7af660603592e76c313e0ba32003ac49d1e32"},
-    {file = "langfuse-1.8.2.tar.gz", hash = "sha256:781e2853a0e3d92c73689630b8c152a50415f62850cac8eeef35404876f1108d"},
+    {file = "langfuse-1.9.2-py3-none-any.whl", hash = "sha256:0a171830ec15b26e6b512db4612422a48402d422c1269091390d0b81fbdfe46b"},
+    {file = "langfuse-1.9.2.tar.gz", hash = "sha256:6542d38013e9ca21ab3d31840bdd517a79cb6db72ddb30fec8ad0d999d0e2bfd"},
 ]
 
 [package.dependencies]
@@ -5091,13 +5091,13 @@ win-unicode-console = {version = "*", markers = "platform_system == \"Windows\" 
 
 [[package]]
 name = "pexpect"
-version = "4.8.0"
+version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
 optional = false
 python-versions = "*"
 files = [
-    {file = "pexpect-4.8.0-py2.py3-none-any.whl", hash = "sha256:0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"},
-    {file = "pexpect-4.8.0.tar.gz", hash = "sha256:fc65a43959d153d0114afe13997d439c22823a27cefceb5ff35c2178c6784c0c"},
+    {file = "pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523"},
+    {file = "pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f"},
 ]
 
 [package.dependencies]
@@ -5210,13 +5210,13 @@ grpc = ["googleapis-common-protos (>=1.53.0)", "grpc-gateway-protoc-gen-openapiv
 
 [[package]]
 name = "platformdirs"
-version = "3.11.0"
+version = "4.0.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.11.0-py3-none-any.whl", hash = "sha256:e9d171d00af68be50e9202731309c4e658fd8bc76f55c11c7dd760d023bda68e"},
-    {file = "platformdirs-3.11.0.tar.gz", hash = "sha256:cf8ee52a3afdb965072dcc652433e0c7e3e40cf5ea1477cd4b3b1d2eb75495b3"},
+    {file = "platformdirs-4.0.0-py3-none-any.whl", hash = "sha256:118c954d7e949b35437270383a3f2531e99dd93cf7ce4dc8340d3356d30f173b"},
+    {file = "platformdirs-4.0.0.tar.gz", hash = "sha256:cb633b2bcf10c51af60beb0ab06d2f1d69064b43abf4c185ca6b28865f3f9731"},
 ]
 
 [package.extras]
@@ -6312,7 +6312,7 @@ files = [
 name = "python-multipart"
 version = "0.0.6"
 description = "A streaming multipart parser for Python"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "python_multipart-0.0.6-py3-none-any.whl", hash = "sha256:ee698bab5ef148b0a760751c261902cd096e57e10558e11aca17646b74ee1c18"},
@@ -8108,7 +8108,7 @@ tutorials = ["matplotlib", "pandas", "tabulate"]
 name = "typer"
 version = "0.9.0"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
-optional = true
+optional = false
 python-versions = ">=3.6"
 files = [
     {file = "typer-0.9.0-py3-none-any.whl", hash = "sha256:5d96d986a21493606a358cae4461bd8cdf83cbf33a5aa950ae629ca3b51467ee"},
@@ -8680,7 +8680,7 @@ test = ["websockets"]
 name = "websockets"
 version = "10.4"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "websockets-10.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d58804e996d7d2307173d56c297cf7bc132c52df27a3efaac5e8d43e36c21c48"},
@@ -9095,4 +9095,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "502416dcccff69d73061560fb5d4fceca93fa4040a2f6986e5e8b6a768c816ec"
+content-hash = "bf17cdc5a3a17611e8ae95d0499a54da1e6482a2f3741eb4fabbf61d14100961"
