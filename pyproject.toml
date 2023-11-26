@@ -29,7 +29,8 @@ langflow = "langflow.__main__:main"
 
 python = ">=3.9,<3.11"
 fastapi = "^0.104.0"
-uvicorn = "^0.23.0"
+httpx = "*"
+uvicorn = "^0.24.0"
 gunicorn = "^21.2.0"
 langchain = "~0.0.338"
 sqlmodel = { git = "https://github.com/honglei/sqlmodel.git", branch = "main" }
@@ -43,6 +44,7 @@ typer = "^0.9.0"
 cachetools = "^5.3.1"
 platformdirs = "^4.0.0"
 python-multipart = "^0.0.6"
+orjson = "^3.9.3"
 beautifulsoup4 = { version = "^4.12.2", optional = true }
 google-search-results = { version = "^2.4.1", optional = true }
 google-api-python-client = { version = "^2.79.0", optional = true }
@@ -73,7 +75,6 @@ cohere = { version = "^4.32.0", optional = true }
 # install sqlmodel using https://github.com/honglei/sqlmodel.git
 faiss-cpu = { version = "^1.7.4", optional = true }
 anthropic = { version = "^0.5.0", optional = true }
-orjson = { version = "3.9.3", optional = true }
 multiprocess = { version = "^0.70.14", optional = true }
 pinecone-client = { version = "^2.2.2", optional = true }
 pymongo = { version = "^4.5.0", optional = true }
@@ -92,7 +93,6 @@ passlib = { version = "^1.7.4", optional = true }
 bcrypt = { version = "^4.0.1", optional = true }
 python-jose = { version = "^3.3.0", optional = true }
 metaphor-python = { version = "^0.1.11", optional = true }
-
 zep-python = { version = "^1.4.0", optional = true }
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'", optional = true }
 langfuse = { version = "^1.1.11", optional = true }
@@ -105,6 +105,7 @@ boto3 = { version = "^1.28.63", optional = true }
 numexpr = { version = "^2.8.6", optional = true }
 qianfan = { version = "0.0.5", optional = true }
 pgvector = { version = "^0.2.3", optional = true }
+
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.1"
