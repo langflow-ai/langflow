@@ -46,8 +46,10 @@ class Settings(BaseSettings):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
-                logger.debug("No DATABASE_URL env variable, using sqlite database")
-                value = "sqlite:///./langflow.db"
+                # logger.debug("No DATABASE_URL env variable, using sqlite database")
+                logger.debug("No DATABASE_URL env variable, using custom database from secrets of {}".format(os.environ["host"]))
+                # value = "sqlite:///./langflow.db"
+                value = "mysql+pymysql://{}:{}@{}:3306/{}".format(os.environ["username"],os.environ["password"],os.environ["host"],os.environ["dbname"])
 
         return value
 

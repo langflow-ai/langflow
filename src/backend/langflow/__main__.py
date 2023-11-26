@@ -127,13 +127,13 @@ def run(
         default=None,
     ),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    # This variable does not work but is set by the .env file
-    # and works with Pydantic
-    database_url: str = typer.Option(
-        "mysql+pymysql://{}:{}@{}:3306/{}".format(os.environ["username"],os.environ["password"],os.environ["host"],os.environ["dbname"]),
-        help="Database URL to connect to. If not provided, a local SQLite database will be used.",
-        envvar="LANGFLOW_DATABASE_URL",
-    ),
+    # # This variable does not work but is set by the .env file
+    # # and works with Pydantic
+    # database_url: str = typer.Option(
+    #     "mysql+pymysql://{}:{}@{}:3306/{}".format(os.environ["username"],os.environ["password"],os.environ["host"],os.environ["dbname"]),
+    #     help="Database URL to connect to. If not provided, a local SQLite database will be used.",
+    #     envvar="LANGFLOW_DATABASE_URL",
+    # ),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
