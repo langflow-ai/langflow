@@ -32,7 +32,7 @@ export default function Dropdown({
       >
         {({ open }) => (
           <>
-            <div className={editNode ? "mt-1" : "relative mt-1"}>
+            <div className={"relative mt-1"}>
               <Listbox.Button
                 data-test={`${id ?? ""}`}
                 className={
@@ -68,7 +68,7 @@ export default function Dropdown({
                     editNode
                       ? "dropdown-component-true-options nowheel custom-scroll"
                       : "dropdown-component-false-options nowheel custom-scroll",
-                    apiModal ? "mb-2 w-[250px]" : "absolute"
+                    apiModal ? "mb-2 w-[250px]" : "absolute w-full"
                   )}
                 >
                   {options.map((option, id) => (
