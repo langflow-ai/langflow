@@ -1,17 +1,17 @@
-from typing import Any, Callable, Dict, Type
-from langchain.vectorstores import (
-    Pinecone,
-    Qdrant,
-    Chroma,
-    FAISS,
-    Weaviate,
-    SupabaseVectorStore,
-    MongoDBAtlasVectorSearch,
-)
-from langchain.schema import Document
 import os
+from typing import Any, Callable, Dict, Type
 
 import orjson
+from langchain.schema import Document
+from langchain.vectorstores import (
+    FAISS,
+    Chroma,
+    MongoDBAtlasVectorSearch,
+    Pinecone,
+    Qdrant,
+    SupabaseVectorStore,
+    Weaviate,
+)
 
 
 def docs_in_params(params: dict) -> bool:
@@ -28,8 +28,8 @@ def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dic
     MONGODB_ATLAS_CLUSTER_URI = params.pop("mongodb_atlas_cluster_uri")
     if not MONGODB_ATLAS_CLUSTER_URI:
         raise ValueError("Mongodb atlas cluster uri must be provided in the params")
-    from pymongo import MongoClient
     import certifi
+    from pymongo import MongoClient
 
     client: MongoClient = MongoClient(
         MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where()
@@ -120,6 +120,7 @@ def initialize_faiss(class_object: Type[FAISS], params: dict):
         return class_object.load_local
 
     save_local = params.get("save_local")
+    params["embedding_function"] = params.pop("embedding")
     faiss_index = class_object(**params)
     if save_local:
         faiss_index.save_local(folder_path=save_local)
