@@ -143,8 +143,8 @@ test("KeypairListComponent", async ({ page }) => {
       if (
         key1 === "testtesttesttest" &&
         value1 === "test test test test test test" &&
-        key2 === "testtesttesttest2" &&
-        value2 === "testtesttesttesttesttest2"
+        key2 === "testtesttesttest1" &&
+        value2 === "testtesttesttesttesttest1"
       ) {
         expect(true).toBeTruthy();
       } else {
