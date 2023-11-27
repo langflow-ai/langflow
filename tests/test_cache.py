@@ -1,7 +1,7 @@
 import json
-from langflow.graph import Graph
 
 import pytest
+from langflow_base.graph import Graph
 
 
 def get_graph(_type="basic"):

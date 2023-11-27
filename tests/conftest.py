@@ -10,18 +10,18 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.user.model import User, UserCreate
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow_base.graph.graph.base import Graph
+from langflow_base.services.auth.utils import get_password_hash
+from langflow_base.services.database.models.flow.model import Flow, FlowCreate
+from langflow_base.services.database.models.user.model import User, UserCreate
+from langflow_base.services.database.utils import session_getter
+from langflow_base.services.deps import get_db_service
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from langflow.services.database.service import DatabaseService
+    from langflow_base.services.database.service import DatabaseService
 
 
 def pytest_configure():
@@ -44,7 +44,7 @@ def get_text():
 
 @pytest.fixture()
 async def async_client() -> AsyncGenerator:
-    from langflow.main import create_app
+    from langflow_base.main import create_app
 
     app = create_app()
     async with AsyncClient(app=app, base_url="http://testserver") as client:
@@ -81,7 +81,7 @@ def setup_env(monkeypatch):
 @pytest.fixture(name="distributed_client")
 def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     # Here we load the .env from ../deploy/.env
-    from langflow.core import celery_app
+    from langflow_base.core import celery_app
 
     db_dir = tempfile.mkdtemp()
     db_path = Path(db_dir) / "test.db"
@@ -94,7 +94,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     # def get_session_override():
     #     return session
 
-    from langflow.main import create_app
+    from langflow_base.main import create_app
 
     app = create_app()
 
@@ -188,7 +188,7 @@ def client_fixture(session: Session, monkeypatch):
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
 
-    from langflow.main import create_app
+    from langflow_base.main import create_app
 
     app = create_app()
 
@@ -260,7 +260,7 @@ def logged_in_headers(client, active_user):
 
 @pytest.fixture
 def flow(client, json_flow: str, active_user):
-    from langflow.services.database.models.flow.model import FlowCreate
+    from langflow_base.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(

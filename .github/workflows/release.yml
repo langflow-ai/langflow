@@ -1,6 +1,12 @@
 name: release
 
 on:
+  workflow_call:
+    inputs:
+      working-directory:
+        required: true
+        type: string
+        description: "From which folder this pipeline executes"
   pull_request:
     types:
       - closed

@@ -1,0 +1,101 @@
+[tool.poetry]
+name = "langflow-base"
+version = "0.6.1"
+description = "A Python package with a built-in web application"
+authors = ["Logspace <contact@logspace.ai>"]
+maintainers = [
+    "Carlos Coelho <carlos@logspace.ai>",
+    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
+    "Gabriel Almeida <gabriel@logspace.ai>",
+    "Gustavo Schaedler <gustavopoa@gmail.com>",
+    "Igor Carvalho <igorr.ackerman@gmail.com>",
+    "Lucas Eduoli <lucaseduoli@gmail.com>",
+    "Otávio Anovazzi <otavio2204@gmail.com>",
+    "Rodrigo Nader <rodrigo@logspace.ai>",
+]
+repository = "https://github.com/logspace-ai/langflow"
+license = "MIT"
+readme = "README.md"
+keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
+packages = [{ include = "langflow_base" }]
+include = ["pyproject.toml", "README.md", "langflow_base/**/*"]
+documentation = "https://docs.langflow.org"
+
+[tool.poetry.scripts]
+langflow-base = "langflow_base.__main__:main"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+fastapi = "^0.104.0"
+httpx = "^0.25.0"
+uvicorn = "^0.24.0"
+gunicorn = "^21.2.0"
+langchain = "^0.0.341"
+sqlmodel = { git = "https://github.com/honglei/sqlmodel.git", branch = "main" }
+loguru = "^0.7.1"
+rich = "^13.7.0"
+langchain-experimental = "*"
+pydantic = "^2.0.0"
+pydantic-settings = "^2.0.3"
+websockets = "^10.3"
+typer = "^0.9.0"
+cachetools = "^5.3.1"
+platformdirs = "^4.0.0"
+python-multipart = "^0.0.6"
+orjson = "^3.9.3"
+alembic = "^1.12.0"
+passlib = "^1.7.4"
+bcrypt = "^4.0.1"
+pillow = "^10.1.0"
+docstring-parser = "^0.15"
+python-jose = "^3.3.0"
+pandas = "2.0.3"
+multiprocess = "^0.70.14"
+
+[tool.poetry.group.dev.dependencies]
+pytest-asyncio = "^0.21.1"
+types-redis = "^4.6.0.5"
+ipykernel = "^6.26.0"
+mypy = "^1.7.1"
+ruff = "^0.1.5"
+httpx = "*"
+pytest = "^7.4.2"
+types-requests = "^2.31.0"
+requests = "^2.31.0"
+pytest-cov = "^4.1.0"
+pandas-stubs = "^2.0.0.230412"
+types-pillow = "^9.5.0.2"
+types-pyyaml = "^6.0.12.8"
+types-python-jose = "^3.3.4.8"
+types-passlib = "^1.7.7.13"
+locust = "^2.16.1"
+pytest-mock = "^3.11.1"
+pytest-xdist = "^3.3.1"
+types-pywin32 = "^306.0.0.4"
+types-google-cloud-ndb = "^2.2.0.0"
+pytest-sugar = "^0.9.7"
+
+
+[tool.poetry.extras]
+deploy = ["langchain-serve", "celery", "redis", "flower"]
+local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
+all = ["deploy", "local"]
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning"]
+log_cli = true
+markers = ["async_test"]
+
+
+[tool.ruff]
+exclude = ["src/backend/langflow/alembic/*"]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

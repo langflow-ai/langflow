@@ -1,0 +1,12 @@
+---
+name: langflow_base Release
+
+on:
+  workflow_dispatch: # Allows to trigger the workflow manually in GitHub UI
+
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    with:
+      working-directory: src/backend/base
+    secrets: inherit

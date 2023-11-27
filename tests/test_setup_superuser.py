@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-from langflow.services.database.models.user.model import User
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from langflow.services.utils import teardown_superuser
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow_base.services.utils import teardown_superuser
 
 # @patch("langflow.services.deps.get_session")
 # @patch("langflow.services.utils.create_super_user")

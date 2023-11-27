@@ -1,5 +1,5 @@
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.embeddings import EmbeddingFrontendNode
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.embeddings import EmbeddingFrontendNode
 
 
 def test_format_jina_fields():

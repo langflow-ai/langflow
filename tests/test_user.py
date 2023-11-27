@@ -1,11 +1,11 @@
 from datetime import datetime
 
 import pytest
-from langflow.services.auth.utils import create_super_user, get_password_hash
-from langflow.services.database.models.user import UserUpdate
-from langflow.services.database.models.user.model import User
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow_base.services.auth.utils import create_super_user, get_password_hash
+from langflow_base.services.database.models.user import UserUpdate
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.database.utils import session_getter
+from langflow_base.services.deps import get_db_service, get_settings_service
 
 
 @pytest.fixture

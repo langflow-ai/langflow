@@ -2,8 +2,8 @@ import importlib
 from typing import Dict, List, Optional
 
 import pytest
-from langflow.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
-from langflow.utils.util import (
+from langflow_base.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
+from langflow_base.utils.util import (
     build_template_from_class,
     build_template_from_function,
     format_dict,

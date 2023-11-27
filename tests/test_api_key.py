@@ -1,5 +1,5 @@
 import pytest
-from langflow.services.database.models.api_key import ApiKeyCreate
+from langflow_base.services.database.models.api_key import ApiKeyCreate
 
 
 @pytest.fixture

@@ -1,17 +1,16 @@
-from collections import namedtuple
+import time
 import uuid
-from langflow.processing.process import Result
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.deps import get_settings_service
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from collections import namedtuple
+
 import pytest
 from fastapi.testclient import TestClient
-from langflow.interface.tools.constants import CUSTOM_TOOLS
-from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
-
-import time
+from langflow_base.interface.tools.constants import CUSTOM_TOOLS
+from langflow_base.processing.process import Result
+from langflow_base.services.auth.utils import get_password_hash
+from langflow_base.services.database.models.api_key.model import ApiKey
+from langflow_base.services.database.utils import session_getter
+from langflow_base.services.deps import get_db_service, get_settings_service
+from langflow_base.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -137,8 +136,8 @@ def created_api_key(active_user):
 
 def test_process_flow_invalid_api_key(client, flow, monkeypatch):
     # Mock de process_graph_cached
-    from langflow.api.v1 import endpoints
-    from langflow.services.database.models.api_key import crud
+    from langflow_base.api.v1 import endpoints
+    from langflow_base.services.database.models.api_key import crud
 
     settings_service = get_settings_service()
     settings_service.auth_settings.AUTO_LOGIN = False
@@ -171,7 +170,7 @@ def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
     async def mock_process_graph_cached(*args, **kwargs):
         return Result(result={}, session_id="session_id_mock")
 
-    from langflow.api.v1 import endpoints
+    from langflow_base.api.v1 import endpoints
 
     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
 
@@ -194,8 +193,8 @@ def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
 
 def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_key):
     # Mock de process_graph_cached
-    from langflow.api.v1 import endpoints
-    from langflow.services.database.models.api_key import crud
+    from langflow_base.api.v1 import endpoints
+    from langflow_base.services.database.models.api_key import crud
 
     settings_service = get_settings_service()
     settings_service.auth_settings.AUTO_LOGIN = False
@@ -252,8 +251,8 @@ def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_k
 
 def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
     # Mock de process_graph_cached
-    from langflow.api.v1 import endpoints
-    from langflow.services.database.models.api_key import crud
+    from langflow_base.api.v1 import endpoints
+    from langflow_base.services.database.models.api_key import crud
 
     settings_service = get_settings_service()
     settings_service.auth_settings.AUTO_LOGIN = False

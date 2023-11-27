@@ -1,9 +1,9 @@
 from pathlib import Path
 from tempfile import tempdir
-from langflow.__main__ import app
-import pytest
 
-from langflow.services import deps
+import pytest
+from langflow_base.__main__ import app
+from langflow_base.services import deps
 
 
 @pytest.fixture(scope="module")

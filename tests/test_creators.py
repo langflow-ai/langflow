@@ -1,8 +1,8 @@
 from typing import Dict, List
 
 import pytest
-from langflow.interface.agents.base import AgentCreator
-from langflow.interface.base import LangChainTypeCreator
+from langflow_base.interface.agents.base import AgentCreator
+from langflow_base.interface.base import LangChainTypeCreator
 
 
 @pytest.fixture
