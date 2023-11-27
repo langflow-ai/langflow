@@ -69,7 +69,7 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	poetry install --extras deploy
+	poetry install --extras "deploy base"
 
 backend:
 	make install_backend
