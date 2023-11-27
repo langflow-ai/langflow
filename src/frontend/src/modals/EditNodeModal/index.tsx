@@ -127,7 +127,7 @@ const EditNodeModal = forwardRef(
                 "edit-node-modal-box",
                 nodeLength > limitScrollFieldsModal
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
-                  : "overflow-hidden"
+                  : ""
               )}
             >
               {nodeLength > 0 && (
