@@ -34,11 +34,11 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self._build_graph()
 
+    def __getstate__(self):
+        return self.raw_graph_data
+
     def __setstate__(self, state):
-        self.__dict__.update(state)
-        for edge in self.edges:
-            edge.reset()
-            edge.validate_edge()
+        self.__init__(**state)
 
     @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
