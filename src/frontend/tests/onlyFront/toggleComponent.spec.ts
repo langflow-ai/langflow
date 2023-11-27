@@ -22,7 +22,7 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.waitForTimeout(2000);
   await page
-    .locator('//*[@id="sideDirectoryLoader"]')
+    .getByTestId("documentloadersDirectoryLoader")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -32,8 +32,8 @@ test("ToggleComponent", async ({ page }) => {
       '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[1]/div'
     )
     .click();
-  await page.locator('//*[@id="advancedIcon"]').click();
-  await page.locator('//*[@id="editAdvancedBtn"]').click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
@@ -62,8 +62,8 @@ test("ToggleComponent", async ({ page }) => {
       '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[1]/div'
     )
     .click();
-  await page.locator('//*[@id="advancedIcon"]').click();
-  await page.locator('//*[@id="editAdvancedBtn"]').click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   expect(
     await page.locator('//*[@id="toggle-edit-1"]').isChecked()
@@ -144,8 +144,8 @@ test("ToggleComponent", async ({ page }) => {
     await page
       .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
       .click();
-    await page.locator('//*[@id="advancedIcon"]').click();
-    await page.locator('//*[@id="editAdvancedBtn"]').click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     await page.locator('//*[@id="showload_hidden"]').click();
     expect(

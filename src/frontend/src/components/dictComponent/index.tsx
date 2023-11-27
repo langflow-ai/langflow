@@ -10,6 +10,7 @@ export default function DictComponent({
   onChange,
   disabled,
   editNode = false,
+  id = "",
 }: DictComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {
@@ -30,7 +31,7 @@ export default function DictComponent({
       )}
     >
       {
-        <div className="flex w-full gap-3">
+        <div className="flex w-full gap-3" data-testid={id}>
           <DictAreaModal
             value={ref.current}
             onChange={(obj) => {
@@ -45,6 +46,7 @@ export default function DictComponent({
                   : "input-disable pointer-events-none cursor-pointer"
               }
               placeholder="Click to edit your dictionary..."
+              data-testid="dict-input"
             />
           </DictAreaModal>
         </div>

@@ -54,6 +54,7 @@ export default function DictAreaModal({
           />
           <div className="flex h-fit w-full justify-end">
             <Button
+              data-testid="save-dict-button"
               className="mt-3"
               type="submit"
               onClick={() => {

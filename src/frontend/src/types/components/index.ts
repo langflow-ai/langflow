@@ -36,6 +36,7 @@ export type DropDownComponentType = {
   editNode?: boolean;
   apiModal?: boolean;
   numberOfOptions?: number;
+  id?: string;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -78,6 +79,7 @@ export type DictComponentType = {
   onChange: (value) => void;
   disabled: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TextAreaComponentType = {
