@@ -41,8 +41,9 @@ export class LangflowAppStack extends cdk.Stack {
       alb:alb,
       arch:arch
     })
+    backendService.node.addDependency(rdsCluster);
 
-    new FrontEndCluster(this, 'frontend',{
+    const frontendService = new FrontEndCluster(this, 'frontend',{
       cluster:cluster,
       ecsFrontSG:ecsFrontSG,
       ecrFrontEndRepository:ecrFrontEndRepository,
@@ -54,6 +55,8 @@ export class LangflowAppStack extends cdk.Stack {
       cloudmapNamespace: cloudmapNamespace,
       arch:arch 
     })
+    frontendService.node.addDependency(backendService);
+
 
     // S3+CloudFront
     // new Web(this,'Cloudfront-S3')
