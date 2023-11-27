@@ -248,9 +248,9 @@ const EditNodeModal = forwardRef(
                                     disabled={disabled}
                                     editNode={true}
                                     value={
-                                      myData.current.node!.template[
+                                      myData?.current?.node!.template[
                                         templateParam
-                                      ].value.toString() === "{}"
+                                      ]?.value?.toString() === "{}"
                                         ? {
                                             yourkey: "value",
                                           }
@@ -264,6 +264,7 @@ const EditNodeModal = forwardRef(
                                       ].value = newValue;
                                       handleOnNewValue(newValue, templateParam);
                                     }}
+                                    id="editnode-div-dict-input"
                                   />
                                 </div>
                               ) : myData.current.node?.template[templateParam]
@@ -371,6 +372,7 @@ const EditNodeModal = forwardRef(
                                         templateParam
                                       ].value ?? "Choose an option"
                                     }
+                                    id={"dropdown-edit-" + index}
                                   ></Dropdown>
                                 </div>
                               ) : myData.current.node?.template[templateParam]

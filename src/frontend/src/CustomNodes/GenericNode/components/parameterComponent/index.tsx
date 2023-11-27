@@ -422,6 +422,7 @@ export default function ParameterComponent({
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
                 value={data.node.template[name].value ?? "Choose an option"}
+                id={"dropdown-" + index}
               />
             </div>
             {data.node?.template[name].refresh && (
@@ -513,6 +514,7 @@ export default function ParameterComponent({
                 data.node!.template[name].value = newValue;
                 handleOnNewValue(newValue);
               }}
+              id="div-dict-input"
             />
           </div>
         ) : left === true && type === "dict" ? (
