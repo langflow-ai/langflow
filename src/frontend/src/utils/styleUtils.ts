@@ -196,7 +196,7 @@ export const nodeNames: { [char: string]: string } = {
   agents: "Agents",
   tools: "Tools",
   memories: "Memories",
-  saved_components: "Saved Components",
+  saved_components: "Saved",
   advanced: "Advanced",
   chat: "Chat",
   embeddings: "Embeddings",
