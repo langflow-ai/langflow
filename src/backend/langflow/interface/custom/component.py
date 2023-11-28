@@ -25,6 +25,7 @@ class Component:
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
+    _user_id: Optional[str]
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
@@ -36,9 +37,8 @@ class Component:
 
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):
-            warnings.warn("Modification of user_id is not allowed")
-        else:
-            super().__setattr__(key, value)
+            warnings.warn("user_id is immutable and cannot be changed.")
+        super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
