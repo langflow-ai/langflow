@@ -81,8 +81,8 @@ def test_graph_structure(basic_graph):
         assert isinstance(node, Vertex)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-        assert edge.source_id in basic_graph.vertex_ids
-        assert edge.target_id in basic_graph.vertex_ids
+        assert edge.source_id in basic_graph.vertex_map.keys()
+        assert edge.target_id in basic_graph.vertex_map.keys()
 
 
 def test_circular_dependencies(basic_graph):
