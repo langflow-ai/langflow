@@ -277,11 +277,10 @@ export default function NodeToolbarComponent({
           <ConfirmationModal
             asChild
             open={showOverrideModal}
-            title={`Replace ${data.node?.display_name}`}
-            titleHeader={`Please, confirm your save actions`}
-            modalContentTitle="Attention!"
-            cancelText="New"
+            title={`Replace`}
+            cancelText="Create New"
             confirmationText="Replace"
+            size={"x-small"}
             icon={"SaveAll"}
             index={6}
             onConfirm={(index, user) => {
@@ -292,8 +291,7 @@ export default function NodeToolbarComponent({
           >
             <ConfirmationModal.Content>
               <span>
-                It seems {data.node?.display_name} already exists. Replacing it
-                will switch the current component. Proceed with replacement?
+                It seems {data.node?.display_name} already exists. Do you want to replace it with the current or create a new one?
               </span>
             </ConfirmationModal.Content>
             <ConfirmationModal.Trigger>

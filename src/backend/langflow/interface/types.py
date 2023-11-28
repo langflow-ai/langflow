@@ -8,7 +8,6 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
-from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.base import custom_component_creator
@@ -416,8 +415,8 @@ def build_valid_menu(valid_components):
 
                 component_template = build_langchain_template_custom_component(component_extractor)
                 component_template["output_types"] = component_output_types
-                full_path = f"{menu_path}/{component.get('file')}"
-                component_template["full_path"] = full_path
+                # full_path = f"{menu_path}/{component.get('file')}"
+                # component_template["full_path"] = full_path
                 if len(component_output_types) == 1:
                     component_name = component_output_types[0]
                 else:
@@ -476,15 +475,24 @@ def build_invalid_menu(invalid_components):
     return invalid_menu
 
 
+def get_new_key(dictionary, original_key):
+    counter = 1
+    new_key = original_key + " (" + str(counter) + ")"
+    while new_key in dictionary:
+        counter += 1
+        new_key = original_key + " (" + str(counter) + ")"
+    return new_key
+
+
 def merge_nested_dicts_with_renaming(dict1, dict2):
     for key, value in dict2.items():
         if key in dict1 and isinstance(value, dict) and isinstance(dict1.get(key), dict):
             for sub_key, sub_value in value.items():
-                if sub_key in dict1[key]:
-                    new_key = get_new_key(dict1[key], sub_key)
-                    dict1[key][new_key] = sub_value
-                else:
-                    dict1[key][sub_key] = sub_value
+                # if sub_key in dict1[key]:
+                #     new_key = get_new_key(dict1[key], sub_key)
+                #     dict1[key][new_key] = sub_value
+                # else:
+                dict1[key][sub_key] = sub_value
         else:
             dict1[key] = value
     return dict1

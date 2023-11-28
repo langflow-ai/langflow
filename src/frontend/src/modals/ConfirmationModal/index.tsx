@@ -29,6 +29,7 @@ function ConfirmationModal({
   cancelText,
   confirmationText,
   children,
+  destructive = false,
   icon,
   data,
   index,
@@ -56,9 +57,9 @@ function ConfirmationModal({
   );
 
   return (
-    <BaseModal size={size ?? "x-small"} open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
       <BaseModal.Trigger asChild={asChild}>{triggerChild}</BaseModal.Trigger>
-      <BaseModal.Header description={titleHeader}>
+      <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         <Icon
           name="icon"
@@ -67,7 +68,7 @@ function ConfirmationModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
-        {modalContentTitle != "" && (
+        {modalContentTitle && modalContentTitle != "" && (
           <>
             <strong>{modalContentTitle}</strong>
             <br></br>
@@ -78,7 +79,8 @@ function ConfirmationModal({
 
       <BaseModal.Footer>
         <Button
-          className="ml-3 mt-5"
+          className="ml-3"
+          variant={destructive ? "destructive" : "default"}
           onClick={() => {
             setModalOpen(false);
             onConfirm(index, data);
@@ -88,7 +90,7 @@ function ConfirmationModal({
         </Button>
 
         <Button
-          className="mt-5"
+          className=""
           variant="outline"
           onClick={() => {
             if (onCancel) onCancel();

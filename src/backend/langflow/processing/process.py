@@ -1,7 +1,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
 
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
@@ -138,6 +138,8 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
         result = langchain_object.dict()
     else:
         logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+        if isinstance(langchain_object, Coroutine):
+            result = asyncio.run(langchain_object)
         result = langchain_object
 
     return result

@@ -134,8 +134,8 @@ services:
     image: redis:6.2.5
     env_file:
       - .env
-    # ports:
-    #   - 6379:6379
+    ports:
+      - 6379:6379
     healthcheck:
       test: "exit 0"
 
@@ -146,7 +146,7 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
-    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h
+    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet
     healthcheck:
       test: "exit 0"
     deploy:

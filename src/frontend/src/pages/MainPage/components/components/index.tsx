@@ -95,47 +95,49 @@ export default function ComponentsComponent({
     >
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
-          <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-            {!isLoading || data?.length > 0 ? (
-              data?.map((item, idx) => (
-                <CollectionCardComponent
-                  onDelete={() => {
-                    removeFlow(item.id);
-                  }}
-                  key={idx}
-                  data={item}
-                  disabled={isLoading}
-                  button={
-                    !is_component ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="whitespace-nowrap "
-                        onClick={() => {
-                          navigate("/flow/" + item.id);
-                        }}
-                      >
-                        <IconComponent
-                          name="ExternalLink"
-                          className="main-page-nav-button"
-                        />
-                        Edit Flow
-                      </Button>
-                    ) : (
-                      <></>
-                    )
-                  }
-                />
-              ))
-            ) : !isLoading && data?.length === 0 ? (
-              <>You haven't created {name}s yet.</>
-            ) : (
-              <>
-                <SkeletonCardComponent />
-                <SkeletonCardComponent />
-              </>
-            )}
-          </div>
+          {!isLoading && data.length === 0 ? (
+            <div className="w-full text-center">You haven't created any {name}s yet.</div>
+          ) : (
+            <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
+              {!isLoading || data?.length > 0 ? (
+                data?.map((item, idx) => (
+                  <CollectionCardComponent
+                    onDelete={() => {
+                      removeFlow(item.id);
+                    }}
+                    key={idx}
+                    data={item}
+                    disabled={isLoading}
+                    button={
+                      !is_component ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="whitespace-nowrap "
+                          onClick={() => {
+                            navigate("/flow/" + item.id);
+                          }}
+                        >
+                          <IconComponent
+                            name="ExternalLink"
+                            className="main-page-nav-button"
+                          />
+                          Edit Flow
+                        </Button>
+                      ) : (
+                        <></>
+                      )
+                    }
+                  />
+                ))
+              ) : (
+                <>
+                  <SkeletonCardComponent />
+                  <SkeletonCardComponent />
+                </>
+              )}
+            </div>
+          )}
         </div>
         {!isLoading && allData.length > 0 && (
           <div className="relative py-6">

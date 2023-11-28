@@ -1,17 +1,16 @@
-from collections import namedtuple
+import time
 import uuid
-from langflow.processing.process import Result
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.deps import get_settings_service
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from collections import namedtuple
+
 import pytest
 from fastapi.testclient import TestClient
 from langflow.interface.tools.constants import CUSTOM_TOOLS
+from langflow.processing.process import Result
+from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
-
-import time
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -25,7 +24,7 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
+def poll_task_status(client, headers, href, max_attempts=20, sleep_time=2):
     for _ in range(max_attempts):
         task_status_response = client.get(
             href,

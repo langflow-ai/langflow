@@ -170,7 +170,7 @@ async def stream_build(
                     update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
                 vertex_id = vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
-                if vertex_id in graph.top_level_nodes:
+                if vertex_id in graph.top_level_vertices:
                     response = {
                         "valid": valid,
                         "params": params,

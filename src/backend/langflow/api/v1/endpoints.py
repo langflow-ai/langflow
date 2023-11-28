@@ -89,6 +89,7 @@ async def process(
         if flow.data is None:
             raise ValueError(f"Flow {flow_id} has no data")
         graph_data = flow.data
+        task_result = None
         if tweaks:
             try:
                 graph_data = process_tweaks(graph_data, tweaks)
@@ -160,6 +161,10 @@ async def get_task_status(task_id: str):
     result = None
     if task.ready():
         result = task.result
+        # If result isinstance of Exception, can we get the traceback?
+        if isinstance(result, Exception):
+            logger.exception(task.traceback)
+
         if isinstance(result, dict) and "result" in result:
             result = result["result"]
         elif hasattr(result, "result"):
@@ -167,6 +172,10 @@ async def get_task_status(task_id: str):
 
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    if task.status == "FAILURE":
+        result = str(task.result)
+        logger.error(f"Task {task_id} failed: {task.traceback}")
+
     return TaskStatusResponse(status=task.status, result=result)
 
 
@@ -235,5 +244,11 @@ async def custom_component_update(
     component = create_and_validate_component(raw_code.code)
 
     component_node = build_langchain_template_custom_component(component, user_id=user.id, update_field=raw_code.field)
+    # Update the field
+    return component_node
+    # Update the field
+    return component_node
+    # Update the field
+    return component_node
     # Update the field
     return component_node
