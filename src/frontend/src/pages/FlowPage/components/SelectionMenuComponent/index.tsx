@@ -45,7 +45,7 @@ export default function SelectionMenu({ onClick, nodes, isVisible }) {
             className="flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
             onClick={onClick}
           >
-            <IconComponent name="Group" className="w-6" />
+            <IconComponent name="Combine" className="w-6" />
             Group
           </button>
         </div>
