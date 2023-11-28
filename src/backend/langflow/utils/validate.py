@@ -235,6 +235,12 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     :param class_name: Name of the class
     :return: Constructor function for the class
     """
+    # Add basic imports from typing module
+    # List, Dict, Tuple, Union, Optional
+    # to the global scope
+    for name in ["List", "Dict", "Tuple", "Union", "Optional"]:
+        exec_globals[name] = getattr(importlib.import_module("typing"), name)
+
     exec(compiled_class, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
 
