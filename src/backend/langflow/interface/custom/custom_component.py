@@ -5,7 +5,6 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
@@ -232,7 +231,7 @@ class CustomComponent(Component):
         return await build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
-        if not self.user_id:
+        if not self._user_id:
             raise ValueError("Session is invalid")
         try:
             get_session = get_session or session_getter
