@@ -1,33 +1,32 @@
 import ast
 import inspect
-import pickle
 import types
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from loguru import logger
-
 from langflow.graph.utils import UnbuiltObject
-from langflow.graph.vertex.utils import is_basic_type
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
+    from langflow.graph.graph.base import Graph
 
 
 class Vertex:
     def __init__(
         self,
         data: Dict,
+        graph: "Graph",
         base_type: Optional[str] = None,
         is_task: bool = False,
         params: Optional[Dict] = None,
     ) -> None:
+        self.graph = graph
         self.id: str = data["id"]
         self._data = data
-        self.edges: List["Edge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = UnbuiltObject()
@@ -39,43 +38,28 @@ class Vertex:
         self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.parent_is_top_level = False
 
-    def reset_params(self):
-        for edge in self.edges:
-            if edge.source != self:
-                target_param = edge.target_param
-                if target_param in ["document", "texts"]:
-                    # this means they got data and have already ingested it
-                    # so we continue after removing the param
-                    self.params.pop(target_param, None)
-                    continue
-
-                if target_param in self.params and not is_basic_type(self.params[target_param]):
-                    # edge.source.params = {}
-                    edge.source._build_params()
-                    edge.source._built_object = UnbuiltObject()
-                    edge.source._built = False
-
-                    self.params[target_param] = edge.source
+    @property
+    def edges(self) -> List["Edge"]:
+        return self.graph.get_vertex_edges(self.id)
 
     def __getstate__(self):
-        state_dict = self.__dict__.copy()
-        try:
-            # try pickling the built object
-            # if it fails, then we need to delete it
-            # and build it again
-            pickle.dumps(state_dict["_built_object"])
-        except Exception:
-            self.reset_params()
-            del state_dict["_built_object"]
-            del state_dict["_built"]
-        return state_dict
+        return {
+            "_data": self._data,
+            "params": {},
+            "base_type": self.base_type,
+            "is_task": self.is_task,
+            "id": self.id,
+            "_built_object": UnbuiltObject(),
+            "_built": False,
+            "parent_node_id": self.parent_node_id,
+            "parent_is_top_level": self.parent_is_top_level,
+        }
 
     def __setstate__(self, state):
         self._data = state["_data"]
         self.params = state["params"]
         self.base_type = state["base_type"]
         self.is_task = state["is_task"]
-        self.edges = state["edges"]
         self.id = state["id"]
         self._parse_data()
         if "_built_object" in state:
@@ -144,6 +128,10 @@ class Vertex:
         # and use that as the value for the param
         # If the type is "str", then we need to get the value of the "value" key
         # and use that as the value for the param
+
+        if self.graph is None:
+            raise ValueError("Graph not found")
+
         template_dict = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
         params = self.params.copy() if self.params else {}
 
@@ -155,9 +143,9 @@ class Vertex:
                 if template_dict[param_key]["list"]:
                     if param_key not in params:
                         params[param_key] = []
-                    params[param_key].append(edge.source)
-                elif edge.target.id == self.id:
-                    params[param_key] = edge.source
+                    params[param_key].append(self.graph.get_vertex(edge.source_id))
+                elif edge.target_id == self.id:
+                    params[param_key] = self.graph.get_vertex(edge.source_id)
 
         for key, value in template_dict.items():
             if key in params:
@@ -177,33 +165,33 @@ class Vertex:
                 else:
                     raise ValueError(f"File path not found for {self.vertex_type}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
+                val = value.get("value")
                 if value.get("type") == "code":
                     try:
-                        params[key] = ast.literal_eval(value.get("value"))
+                        params[key] = ast.literal_eval(val) if val else None
                     except Exception as exc:
                         logger.debug(f"Error parsing code: {exc}")
-                        params[key] = value.get("value")
+                        params[key] = val
                 elif value.get("type") in ["dict", "NestedDict"]:
                     # When dict comes from the frontend it comes as a
                     # list of dicts, so we need to convert it to a dict
                     # before passing it to the build method
-                    _value = value.get("value")
-                    if isinstance(_value, list):
+                    if isinstance(val, list):
                         params[key] = {k: v for item in value.get("value", []) for k, v in item.items()}
-                    elif isinstance(_value, dict):
-                        params[key] = _value
-                elif value.get("type") == "int" and value.get("value") is not None:
+                    elif isinstance(val, dict):
+                        params[key] = val
+                elif value.get("type") == "int" and val is not None:
                     try:
-                        params[key] = int(value.get("value"))
+                        params[key] = int(val)
                     except ValueError:
-                        params[key] = value.get("value")
-                elif value.get("type") == "float" and value.get("value") is not None:
+                        params[key] = val
+                elif value.get("type") == "float" and val is not None:
                     try:
-                        params[key] = float(value.get("value"))
+                        params[key] = float(val)
                     except ValueError:
-                        params[key] = value.get("value")
+                        params[key] = val
                 else:
-                    params[key] = value.get("value")
+                    params[key] = val
 
             if not value.get("required") and params.get(key) is None:
                 if value.get("default"):
@@ -266,7 +254,7 @@ class Vertex:
                 pass
 
         # If there's no task_id, build the vertex locally
-        await self.build(user_id)
+        await self.build(user_id=user_id)
         return self._built_object
 
     async def _build_node_and_update_params(self, key, node, user_id=None):

@@ -1,27 +1,15 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from loguru import logger
-from sqlmodel import Session
-
 from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import (
-    get_current_active_user,
-    get_current_user_by_jwt,
-)
+from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
+from loguru import logger
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -148,7 +136,7 @@ async def stream_build(
             # Some error could happen when building the graph
             graph = Graph.from_payload(graph_data)
 
-            number_of_nodes = len(graph.nodes)
+            number_of_nodes = len(graph.vertices)
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
             try:

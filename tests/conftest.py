@@ -12,8 +12,8 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.flow.flow import Flow, FlowCreate
-from langflow.services.database.models.user.user import User, UserCreate
+from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from sqlmodel import Session, SQLModel, create_engine
@@ -260,7 +260,7 @@ def logged_in_headers(client, active_user):
 
 @pytest.fixture
 def flow(client, json_flow: str, active_user):
-    from langflow.services.database.models.flow.flow import FlowCreate
+    from langflow.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(

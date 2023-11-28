@@ -5,15 +5,13 @@ from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
-from sqlmodel import JSON, Column, Field, Relationship
-
-from langflow.services.database.models.base import SQLModelSerializable
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
 
 
-class FlowBase(SQLModelSerializable):
+class FlowBase(SQLModel):
     name: str = Field(index=True)
     description: Optional[str] = Field(index=True, nullable=True, default=None)
     data: Optional[Dict] = Field(default=None, nullable=True)
@@ -69,7 +67,7 @@ class FlowRead(FlowBase):
     user_id: UUID = Field()
 
 
-class FlowUpdate(SQLModelSerializable):
+class FlowUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
     data: Optional[Dict] = None

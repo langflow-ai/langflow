@@ -275,8 +275,18 @@ export default function StorePage(): JSX.Element {
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="createdbyme">Created By Me</SelectItem>
-                  <SelectItem value="likedbyme">Liked By Me</SelectItem>
+                  <SelectItem
+                    disabled={!hasApiKey || !validApiKey}
+                    value="createdbyme"
+                  >
+                    Created By Me
+                  </SelectItem>
+                  <SelectItem
+                    disabled={!hasApiKey || !validApiKey}
+                    value="likedbyme"
+                  >
+                    Liked By Me
+                  </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>

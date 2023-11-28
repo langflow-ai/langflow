@@ -10,7 +10,8 @@ export type FlowsContextType = {
   removeFlow: (id: string) => void;
   addFlow: (
     newProject: boolean,
-    flow?: FlowType
+    flow?: FlowType,
+    override?: boolean
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -44,7 +45,10 @@ export type FlowsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
-  saveComponent: (component: NodeDataType) => Promise<String | undefined>;
+  saveComponent: (
+    component: NodeDataType,
+    override: boolean
+  ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
 };

@@ -36,6 +36,7 @@ export type DropDownComponentType = {
   editNode?: boolean;
   apiModal?: boolean;
   numberOfOptions?: number;
+  id?: string;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -67,6 +68,7 @@ export type KeyPairListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   duplicateKey?: boolean;
+  editNodeModal?: boolean;
 };
 
 export type DictComponentType = {
@@ -74,6 +76,7 @@ export type DictComponentType = {
   onChange: (value) => void;
   disabled: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TextAreaComponentType = {
@@ -214,6 +217,7 @@ export type IconComponentProps = {
   iconColor?: string;
   onClick?: () => void;
   stroke?: string;
+  id?: string;
 };
 
 export type InputProps = {
@@ -277,6 +281,7 @@ export type PaginatorComponentType = {
 };
 
 export type ConfirmationModalType = {
+  onCancel?: () => void;
   title: string;
   titleHeader: string;
   asChild?: boolean;

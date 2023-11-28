@@ -21,11 +21,17 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  TOOLTIP_EMPTY,
+} from "../../../../constants/constants";
+import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import { postCustomComponentUpdate } from "../../../../controllers/API";
 import { ParameterComponentType } from "../../../../types/components";
+import { NodeDataType } from "../../../../types/flow";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -59,6 +65,7 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const { setErrorData } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, flows } = useContext(FlowsContext);
@@ -92,6 +99,25 @@ export default function ParameterComponent({
   const { data: myData } = useContext(typesContext);
 
   const { takeSnapshot } = useContext(undoRedoContext);
+
+  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+    const code = data.node?.template["code"]?.value;
+    if (!code) {
+      console.error("Code not found in the template");
+      return;
+    }
+
+    try {
+      const res = await postCustomComponentUpdate(code, name);
+      if (res.status === 200 && data.node?.template) {
+        let clone = cloneDeep(data);
+        clone.node!.template[name] = res.data.template[name];
+        setData(clone);
+      }
+    } catch (err) {
+      setErrorData(err as { title: string; list?: Array<string> });
+    }
+  };
 
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
@@ -222,17 +248,7 @@ export default function ParameterComponent({
   }, [tooltipTitle, flow]);
 
   return !showNode ? (
-    left &&
-    (type === "str" ||
-      type === "bool" ||
-      type === "float" ||
-      type === "code" ||
-      type === "prompt" ||
-      type === "file" ||
-      type === "int" ||
-      type === "dict" ||
-      type === "NestedDict") &&
-    !optionalHandle ? (
+    left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
       <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -305,17 +321,7 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
-        {left &&
-        (type === "str" ||
-          type === "bool" ||
-          type === "float" ||
-          type === "code" ||
-          type === "prompt" ||
-          type === "file" ||
-          type === "int" ||
-          type === "dict" ||
-          type === "NestedDict") &&
-        !optionalHandle ? (
+        {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -409,12 +415,26 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
-            <Dropdown
-              options={data.node.template[name].options}
-              onSelect={handleOnNewValue}
-              value={data.node.template[name].value ?? "Choose an option"}
-            ></Dropdown>
+          // TODO: Improve CSS
+          <div className="mt-2 flex w-full items-center">
+            <div className="w-5/6 flex-grow">
+              <Dropdown
+                options={data.node.template[name].options}
+                onSelect={handleOnNewValue}
+                value={data.node.template[name].value ?? "Choose an option"}
+                id={"dropdown-" + index}
+              />
+            </div>
+            {data.node?.template[name].refresh && (
+              <button
+                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
+                onClick={() => {
+                  handleUpdateValues(name, data);
+                }}
+              >
+                <IconComponent name="RefreshCcw" />
+              </button>
+            )}
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
@@ -491,6 +511,7 @@ export default function ParameterComponent({
                 data.node!.template[name].value = newValue;
                 handleOnNewValue(newValue);
               }}
+              id="div-dict-input"
             />
           </div>
         ) : left === true && type === "dict" ? (

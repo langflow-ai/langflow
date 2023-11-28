@@ -47,6 +47,7 @@ export default function TextAreaComponent({
           />
           {!editNode && (
             <IconComponent
+              id={id}
               name="ExternalLink"
               className={
                 "icons-parameters-comp" +

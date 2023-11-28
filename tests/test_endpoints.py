@@ -2,7 +2,7 @@ from collections import namedtuple
 import uuid
 from langflow.processing.process import Result
 from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.api_key import ApiKey
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.deps import get_settings_service
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service

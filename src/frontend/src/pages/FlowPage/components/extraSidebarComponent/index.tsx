@@ -6,6 +6,7 @@ import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
+import { StoreContext } from "../../../../contexts/storeContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
@@ -29,6 +30,7 @@ export default function ExtraSidebar(): JSX.Element {
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
+  const { hasApiKey, validApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -179,25 +181,56 @@ export default function ExtraSidebar(): JSX.Element {
   }, [getFilterEdge, data]);
 
   const ModalMemo = useMemo(
-    () => (
-      <ShareModal is_component={false} component={flow!}>
-        <ShadTooltip content="Share" side="top">
-          <div className={classNames("extra-side-bar-buttons")}>
-            <IconComponent name="Share2" className="side-bar-button-size" />
-          </div>
-        </ShadTooltip>
-      </ShareModal>
-    ),
-    []
+    () =>
+      !hasApiKey || !validApiKey ? (
+        <button
+          disabled={!hasApiKey || !validApiKey}
+          className={classNames(
+            "extra-side-bar-buttons",
+            !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+          )}
+        >
+          <IconComponent
+            name="Share2"
+            className={classNames(
+              "side-bar-button-size",
+              !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+            )}
+          />
+        </button>
+      ) : (
+        <ShareModal
+          is_component={false}
+          component={flow!}
+          disabled={!hasApiKey || !validApiKey}
+        >
+          <button
+            disabled={!hasApiKey || !validApiKey}
+            className={classNames(
+              "extra-side-bar-buttons",
+              !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+            )}
+          >
+            <IconComponent
+              name="Share2"
+              className={classNames(
+                "side-bar-button-size",
+                !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+              )}
+            />
+          </button>
+        </ShareModal>
+      ),
+    [hasApiKey, validApiKey]
   );
 
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
         <ShadTooltip content="Export" side="top">
-          <div className={classNames("extra-side-bar-buttons")}>
+          <button className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="FileDown" className="side-bar-button-size" />
-          </div>
+          </button>
         </ShadTooltip>
       </ExportModal>
     ),
@@ -276,8 +309,9 @@ export default function ExtraSidebar(): JSX.Element {
             </div>
           </ShadTooltip>
         </div>
-
-        <div className="side-bar-button">{ModalMemo}</div>
+        <ShadTooltip content="Share" side="top" styleClasses="cursor-default">
+          <div className="side-bar-button">{ModalMemo}</div>
+        </ShadTooltip>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
@@ -305,7 +339,15 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort()
+          .sort((a, b) => {
+            if (a.toLowerCase() === "saved_components") {
+              return -1;
+            } else if (b.toLowerCase() === "saved_components") {
+              return 1;
+            } else {
+              return a.localeCompare(b);
+            }
+          })
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent
