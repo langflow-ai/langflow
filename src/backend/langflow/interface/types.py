@@ -8,7 +8,6 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
-from langflow.api.utils import get_new_key
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.base import custom_component_creator
@@ -476,6 +475,15 @@ def build_invalid_menu(invalid_components):
     return invalid_menu
 
 
+def get_new_key(dictionary, original_key):
+    counter = 1
+    new_key = original_key + " (" + str(counter) + ")"
+    while new_key in dictionary:
+        counter += 1
+        new_key = original_key + " (" + str(counter) + ")"
+    return new_key
+
+
 def merge_nested_dicts_with_renaming(dict1, dict2):
     for key, value in dict2.items():
         if key in dict1 and isinstance(value, dict) and isinstance(dict1.get(key), dict):
@@ -546,4 +554,6 @@ def merge_nested_dicts(dict1, dict2):
 def create_and_validate_component(code: str) -> CustomComponent:
     component = CustomComponent(code=code)
     component.validate()
+    return component
+    return component
     return component
