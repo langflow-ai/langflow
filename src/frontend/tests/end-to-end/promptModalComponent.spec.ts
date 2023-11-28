@@ -152,8 +152,8 @@ test("PromptTemplateComponent", async ({ page }) => {
       )
       .click();
 
-      await page.getByTestId("more-options-modal").click();
-      await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(

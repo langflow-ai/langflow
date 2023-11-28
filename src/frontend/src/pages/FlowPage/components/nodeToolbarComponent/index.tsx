@@ -52,7 +52,7 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
-  const { hasApiKey,validApiKey } = useContext(StoreContext);
+  const { hasApiKey, validApiKey } = useContext(StoreContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -161,9 +161,9 @@ export default function NodeToolbarComponent({
             <a
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                (data.node?.documentation === ""
-                  ? " text-muted-foreground"
-                  : " text-foreground")
+                  (data.node?.documentation === ""
+                    ? " text-muted-foreground"
+                    : " text-foreground")
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -232,7 +232,7 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem disabled={(!hasApiKey||!validApiKey)} value={"Share"}>
+              <SelectItem disabled={!hasApiKey || !validApiKey} value={"Share"}>
                 <div className="flex">
                   <IconComponent
                     name="Share2"
