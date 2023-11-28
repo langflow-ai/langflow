@@ -24,7 +24,7 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=3):
+def poll_task_status(client, headers, href, max_attempts=20, sleep_time=2):
     for _ in range(max_attempts):
         task_status_response = client.get(
             href,
