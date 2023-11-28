@@ -47,12 +47,3 @@ def build_input_keys_response(langchain_object, artifacts):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
-
-
-def get_new_key(dictionary, original_key):
-    counter = 1
-    new_key = original_key + " (" + str(counter) + ")"
-    while new_key in dictionary:
-        counter += 1
-        new_key = original_key + " (" + str(counter) + ")"
-    return new_key
