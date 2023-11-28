@@ -70,7 +70,7 @@ class Graph:
     def _build_graph(self) -> None:
         """Builds the graph from the vertices and edges."""
         self.vertices = self._build_vertices()
-        self.vertex_ids = [vertex.id for vertex in self.vertices]
+        self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         self.edges = self._build_edges()
 
         # This is a hack to make sure that the LLM vertex is sent to
@@ -107,7 +107,7 @@ class Graph:
 
     def get_vertex(self, vertex_id: str) -> Union[None, Vertex]:
         """Returns a vertex by id."""
-        return next((vertex for vertex in self.vertices if vertex.id == vertex_id), None)
+        return self.vertex_map.get(vertex_id)
 
     def get_vertex_edges(self, vertex_id: str) -> List[Edge]:
         """Returns a list of edges for a given vertex."""
@@ -248,4 +248,5 @@ class Graph:
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
+        return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
