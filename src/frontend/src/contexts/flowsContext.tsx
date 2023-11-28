@@ -308,7 +308,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         let text = await file.text();
         let fileData = JSON.parse(text);
         if (
-          (fileData.is_component === undefined && isComponent === true) ||
+          (fileData.is_component === undefined && isComponent === false) ||
           (fileData.is_component !== undefined &&
             fileData.is_component !== isComponent)
         ) {
@@ -339,11 +339,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             let fileData: FlowType = await JSON.parse(text);
             console.log(isComponent, fileData);
 
-            if (fileData.is_component === undefined) {
-              reject("Your file doesn't have the is_component property.");
-            } else if (
-              fileData.is_component !== undefined &&
-              fileData.is_component !== isComponent
+            if (
+              (fileData.is_component === undefined && isComponent === false) ||
+              (fileData.is_component !== undefined &&
+                fileData.is_component !== isComponent)
             ) {
               reject("You cannot upload a component as a flow or vice versa");
             } else {
