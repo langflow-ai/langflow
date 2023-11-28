@@ -11,7 +11,7 @@
 <img alt="GitHub Issues" src="https://img.shields.io/github/issues/logspace-ai/langflow" />
 <img alt="GitHub Pull Requests" src="https://img.shields.io/github/issues-pr/logspace-ai/langflow" />
 <img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
-</p>
+</p> 
 
 <p>
 <a href="https://discord.gg/EqksyE2EX9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat"/></a>
