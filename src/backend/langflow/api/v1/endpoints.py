@@ -3,8 +3,6 @@ from typing import Annotated, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
-from loguru import logger
-
 from langflow.api.v1.schemas import (
     CustomComponentCode,
     ProcessResponse,
@@ -20,12 +18,8 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import (
-    get_session,
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-)
+from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from loguru import logger
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -35,9 +29,8 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from sqlmodel import Session
-
 from langflow.services.task.service import TaskService
+from sqlmodel import Session
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -218,10 +211,8 @@ async def custom_component(
 
 
 @router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(path: str):
-    from langflow.interface.types import (
-        build_langchain_template_custom_component,
-    )
+async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
+    from langflow.interface.types import build_langchain_template_custom_component
 
     try:
         reader = DirectoryReader("")
