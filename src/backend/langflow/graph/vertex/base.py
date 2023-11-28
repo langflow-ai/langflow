@@ -73,8 +73,8 @@ class Vertex:
         self.parent_node_id = state["parent_node_id"]
         self.parent_is_top_level = state["parent_is_top_level"]
 
-    def set_top_level(self, top_level_nodes: List[str]) -> None:
-        self.parent_is_top_level = self.parent_node_id in top_level_nodes
+    def set_top_level(self, top_level_vertices: List[str]) -> None:
+        self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
