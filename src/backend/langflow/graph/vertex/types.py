@@ -26,7 +26,7 @@ class AgentVertex(Vertex):
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
-            if not hasattr(edge, "source"):
+            if not hasattr(edge, "source_id"):
                 continue
             source_node = self.graph.get_vertex(edge.source_id)
             if isinstance(source_node, (ToolVertex, ToolkitVertex)):
