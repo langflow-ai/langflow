@@ -85,17 +85,11 @@ export default function Page({
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
-
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
-
-
   useEffect(() => {
-    console.log("1")
-    // this effect is used to attach the global event handlers
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isWrappedWithClass(event, "nocopy")) {
         if (
@@ -112,10 +106,9 @@ export default function Page({
           lastCopiedSelection
         ) {
           event.preventDefault();
-          let bounds = reactFlowWrapper.current?.getBoundingClientRect();
           paste(lastCopiedSelection, {
-            x: position.x - bounds!.left,
-            y: position.y - bounds!.top,
+            x: position.x,
+            y: position.y,
           });
         }
         if (
@@ -137,18 +130,26 @@ export default function Page({
         }
       }
     };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [lastCopiedSelection, lastSelection]);
+
+  useEffect(() => {
     const handleMouseMove = (event) => {
       setPosition({ x: event.clientX, y: event.clientY });
     };
 
-    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [position, lastCopiedSelection, lastSelection]);
+  }, [position]);
+
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
@@ -165,33 +166,21 @@ export default function Page({
 
   //update flow when tabs change
   useEffect(() => {
-    console.log("2")
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
     if (reactFlowInstance) {
       setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
     }
   }, [flow, reactFlowInstance]);
-  //set extra sidebar
-  useEffect(() => {
-    console.log("3")
-    setExtraComponent(<ExtraSidebar />);
-    setExtraNavigation({ title: "Components" });
-  }, [setExtraComponent, setExtraNavigation]);
-
-  const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
-    console.log("4")
     const index = flows.findIndex((flowId) => flowId.id === flow.id);
 
     const interval = setInterval(() => {
       saveFlow(
         {
           ...flows[index]!,
-          data: reactFlowInstance
-            ? reactFlowInstance!.toObject()
-            : flow!.data,
+          data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
         },
         true
       );
@@ -204,8 +193,7 @@ export default function Page({
 
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
-      console.log("5")
-      updateFlow({    
+      updateFlow({
         ...flow!,
         data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
       });
@@ -226,7 +214,6 @@ export default function Page({
 
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
-      console.log("6")
       onNodesChange(change);
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
@@ -244,7 +231,6 @@ export default function Page({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      console.log("7")
       takeSnapshot();
       setEdges((eds) =>
         addEdge(
@@ -276,26 +262,22 @@ export default function Page({
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
-    console.log("8")
     // 👇 make dragging a node undoable
     takeSnapshot();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
-    console.log("9")
     // 👇 make dragging a selection undoable
     takeSnapshot();
   }, [takeSnapshot]);
 
   const onEdgesDelete: OnEdgesDelete = useCallback(() => {
-    console.log("10")
     // 👇 make deleting edges undoable
     takeSnapshot();
   }, [takeSnapshot]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
-    console.log("11")
     event.preventDefault();
     if (event.dataTransfer.types.some((types) => types === "nodedata")) {
       event.dataTransfer.dropEffect = "move";
@@ -306,7 +288,6 @@ export default function Page({
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
-      console.log("12")
       event.preventDefault();
       if (event.dataTransfer.types.some((types) => types === "nodedata")) {
         takeSnapshot();
@@ -383,7 +364,9 @@ export default function Page({
   );
 
   useEffect(() => {
-    console.log("13")
+    setExtraComponent(<ExtraSidebar />);
+    setExtraNavigation({ title: "Components" });
+
     return () => {
       if (tabsState && tabsState[flow.id]?.isPending) {
         saveFlow({
@@ -396,7 +379,6 @@ export default function Page({
 
   const onDelete = useCallback(
     (mynodes: Node[]) => {
-      console.log("14")
       takeSnapshot();
       setEdges(
         edges.filter(
@@ -411,13 +393,11 @@ export default function Page({
   );
 
   const onEdgeUpdateStart = useCallback(() => {
-    console.log("15")
     edgeUpdateSuccessful.current = false;
   }, []);
 
   const onEdgeUpdate = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      console.log("16")
       if (isValidConnection(newConnection, reactFlowInstance!)) {
         edgeUpdateSuccessful.current = true;
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
@@ -427,7 +407,6 @@ export default function Page({
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
-    console.log("17")
     if (!edgeUpdateSuccessful.current) {
       setEdges((eds) => eds.filter((edg) => edg.id !== edge.id));
     }
@@ -437,18 +416,15 @@ export default function Page({
   const [selectionEnded, setSelectionEnded] = useState(true);
 
   const onSelectionEnd = useCallback(() => {
-    console.log("18")
     setSelectionEnded(true);
   }, []);
   const onSelectionStart = useCallback((event: MouseEvent) => {
-    console.log("19")
     event.preventDefault();
     setSelectionEnded(false);
   }, []);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
-    console.log("20")
     if (selectionEnded && lastSelection && lastSelection.nodes.length > 1) {
       setSelectionMenuVisible(true);
     } else {
@@ -458,14 +434,12 @@ export default function Page({
 
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
-      console.log("21")
       setLastSelection(flow);
     },
     []
   );
 
   const onPaneClick = useCallback((flow) => {
-    console.log("22")
     setFilterEdge([]);
   }, []);
 

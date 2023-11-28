@@ -418,7 +418,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
     const insidePosition = position.paneX
       ? { x: position.paneX + position.x, y: position.paneY! + position.y }
-      : reactFlowInstance!.project({ x: position.x, y: position.y });
+      : reactFlowInstance!.screenToFlowPosition({ x: position.x, y: position.y });
 
     selectionInstance.nodes.forEach((node: NodeType) => {
       // Generate a unique node ID
