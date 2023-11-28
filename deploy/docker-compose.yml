@@ -146,7 +146,7 @@ services:
     build:
       context: ../
       dockerfile: base.Dockerfile
-    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=2 -n lf-worker@%h --pool=gevent
+    command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet
     healthcheck:
       test: "exit 0"
     deploy:
