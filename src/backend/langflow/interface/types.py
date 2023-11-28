@@ -415,8 +415,8 @@ def build_valid_menu(valid_components):
 
                 component_template = build_langchain_template_custom_component(component_extractor)
                 component_template["output_types"] = component_output_types
-                full_path = f"{menu_path}/{component.get('file')}"
-                component_template["full_path"] = full_path
+                # full_path = f"{menu_path}/{component.get('file')}"
+                # component_template["full_path"] = full_path
                 if len(component_output_types) == 1:
                     component_name = component_output_types[0]
                 else:
@@ -554,6 +554,7 @@ def merge_nested_dicts(dict1, dict2):
 def create_and_validate_component(code: str) -> CustomComponent:
     component = CustomComponent(code=code)
     component.validate()
+    return component
     return component
     return component
     return component
