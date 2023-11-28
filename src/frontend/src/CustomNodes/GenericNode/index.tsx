@@ -9,6 +9,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { useSSE } from "../../contexts/SSEContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
+import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
@@ -22,7 +23,7 @@ import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
-  data: olddata,
+  data,
   xPos,
   yPos,
   selected,
@@ -32,7 +33,6 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const [data, setData] = useState(olddata);
   const { updateFlow, flows, tabId } = useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
@@ -46,9 +46,10 @@ export default function GenericNode({
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
-  const [showNode, setShowNode] = useState<boolean>(true);
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
+
+  const { takeSnapshot } = useContext(undoRedoContext);
 
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)
@@ -86,7 +87,6 @@ export default function GenericNode({
   // State for outline color
   const { sseData, isBuilding } = useSSE();
   useEffect(() => {
-    olddata.node = data.node;
     let myFlow = flows.find((flow) => flow.id === tabId);
     if (reactFlowInstance && myFlow) {
       let flow = cloneDeep(myFlow);
@@ -108,10 +108,12 @@ export default function GenericNode({
   }, [data]);
 
   useEffect(() => {
-    setTimeout(() => {
-      updateNodeInternals(data.id);
-    }, 300);
-  }, [showNode]);
+    setNodeDescription(data.node!.description);
+  }, [data.node!.description]);
+
+  useEffect(() => {
+    setNodeName(data.node!.display_name);
+  }, [data.node!.display_name]);
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
@@ -123,15 +125,17 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
+
+  const showNode = data.showNode ?? true;
+
   return (
     <>
       <NodeToolbar>
         <NodeToolbarComponent
           position={{ x: xPos, y: yPos }}
           data={data}
-          setData={setData}
           deleteNode={deleteNode}
-          setShowNode={setShowNode}
+          setShowNode={(showNode: boolean) => {data.showNode = showNode}}
           numberOfHandles={handles}
           showNode={showNode}
         ></NodeToolbarComponent>
@@ -180,7 +184,6 @@ export default function GenericNode({
                   {data.node?.flow && inputName ? (
                     <div>
                       <InputComponent
-                        autoFocus
                         onBlur={() => {
                           setInputName(false);
                           if (nodeName.trim() !== "") {
@@ -200,7 +203,10 @@ export default function GenericNode({
                     <ShadTooltip content={data.node?.display_name}>
                       <div
                         className="flex"
-                        onDoubleClick={() => setInputName(true)}
+                        onDoubleClick={() => {
+                          setInputName(true);
+                          takeSnapshot();
+                        }}
                       >
                         <div className="generic-node-tooltip-div pr-3 text-primary">
                           {data.node?.display_name}
@@ -237,7 +243,6 @@ export default function GenericNode({
                               proxy: data.node!.template[templateField].proxy,
                             })}
                             data={data}
-                            setData={setData}
                             color={
                               nodeColors[
                                 types[data.node?.template[templateField].type!]
@@ -286,7 +291,6 @@ export default function GenericNode({
                       dataType: data.type,
                     })}
                     data={data}
-                    setData={setData}
                     color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                     title={
                       data.node?.output_types &&
@@ -417,7 +421,10 @@ export default function GenericNode({
             ) : (
               <div
                 className="generic-node-desc-text break-all"
-                onDoubleClick={() => setInputDescription(true)}
+                onDoubleClick={() => {
+                  setInputDescription(true);
+                  takeSnapshot();
+                }}
               >
                 {data.node?.description}
               </div>
@@ -449,7 +456,6 @@ export default function GenericNode({
                           proxy: data.node!.template[templateField].proxy,
                         })}
                         data={data}
-                        setData={setData}
                         color={
                           nodeColors[
                             types[data.node?.template[templateField].type!]
@@ -507,8 +513,7 @@ export default function GenericNode({
                     dataType: data.type,
                   })}
                   data={data}
-                  setData={setData}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                    color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
                       ? data.node.output_types.join("|")

@@ -52,15 +52,23 @@ export function UndoRedoProvider({ children }) {
 
   const takeSnapshot = useCallback(() => {
     // push the current graph to the past state
-    setPast((old) => {
-      let newPast = cloneDeep(old);
-      newPast[tabIndex] = old[tabIndex].slice(
-        old[tabIndex].length - defaultOptions.maxHistorySize + 1,
-        old[tabIndex].length
+    let newPast = cloneDeep(past);
+    let newState = {
+      nodes: cloneDeep(getNodes()),
+      edges: cloneDeep(getEdges()),
+    };
+    if (
+      past[tabIndex] &&
+      JSON.stringify(past[tabIndex][past[tabIndex].length - 1]) !==
+        JSON.stringify(newState)
+    ) {
+      newPast[tabIndex] = past[tabIndex].slice(
+        past[tabIndex].length - defaultOptions.maxHistorySize + 1,
+        past[tabIndex].length
       );
-      newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
-      return newPast;
-    });
+      newPast[tabIndex].push(newState);
+    }
+    setPast(newPast);
 
     // whenever we take a new snapshot, the redo operations need to be cleared to avoid state mismatches
     setFuture((old) => {

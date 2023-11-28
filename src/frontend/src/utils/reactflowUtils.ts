@@ -934,8 +934,6 @@ export function expandGroupNode(
   updateEdgesIds(flowEdges, idsMap);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
-  //TODO update ids of intern nodes and proxy on edges before expanding
-  console.log(gEdges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   flowEdges.forEach((edge) => {
@@ -1046,7 +1044,6 @@ export function getGroupStatus(
   let status = { valid: true, params: "Built sucessfully ✨" };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
-  ids.forEach((id) => console.log(ssData[id]));
   ids.forEach((id) => {
     if (!ssData[id]) {
       status = ssData[id];

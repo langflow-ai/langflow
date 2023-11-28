@@ -90,8 +90,6 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
 
   useEffect(() => {
-    // this effect is used to attach the global event handlers
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isWrappedWithClass(event, "nocopy")) {
         if (
@@ -108,10 +106,9 @@ export default function Page({
           lastCopiedSelection
         ) {
           event.preventDefault();
-          let bounds = reactFlowWrapper.current?.getBoundingClientRect();
           paste(lastCopiedSelection, {
-            x: position.x - bounds!.left,
-            y: position.y - bounds!.top,
+            x: position.x,
+            y: position.y,
           });
         }
         if (
@@ -133,18 +130,26 @@ export default function Page({
         }
       }
     };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [lastCopiedSelection, lastSelection]);
+
+  useEffect(() => {
     const handleMouseMove = (event) => {
       setPosition({ x: event.clientX, y: event.clientY });
     };
 
-    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [position, lastCopiedSelection, lastSelection]);
+  }, [position]);
+
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
@@ -152,58 +157,34 @@ export default function Page({
   const [nodes, setNodes, onNodesChange] = useNodesState(
     flow.data?.nodes ?? []
   );
+
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     flow.data?.edges ?? []
   );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
-  useEffect(() => {
-    if (reactFlowInstance && flow) {
-      flow.data = reactFlowInstance.toObject();
-      updateFlow(flow);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edges]);
+
   //update flow when tabs change
   useEffect(() => {
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
     if (reactFlowInstance) {
       setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
-      reactFlowInstance.fitView();
     }
-  }, [flow, reactFlowInstance, setEdges, setNodes, setViewport]);
-  //set extra sidebar
-  useEffect(() => {
-    setExtraComponent(<ExtraSidebar />);
-    setExtraNavigation({ title: "Components" });
-  }, [setExtraComponent, setExtraNavigation]);
-
-  const [seconds, setSeconds] = useState(0);
+  }, [flow, reactFlowInstance]);
 
   useEffect(() => {
     const index = flows.findIndex((flowId) => flowId.id === flow.id);
 
     const interval = setInterval(() => {
-      setSeconds((prevSeconds) => {
-        let updatedSeconds = prevSeconds + 1;
-
-        if (updatedSeconds % 30 === 0) {
-          saveFlow(
-            {
-              ...flows[index]!,
-              data: reactFlowInstance
-                ? reactFlowInstance!.toObject()
-                : flow!.data,
-            },
-            true
-          );
-          updatedSeconds = 0;
-        }
-
-        return updatedSeconds;
-      });
-    }, 1000);
+      saveFlow(
+        {
+          ...flows[index]!,
+          data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
+        },
+        true
+      );
+    }, 30000);
 
     return () => {
       clearInterval(interval);
@@ -212,11 +193,11 @@ export default function Page({
 
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
-      onEdgesChange(change);
-      setNodes((node) => {
-        let newX = _.cloneDeep(node);
-        return newX;
+      updateFlow({
+        ...flow!,
+        data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
       });
+      onEdgesChange(change);
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
         return {
@@ -383,6 +364,9 @@ export default function Page({
   );
 
   useEffect(() => {
+    setExtraComponent(<ExtraSidebar />);
+    setExtraNavigation({ title: "Components" });
+
     return () => {
       if (tabsState && tabsState[flow.id]?.isPending) {
         saveFlow({
@@ -520,6 +504,7 @@ export default function Page({
                     isVisible={selectionMenuVisible}
                     nodes={lastSelection?.nodes}
                     onClick={() => {
+                      takeSnapshot();
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {

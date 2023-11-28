@@ -97,7 +97,6 @@ export default function ExtraSidebar(): JSX.Element {
   useEffect(() => {
     if (getFilterEdge.length === 0 && search === "") {
       setFilterData(data);
-      setFilterEdge([]);
       setSearch("");
     }
   }, [getFilterEdge]);

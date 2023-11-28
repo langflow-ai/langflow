@@ -23,10 +23,10 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 
 export default function NodeToolbarComponent({
   data,
-  setData,
   deleteNode,
   position,
   setShowNode,
@@ -66,6 +66,7 @@ export default function NodeToolbarComponent({
   const isGroup = data.node?.flow ? true : false;
 
   const { paste, saveComponent, version, flows } = useContext(FlowsContext);
+  const { takeSnapshot } = useContext(undoRedoContext);
   const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -84,6 +85,7 @@ export default function NodeToolbarComponent({
         setShowModalAdvanced(true);
         break;
       case "show":
+        takeSnapshot();
         setShowNode((prev) => !prev);
         updateNodeInternals(data.id);
         break;
@@ -99,6 +101,7 @@ export default function NodeToolbarComponent({
       case "disabled":
         break;
       case "ungroup":
+        takeSnapshot();
         updateFlowPosition(position, data.node?.flow!);
         expandGroupNode(data, reactFlowInstance, getNodeId);
         break;
@@ -301,7 +304,6 @@ export default function NodeToolbarComponent({
           </ConfirmationModal>
           <EditNodeModal
             data={data}
-            setData={setData}
             nodeLength={nodeLength}
             open={showModalAdvanced}
             setOpen={setShowModalAdvanced}
