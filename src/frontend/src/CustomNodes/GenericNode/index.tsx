@@ -46,7 +46,6 @@ export default function GenericNode({
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
-  const [showNode, setShowNode] = useState<boolean>(true);
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
 
@@ -109,12 +108,6 @@ export default function GenericNode({
   }, [data]);
 
   useEffect(() => {
-    setTimeout(() => {
-      updateNodeInternals(data.id);
-    }, 300);
-  }, [showNode]);
-
-  useEffect(() => {
     setNodeDescription(data.node!.description);
   }, [data.node!.description]);
 
@@ -132,6 +125,9 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
+  
+  const showNode = data.showNode ?? false;
+
   return (
     <>
       <NodeToolbar>
@@ -139,7 +135,7 @@ export default function GenericNode({
           position={{ x: xPos, y: yPos }}
           data={data}
           deleteNode={deleteNode}
-          setShowNode={setShowNode}
+          setShowNode={(showNode: boolean) => {data.showNode = showNode}}
           numberOfHandles={handles}
           showNode={showNode}
         ></NodeToolbarComponent>
