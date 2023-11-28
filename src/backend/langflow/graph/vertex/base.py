@@ -1,7 +1,7 @@
 import ast
 import inspect
 import types
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional
 
 from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
@@ -73,8 +73,8 @@ class Vertex:
         self.parent_node_id = state["parent_node_id"]
         self.parent_is_top_level = state["parent_is_top_level"]
 
-    def set_top_level(self, top_level_nodes: List[str]) -> None:
-        self.parent_is_top_level = self.parent_node_id in top_level_nodes
+    def set_top_level(self, top_level_vertices: List[str]) -> None:
+        self.parent_is_top_level = self.parent_node_id in top_level_vertices
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
@@ -245,7 +245,10 @@ class Vertex:
 
         if self.is_task and self.task_id is not None:
             task = self.get_task()
+
             result = task.get(timeout=timeout)
+            if isinstance(result, Coroutine):
+                result = await result
             if result is not None:  # If result is ready
                 self._update_built_object_and_artifacts(result)
                 return self._built_object

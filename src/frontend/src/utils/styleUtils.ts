@@ -99,6 +99,8 @@ import {
   X,
   XCircle,
   Zap,
+  Combine,
+  TerminalIcon
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -111,7 +113,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
-import { GradientInfinity } from "../icons/GradientSparkles";
+import { GradientInfinity, GradientSave } from "../icons/GradientSparkles";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -260,7 +262,7 @@ export const nodeIconsLucide: iconsType = {
   advanced: Laptop2,
   chat: MessageCircle,
   embeddings: Fingerprint,
-  saved_components: Save,
+  saved_components: GradientSave,
   documentloaders: Paperclip,
   vectorstores: Layers,
   toolkits: Hammer,
@@ -356,4 +358,6 @@ export const nodeIconsLucide: iconsType = {
   Link,
   ToyBrick,
   RefreshCcw,
+  Combine,
+  TerminalIcon,
 };

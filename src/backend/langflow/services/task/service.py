@@ -1,10 +1,11 @@
 from typing import Any, Callable, Coroutine, Union
-from langflow.utils.logger import configure
-from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
 from langflow.services.task.backends.base import TaskBackend
 from langflow.services.task.utils import get_celery_worker_status
+from langflow.utils.logger import configure
+from loguru import logger
 
 
 def check_celery_availability():
@@ -60,7 +61,11 @@ class TaskService(Service):
         if not hasattr(task_func, "apply"):
             raise ValueError(f"Task function {task_func} does not have an apply method")
         task = task_func.apply(args=args, kwargs=kwargs)
+
         result = task.get()
+        # if result is coroutine
+        if isinstance(result, Coroutine):
+            result = await result
         return task.id, result
 
     async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
@@ -68,6 +73,9 @@ class TaskService(Service):
         logger.debug(f"Using backend {self.backend}")
         task = self.backend.launch_task(task_func, *args, **kwargs)
         return await task if isinstance(task, Coroutine) else task
+
+    def get_task(self, task_id: Union[int, str]) -> Any:
+        return self.backend.get_task(task_id)
 
     def get_task(self, task_id: Union[int, str]) -> Any:
         return self.backend.get_task(task_id)
