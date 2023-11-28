@@ -25,6 +25,10 @@ export default function CodeAreaModal({
   children,
   dynamic,
   readonly = false,
+  options = {
+    readOnly: readonly,
+
+  }
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
@@ -152,16 +156,12 @@ export default function CodeAreaModal({
         />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
-            <AceEditor
-              readOnly={readonly}
-              value={code}
-              mode="python"
+            <Editor
+              options={readOnly: readonly, renderLineHighlight: "line",
+                          codeLensFontSize: 14 }
+              defaultValue={code}
+              defaultLanguage="python"
               height={height ?? "100%"}
-              highlightActiveLine={true}
-              showPrintMargin={false}
-              fontSize={14}
-              showGutter
-              enableLiveAutocompletion
               theme={dark ? "twilight" : "github"}
               name="CodeEditor"
               onChange={(value) => {
