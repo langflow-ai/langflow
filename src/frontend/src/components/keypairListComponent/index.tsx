@@ -12,8 +12,6 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   duplicateKey,
-  advanced = false,
-  dataValue,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled) {

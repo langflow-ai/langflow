@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import React, {
   ReactNode,
   useContext,
@@ -29,6 +28,7 @@ import {
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
@@ -50,7 +50,6 @@ export default function ParameterComponent({
   left,
   id,
   data,
-  setData,
   tooltipTitle,
   title,
   color,
@@ -99,6 +98,8 @@ export default function ParameterComponent({
 
   const { data: myData } = useContext(typesContext);
 
+  const { takeSnapshot } = useContext(undoRedoContext);
+
   const handleUpdateValues = async (name: string, data: NodeDataType) => {
     const code = data.node?.template["code"]?.value;
     if (!code) {
@@ -121,9 +122,8 @@ export default function ParameterComponent({
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
-    let newData = cloneDeep(data);
-    newData.node!.template[name].value = newValue;
-    setData(newData);
+    takeSnapshot();
+    data.node!.template[name].value = newValue;
     // Set state to pending
     //@ts-ignore
     setTabsState((prev: TabsState) => {
@@ -484,9 +484,6 @@ export default function ParameterComponent({
               field_name={name}
               setNodeClass={(nodeClass) => {
                 data.node = nodeClass;
-                const clone = cloneDeep(data);
-                clone.node = nodeClass;
-                setData(clone);
               }}
               nodeClass={data.node}
               disabled={disabled}

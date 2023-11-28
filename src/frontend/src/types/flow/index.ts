@@ -22,6 +22,7 @@ export type NodeType = {
 };
 
 export type NodeDataType = {
+  showNode?: boolean;
   type: string;
   node?: APIClassType;
   id: string;
