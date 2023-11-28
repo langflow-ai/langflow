@@ -100,6 +100,7 @@ import {
   XCircle,
   Zap,
   Combine,
+  TerminalIcon
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -358,4 +359,5 @@ export const nodeIconsLucide: iconsType = {
   ToyBrick,
   RefreshCcw,
   Combine,
+  TerminalIcon,
 };
