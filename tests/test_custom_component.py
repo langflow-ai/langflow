@@ -7,10 +7,7 @@ from fastapi import HTTPException
 from langflow.field_typing.constants import Data
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
-from langflow.interface.custom.component import (
-    Component,
-    ComponentCodeNullError,
-)
+from langflow.interface.custom.component import Component, ComponentCodeNullError
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
@@ -445,7 +442,7 @@ def test_custom_component_build_not_implemented():
 def test_build_config_no_code():
     component = CustomComponent(code=None)
 
-    assert component.get_function_entrypoint_args == ""
+    assert component.get_function_entrypoint_args == []
     assert component.get_function_entrypoint_return_type == []
 
 
