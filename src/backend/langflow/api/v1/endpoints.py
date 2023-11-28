@@ -89,6 +89,7 @@ async def process(
         if flow.data is None:
             raise ValueError(f"Flow {flow_id} has no data")
         graph_data = flow.data
+        task_result = None
         if tweaks:
             try:
                 graph_data = process_tweaks(graph_data, tweaks)
@@ -243,6 +244,8 @@ async def custom_component_update(
     component = create_and_validate_component(raw_code.code)
 
     component_node = build_langchain_template_custom_component(component, user_id=user.id, update_field=raw_code.field)
+    # Update the field
+    return component_node
     # Update the field
     return component_node
     # Update the field
