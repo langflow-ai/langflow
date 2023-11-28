@@ -308,7 +308,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         let text = await file.text();
         let fileData = JSON.parse(text);
         if (
-          (fileData.is_component === undefined && isComponent === false) ||
+          (!fileData.is_component && isComponent === true) ||
           (fileData.is_component !== undefined &&
             fileData.is_component !== isComponent)
         ) {
@@ -340,7 +340,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             console.log(isComponent, fileData);
 
             if (
-              (fileData.is_component === undefined && isComponent === false) ||
+              (!fileData.is_component && isComponent === true) ||
               (fileData.is_component !== undefined &&
                 fileData.is_component !== isComponent)
             ) {
