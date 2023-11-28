@@ -1,8 +1,6 @@
 from typing import Dict, Generator, List, Type, Union
 
 from langchain.chains.base import Chain
-from loguru import logger
-
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
@@ -10,6 +8,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from loguru import logger
 
 
 class Graph:
@@ -154,8 +153,8 @@ class Graph:
             if state[vertex] == 0:
                 state[vertex] = 1
                 for edge in vertex.edges:
-                    if edge.source == vertex:
-                        dfs(edge.target)
+                    if edge.source_id == vertex.id:
+                        dfs(self.get_vertex(edge.target_id))
                 state[vertex] = 2
                 sorted_vertices.append(vertex)
 
