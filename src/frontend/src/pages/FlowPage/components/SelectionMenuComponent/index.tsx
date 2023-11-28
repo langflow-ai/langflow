@@ -37,8 +37,8 @@ export default function SelectionMenu({ onClick, nodes, isVisible }) {
       <div className="h-10 w-28 overflow-hidden">
         <div
           className={
-            "h-10 w-24 rounded-md border border-indigo-300 bg-white px-2.5 text-gray-700 shadow-inner transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300" +
-            (isTransitioning ? " translate-y-0" : " translate-y-10")
+            "h-10 w-24 rounded-md border border-indigo-300 bg-white px-2.5 text-gray-700 shadow-inner transition-all duration-400 ease-in-out dark:bg-gray-800 dark:text-gray-300" +
+            (isTransitioning ? " opacity-100" : " opacity-0 ")
           }
         >
           <button
