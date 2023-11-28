@@ -22,8 +22,8 @@ class TargetHandle(BaseModel):
 
 class Edge:
     def __init__(self, source: "Vertex", target: "Vertex", edge: dict):
-        self.source_id: str = source.id
-        self.target_id: str = target.id
+        self.source_id: str = source.id if source else ""
+        self.target_id: str = target.id if target else ""
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
             self._target_handle = data.get("targetHandle", {})
