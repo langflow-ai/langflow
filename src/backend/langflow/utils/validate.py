@@ -1,7 +1,7 @@
 import ast
 import contextlib
 import importlib
-import types
+from types import FunctionType
 from typing import Dict
 
 
@@ -61,7 +61,7 @@ def eval_function(function_string: str):
         (
             obj
             for name, obj in namespace.items()
-            if isinstance(obj, types.FunctionType) and obj.__code__.co_filename == "<string>"
+            if isinstance(obj, FunctionType) and obj.__code__.co_filename == "<string>"
         ),
         None,
     )
