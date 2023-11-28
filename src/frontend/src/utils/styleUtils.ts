@@ -99,6 +99,7 @@ import {
   X,
   XCircle,
   Zap,
+  Combine,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -356,4 +357,5 @@ export const nodeIconsLucide: iconsType = {
   Link,
   ToyBrick,
   RefreshCcw,
+  Combine,
 };
