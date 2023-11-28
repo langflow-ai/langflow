@@ -125,8 +125,8 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [sseData, data.id]);
-  
-  const showNode = data.showNode ?? false;
+
+  const showNode = data.showNode ?? true;
 
   return (
     <>
