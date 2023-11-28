@@ -286,9 +286,10 @@ export type PaginatorComponentType = {
 export type ConfirmationModalType = {
   onCancel?: () => void;
   title: string;
-  titleHeader: string;
+  titleHeader?: string;
   asChild?: boolean;
-  modalContentTitle: string;
+  destructive?: boolean;
+  modalContentTitle?: string;
   cancelText: string;
   confirmationText: string;
   children: [

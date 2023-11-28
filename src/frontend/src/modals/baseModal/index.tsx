@@ -99,7 +99,7 @@ function BaseModal({
   switch (size) {
     case "x-small":
       minWidth = "min-w-[20vw]";
-      height = "h-[10vh]";
+      height = " ";
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
@@ -150,7 +150,7 @@ function BaseModal({
         <div className="truncate-doubleline word-break-break-word">
           {headerChild}
         </div>
-        <div className={`mt-2 flex flex-col ${height!} w-full `}>
+        <div className={`flex flex-col ${height!} w-full `}>
           {ContentChild}
         </div>
         {ContentFooter && (

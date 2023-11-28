@@ -41,7 +41,7 @@ export default function DeleteConfirmationModal({
         </span>
         <DialogFooter>
           <DialogClose>
-            <Button className="mr-3">Cancel</Button>
+            <Button className="mr-3" variant="outline">Cancel</Button>
 
             <Button
               type="submit"
