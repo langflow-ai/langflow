@@ -1,15 +1,8 @@
 from typing import List
-from langflow import CustomComponent
-from langchain.document_loaders import AZLyricsLoader
-from langchain.document_loaders import CollegeConfidentialLoader
-from langchain.document_loaders import GitbookLoader
-from langchain.document_loaders import HNLoader
-from langchain.document_loaders import IFixitLoader
-from langchain.document_loaders import IMSDbLoader
-from langchain.document_loaders import WebBaseLoader
 
-
+from langchain import document_loaders
 from langchain.schema import Document
+from langflow import CustomComponent
 
 
 class UrlLoaderComponent(CustomComponent):
@@ -41,22 +34,13 @@ class UrlLoaderComponent(CustomComponent):
         }
 
     def build(self, web_path: str, loader: str) -> List[Document]:
-        if loader == "AZLyricsLoader":
-            loader_instance = AZLyricsLoader(web_path=web_path)  # type: ignore
-        elif loader == "CollegeConfidentialLoader":
-            loader_instance = CollegeConfidentialLoader(web_path=web_path)  # type: ignore
-        elif loader == "GitbookLoader":
-            loader_instance = GitbookLoader(web_page=web_path)  # type: ignore
-        elif loader == "HNLoader":
-            loader_instance = HNLoader(web_path=web_path)  # type: ignore
-        elif loader == "IFixitLoader":
-            loader_instance = IFixitLoader(web_path=web_path)  # type: ignore
-        elif loader == "IMSDbLoader":
-            loader_instance = IMSDbLoader(web_path=web_path)  # type: ignore
-        elif loader == "WebBaseLoader":
-            loader_instance = WebBaseLoader(web_path=web_path)  # type: ignore
-
-        if loader_instance is None:
-            raise ValueError(f"No loader found for: {web_path}")
-
-        return loader_instance.load()
+        try:
+            loader_instance = getattr(document_loaders, loader)(web_path=web_path)
+        except Exception as e:
+            raise ValueError(f"No loader found for: {web_path}") from e
+        docs = loader_instance.load()
+        avg_length = sum(len(doc.page_content) for doc in docs if hasattr(doc, "page_content")) / len(docs)
+        self.status = f"""{len(docs)} documents)
+        \nAvg. Document Length (characters): {int(avg_length)}
+        Documents: {docs[:3]}..."""
+        return docs
