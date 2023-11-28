@@ -198,14 +198,19 @@ export default function GenericNode({
                     </div>
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
-                      <div className="flex" onDoubleClick={() => setInputName(true)}>
-                        <div
-                          className="generic-node-tooltip-div text-primary pr-3"
-                          
-                        >
+                      <div
+                        className="flex"
+                        onDoubleClick={() => setInputName(true)}
+                      >
+                        <div className="generic-node-tooltip-div pr-3 text-primary">
                           {data.node?.display_name}
                         </div>
-                        {data.node?.flow&& <IconComponent name="Pencil" className="w-5 h-5 text-primary-content" />}
+                        {data.node?.flow && (
+                          <IconComponent
+                            name="Pencil"
+                            className="h-5 w-5 text-primary-content"
+                          />
+                        )}
                       </div>
                     </ShadTooltip>
                   )}
@@ -235,10 +240,10 @@ export default function GenericNode({
                             setData={setData}
                             color={
                               nodeColors[
-                              types[data.node?.template[templateField].type!]
+                                types[data.node?.template[templateField].type!]
                               ] ??
                               nodeColors[
-                              data.node?.template[templateField].type!
+                                data.node?.template[templateField].type!
                               ] ??
                               nodeColors.unknown
                             }
@@ -285,7 +290,7 @@ export default function GenericNode({
                     color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                     title={
                       data.node?.output_types &&
-                        data.node.output_types.length > 0
+                      data.node.output_types.length > 0
                         ? data.node.output_types.join("|")
                         : data.type
                     }
@@ -323,10 +328,10 @@ export default function GenericNode({
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
                             ? validationStatus.params
-                              .split("\n")
-                              .map((line: string, index: number) => (
-                                <div key={index}>{line}</div>
-                              ))
+                                .split("\n")
+                                .map((line: string, index: number) => (
+                                  <div key={index}>{line}</div>
+                                ))
                             : ""}
                         </div>
                       )
@@ -370,14 +375,14 @@ export default function GenericNode({
             className={
               showNode
                 ? "generic-node-desc " +
-                (data.node?.description !== "" ? "py-5" : "pb-5")
+                  (data.node?.description !== "" ? "py-5" : "pb-5")
                 : ""
             }
           >
             {data.node?.description !== "" &&
-              showNode &&
-              data.node?.flow &&
-              inputDescription ? (
+            showNode &&
+            data.node?.flow &&
+            inputDescription ? (
               <Textarea
                 autoFocus
                 onBlur={() => {
@@ -432,7 +437,7 @@ export default function GenericNode({
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&
-                      !data.node!.template[templateField].advanced ? (
+                    !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
                         index={idx.toString()}
                         key={scapedJSONStringfy({
@@ -447,10 +452,10 @@ export default function GenericNode({
                         setData={setData}
                         color={
                           nodeColors[
-                          types[data.node?.template[templateField].type!]
+                            types[data.node?.template[templateField].type!]
                           ] ??
                           nodeColors[
-                          data.node?.template[templateField].type!
+                            data.node?.template[templateField].type!
                           ] ??
                           nodeColors.unknown
                         }

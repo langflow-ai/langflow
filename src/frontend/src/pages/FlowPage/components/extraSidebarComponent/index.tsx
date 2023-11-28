@@ -30,7 +30,7 @@ export default function ExtraSidebar(): JSX.Element {
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
-  const { hasApiKey,validApiKey } = useContext(StoreContext);
+  const { hasApiKey, validApiKey } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -181,25 +181,54 @@ export default function ExtraSidebar(): JSX.Element {
   }, [getFilterEdge, data]);
 
   const ModalMemo = useMemo(
-    () => (
-      <ShareModal is_component={false} component={flow!} disabled={(!hasApiKey||!validApiKey)}>
-        <ShadTooltip content="Share" side="top">
-          <button disabled={!hasApiKey} className={classNames("extra-side-bar-buttons",(!hasApiKey||!validApiKey)?"button-disable cursor-default":"")}>
-            <IconComponent name="Share2" className={classNames("side-bar-button-size",(!hasApiKey||!validApiKey)?"extra-side-bar-save-disable":"")} />
+    () =>
+      !hasApiKey || !validApiKey ? (
+        <button
+          disabled={!hasApiKey || !validApiKey}
+          className={classNames(
+            "extra-side-bar-buttons",
+            !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+          )}
+        >
+          <IconComponent
+            name="Share2"
+            className={classNames(
+              "side-bar-button-size",
+              !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+            )}
+          />
+        </button>
+      ) : (
+        <ShareModal
+          is_component={false}
+          component={flow!}
+          disabled={!hasApiKey || !validApiKey}
+        >
+          <button
+            disabled={!hasApiKey || !validApiKey}
+            className={classNames(
+              "extra-side-bar-buttons",
+              !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+            )}
+          >
+            <IconComponent
+              name="Share2"
+              className={classNames(
+                "side-bar-button-size",
+                !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+              )}
+            />
           </button>
-        </ShadTooltip>
-      </ShareModal>
-    ),
-    [hasApiKey,validApiKey]
+        </ShareModal>
+      ),
+    [hasApiKey, validApiKey]
   );
 
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
         <ShadTooltip content="Export" side="top">
-          <button
-            className={classNames("extra-side-bar-buttons")}
-          >
+          <button className={classNames("extra-side-bar-buttons")}>
             <IconComponent name="FileDown" className="side-bar-button-size" />
           </button>
         </ShadTooltip>
@@ -280,8 +309,9 @@ export default function ExtraSidebar(): JSX.Element {
             </div>
           </ShadTooltip>
         </div>
-
-        <div className="side-bar-button">{ModalMemo}</div>
+        <ShadTooltip content="Share" side="top" styleClasses="cursor-default">
+          <div className="side-bar-button">{ModalMemo}</div>
+        </ShadTooltip>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
