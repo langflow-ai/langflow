@@ -1,27 +1,27 @@
+from typing import TYPE_CHECKING
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends
-from langflow.api.v1.schemas import ApiKeysResponse, ApiKeyCreateRequest
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session
+
+from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.api_key.api_key import (
-    ApiKeyCreate,
-    UnmaskedApiKeyRead,
-)
 
 # Assuming you have these methods in your service layer
 from langflow.services.database.models.api_key.crud import (
-    get_api_keys,
     create_api_key,
     delete_api_key,
+    get_api_keys,
 )
-from langflow.services.database.models.user.user import User
+from langflow.services.database.models.api_key.model import (
+    ApiKeyCreate,
+    UnmaskedApiKeyRead,
+)
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_session,
     get_settings_service,
 )
-from typing import TYPE_CHECKING
-
-
-from sqlmodel import Session
 
 if TYPE_CHECKING:
     pass
@@ -83,5 +83,18 @@ def save_store_api_key(
         current_user.store_api_key = encrypted
         db.commit()
         return {"detail": "API Key saved"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.delete("/store")
+def delete_store_api_key(
+    current_user: User = Depends(auth_utils.get_current_active_user),
+    db: Session = Depends(get_session),
+):
+    try:
+        current_user.store_api_key = None
+        db.commit()
+        return {"detail": "API Key deleted"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

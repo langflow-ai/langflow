@@ -88,17 +88,17 @@ export default function SidebarDraggableComponent({
           }}
         >
           <div
+            data-testid={sectionName + display_name}
             id={sectionName + display_name}
             className="side-bar-components-div-form"
           >
             <span className="side-bar-components-text">{display_name}</span>
             <div>
-              <SelectTrigger>
-                <IconComponent
-                  name="Menu"
-                  className="side-bar-components-icon "
-                />
-              </SelectTrigger>
+              <IconComponent
+                name="Menu"
+                className="side-bar-components-icon "
+              />
+              <SelectTrigger></SelectTrigger>
               <SelectContent>
                 <SelectItem value={"download"}>
                   <div className="flex">

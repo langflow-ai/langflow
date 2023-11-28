@@ -70,6 +70,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
+    flows,
   } = useContext(FlowsContext);
   const {
     types,
@@ -144,7 +145,6 @@ export default function Page({
       document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [position, lastCopiedSelection, lastSelection]);
-
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
@@ -181,6 +181,8 @@ export default function Page({
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
+    const index = flows.findIndex((flowId) => flowId.id === flow.id);
+
     const interval = setInterval(() => {
       setSeconds((prevSeconds) => {
         let updatedSeconds = prevSeconds + 1;
@@ -188,7 +190,7 @@ export default function Page({
         if (updatedSeconds % 30 === 0) {
           saveFlow(
             {
-              ...flow!,
+              ...flows[index]!,
               data: reactFlowInstance
                 ? reactFlowInstance!.toObject()
                 : flow!.data,
@@ -318,9 +320,9 @@ export default function Page({
         );
 
         // Calculate the position where the node should be created
-        const position = reactFlowInstance!.project({
-          x: event.clientX - reactflowBounds!.left,
-          y: event.clientY - reactflowBounds!.top,
+        const position = reactFlowInstance!.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
         });
 
         // Generate a unique node ID

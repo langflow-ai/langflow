@@ -1,17 +1,16 @@
-from langflow.services.database.models.base import SQLModel, SQLModelSerializable
-from sqlmodel import Field, Relationship
-
-
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
+
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key import ApiKey
+    from langflow.services.database.models.credential import Credential
     from langflow.services.database.models.flow import Flow
 
 
-class User(SQLModelSerializable, table=True):
+class User(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
@@ -27,6 +26,10 @@ class User(SQLModelSerializable, table=True):
     )
     store_api_key: str = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
+    credentials: list["Credential"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
 
 
 class UserCreate(SQLModel):

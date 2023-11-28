@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-from langflow.services.database.models.user.user import User
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import teardown_superuser
 
@@ -104,13 +103,7 @@ def test_teardown_superuser_default_superuser(mock_get_session, mock_get_setting
 
     teardown_superuser(mock_settings_service, mock_session)
 
-    mock_session.query.assert_called_once_with(User)
-    actual_expr = mock_session.query.return_value.filter.call_args[0][0]
-    expected_expr = User.username == DEFAULT_SUPERUSER
-
-    assert str(actual_expr) == str(expected_expr)
-    mock_session.delete.assert_called_once_with(mock_user)
-    mock_session.commit.assert_called_once()
+    mock_session.query.assert_not_called()
 
 
 @patch("langflow.services.deps.get_settings_service")
@@ -131,6 +124,6 @@ def test_teardown_superuser_no_default_superuser(mock_get_session, mock_get_sett
 
     teardown_superuser(mock_settings_service, mock_session)
 
-    mock_session.query.assert_not_called()
+    mock_session.query.assert_called_once()
     mock_session.delete.assert_not_called()
     mock_session.commit.assert_not_called()

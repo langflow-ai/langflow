@@ -1,15 +1,15 @@
-from pydantic import validator
-from sqlmodel import Field, Relationship
-from uuid import UUID, uuid4
-from typing import Optional, TYPE_CHECKING
 from datetime import datetime
-from langflow.services.database.models.base import SQLModelSerializable
+from typing import TYPE_CHECKING, Optional
+from uuid import UUID, uuid4
+
+from pydantic import validator
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
 
 
-class ApiKeyBase(SQLModelSerializable):
+class ApiKeyBase(SQLModel):
     name: Optional[str] = Field(index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_used_at: Optional[datetime] = Field(default=None, nullable=True)

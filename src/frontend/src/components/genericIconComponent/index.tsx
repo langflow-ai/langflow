@@ -3,7 +3,10 @@ import { IconComponentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 
 const ForwardedIconComponent = forwardRef(
-  ({ name, className, iconColor, stroke }: IconComponentProps, ref) => {
+  (
+    { name, className, iconColor, stroke, id = "" }: IconComponentProps,
+    ref
+  ) => {
     const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
     return (
       <TargetIcon
@@ -12,6 +15,7 @@ const ForwardedIconComponent = forwardRef(
         style={iconColor ? { color: iconColor } : {}}
         ref={ref}
         stroke={stroke ? stroke : "currentColor"}
+        data-testid={id ? `${id}-${name}` : "icon-" + name}
       />
     );
   }

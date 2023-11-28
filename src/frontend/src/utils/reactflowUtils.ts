@@ -9,7 +9,10 @@ import {
   XYPosition,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { specialCharsRegex } from "../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  specialCharsRegex,
+} from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
   FlowType,
@@ -634,15 +637,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     let type = template[key].type;
     let input_types = template[key].input_types;
     if (
-      (type === "str" ||
-        type === "bool" ||
-        type === "float" ||
-        type === "code" ||
-        type === "prompt" ||
-        type === "file" ||
-        type === "int" ||
-        type === "dict" ||
-        type === "NestedDict") &&
+      LANGFLOW_SUPPORTED_TYPES.has(type) &&
       !template[key].required &&
       !input_types
     ) {

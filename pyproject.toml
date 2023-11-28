@@ -102,11 +102,12 @@ boto3 = "^1.28.63"
 numexpr = "^2.8.6"
 qianfan = "0.0.5"
 pgvector = "^0.2.3"
+pyautogen = "^0.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.1"
 types-redis = "^4.6.0.5"
-ipykernel = "^6.21.2"
+ipykernel = "^6.26.0"
 mypy = "^1.1.1"
 ruff = "^0.1.5"
 httpx = "*"

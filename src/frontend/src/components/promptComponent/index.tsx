@@ -53,6 +53,7 @@ export default function PromptAreaComponent({
         <div className="flex w-full items-center">
           <span
             id={id}
+            data-testid={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"
@@ -64,6 +65,7 @@ export default function PromptAreaComponent({
           </span>
           {!editNode && (
             <IconComponent
+              id={id}
               name="ExternalLink"
               className={
                 "icons-parameters-comp" +

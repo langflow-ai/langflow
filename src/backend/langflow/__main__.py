@@ -313,7 +313,7 @@ def superuser(
 
         if create_super_user(db=session, username=username, password=password):
             # Verify that the superuser was created
-            from langflow.services.database.models.user.user import User
+            from langflow.services.database.models.user.model import User
 
             user: User = session.query(User).filter(User.username == username).first()
             if user is None or not user.is_superuser:

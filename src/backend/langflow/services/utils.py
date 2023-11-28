@@ -18,6 +18,7 @@ def get_factories_and_deps():
     from langflow.services.settings import factory as settings_factory
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory
+    from langflow.services.credentials import factory as credentials_factory
 
     return [
         (settings_factory.SettingsServiceFactory(), []),
@@ -40,11 +41,12 @@ def get_factories_and_deps():
             [ServiceType.CACHE_SERVICE],
         ),
         (store_factory.StoreServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
+        (credentials_factory.CredentialServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
     ]
 
 
 def get_or_create_super_user(session: Session, username, password, is_default):
-    from langflow.services.database.models.user.user import User
+    from langflow.services.database.models.user.model import User
 
     user = session.query(User).filter(User.username == username).first()
 
@@ -127,7 +129,7 @@ def teardown_superuser(settings_service, session):
         try:
             logger.debug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
-            from langflow.services.database.models.user.user import User
+            from langflow.services.database.models.user.model import User
 
             user = session.query(User).filter(User.username == username).first()
             if user and user.is_superuser:

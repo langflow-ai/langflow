@@ -38,7 +38,7 @@ export default function GenericNode({
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
-  const [inputName, setInputName] = useState(true);
+  const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
@@ -206,13 +206,21 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div
-                        className="generic-node-tooltip-div text-primary"
+                        className="flex"
                         onDoubleClick={() => {
                           setInputName(true);
                           takeSnapshot();
                         }}
                       >
-                        {data.node?.display_name}
+                        <div className="generic-node-tooltip-div pr-3 text-primary">
+                          {data.node?.display_name}
+                        </div>
+                        {data.node?.flow && (
+                          <IconComponent
+                            name="Pencil"
+                            className="h-5 w-5 text-primary-content"
+                          />
+                        )}
                       </div>
                     </ShadTooltip>
                   )}

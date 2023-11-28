@@ -1,9 +1,11 @@
 import ast
 import operator
+import warnings
 from typing import Any, ClassVar, Optional
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser import CodeParser
 from langflow.utils import validate
 
@@ -23,11 +25,20 @@ class Component:
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
+    _user_id: Optional[str]
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
-            setattr(self, key, value)
+            if key == "user_id":
+                setattr(self, "_user_id", value)
+            else:
+                setattr(self, key, value)
+
+    def __setattr__(self, key, value):
+        if key == "_user_id" and hasattr(self, "_user_id"):
+            warnings.warn("user_id is immutable and cannot be changed.")
+        super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):

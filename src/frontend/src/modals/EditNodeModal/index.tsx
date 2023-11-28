@@ -25,7 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { limitScrollFieldsModal } from "../../constants/constants";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  limitScrollFieldsModal,
+} from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -123,7 +126,7 @@ const EditNodeModal = forwardRef(
                 "edit-node-modal-box",
                 nodeLength > limitScrollFieldsModal
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
-                  : "overflow-hidden"
+                  : ""
               )}
             >
               {nodeLength > 0 && (
@@ -144,24 +147,9 @@ const EditNodeModal = forwardRef(
                           (templateParam) =>
                             templateParam.charAt(0) !== "_" &&
                             myData.node?.template[templateParam].show &&
-                            (myData.node.template[templateParam]
-                              .type === "str" ||
-                              myData.node.template[templateParam]
-                                .type === "bool" ||
-                              myData.node.template[templateParam]
-                                .type === "float" ||
-                              myData.node.template[templateParam]
-                                .type === "code" ||
-                              myData.node.template[templateParam]
-                                .type === "prompt" ||
-                              myData.node.template[templateParam]
-                                .type === "file" ||
-                              myData.node.template[templateParam]
-                                .type === "int" ||
-                              myData.node.template[templateParam]
-                                .type === "dict" ||
-                              myData.node.template[templateParam]
-                                .type === "NestedDict")
+                            LANGFLOW_SUPPORTED_TYPES.has(
+                              myData.node.template[templateParam].type
+                            )
                         )
                         .map((templateParam, index) => (
                           <TableRow key={index} className="h-10">
@@ -261,7 +249,7 @@ const EditNodeModal = forwardRef(
                                     value={
                                       myData.node!.template[
                                         templateParam
-                                      ].value.toString() === "{}"
+                                      ]?.value?.toString() === "{}"
                                         ? {
                                             yourkey: "value",
                                           }
@@ -275,6 +263,7 @@ const EditNodeModal = forwardRef(
                                       ].value = newValue;
                                       handleOnNewValue(newValue, templateParam);
                                     }}
+                                    id="editnode-div-dict-input"
                                   />
                                 </div>
                               ) : myData.node?.template[templateParam]
@@ -380,6 +369,7 @@ const EditNodeModal = forwardRef(
                                         templateParam
                                       ].value ?? "Choose an option"
                                     }
+                                    id={"dropdown-edit-" + index}
                                   ></Dropdown>
                                 </div>
                               ) : myData.node?.template[templateParam]

@@ -1,4 +1,3 @@
-from sqlmodel import SQLModel
 import orjson
 
 
@@ -16,9 +15,3 @@ def orjson_dumps(v, *, default=None, sort_keys=False, indent_2=True):
     if default is None:
         return orjson.dumps(v, option=option).decode()
     return orjson.dumps(v, default=default, option=option).decode()
-
-
-class SQLModelSerializable(SQLModel):
-    # TODO[pydantic]: The following keys were removed: `json_loads`, `json_dumps`.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-    pass
