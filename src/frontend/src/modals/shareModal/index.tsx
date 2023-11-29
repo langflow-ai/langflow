@@ -40,14 +40,14 @@ export default function ShareModal({
   const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
 
-  const nameComponent = is_component ? "component" : "flow";
+  const nameComponent = is_component ? "Component" : "Flow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
-  const { saveFlow } = useContext(FlowsContext);
+  const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
   useEffect(() => {
     if (open || internalOpen) {
@@ -78,7 +78,7 @@ export default function ShareModal({
   useEffect(() => {
     setName(component?.name ?? "");
     setDescription(component?.description ?? "");
-  }, [component, open]);
+  }, [component, open, internalOpen]);
 
   const handleShareComponent = () => {
     const flow: FlowType = checked
@@ -99,12 +99,7 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    saveFlow(
-      {
-        ...flow!,
-      },
-      true
-    );
+    saveFlow(flows.find((flow) => flow.id === tabId)!, true);
 
     saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
       () => {
