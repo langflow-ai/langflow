@@ -48,16 +48,32 @@ def build_input_keys_response(langchain_object, artifacts):
 
     return input_keys_response
 
-def replace_existing_field_values(built_frontend_node, raw_code):
-    if built_frontend_node and "template" in built_frontend_node and raw_code.template is not None:
-        # Run over the template and replace the values
-        for key, value_dict in raw_code.template.items():
-            if key in ["code"] or not isinstance(value_dict, dict):
-                continue
-            value = value_dict.get("value")
-            if value is None:
-                continue
-            # template is a dict and all the values are dicts
-            if key in built_frontend_node["template"]:
-                built_frontend_node["template"][key]["value"] = value
-    return built_frontend_node
+
+def update_frontend_node_with_template_values(frontend_node, raw_template_data):
+    """
+    Updates the given frontend node with values from the raw template data.
+
+    :param frontend_node: A dict representing a built frontend node.
+    :param raw_template_data: A dict representing raw template data.
+    :return: Updated frontend node.
+    """
+    if (
+        not frontend_node
+        or "template" not in frontend_node
+        or not raw_template_data
+        or "template" not in raw_template_data
+    ):
+        return frontend_node
+
+    frontend_template = frontend_node.get("template", {})
+    raw_template = raw_template_data.get("template", {})
+
+    for key, value_dict in raw_template.items():
+        if key == "code" or not isinstance(value_dict, dict):
+            continue
+
+        value = value_dict.get("value")
+        if value is not None and key in frontend_template:
+            frontend_template[key]["value"] = value
+
+    return frontend_node
