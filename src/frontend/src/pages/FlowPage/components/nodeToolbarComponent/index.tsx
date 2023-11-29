@@ -268,7 +268,7 @@ export default function NodeToolbarComponent({
                 <SelectItem value="ungroup">
                   <div className="flex">
                     <IconComponent
-                      name="Ungroup"
+                      name="Combine"
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />{" "}
                     Ungroup{" "}
