@@ -290,7 +290,7 @@ class OutputParserVertex(Vertex):
 
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components", is_task=True)
+        super().__init__(data, graph=graph, base_type="custom_components", is_task=False)
 
     def _built_object_repr(self):
         if self.task_id and self.is_task:
