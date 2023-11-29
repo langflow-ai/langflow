@@ -1,4 +1,4 @@
-from typing import ClassVar, Dict
+from typing import ClassVar, Dict, Optional
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
