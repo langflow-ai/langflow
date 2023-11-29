@@ -61,19 +61,21 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
         not frontend_node
         or "template" not in frontend_node
         or not raw_template_data
-        or "template" not in raw_template_data
+        or not raw_template_data.template
     ):
         return frontend_node
 
     frontend_template = frontend_node.get("template", {})
-    raw_template = raw_template_data.get("template", {})
+    raw_template = raw_template_data.template or {}
 
     for key, value_dict in raw_template.items():
         if key == "code" or not isinstance(value_dict, dict):
             continue
 
         value = value_dict.get("value")
-        if value is not None and key in frontend_template:
+        template_field_type = value_dict.get("type")
+        frontend_node_field_type = frontend_template[key].get("type")
+        if value is not None and key in frontend_template and template_field_type == frontend_node_field_type:
             frontend_template[key]["value"] = value
 
     return frontend_node
