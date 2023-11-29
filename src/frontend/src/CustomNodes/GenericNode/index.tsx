@@ -135,7 +135,9 @@ export default function GenericNode({
           position={{ x: xPos, y: yPos }}
           data={data}
           deleteNode={deleteNode}
-          setShowNode={(showNode: boolean) => {data.showNode = showNode}}
+          setShowNode={(showNode: boolean) => {
+            data.showNode = showNode;
+          }}
           numberOfHandles={handles}
           showNode={showNode}
         ></NodeToolbarComponent>
@@ -513,7 +515,7 @@ export default function GenericNode({
                     dataType: data.type,
                   })}
                   data={data}
-                    color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
                       ? data.node.output_types.join("|")

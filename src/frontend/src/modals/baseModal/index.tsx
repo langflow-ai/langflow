@@ -150,9 +150,7 @@ function BaseModal({
         <div className="truncate-doubleline word-break-break-word">
           {headerChild}
         </div>
-        <div className={`flex flex-col ${height!} w-full `}>
-          {ContentChild}
-        </div>
+        <div className={`flex flex-col ${height!} w-full `}>{ContentChild}</div>
         {ContentFooter && (
           <div className="flex flex-row-reverse">{ContentFooter}</div>
         )}

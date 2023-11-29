@@ -344,10 +344,10 @@ export default function ExtraSidebar(): JSX.Element {
             } else if (b.toLowerCase() === "saved_components") {
               return 1;
             } else if (a.toLowerCase() === "custom_components") {
-              return -2
+              return -2;
             } else if (b.toLowerCase() === "custom_components") {
-              return 2
-            }else {
+              return 2;
+            } else {
               return a.localeCompare(b);
             }
           })

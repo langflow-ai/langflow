@@ -11,6 +11,7 @@ import {
 } from "../../../../components/ui/select-custom";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { StoreContext } from "../../../../contexts/storeContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -23,7 +24,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 
 export default function NodeToolbarComponent({
   data,
@@ -295,7 +295,8 @@ export default function NodeToolbarComponent({
           >
             <ConfirmationModal.Content>
               <span>
-                It seems {data.node?.display_name} already exists. Do you want to replace it with the current or create a new one?
+                It seems {data.node?.display_name} already exists. Do you want
+                to replace it with the current or create a new one?
               </span>
             </ConfirmationModal.Content>
             <ConfirmationModal.Trigger>

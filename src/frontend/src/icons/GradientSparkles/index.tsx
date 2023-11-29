@@ -1,4 +1,4 @@
-import { InfinityIcon, Terminal, Code } from "lucide-react";
+import { Code } from "lucide-react";
 import { forwardRef } from "react";
 import ForwardedIconComponent from "../../components/genericIconComponent";
 
@@ -21,7 +21,6 @@ export const GradientInfinity = forwardRef<
   );
 });
 
-
 export const GradientSave = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
@@ -38,7 +37,7 @@ export const GradientSave = forwardRef<
       </svg>
       <ForwardedIconComponent
         name="Save"
-        stroke="url(#grad2)" 
+        stroke="url(#grad2)"
         ref={ref}
         {...props}
       />
@@ -57,11 +56,7 @@ export const GradientGroup = (props) => {
           </linearGradient>
         </defs>
       </svg>
-      <ForwardedIconComponent
-        name="Combine"
-        stroke="url(#grad3)"
-        {...props}
-      />
+      <ForwardedIconComponent name="Combine" stroke="url(#grad3)" {...props} />
     </>
   );
 };
