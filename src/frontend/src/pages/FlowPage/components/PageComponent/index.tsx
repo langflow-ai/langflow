@@ -167,9 +167,6 @@ export default function Page({
   useEffect(() => {
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
-    if (reactFlowInstance) {
-      setViewport(flow?.data?.viewport ?? { x: 1, y: 0, zoom: 0.5 });
-    }
   }, [flow, reactFlowInstance]);
 
   useEffect(() => {
