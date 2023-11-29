@@ -172,8 +172,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       }
     });
     setData((prev) => {
-      prev["saved_components"] = cloneDeep(savedComponents);
-      return prev;
+      let newData = cloneDeep(prev);
+      newData["saved_components"] = cloneDeep(savedComponents);
+      return newData;
     });
   }
 

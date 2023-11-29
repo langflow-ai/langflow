@@ -41,11 +41,13 @@ export default function SidebarDraggableComponent({
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const handlePointerDown = (e) => {
-    const rect = popoverRef.current?.getBoundingClientRect() ?? {
-      left: 0,
-      top: 0,
-    };
-    setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    if (!open) {
+      const rect = popoverRef.current?.getBoundingClientRect() ?? {
+        left: 0,
+        top: 0,
+      };
+      setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    }
   };
 
   function handleSelectChange(value: string) {
@@ -74,9 +76,8 @@ export default function SidebarDraggableComponent({
     >
       <div
         onPointerDown={handlePointerDown}
-        onContextMenu={(e) => {
+        onContextMenuCapture={(e) => {
           e.preventDefault();
-          console.log("que");
           setOpen(true);
         }}
         key={itemName}
