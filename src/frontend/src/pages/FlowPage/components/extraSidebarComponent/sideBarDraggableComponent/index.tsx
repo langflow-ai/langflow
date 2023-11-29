@@ -1,4 +1,4 @@
-import { DragEventHandler, useContext, useRef } from "react";
+import { DragEventHandler, useContext, useRef, useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
 import {
   Select,
@@ -34,9 +34,19 @@ export default function SidebarDraggableComponent({
   onDragStart: DragEventHandler<HTMLDivElement>;
   official: boolean;
 }) {
-  const open = useRef(false);
+  const [open, setOpen] = useState(false);
   const { getNodeId, deleteComponent, version } = useContext(FlowsContext);
   const { autoLogin, userData } = useContext(AuthContext);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  const handlePointerDown = (e) => {
+    const rect = popoverRef.current?.getBoundingClientRect() ?? {
+      left: 0,
+      top: 0,
+    };
+    setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
 
   function handleSelectChange(value: string) {
     switch (value) {
@@ -56,17 +66,18 @@ export default function SidebarDraggableComponent({
         break;
     }
   }
-
   return (
     <Select
       onValueChange={handleSelectChange}
-      onOpenChange={(change) => (open.current = change)}
-      open={open.current}
+      onOpenChange={(change) => setOpen(change)}
+      open={open}
     >
       <div
-        onContextMenuCapture={(e) => {
+        onPointerDown={handlePointerDown}
+        onContextMenu={(e) => {
           e.preventDefault();
-          open.current = true;
+          console.log("que");
+          setOpen(true);
         }}
         key={itemName}
         data-tooltip-id={itemName}
@@ -93,13 +104,22 @@ export default function SidebarDraggableComponent({
             className="side-bar-components-div-form"
           >
             <span className="side-bar-components-text">{display_name}</span>
-            <div>
+            <div ref={popoverRef}>
               <IconComponent
                 name="Menu"
                 className="side-bar-components-icon "
               />
               <SelectTrigger></SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                side="bottom"
+                sideOffset={-25}
+                style={{
+                  position: "absolute",
+                  left: cursorPos.x,
+                  top: cursorPos.y,
+                }}
+              >
                 <SelectItem value={"download"}>
                   <div className="flex">
                     <IconComponent
