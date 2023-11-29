@@ -76,6 +76,3 @@ class TaskService(Service):
 
     def get_task(self, task_id: Union[int, str]) -> Any:
         return self.backend.get_task(task_id)
-
-    def get_task(self, task_id: Union[int, str]) -> Any:
-        return self.backend.get_task(task_id)
