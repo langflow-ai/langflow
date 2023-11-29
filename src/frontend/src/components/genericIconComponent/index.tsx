@@ -11,13 +11,13 @@ const ForwardedIconComponent = forwardRef(
 
     const style = {
       strokeWidth: 1.5,
-      className: className,
       ...(stroke && { stroke: stroke }),
       ...(iconColor && { color: iconColor, stroke: stroke }),
     };
 
     return (
       <TargetIcon
+        className={className}
         style={style}
         ref={ref}
         data-testid={id ? `${id}-${name}` : `icon-${name}`}
