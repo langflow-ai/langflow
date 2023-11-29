@@ -47,3 +47,17 @@ def build_input_keys_response(langchain_object, artifacts):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
+
+def replace_existing_field_values(built_frontend_node, raw_code):
+    if built_frontend_node and "template" in built_frontend_node and raw_code.template is not None:
+        # Run over the template and replace the values
+        for key, value_dict in raw_code.template.items():
+            if key in ["code"] or not isinstance(value_dict, dict):
+                continue
+            value = value_dict.get("value")
+            if value is None:
+                continue
+            # template is a dict and all the values are dicts
+            if key in built_frontend_node["template"]:
+                built_frontend_node["template"][key]["value"] = value
+    return built_frontend_node
