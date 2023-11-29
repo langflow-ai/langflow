@@ -1040,12 +1040,11 @@
 
   .fade-container::before,
   .fade-container::after {
-    @apply pointer-events-none absolute bottom-0 top-0;
+    @apply pointer-events-none absolute bottom-0 top-0 bg-gradient-to-r to-transparent from-background;
     content: "";
     width: 50px;
     opacity: 0;
     transition: opacity 0.3s;
-    background: linear-gradient(to right, white, transparent);
   }
 
   .fade-container::after {
