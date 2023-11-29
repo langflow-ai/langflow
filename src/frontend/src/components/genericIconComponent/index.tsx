@@ -8,14 +8,19 @@ const ForwardedIconComponent = forwardRef(
     ref
   ) => {
     const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
+
+    const style = {
+      strokeWidth: 1.5,
+      className: className,
+      ...(stroke && { stroke: stroke }),
+      ...(iconColor && { color: iconColor, stroke: stroke }),
+    };
+
     return (
       <TargetIcon
-        strokeWidth={1.5}
-        className={className}
-        style={iconColor ? { color: iconColor } : {}}
+        style={style}
         ref={ref}
-        stroke={stroke ? stroke : "currentColor"}
-        data-testid={id ? `${id}-${name}` : "icon-" + name}
+        data-testid={id ? `${id}-${name}` : `icon-${name}`}
       />
     );
   }
