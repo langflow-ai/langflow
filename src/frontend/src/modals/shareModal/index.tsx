@@ -35,18 +35,19 @@ export default function ShareModal({
   const { version, addFlow } = useContext(FlowsContext);
   const { hasApiKey } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
-  const [checked, setChecked] = useState(true);
+  const [checked, setChecked] = useState(false);
   const [name, setName] = useState(component?.name ?? "");
   const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
 
-  const nameComponent = is_component ? "Component" : "Flow";
+  const nameComponent = is_component ? "component" : "flow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
+  const { saveFlow } = useContext(FlowsContext);
 
   useEffect(() => {
     if (open || internalOpen) {
@@ -78,10 +79,10 @@ export default function ShareModal({
   useEffect(() => {
     setName(component?.name ?? "");
     setDescription(component?.description ?? "");
-  }, [component]);
+  }, [component, open]);
 
   const handleShareComponent = () => {
-    const saveFlow: FlowType = checked
+    const flow: FlowType = checked
       ? {
           id: component!.id,
           data: component!.data,
@@ -98,10 +99,18 @@ export default function ShareModal({
           last_tested_version: version,
           is_component: is_component,
         });
-    saveFlowStore(saveFlow, getTagsIds(selectedTags, tags), sharePublic).then(
+
+    saveFlow(
+      {
+        ...flow!,
+      },
+      true
+    );
+
+    saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
       () => {
         if (is_component) {
-          addFlow(true, saveFlow);
+          addFlow(true, flow);
         }
         setSuccessData({
           title: `${nameComponent} shared successfully`,
@@ -124,7 +133,7 @@ export default function ShareModal({
     >
       <BaseModal.Trigger>{children ? children : <></>}</BaseModal.Trigger>
       <BaseModal.Header
-        description={`Share your ${nameComponent} to the Langflow Store`}
+        description={`Share your ${nameComponent} to the Langflow Store.`}
       >
         <span className="pr-2">Share</span>
         <IconComponent
@@ -156,10 +165,11 @@ export default function ShareModal({
             checked={sharePublic}
             onCheckedChange={(event: boolean) => {
               setSharePublic(event);
+              setChecked(false);
             }}
           />
           <label htmlFor="public" className="export-modal-save-api text-sm ">
-            Make {nameComponent} Public
+            Make {nameComponent} public
           </label>
         </div>
         <div className="mt-3 flex items-center space-x-2">
@@ -169,14 +179,15 @@ export default function ShareModal({
             onCheckedChange={(event: boolean) => {
               setChecked(event);
             }}
+            disabled={sharePublic}
           />
           <label htmlFor="terms" className="export-modal-save-api text-sm ">
             Save with my API keys
           </label>
         </div>
         <span className=" text-xs text-destructive ">
-          Caution: Uncheck this box only removes API keys from fields
-          specifically designated for API keys.
+          Warning: Deselecting this box will exclusively eliminate API keys from
+          fields explicitly designated for API keys.
         </span>
       </BaseModal.Content>
 

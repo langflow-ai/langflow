@@ -241,7 +241,7 @@
   }
 
   .community-page-arrangement {
-    @apply flex-max-width justify-between h-full flex-col overflow-auto bg-background px-16;
+    @apply flex-max-width h-full flex-col justify-between overflow-auto bg-background px-16;
   }
 
   .community-page-nav-arrangement {
@@ -1037,27 +1037,51 @@
   .fade-container {
     @apply relative overflow-hidden;
   }
-  
+
   .fade-container::before,
   .fade-container::after {
-    @apply absolute top-0 bottom-0 pointer-events-none;
-    content: '';
+    @apply pointer-events-none absolute bottom-0 top-0;
+    content: "";
     width: 50px;
     opacity: 0;
     transition: opacity 0.3s;
     background: linear-gradient(to right, white, transparent);
   }
-  
+
   .fade-container::after {
     @apply right-0;
     transform: rotate(180deg);
   }
-  
+
   .fade-container.fade-left::before,
   .fade-container.fade-right::after {
     opacity: 1;
   }
-  
+
+  .fade-container-dark {
+    @apply relative overflow-hidden;
+  }
+
+  .fade-container-dark::before,
+  .fade-container-dark::after {
+    @apply pointer-events-none absolute bottom-0 top-0;
+    content: "";
+    width: 50px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: linear-gradient(to right, black, transparent);
+  }
+
+  .fade-container-dark:after {
+    @apply right-0;
+    transform: rotate(180deg);
+  }
+
+  .fade-container-dark.fade-left::before,
+  .fade-container-dark.fade-right::after {
+    opacity: 1;
+  }
+
   .scroll-container {
     @apply flex overflow-x-scroll scrollbar-hide;
   }
