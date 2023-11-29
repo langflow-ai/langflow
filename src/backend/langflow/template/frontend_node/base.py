@@ -3,8 +3,7 @@ from collections import defaultdict
 from typing import ClassVar, DefaultDict, Dict, List, Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import (CLASSES_TO_REMOVE,
-                                                       FORCE_SHOW_FIELDS)
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
@@ -136,11 +135,7 @@ class FrontendNode(BaseModel):
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
             field.file_types = [".json", ".yaml", ".yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"
         return _type
 

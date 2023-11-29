@@ -4,8 +4,7 @@ from typing import ClassVar, Dict, Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter.base import FieldFormatter
-from langflow.utils.constants import (ANTHROPIC_MODELS, CHAT_OPENAI_MODELS,
-                                      OPENAI_MODELS)
+from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
 
 
 class OpenAIAPIKeyFormatter(FieldFormatter):
@@ -150,9 +149,5 @@ class DictCodeFileFormatter(FieldFormatter):
         if "dict" in _type.lower() and key == "dict_":
             field.field_type = "file"
             field.file_types = [".json", ".yaml", ".yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"
