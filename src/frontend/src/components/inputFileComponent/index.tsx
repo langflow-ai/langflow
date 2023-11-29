@@ -19,6 +19,18 @@ export default function InputFileComponent({
   const { setErrorData } = useContext(alertContext);
   const { tabId } = useContext(FlowsContext);
 
+  // For backward compatibility, if the suffixes are not provided, allow use fileTypes instead
+  if (!suffixes) {
+    // if fileTypes does not have '.' at the beginning, add it
+    // and use it as suffixes
+    suffixes = fileTypes.map((fileType) => {
+      if (!fileType.startsWith(".")) {
+        return "." + fileType;
+      }
+      return fileType;
+    });
+  }
+
   // Clear component state
   useEffect(() => {
     if (disabled) {
