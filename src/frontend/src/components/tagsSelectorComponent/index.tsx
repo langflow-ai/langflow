@@ -85,6 +85,7 @@ export function TagsSelector({
               onClick={() => {
                 updateTags(tag.name);
               }}
+              key={idx}
             >
               <Badge
                 key={idx}

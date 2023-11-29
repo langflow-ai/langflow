@@ -220,7 +220,7 @@ export default function ExtraSidebar(): JSX.Element {
           </button>
         </ShareModal>
       ),
-    [hasApiKey, validApiKey]
+    [hasApiKey, validApiKey, flow]
   );
 
   const ExportMemo = useMemo(
