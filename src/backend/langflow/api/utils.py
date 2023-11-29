@@ -57,12 +57,7 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
     :param raw_template_data: A dict representing raw template data.
     :return: Updated frontend node.
     """
-    if (
-        not frontend_node
-        or "template" not in frontend_node
-        or not raw_template_data
-        or not raw_template_data.template
-    ):
+    if not frontend_node or "template" not in frontend_node or not raw_template_data or not raw_template_data.template:
         return frontend_node
 
     frontend_template = frontend_node.get("template", {})

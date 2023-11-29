@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
 
+from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
@@ -66,7 +67,11 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
         if hasattr(langchain_object, "return_intermediate_steps"):
             langchain_object.return_intermediate_steps = False
 
-        fix_memory_inputs(langchain_object)
+        try:
+            if not isinstance(langchain_object, AgentExecutor):
+                fix_memory_inputs(langchain_object)
+        except Exception as exc:
+            logger.error(f"Error fixing memory inputs: {exc}")
 
         try:
             output = langchain_object(inputs, return_only_outputs=True)
@@ -99,18 +104,6 @@ def get_build_result(data_graph, session_id):
 
     logger.debug("Building langchain object")
     return build_sorted_vertices(data_graph)
-
-
-def load_langchain_object(
-    data_graph: Dict[str, Any], session_id: str
-) -> Tuple[Union[Chain, VectorStore], Dict[str, Any], str]:
-    langchain_object, artifacts = get_build_result(data_graph, session_id)
-    logger.debug("Loaded LangChain object")
-
-    if langchain_object is None:
-        raise ValueError("There was an error loading the langchain_object. Please, check all the nodes and try again.")
-
-    return langchain_object, artifacts, session_id
 
 
 def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
@@ -162,9 +155,12 @@ async def process_graph_cached(
     if session_id is None:
         session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
-    graph, artifacts = await session_service.load_session(session_id, data_graph)
+    session = await session_service.load_session(session_id, data_graph)
+    graph, artifacts = session if session else (None, None)
+    if not graph:
+        raise ValueError("Graph not found in the session")
     built_object = await graph.build()
-    processed_inputs = process_inputs(inputs, artifacts)
+    processed_inputs = process_inputs(inputs, artifacts or {})
     result = generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
