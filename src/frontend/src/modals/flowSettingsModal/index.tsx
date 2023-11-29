@@ -4,7 +4,6 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { readFlowsFromDatabase } from "../../controllers/API";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
@@ -13,7 +12,7 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { flows, tabId, updateFlow, saveFlow } = useContext(FlowsContext);
+  const { flows, tabId, saveFlow } = useContext(FlowsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     setName(flow!.name);
@@ -31,15 +30,14 @@ export default function FlowSettingsModal({
   }
 
   const [nameLists, setNameList] = useState<string[]>([]);
+
   useEffect(() => {
     const tempNameList: string[] = [];
-    readFlowsFromDatabase().then((flows) => {
-      flows.forEach((flow: FlowType) => {
-        tempNameList.push(flow.name);
-      });
-      setNameList(tempNameList.filter((name) => name !== flow!.name));
+    flows.forEach((flow: FlowType) => {
+      tempNameList.push(flow.name);
     });
-  }, []);
+    setNameList(tempNameList.filter((name) => name !== flow!.name));
+  }, [flows]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="smaller">
