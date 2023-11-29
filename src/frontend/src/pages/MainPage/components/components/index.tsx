@@ -96,7 +96,9 @@ export default function ComponentsComponent({
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
           {!isLoading && data.length === 0 ? (
-            <div className="w-full text-center">You haven't created any {name}s yet.</div>
+            <div className="w-full text-center">
+              You haven't created any {name}s yet.
+            </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
               {!isLoading || data?.length > 0 ? (

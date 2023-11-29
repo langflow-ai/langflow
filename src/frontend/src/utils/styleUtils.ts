@@ -16,6 +16,7 @@ import {
   Circle,
   Clipboard,
   Code2,
+  Combine,
   Compass,
   Copy,
   Cpu,
@@ -80,6 +81,7 @@ import {
   Square,
   Store,
   SunIcon,
+  TerminalIcon,
   TerminalSquare,
   ToyBrick,
   Trash2,
@@ -99,8 +101,6 @@ import {
   X,
   XCircle,
   Zap,
-  Combine,
-  TerminalIcon
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
