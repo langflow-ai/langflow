@@ -1,13 +1,11 @@
 import contextlib
 import json
-from langflow.services.database.models.base import orjson_dumps
-import orjson
 from typing import Any, Dict, List
 
+import orjson
 from langchain.agents import ZeroShotAgent
-
-
-from langchain.schema import Document, BaseOutputParser
+from langchain.schema import BaseOutputParser, Document
+from langflow.services.database.models.base import orjson_dumps
 
 
 def handle_node_type(node_type, class_object, params: Dict):
@@ -85,8 +83,11 @@ def format_document(variable, input_variable: str, format_kwargs: Dict):
 def format_content(variable):
     if len(variable) > 1:
         return "\n".join([item.page_content for item in variable if item.page_content])
-    content = variable[0].page_content
-    return try_to_load_json(content)
+    elif len(variable) == 1:
+        content = variable[0].page_content
+        return try_to_load_json(content)
+    return ""
+
 
 
 def try_to_load_json(content):
