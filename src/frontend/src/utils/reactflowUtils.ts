@@ -100,8 +100,7 @@ export function isValidConnection(
       (t) =>
         targetHandleObject.inputTypes?.some((n) => n === t) ||
         t === targetHandleObject.type
-    ) ||
-    targetHandleObject.type === "str"
+    )
   ) {
     let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
     if (!targetNode) {
