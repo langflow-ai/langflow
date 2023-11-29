@@ -88,6 +88,12 @@ export default function ComponentsComponent({
     }
   };
 
+  function resetFilter() {
+    setPageIndex(1);
+    setPageSize(10);
+    setAllData(flows);
+  }
+
   return (
     <CardsWrapComponent
       onFileDrop={onFileDrop}
@@ -106,6 +112,12 @@ export default function ComponentsComponent({
                   <CollectionCardComponent
                     onDelete={() => {
                       removeFlow(item.id);
+                      setSuccessData({
+                        title: `${
+                          item.is_component ? "Component" : "Flow"
+                        } deleted successfully!`,
+                      });
+                      resetFilter();
                     }}
                     key={idx}
                     data={item}

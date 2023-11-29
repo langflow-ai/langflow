@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { darkContext } from "../../contexts/darkContext";
 import { cn } from "../../utils/utils";
 import { Badge } from "../ui/badge";
 
@@ -23,6 +24,7 @@ export function TagsSelector({
         : selectedTags.filter((_, i) => i !== index);
     setSelectedTags(newArray);
   };
+  const { dark } = useContext(darkContext);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fadeContainerRef = useRef<HTMLDivElement>(null);
@@ -70,7 +72,10 @@ export function TagsSelector({
   }, [divWidth, loadingTags]); // Depend on divWidth
 
   return (
-    <div ref={fadeContainerRef} className="fade-container">
+    <div
+      ref={fadeContainerRef}
+      className={dark ? "fade-container-dark" : "fade-container"}
+    >
       <div ref={scrollContainerRef} className="scroll-container flex gap-2">
         {!loadingTags &&
           tags.map((tag, idx) => (
