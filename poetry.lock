@@ -181,13 +181,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.5.0"
-description = "Client library for the anthropic API"
+version = "0.7.6"
+description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.5.0-py3-none-any.whl", hash = "sha256:61a774b57252831bff80636f351a74ef0e8a727a70a46dcddab9a62e3b00ecb2"},
-    {file = "anthropic-0.5.0.tar.gz", hash = "sha256:b7961cf3ff930698d6c1e11f3ad5d193c0623d3b4c607fbf5f23bcf9a17fa6a6"},
+    {file = "anthropic-0.7.6-py3-none-any.whl", hash = "sha256:af26176ecebc8b57b7f193512ac220a2e8a123ddd521fa1ddecdc932aa2e492c"},
+    {file = "anthropic-0.7.6.tar.gz", hash = "sha256:fc9a946cdd3842a7c9c760531614772794b8b356e163dd7fa356f03a5f78c975"},
 ]
 
 [package.dependencies]
@@ -195,6 +195,7 @@ anyio = ">=3.5.0,<4"
 distro = ">=1.7.0,<2"
 httpx = ">=0.23.0,<1"
 pydantic = ">=1.9.0,<3"
+sniffio = "*"
 tokenizers = ">=0.13.0"
 typing-extensions = ">=4.5,<5"
 
@@ -5267,13 +5268,13 @@ grpc = ["googleapis-common-protos (>=1.53.0)", "grpc-gateway-protoc-gen-openapiv
 
 [[package]]
 name = "platformdirs"
-version = "3.11.0"
+version = "4.0.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.11.0-py3-none-any.whl", hash = "sha256:e9d171d00af68be50e9202731309c4e658fd8bc76f55c11c7dd760d023bda68e"},
-    {file = "platformdirs-3.11.0.tar.gz", hash = "sha256:cf8ee52a3afdb965072dcc652433e0c7e3e40cf5ea1477cd4b3b1d2eb75495b3"},
+    {file = "platformdirs-4.0.0-py3-none-any.whl", hash = "sha256:118c954d7e949b35437270383a3f2531e99dd93cf7ce4dc8340d3356d30f173b"},
+    {file = "platformdirs-4.0.0.tar.gz", hash = "sha256:cb633b2bcf10c51af60beb0ab06d2f1d69064b43abf4c185ca6b28865f3f9731"},
 ]
 
 [package.extras]
@@ -9180,4 +9181,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "590d69d008256a274e85a115331ee3af1dd19ac9c2be50b0de628ccb1fe859d2"
+content-hash = "a0d05b525c374e67a49aa5137017cbcffbe2006b41977b6908d5ff6a525e3d92"
