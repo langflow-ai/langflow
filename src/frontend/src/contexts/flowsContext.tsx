@@ -337,7 +337,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
             let fileData: FlowType = await JSON.parse(text);
-            console.log(isComponent, fileData);
 
             if (
               (!fileData.is_component && isComponent === true) ||

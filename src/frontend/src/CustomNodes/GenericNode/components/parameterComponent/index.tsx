@@ -120,6 +120,9 @@ export default function ParameterComponent({
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
+    if (data.node!.template[name].value === newValue) {
+      return;
+    }
     takeSnapshot();
     data.node!.template[name].value = newValue;
     // Set state to pending
