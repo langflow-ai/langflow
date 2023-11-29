@@ -89,7 +89,6 @@ def format_content(variable):
     return ""
 
 
-
 def try_to_load_json(content):
     with contextlib.suppress(json.JSONDecodeError):
         content = orjson.loads(content)

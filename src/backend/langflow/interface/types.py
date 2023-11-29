@@ -30,8 +30,7 @@ from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
-from langflow.template.frontend_node.custom_components import \
-    CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
 from loguru import logger
 
@@ -403,7 +402,7 @@ def build_valid_menu(valid_components):
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = {}
-        menu_path = menu_item["path"]
+        # menu_path = menu_item["path"]
         for component in menu_item["components"]:
             logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
             try:
