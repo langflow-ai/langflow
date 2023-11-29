@@ -63,7 +63,7 @@ class TemplateFieldCreator(BaseModel, ABC):
         result = self.model_dump()
         # Remove key if it is None
         for key in list(result.keys()):
-            if result[key] is None or result[key] == []:
+            if result[key] is None or result[key] == [] and key != "value":
                 del result[key]
         result["type"] = result.pop("field_type")
         result["list"] = result.pop("is_list")
