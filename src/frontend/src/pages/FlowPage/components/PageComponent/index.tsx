@@ -13,7 +13,6 @@ import ReactFlow, {
   Controls,
   Edge,
   EdgeChange,
-  Node,
   NodeChange,
   NodeDragHandler,
   OnEdgesDelete,
@@ -377,21 +376,6 @@ export default function Page({
     };
   }, []);
 
-  const onDelete = useCallback(
-    (mynodes: Node[]) => {
-      takeSnapshot();
-      setEdges(
-        edges.filter(
-          (edge) =>
-            !mynodes.some(
-              (node) => edge.source === node.id || edge.target === node.id
-            )
-        )
-      );
-    },
-    [takeSnapshot, edges, setEdges]
-  );
-
   const onEdgeUpdateStart = useCallback(() => {
     edgeUpdateSuccessful.current = false;
   }, []);
@@ -482,7 +466,6 @@ export default function Page({
                   onDragOver={onDragOver}
                   onDrop={onDrop}
                   onSelectionChange={onSelectionChange}
-                  onNodesDelete={onDelete}
                   deleteKeyCode={[]}
                   className="theme-attribution"
                   minZoom={0.01}
