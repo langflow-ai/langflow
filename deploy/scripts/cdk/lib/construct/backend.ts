@@ -10,6 +10,13 @@ import {
     aws_logs as logs,
     aws_elasticloadbalancingv2 as elb,
 } from 'aws-cdk-lib';
+import * as dotenv from 'dotenv';
+const path = require('path');
+dotenv.config({path: path.join(__dirname, "../../.env")});
+
+console.log(process.env.LANGFLOW_AUTO_LOGIN);
+console.log(process.env.LANGFLOW_SUPERUSER);
+console.log(process.env.LANGFLOW_SUPERUSER_PASSWORD);
 
 interface BackEndProps {
   cluster: ecs.Cluster
@@ -60,9 +67,12 @@ export class BackEndCluster extends Construct {
         // "LANGFLOW_DATABASE_URL" : `mysql+pymysql://${username}:${password}@${host}:3306/${dbname}`,
         // "LANGFLOW_DATABASE_URL" : "sqlite:///./langflow.db",
         // "LANGFLOW_LANGCHAIN_CACHE" : "SQLiteCache",
-        "LANGFLOW_AUTO_LOGIN" : "false",
-        "LANGFLOW_SUPERUSER" : "admin",
-        "LANGFLOW_SUPERUSER_PASSWORD" : "1234567"
+        // "LANGFLOW_AUTO_LOGIN" : "false",
+        // "LANGFLOW_SUPERUSER" : "admin",
+        // "LANGFLOW_SUPERUSER_PASSWORD" : "1234567"
+        "LANGFLOW_AUTO_LOGIN" : process.env.LANGFLOW_AUTO_LOGIN ?? 'false',
+        "LANGFLOW_SUPERUSER" : process.env.LANGFLOW_SUPERUSER ?? "admin",
+        "LANGFLOW_SUPERUSER_PASSWORD" : process.env.LANGFLOW_SUPERUSER_PASSWORD ?? "123456"
       },
       portMappings: [
           {
