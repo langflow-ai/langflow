@@ -10,7 +10,8 @@ from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias)
+    extract_union_types_from_generic_alias,
+)
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
@@ -218,8 +219,7 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import (build_sorted_vertices,
-                                                 process_tweaks)
+        from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
