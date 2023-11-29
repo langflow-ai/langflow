@@ -15,7 +15,6 @@ import ReactFlow, {
   EdgeChange,
   NodeChange,
   NodeDragHandler,
-  OnEdgesDelete,
   OnSelectionChangeParams,
   SelectionDragHandler,
   addEdge,
@@ -124,6 +123,7 @@ export default function Page({
           lastSelection
         ) {
           event.preventDefault();
+          takeSnapshot();
           deleteNode(lastSelection.nodes.map((node) => node.id));
           deleteEdge(lastSelection.edges.map((edge) => edge.id));
         }
@@ -268,11 +268,6 @@ export default function Page({
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
-    takeSnapshot();
-  }, [takeSnapshot]);
-
-  const onEdgesDelete: OnEdgesDelete = useCallback(() => {
-    // 👇 make deleting edges undoable
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -461,7 +456,6 @@ export default function Page({
                   onSelectionDragStart={onSelectionDragStart}
                   onSelectionEnd={onSelectionEnd}
                   onSelectionStart={onSelectionStart}
-                  onEdgesDelete={onEdgesDelete}
                   connectionLineComponent={ConnectionLineComponent}
                   onDragOver={onDragOver}
                   onDrop={onDrop}

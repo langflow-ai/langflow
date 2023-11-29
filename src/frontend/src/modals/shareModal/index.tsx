@@ -71,7 +71,6 @@ export default function ShareModal({
       res?.results?.forEach((element: any) => {
         unavaliableNames.push(element.name);
       });
-      console.log(unavaliableNames);
       setUnavaliableNames(unavaliableNames);
     });
   }

@@ -134,7 +134,10 @@ export default function GenericNode({
         <NodeToolbarComponent
           position={{ x: xPos, y: yPos }}
           data={data}
-          deleteNode={deleteNode}
+          deleteNode={(id) => {
+            takeSnapshot();
+            deleteNode(id);
+          }}
           setShowNode={(showNode: boolean) => {
             data.showNode = showNode;
           }}

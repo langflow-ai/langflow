@@ -17,8 +17,6 @@ export function getTagsIds(
   tags: string[],
   tagListId: { name: string; id: string }[]
 ) {
-  console.log(tags);
-  console.log(tagListId);
   return tags
     .map((tag) => tagListId.find((tagObj) => tagObj.name === tag))!
     .map((tag) => tag!.id);

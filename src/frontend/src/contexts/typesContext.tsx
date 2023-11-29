@@ -12,7 +12,6 @@ import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
-import { undoRedoContext } from "./undoRedoContext";
 
 //context to share types adn functions from nodes to flow
 
@@ -44,7 +43,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [fetchError, setFetchError] = useState(false);
   const { setLoading } = useContext(alertContext);
   const { getAuthentication } = useContext(AuthContext);
-  const { takeSnapshot } = useContext(undoRedoContext);
   const [getFilterEdge, setFilterEdge] = useState([]);
 
   useEffect(() => {
@@ -100,7 +98,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteNode(idx: string | Array<string>) {
-    takeSnapshot();
     if (reactFlowInstance === null) return;
     const edges = reactFlowInstance!
       .getEdges()
@@ -116,7 +113,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     });
   }
   function deleteEdge(idx: string | Array<string>) {
-    takeSnapshot();
     reactFlowInstance!.deleteElements({
       edges:
         typeof idx === "string" ? [{ id: idx }] : idx.map((id) => ({ id })),
