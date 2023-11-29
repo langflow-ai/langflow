@@ -72,10 +72,7 @@ export function TagsSelector({
   }, [divWidth, loadingTags]); // Depend on divWidth
 
   return (
-    <div
-      ref={fadeContainerRef}
-      className={dark ? "fade-container-dark" : "fade-container"}
-    >
+    <div ref={fadeContainerRef} className="fade-container">
       <div ref={scrollContainerRef} className="scroll-container flex gap-2">
         {!loadingTags &&
           tags.map((tag, idx) => (
