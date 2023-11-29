@@ -110,9 +110,7 @@ export default function ParameterComponent({
     try {
       const res = await postCustomComponentUpdate(code, name);
       if (res.status === 200 && data.node?.template) {
-        let clone = cloneDeep(data);
-        clone.node!.template[name] = res.data.template[name];
-        setData(clone);
+        data.node!.template[name] = res.data.template[name];
       }
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
