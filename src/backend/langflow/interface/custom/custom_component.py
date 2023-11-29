@@ -10,8 +10,7 @@ from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias,
-)
+    extract_union_types_from_generic_alias)
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
@@ -28,7 +27,7 @@ class CustomComponent(Component):
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
-    status: Optional[str] = None
+    status: Optional[Any] = None
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
@@ -39,7 +38,7 @@ class CustomComponent(Component):
         return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
 
     def custom_repr(self):
-        if self.status:
+        if self.repr_value == "":
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             return yaml.dump(self.repr_value)
@@ -219,7 +218,8 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices, process_tweaks
+        from langflow.processing.process import (build_sorted_vertices,
+                                                 process_tweaks)
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
