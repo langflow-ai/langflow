@@ -357,7 +357,11 @@ export async function postCustomComponent(
   code: string,
   apiClass: APIClassType
 ): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`${BASE_URL_API}custom_component`, { code });
+  let template = apiClass.template
+  return await api.post(`${BASE_URL_API}custom_component`, {
+    code,
+    template
+  });
 }
 
 export async function postCustomComponentUpdate(
