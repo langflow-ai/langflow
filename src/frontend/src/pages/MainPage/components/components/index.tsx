@@ -15,7 +15,8 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { flows, removeFlow, uploadFlow, isLoading } = useContext(FlowsContext);
+  const { flows, removeFlow, uploadFlow, isLoading, tabId } =
+    useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
@@ -24,6 +25,7 @@ export default function ComponentsComponent({
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (isLoading) return;
     setAllData(
       flows
         .filter((f) => f.is_component === is_component)
