@@ -161,7 +161,7 @@ def create_class(code, class_name):
     class_code = extract_class_code(module, class_name)
     compiled_class = compile_class_code(class_code)
 
-    return build_class_constructor( compiled_class, exec_globals, class_name)
+    return build_class_constructor(compiled_class, exec_globals, class_name)
 
 
 def create_type_ignore_class():
@@ -228,7 +228,7 @@ def compile_class_code(class_code):
     return code_obj
 
 
-def build_class_constructor( compiled_class, exec_globals, class_name):
+def build_class_constructor(compiled_class, exec_globals, class_name):
     """
     Builds a constructor function for the dynamically created class.
 
@@ -267,17 +267,34 @@ def get_default_imports(code_string):
     }
 
     langflow_imports = [
-        "AgentExecutor", "BaseChatMemory", "BaseLanguageModel", "BaseLLM",
-        "BaseLoader", "BaseMemory", "BaseOutputParser", "BasePromptTemplate",
-        "BaseRetriever", "Callable", "Chain", "ChatPromptTemplate", "Data",
-        "Document", "Embeddings", "NestedDict", "Object", "PromptTemplate",
-        "TextSplitter", "Tool", "VectorStore"
+        "AgentExecutor",
+        "BaseChatMemory",
+        "BaseLanguageModel",
+        "BaseLLM",
+        "BaseLoader",
+        "BaseMemory",
+        "BaseOutputParser",
+        "BasePromptTemplate",
+        "BaseRetriever",
+        "Callable",
+        "Chain",
+        "ChatPromptTemplate",
+        "Data",
+        "Document",
+        "Embeddings",
+        "NestedDict",
+        "Object",
+        "PromptTemplate",
+        "TextSplitter",
+        "Tool",
+        "VectorStore",
     ]
     necessary_imports = find_names_in_code(code_string, langflow_imports + ["Optional", "List", "Dict", "Union"])
     langflow_module = importlib.import_module("langflow.field_typing")
     default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
 
     return default_imports
+
 
 def find_names_in_code(code, names):
     """
