@@ -57,11 +57,9 @@ export default function InputComponent({
             }}
             onCopy={(e) => {
               e.preventDefault();
-              console.log("Oi")
             }}
             onKeyDown={(e) => {
-              if (e.ctrlKey && e.key === 'c') {
-                console.log('Ctrl+C detected');
+              if (e.ctrlKey && e.key === "c") {
                 // Perform any actions you need when Ctrl+C is detected
               }
               handleKeyDown(e, value, "");
