@@ -289,7 +289,7 @@ def get_default_imports(code_string):
         "Tool",
         "VectorStore",
     ]
-    necessary_imports = find_names_in_code(code_string, langflow_imports + ["Optional", "List", "Dict", "Union"])
+    necessary_imports = find_names_in_code(code_string, langflow_imports)
     langflow_module = importlib.import_module("langflow.field_typing")
     default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
 
