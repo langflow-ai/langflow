@@ -13,7 +13,10 @@ import {
   saveFlowStore,
 } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
-import { removeApiKeys } from "../../utils/reactflowUtils";
+import {
+  removeApiKeys,
+  removeFileNameFromComponents,
+} from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
 import BaseModal from "../baseModal";
 
@@ -81,6 +84,8 @@ export default function ShareModal({
   }, [component, open, internalOpen]);
 
   const handleShareComponent = () => {
+    //remove file names from flows before sharing
+    removeFileNameFromComponents(component);
     const flow: FlowType = checked
       ? {
           id: component!.id,
