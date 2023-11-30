@@ -73,12 +73,12 @@ export function TagsSelector({
 
   return (
     <div ref={fadeContainerRef} className="fade-container">
-      <div ref={scrollContainerRef} className="scroll-container flex gap-2">
+      <div ref={scrollContainerRef} className="scroll-container flex gap-2 min-w-min">
         {!loadingTags &&
           tags.map((tag, idx) => (
             <button
               disabled={disabled}
-              className={disabled ? "cursor-not-allowed" : ""}
+              className={disabled ? "cursor-not-allowed" : " overflow-hidden whitespace-nowrap"}
               onClick={() => {
                 updateTags(tag.name);
               }}
@@ -90,7 +90,7 @@ export function TagsSelector({
                 size="sq"
                 className={cn(
                   selectedTags.some((category) => category === tag.name)
-                    ? "bg-beta-foreground text-background hover:bg-beta-foreground"
+                    ? "bg-beta-foreground text-background hover:bg-beta-foreground min-w-min"
                     : ""
                 )}
               >
