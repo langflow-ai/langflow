@@ -179,8 +179,8 @@ export default function GenericNode({
               <IconComponent
                 name={data.node?.flow ? "Ungroup" : name}
                 className={
-                  "generic-node-icon" +
-                  (!showNode && "absolute inset-x-6 h-12 w-12")
+                  "generic-node-icon " +
+                  (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
                 }
                 iconColor={`${nodeColors[types[data.type]]}`}
               />
