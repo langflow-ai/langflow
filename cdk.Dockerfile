@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM --platform=linux/amd64 python:3.10-slim
 
 WORKDIR /app
 
@@ -14,5 +14,7 @@ COPY ./ ./
 
 # Install dependencies
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+
+RUN poetry add pymysql==1.0.2
 
 CMD ["uvicorn", "--factory", "src.backend.langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860", "--reload", "--log-level", "debug"]
