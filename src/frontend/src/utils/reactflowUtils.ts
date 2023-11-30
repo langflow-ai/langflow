@@ -1096,3 +1096,16 @@ export function updateComponentNameAndType(
   data: any,
   component: NodeDataType
 ) {}
+
+export function removeFileNameFromComponents(flow: FlowType) {
+  flow.data!.nodes.forEach((node: NodeType) => {
+    Object.keys(node.data.node!.template).forEach((field) => {
+      if (node.data.node?.template[field].type === "file") {
+        node.data.node!.template[field].value = "";
+      }
+    });
+    if (node.data.node?.flow) {
+      removeFileNameFromComponents(node.data.node.flow);
+    }
+  });
+}
