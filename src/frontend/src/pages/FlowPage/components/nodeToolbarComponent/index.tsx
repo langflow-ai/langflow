@@ -52,7 +52,7 @@ export default function NodeToolbarComponent({
   );
   const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
-  const { hasApiKey, validApiKey } = useContext(StoreContext);
+  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -93,7 +93,7 @@ export default function NodeToolbarComponent({
         downloadNode(createFlowComponent(cloneDeep(data), version));
         break;
       case "Share":
-        if (hasApiKey) setShowconfirmShare(true);
+        if (hasApiKey || hasStore) setShowconfirmShare(true);
         break;
       case "SaveAll":
         saveComponent(cloneDeep(data), false);
@@ -235,15 +235,20 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem disabled={!hasApiKey || !validApiKey} value={"Share"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Share2"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Share{" "}
-                </div>{" "}
-              </SelectItem>
+              {hasStore && (
+                <SelectItem
+                  disabled={!hasApiKey || !validApiKey}
+                  value={"Share"}
+                >
+                  <div className="flex">
+                    <IconComponent
+                      name="Share2"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Share{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
               <SelectItem value={"Download"}>
                 <div className="flex">
                   <IconComponent

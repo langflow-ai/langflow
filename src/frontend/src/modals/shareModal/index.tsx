@@ -33,7 +33,7 @@ export default function ShareModal({
   disabled?: boolean;
 }): JSX.Element {
   const { version, addFlow } = useContext(FlowsContext);
-  const { hasApiKey } = useContext(StoreContext);
+  const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [checked, setChecked] = useState(false);
   const [name, setName] = useState(component?.name ?? "");
@@ -51,12 +51,12 @@ export default function ShareModal({
 
   useEffect(() => {
     if (open || internalOpen) {
-      if (hasApiKey) {
+      if (hasApiKey && hasStore) {
         handleGetTags();
         handleGetNames();
       }
     }
-  }, [open, internalOpen, hasApiKey]);
+  }, [open, internalOpen, hasApiKey, hasStore]);
 
   function handleGetTags() {
     setLoadingTags(true);
