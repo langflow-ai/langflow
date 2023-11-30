@@ -30,7 +30,7 @@ export default function ExtraSidebar(): JSX.Element {
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);
-  const { hasApiKey, validApiKey } = useContext(StoreContext);
+  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -183,17 +183,21 @@ export default function ExtraSidebar(): JSX.Element {
     () =>
       !hasApiKey || !validApiKey ? (
         <button
-          disabled={!hasApiKey || !validApiKey}
+          disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
             "extra-side-bar-buttons",
-            !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+            !hasApiKey || !validApiKey || !hasStore
+              ? "button-disable  cursor-default"
+              : ""
           )}
         >
           <IconComponent
             name="Share2"
             className={classNames(
               "side-bar-button-size",
-              !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+              !hasApiKey || !validApiKey || !hasStore
+                ? "extra-side-bar-save-disable"
+                : ""
             )}
           />
         </button>
@@ -201,26 +205,30 @@ export default function ExtraSidebar(): JSX.Element {
         <ShareModal
           is_component={false}
           component={flow!}
-          disabled={!hasApiKey || !validApiKey}
+          disabled={!hasApiKey || !validApiKey || !hasStore}
         >
           <button
-            disabled={!hasApiKey || !validApiKey}
+            disabled={!hasApiKey || !validApiKey || !hasStore}
             className={classNames(
               "extra-side-bar-buttons",
-              !hasApiKey || !validApiKey ? "button-disable  cursor-default" : ""
+              !hasApiKey || !validApiKey || !hasStore
+                ? "button-disable  cursor-default"
+                : ""
             )}
           >
             <IconComponent
               name="Share2"
               className={classNames(
                 "side-bar-button-size",
-                !hasApiKey || !validApiKey ? "extra-side-bar-save-disable" : ""
+                !hasApiKey || !validApiKey || !hasStore
+                  ? "extra-side-bar-save-disable"
+                  : ""
               )}
             />
           </button>
         </ShareModal>
       ),
-    [hasApiKey, validApiKey, flow]
+    [hasApiKey, validApiKey, flow, hasStore]
   );
 
   const ExportMemo = useMemo(

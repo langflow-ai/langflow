@@ -17,7 +17,7 @@ const initialValue = {
 export const StoreContext = createContext<storeContextType>(initialValue);
 
 export function StoreProvider({ children }) {
-  const [hasStore, setHasStore] = useState(true);
+  const [hasStore, setHasStore] = useState(false);
   const [loadingApiKey, setLoadingApiKey] = useState(true);
   const [hasApiKey, setHasApiKey] = useState(true);
   const [validApiKey, setValidApiKey] = useState(false);
