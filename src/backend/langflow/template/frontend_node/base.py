@@ -3,8 +3,7 @@ from collections import defaultdict
 from typing import ClassVar, Dict, List, Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import (CLASSES_TO_REMOVE,
-                                                       FORCE_SHOW_FIELDS)
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
