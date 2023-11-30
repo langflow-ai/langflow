@@ -156,12 +156,12 @@ def create_class(code, class_name):
         ast.TypeIgnore = create_type_ignore_class()
 
     module = ast.parse(code)
-    exec_globals = prepare_global_scope(module)
+    exec_globals = prepare_global_scope(code, module)
 
     class_code = extract_class_code(module, class_name)
     compiled_class = compile_class_code(class_code)
 
-    return build_class_constructor(compiled_class, exec_globals, class_name)
+    return build_class_constructor( compiled_class, exec_globals, class_name)
 
 
 def create_type_ignore_class():
@@ -177,7 +177,7 @@ def create_type_ignore_class():
     return TypeIgnore
 
 
-def prepare_global_scope(module):
+def prepare_global_scope(code, module):
     """
     Prepares the global scope with necessary imports from the provided code module.
 
@@ -185,6 +185,7 @@ def prepare_global_scope(module):
     :return: Dictionary representing the global scope with imported modules
     """
     exec_globals = globals().copy()
+    exec_globals.update(get_default_imports(code))
     for node in module.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -192,7 +193,7 @@ def prepare_global_scope(module):
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
                     raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
-        elif isinstance(node, ast.ImportFrom):
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
             try:
                 imported_module = importlib.import_module(node.module)
                 for alias in node.names:
@@ -211,6 +212,7 @@ def extract_class_code(module, class_name):
     :return: AST node of the specified class
     """
     class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
+
     class_code.parent = None
     return class_code
 
@@ -226,7 +228,7 @@ def compile_class_code(class_code):
     return code_obj
 
 
-def build_class_constructor(compiled_class, exec_globals, class_name):
+def build_class_constructor( compiled_class, exec_globals, class_name):
     """
     Builds a constructor function for the dynamically created class.
 
@@ -235,11 +237,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     :param class_name: Name of the class
     :return: Constructor function for the class
     """
-    # Add basic imports from typing module
-    # List, Dict, Tuple, Union, Optional
-    # to the global scope
-    for name in ["List", "Dict", "Tuple", "Union", "Optional"]:
-        exec_globals[name] = getattr(importlib.import_module("typing"), name)
 
     exec(compiled_class, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
@@ -257,9 +254,41 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     return build_custom_class
 
 
-# Example usage:
-# class_builder = create_class("class MyClass: pass", "MyClass")
-# my_instance = class_builder()
+def get_default_imports(code_string):
+    """
+    Returns a dictionary of default imports for the dynamic class constructor.
+    """
+    default_imports = {
+        "Optional": importlib.import_module("typing").Optional,
+        "List": importlib.import_module("typing").List,
+        "Dict": importlib.import_module("typing").Dict,
+        "Union": importlib.import_module("typing").Union,
+        # Add more imports from the typing module as needed
+    }
+
+    langflow_imports = [
+        "AgentExecutor", "BaseChatMemory", "BaseLanguageModel", "BaseLLM",
+        "BaseLoader", "BaseMemory", "BaseOutputParser", "BasePromptTemplate",
+        "BaseRetriever", "Callable", "Chain", "ChatPromptTemplate", "Data",
+        "Document", "Embeddings", "NestedDict", "Object", "PromptTemplate",
+        "TextSplitter", "Tool", "VectorStore"
+    ]
+    necessary_imports = find_names_in_code(code_string, langflow_imports + ["Optional", "List", "Dict", "Union"])
+    langflow_module = importlib.import_module("langflow.field_typing")
+    default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
+
+    return default_imports
+
+def find_names_in_code(code, names):
+    """
+    Finds if any of the specified names are present in the given code string.
+
+    :param code: The source code as a string.
+    :param names: A list of names to check for in the code.
+    :return: A set of names that are found in the code.
+    """
+    found_names = {name for name in names if name in code}
+    return found_names
 
 
 def extract_function_name(code):
