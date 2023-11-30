@@ -23,6 +23,7 @@
     "aws-cdk-lib": "^2.86.0",
     "cdk-ecr-deployment": "^2.5.30",
     "constructs": "^10.0.0",
+    "dotenv": "^16.3.1",
     "source-map-support": "^0.5.21"
   }
 }
