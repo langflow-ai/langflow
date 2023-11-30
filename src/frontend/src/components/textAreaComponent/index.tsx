@@ -20,7 +20,11 @@ export default function TextAreaComponent({
   }, [disabled]);
 
   return (
-    <div className="flex w-full items-center">
+    <div
+      className={
+        "flex w-full items-center " + (disabled ? "pointer-events-none" : "")
+      }
+    >
       <GenericModal
         type={TypeModal.TEXT}
         buttonText="Finishing Editing"
