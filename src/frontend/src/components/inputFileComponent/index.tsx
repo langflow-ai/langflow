@@ -44,7 +44,7 @@ export default function InputFileComponent({
     // Create a file input element
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = fileTypes.join(",");
+    input.accept = fileTypes?.join(",");
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 
