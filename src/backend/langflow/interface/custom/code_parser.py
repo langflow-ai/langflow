@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
-
-from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
+from langflow.interface.custom.schema import (CallableCodeDetails,
+                                              ClassCodeDetails)
 
 
 class CodeSyntaxError(HTTPException):
@@ -168,7 +168,9 @@ class CodeParser:
         args += self.parse_positional_args(node)
         args += self.parse_varargs(node)
         args += self.parse_keyword_args(node)
-        args += self.parse_kwargs(node)
+        # Commented out because we don't want kwargs
+        # showing up as fields in the frontend
+        # args += self.parse_kwargs(node)
 
         return args
 
