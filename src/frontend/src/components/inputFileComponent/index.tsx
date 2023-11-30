@@ -28,6 +28,7 @@ export default function InputFileComponent({
   }, [disabled, onChange]);
 
   function checkFileType(fileName: string): boolean {
+    if (fileTypes === undefined) return true;
     for (let index = 0; index < fileTypes.length; index++) {
       if (fileName.endsWith(fileTypes[index])) {
         return true;
