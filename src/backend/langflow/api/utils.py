@@ -64,12 +64,14 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
     raw_template = raw_template_data.template or {}
 
     for key, value_dict in raw_template.items():
-        if key == "code" or not isinstance(value_dict, dict):
+        frontend_field = frontend_template.get(key)
+        if key == "code" or not isinstance(value_dict, dict) or not frontend_field:
             continue
+
 
         value = value_dict.get("value")
         template_field_type = value_dict.get("type")
-        frontend_node_field_type = frontend_template[key].get("type")
+        frontend_node_field_type = frontend_field.get("type")
         if value is not None and key in frontend_template and template_field_type == frontend_node_field_type:
             frontend_template[key]["value"] = value
 
