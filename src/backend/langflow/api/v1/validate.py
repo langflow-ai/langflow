@@ -1,15 +1,10 @@
 from fastapi import APIRouter, HTTPException
-
-from langflow.api.v1.base import (
-    Code,
-    CodeValidationResponse,
-    ValidatePromptRequest,
-    PromptValidationResponse,
-    validate_prompt,
-)
+from langflow.api.v1.base import (Code, CodeValidationResponse,
+                                  PromptValidationResponse,
+                                  ValidatePromptRequest, validate_prompt)
 from langflow.template.field.base import TemplateField
-from loguru import logger
 from langflow.utils.validate import validate_code
+from loguru import logger
 
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])
@@ -61,7 +56,11 @@ def get_old_custom_fields(prompt_request):
             # then we are dealing with the first prompt request after the node was created
             prompt_request.name = list(prompt_request.frontend_node.custom_fields.keys())[0]
 
-        old_custom_fields = prompt_request.frontend_node.custom_fields[prompt_request.name].copy()
+        old_custom_fields = prompt_request.frontend_node.custom_fields[prompt_request.name]
+        if old_custom_fields is None:
+            old_custom_fields = []
+
+        old_custom_fields = old_custom_fields.copy()
     except KeyError:
         old_custom_fields = []
     prompt_request.frontend_node.custom_fields[prompt_request.name] = []

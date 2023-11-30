@@ -1,9 +1,10 @@
 import re
 from collections import defaultdict
-from typing import ClassVar, DefaultDict, Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import (CLASSES_TO_REMOVE,
+                                                       FORCE_SHOW_FIELDS)
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
@@ -45,7 +46,7 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     documentation: str = ""
-    custom_fields: Optional[DefaultDict[str, List[str]]] = defaultdict(list)
+    custom_fields: Optional[Dict] = defaultdict(list)
     output_types: List[str] = []
     full_path: Optional[str] = None
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
