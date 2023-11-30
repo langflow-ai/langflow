@@ -157,6 +157,11 @@ export default function StorePage(): JSX.Element {
     setTabId("");
   }, []);
 
+  function resetPagination() {
+    setPageIndex(1);
+    setPageSize(12);
+  }
+
   return (
     <PageLayout
       title="Langflow Store"
@@ -230,6 +235,7 @@ export default function StorePage(): JSX.Element {
               <button
                 disabled={loading}
                 onClick={() => {
+                  resetPagination();
                   setTabActive("Flows");
                 }}
                 className={
@@ -244,6 +250,7 @@ export default function StorePage(): JSX.Element {
               <button
                 disabled={loading}
                 onClick={() => {
+                  resetPagination();
                   setTabActive("Components");
                 }}
                 className={
