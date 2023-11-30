@@ -219,7 +219,7 @@ export default function GenericNode({
                         {data.node?.flow && (
                           <IconComponent
                             name="Pencil"
-                            className="h-5 w-5 text-primary-content"
+                            className="h-5 w-5 text-ring"
                           />
                         )}
                       </div>
