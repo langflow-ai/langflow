@@ -345,7 +345,7 @@ class Vertex:
             if self.base_type == "custom_components":
                 message += " Make sure your build method returns a component."
 
-            raise ValueError(message)
+            logger.warning(message)
 
     async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
