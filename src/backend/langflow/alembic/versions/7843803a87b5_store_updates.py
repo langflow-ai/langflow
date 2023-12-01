@@ -7,10 +7,10 @@ Create Date: 2023-10-18 23:08:57.744906
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 import sqlmodel
-
+from alembic import op
+from loguru import logger
 
 # revision identifiers, used by Alembic.
 revision: str = "7843803a87b5"
@@ -28,11 +28,11 @@ def upgrade() -> None:
         with op.batch_alter_table("user", schema=None) as batch_op:
             batch_op.add_column(
                 sa.Column(
-                    "store_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=True
+                    "store_api_key", sqlmodel.AutoString(), nullable=True
                 )
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.exception(e)
 
     # ### end Alembic commands ###
 
