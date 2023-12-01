@@ -33,6 +33,7 @@ import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
   createFlowComponent,
+  removeFileNameFromComponents,
   scapeJSONParse,
   scapedJSONStringfy,
   updateEdgesHandleIds,
@@ -251,9 +252,15 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     flowName: string,
     flowDescription?: string
   ) {
+    let clonedFlow = cloneDeep(flow);
+    removeFileNameFromComponents(clonedFlow);
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
+      JSON.stringify({
+        ...clonedFlow,
+        name: flowName,
+        description: flowDescription,
+      })
     )}`;
 
     // create a link element and set its properties
