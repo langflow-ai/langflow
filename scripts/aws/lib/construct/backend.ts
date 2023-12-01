@@ -14,10 +14,6 @@ import * as dotenv from 'dotenv';
 const path = require('path');
 dotenv.config({path: path.join(__dirname, "../../.env")});
 
-console.log(process.env.LANGFLOW_AUTO_LOGIN);
-console.log(process.env.LANGFLOW_SUPERUSER);
-console.log(process.env.LANGFLOW_SUPERUSER_PASSWORD);
-
 interface BackEndProps {
   cluster: ecs.Cluster
   ecsBackSG:ec2.SecurityGroup
