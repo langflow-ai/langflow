@@ -53,12 +53,6 @@ LANGCHAIN_BASE_TYPES = {
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
-    "str": str,
-    "int": int,
-    "float": float,
-    "bool": bool,
-    "list": list,
-    "dict": dict,
     "NestedDict": NestedDict,
     "Data": Data,
     "Object": Object,
