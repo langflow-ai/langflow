@@ -9,7 +9,8 @@ from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias)
+    extract_union_types_from_generic_alias,
+)
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
@@ -32,8 +33,6 @@ class CustomComponent(Component):
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
-
-
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -75,8 +74,6 @@ class CustomComponent(Component):
     def validate(self) -> bool:
         return self._class_template_validation(self.code) if self.code else False
 
-
-
     @property
     def tree(self):
         return self.get_code_tree(self.code)
@@ -109,8 +106,6 @@ class CustomComponent(Component):
         if not self.code:
             return []
 
-
-
         component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return []
@@ -123,7 +118,6 @@ class CustomComponent(Component):
 
         if not build_methods:
             return []
-
 
         return build_methods[0]
 
@@ -156,7 +150,6 @@ class CustomComponent(Component):
         if not self.code:
             return ""
 
-
         base_name = self.code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
@@ -174,7 +167,6 @@ class CustomComponent(Component):
     def build_template_config(self):
         if not self.code:
             return {}
-
 
         attributes = [
             main_class["attributes"]
@@ -222,8 +214,7 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import (build_sorted_vertices,
-                                                 process_tweaks)
+        from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
