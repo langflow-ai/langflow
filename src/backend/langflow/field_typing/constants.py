@@ -25,6 +25,8 @@ class Object:
 class Data:
     pass
 
+class Prompt
+
 
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
@@ -44,6 +46,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseOutputParser": BaseOutputParser,
     "BaseMemory": BaseMemory,
     "BaseChatMemory": BaseChatMemory,
+
 }
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
@@ -58,4 +61,5 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "Data": Data,
     "Object": Object,
     "Callable": Callable,
+    "Prompt": Prompt,
 }
