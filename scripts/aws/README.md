@@ -15,7 +15,7 @@ cd cloud9-setup-for-prototyping
 ```
 
 1. When you see `Done!`, open `cloud9-for-prototyping` from [Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/).
-![make-cloud9](./img/langflow-cloud9.png)
+![make-cloud9](./img/langflow-cloud9-en.png)
 
 
 1. Run the following command in the Cloud9 terminal.
