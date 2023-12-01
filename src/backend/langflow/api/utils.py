@@ -1,3 +1,10 @@
+
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.flow.model import Flow
+
+
 API_WORDS = ["api", "key", "token"]
 
 
@@ -75,3 +82,22 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
             frontend_template[key]["value"] = value
 
     return frontend_node
+
+def validate_is_component(flows: List["Flow"]):
+
+    for flow in flows:
+        if not flow.data or flow.is_component is not None:
+            continue
+
+        is_component = get_is_component_from_data(flow.data)
+        if is_component is not None:
+            flow.is_component = is_component
+        else:
+            flow.is_component = len(flow.data.get("nodes", [])) == 1
+    return flows
+
+
+
+def get_is_component_from_data(data: dict):
+    """Returns True if the data is a component."""
+    return data.get("is_component")
