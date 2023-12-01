@@ -1,4 +1,4 @@
-import { RemovalPolicy, Duration } from 'aws-cdk-lib'
+import { RemovalPolicy, Duration, CfnOutput } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import {
   aws_ec2 as ec2,
@@ -76,9 +76,9 @@ export class Network extends Construct {
     })
     this.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(alb_listen_port))
 
-    this.alb = new elb.ApplicationLoadBalancer(this,'alb',{
+    this.alb = new elb.ApplicationLoadBalancer(this,'langflow-alb',{
       internetFacing: true, //インターネットからのアクセスを許可するかどうか指定
-      loadBalancerName: 'alb',
+      loadBalancerName: 'langflow-alb',
       securityGroup: this.albSG, //作成したセキュリティグループを割り当てる
       vpc:this.vpc,   
     })
@@ -127,13 +127,17 @@ export class Network extends Construct {
 
     // Create CloudWatch Log Group
     this.backendLogGroup = new logs.LogGroup(this, 'backendLogGroup', {
-      logGroupName: 'myapp-backend',
+      logGroupName: 'langflow-backend-logs',
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
     this.frontendLogGroup = new logs.LogGroup(this, 'frontendLogGroup', {
-      logGroupName: 'myapp-frontend',
+      logGroupName: 'langflow-frontend-logs',
       removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    new CfnOutput(this, 'URL', {
+      value: `http://${this.alb.loadBalancerDnsName}`,
     });
   }
 }
