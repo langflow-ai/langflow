@@ -5,7 +5,6 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
@@ -34,9 +33,7 @@ class CustomComponent(Component):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
 
-    @property
-    def return_type_valid_list(self):
-        return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -148,11 +145,10 @@ class CustomComponent(Component):
         if not hasattr(return_type, "__origin__") or return_type.__origin__ != Union:
             if isinstance(return_type, list):
                 return return_type
-            return [return_type]  # if return_type in self.return_type_valid_list else []
+            return [return_type]
 
         # If the return type is a Union, then we need to parse itx
         return_type = extract_union_types_from_generic_alias(return_type)
-        # return [item for item in return_type if item in self.return_type_valid_list]
         return return_type
 
     @property
