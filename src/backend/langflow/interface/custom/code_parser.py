@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
-from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
+from langflow.interface.custom.schema import (CallableCodeDetails,
+                                              ClassCodeDetails)
 
 
 class CodeSyntaxError(HTTPException):
@@ -56,6 +57,9 @@ class CodeParser:
             ast.Assign: self.parse_global_vars,
         }
 
+
+
+
     def __get_tree(self):
         """
         Parses the provided code to validate its syntax.
@@ -78,6 +82,7 @@ class CodeParser:
         """
         if handler := self.handlers.get(type(node)):  # type: ignore
             handler(node)  # type: ignore
+
 
     def parse_imports(self, node: Union[ast.Import, ast.ImportFrom]) -> None:
         """
@@ -149,12 +154,16 @@ class CodeParser:
                 # Handle cases where the type is not found in the constructed environment
                 pass
 
+
         func = CallableCodeDetails(
-            name=node.name, doc=ast.get_docstring(node), args=[], body=[], return_type=return_type or get_data_type()
+            name=node.name,
+            doc=ast.get_docstring(node),
+            args= self.parse_function_args(node),
+            body= self.parse_function_body(node),
+            return_type=return_type or get_data_type(),
+            has_return=self.parse_return_statement(node),
         )
 
-        func.args = self.parse_function_args(node)
-        func.body = self.parse_function_body(node)
 
         return func.model_dump()
 
@@ -229,6 +238,14 @@ class CodeParser:
         Parses the body of a function or method node.
         """
         return [ast.unparse(line) for line in node.body]
+
+    def parse_return_statement(self, node: ast.FunctionDef) -> bool:
+        """
+        Parses the return statement of a function or method node.
+        """
+
+        return any(isinstance(n, ast.Return) for n in node.body)
+
 
     def parse_assign(self, stmt):
         """

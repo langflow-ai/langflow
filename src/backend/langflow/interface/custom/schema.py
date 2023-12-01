@@ -26,3 +26,4 @@ class CallableCodeDetails(BaseModel):
     args: list
     body: list
     return_type: Optional[Any] = None
+    has_return: bool = False

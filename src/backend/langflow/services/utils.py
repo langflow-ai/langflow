@@ -2,7 +2,8 @@ from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
 from langflow.services.schema import ServiceType
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.constants import (DEFAULT_SUPERUSER,
+                                                  DEFAULT_SUPERUSER_PASSWORD)
 from loguru import logger
 from sqlmodel import Session
 
@@ -13,12 +14,13 @@ def get_factories_and_deps():
     from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
+    from langflow.services.credentials import factory as credentials_factory
     from langflow.services.database import factory as database_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import \
+        factory as session_service_factory  # type: ignore
     from langflow.services.settings import factory as settings_factory
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory
-    from langflow.services.credentials import factory as credentials_factory
 
     return [
         (settings_factory.SettingsServiceFactory(), []),
@@ -171,7 +173,8 @@ def initialize_session_service():
     Initialize the session manager.
     """
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow.services.session import \
+        factory as session_service_factory  # type: ignore
 
     initialize_settings_service()
 
@@ -183,7 +186,7 @@ def initialize_session_service():
     )
 
 
-def initialize_services():
+def initialize_services(fix_migration: bool = False):
     """
     Initialize all the services needed.
     """
@@ -197,7 +200,11 @@ def initialize_services():
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
     # Setup the superuser
-    initialize_database()
+    try:
+        initialize_database(fix_migration=fix_migration)
+    except Exception as exc:
+        logger.exception(exc)
+        raise exc
     setup_superuser(service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()
