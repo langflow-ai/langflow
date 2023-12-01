@@ -30,7 +30,7 @@ This tutorial assumes you have an AWS account and basic knowledge of AWS.
     ```
 
 # Cleanup
-1. Run the following command in the `Cloud9` terminal.
+1. Run the following command in the Cloud9 terminal.
     ```shell
     cdk destroy
     bash delete-ecr.sh
