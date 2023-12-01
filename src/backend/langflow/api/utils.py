@@ -1,4 +1,3 @@
-
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
@@ -83,8 +82,8 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
 
     return frontend_node
 
-def validate_is_component(flows: List["Flow"]):
 
+def validate_is_component(flows: List["Flow"]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -95,7 +94,6 @@ def validate_is_component(flows: List["Flow"]):
         else:
             flow.is_component = len(flow.data.get("nodes", [])) == 1
     return flows
-
 
 
 def get_is_component_from_data(data: dict):

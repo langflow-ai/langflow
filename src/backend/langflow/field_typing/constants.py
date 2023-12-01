@@ -5,8 +5,7 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.llms.base import BaseLLM
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import (BasePromptTemplate, ChatPromptTemplate,
-                               PromptTemplate)
+from langchain.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain.schema import BaseOutputParser, BaseRetriever, Document
 from langchain.schema.embeddings import Embeddings
 from langchain.schema.language_model import BaseLanguageModel
@@ -25,6 +24,7 @@ class Object:
 
 class Data:
     pass
+
 
 class Prompt:
     pass
@@ -48,7 +48,6 @@ LANGCHAIN_BASE_TYPES = {
     "BaseOutputParser": BaseOutputParser,
     "BaseMemory": BaseMemory,
     "BaseChatMemory": BaseChatMemory,
-
 }
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {

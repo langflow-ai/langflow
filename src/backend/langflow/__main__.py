@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import (initialize_services,
-                                     initialize_settings_service)
+from langflow.services.utils import initialize_services, initialize_settings_service
 from langflow.utils.logger import configure, logger
 from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
@@ -328,17 +327,21 @@ def superuser(
 
 
 @app.command()
-def migration(test: bool = typer.Option(True, help="Run migrations in test mode."),
-                fix: bool = typer.Option(False, help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.")
+def migration(
+    test: bool = typer.Option(True, help="Run migrations in test mode."),
+    fix: bool = typer.Option(
+        False,
+        help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
+    ),
 ):
     """
     Run or test migrations.
     """
     if fix:
-        if not typer.confirm("This will delete all data necessary to fix migrations. Are you sure you want to continue?"):
+        if not typer.confirm(
+            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+        ):
             raise typer.Abort()
-
-
 
     initialize_services(fix_migration=fix)
     db_service = get_db_service()
