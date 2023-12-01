@@ -1,17 +1,18 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from loguru import logger
-from contextlib import contextmanager
+
 from alembic.util.exc import CommandError
+from loguru import logger
 from sqlmodel import Session
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
 
 
-def initialize_database():
+def initialize_database(fix_migration: bool = False):
     logger.debug("Initializing database")
-    from langflow.services import service_manager, ServiceType
+    from langflow.services import ServiceType, service_manager
 
     database_service: "DatabaseService" = service_manager.get(ServiceType.DATABASE_SERVICE)
     try:
@@ -28,7 +29,7 @@ def initialize_database():
         logger.error(f"Error checking schema health: {exc}")
         raise RuntimeError("Error checking schema health") from exc
     try:
-        database_service.run_migrations()
+        database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:
         # if "overlaps with other requested revisions" or "Can't locate revision identified by"
         # are not in the exception, we can't handle it
@@ -47,8 +48,9 @@ def initialize_database():
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
-            logger.error(f"Error running migrations: {exc}")
-            raise RuntimeError("Error running migrations") from exc
+            logger.error(exc)
+
+        raise exc
     logger.debug("Database initialized")
 
 
