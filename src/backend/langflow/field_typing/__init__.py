@@ -1,27 +1,9 @@
-from .constants import (
-    AgentExecutor,
-    BaseChatMemory,
-    BaseLanguageModel,
-    BaseLLM,
-    BaseLoader,
-    BaseMemory,
-    BaseOutputParser,
-    BasePromptTemplate,
-    BaseRetriever,
-    Callable,
-    Chain,
-    ChatPromptTemplate,
-    Data,
-    Document,
-    Embeddings,
-    NestedDict,
-    Object,
-    PromptTemplate,
-    TextSplitter,
-    Tool,
-    VectorStore,
-)
-
+from .constants import (AgentExecutor, BaseChatMemory, BaseLanguageModel,
+                        BaseLLM, BaseLoader, BaseMemory, BaseOutputParser,
+                        BasePromptTemplate, BaseRetriever, Callable, Chain,
+                        ChatPromptTemplate, Data, Document, Embeddings,
+                        NestedDict, Object, Prompt, PromptTemplate,
+                        TextSplitter, Tool, VectorStore)
 
 __all__ = [
     "NestedDict",
@@ -45,4 +27,5 @@ __all__ = [
     "Callable",
     "BasePromptTemplate",
     "ChatPromptTemplate",
+    "Prompt"
 ]
