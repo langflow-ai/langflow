@@ -10,7 +10,6 @@ from cachetools import LRUCache, cached
 from fastapi import HTTPException
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import extract_inner_type
@@ -30,7 +29,8 @@ from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import \
+    CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
 from loguru import logger
 
@@ -69,7 +69,6 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         utility_creator,
         output_parser_creator,
         retriever_creator,
-        custom_component_creator,
     ]
 
     all_types = {}
