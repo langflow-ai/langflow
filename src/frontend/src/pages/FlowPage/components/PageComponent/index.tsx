@@ -187,6 +187,15 @@ export default function Page({
     };
   }, []);
 
+  //remove this if you dont want to see the whole flow on fork
+  useEffect(() => {
+    setTimeout(() => {
+      flow?.data!.nodes!.length > 3
+        ? reactFlowInstance?.fitView({ padding: 0.1 })
+        : reactFlowInstance?.fitView({ padding: 0.5 });
+    }, 200);
+  }, []);
+
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
       updateFlow({

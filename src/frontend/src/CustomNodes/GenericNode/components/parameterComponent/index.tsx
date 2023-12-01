@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import React, {
   ReactNode,
   useContext,
@@ -68,7 +69,7 @@ export default function ParameterComponent({
   const { setErrorData } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows } = useContext(FlowsContext);
+  const { setTabsState, tabId, flows, tabsState } = useContext(FlowsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -126,19 +127,14 @@ export default function ParameterComponent({
     data.node!.template[name].value = newValue;
     // Set state to pending
     //@ts-ignore
-    setTabsState((prev: TabsState) => {
-      if (!prev[tabId]) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [tabId]: {
-          ...prev[tabId],
-          isPending: true,
-          formKeysData: prev[tabId].formKeysData,
-        },
-      };
-    });
+    if (data.node!.template[name].value !== newValue) {
+      const tabs = cloneDeep(tabsState);
+      tabs[tabId].isPending = false;
+      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
     renderTooltips();
   };
 
