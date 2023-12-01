@@ -200,7 +200,11 @@ def initialize_services(fix_migration: bool = False):
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
     # Setup the superuser
-    initialize_database(fix_migration=fix_migration)
+    try:
+        initialize_database(fix_migration=fix_migration)
+    except Exception as exc:
+        logger.exception(exc)
+        raise exc
     setup_superuser(service_manager.get(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:
         get_db_service().migrate_flows_if_auto_login()

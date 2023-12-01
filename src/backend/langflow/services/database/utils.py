@@ -48,8 +48,9 @@ def initialize_database(fix_migration: bool = False):
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
-            logger.error(f"Error running migrations: {exc}")
-            raise RuntimeError("Error running migrations") from exc
+            logger.error(exc)
+
+        raise exc
     logger.debug("Database initialized")
 
 
