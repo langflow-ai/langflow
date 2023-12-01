@@ -34,11 +34,11 @@ LangflowAppStack.NetworkURLXXXXXX = http://alb-XXXXXXXXXXX.elb.amazonaws.com
 ```
 
 # Cleanup
-1. `Cloud9` で以下のコマンドを実行します。
+1. Run the following command in the `Cloud9` terminal.
 ```shell
 cdk destroy
 bash delete-ecr.sh
 ```
 
-1. Open [CloudFormation](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/getting-started), select `aws-cloud9-cloud9-for-prototyping-XXXX` and remove it.
+1. Open [CloudFormation](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/getting-started), select `aws-cloud9-cloud9-for-prototyping-XXXX` and delete it.
 ![delete-cfn](./img/langflow-cfn.png)
