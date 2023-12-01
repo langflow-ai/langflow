@@ -12,7 +12,7 @@ This tutorial assumes you have an AWS account and basic knowledge of AWS.
     cd cloud9-setup-for-prototyping
     ./bin/bootstrap
     ```
-1. When you see `Done!`, open `cloud9-for-prototyping` from [Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/).
+1. When you see `Done!` in Cloudshell, open `cloud9-for-prototyping` from [Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/).
     ![make-cloud9](./img/langflow-cloud9-en.png)
 1. Run the following command in the Cloud9 terminal.
     ```shell
