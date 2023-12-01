@@ -177,7 +177,7 @@ export default function GenericNode({
               }
             >
               <IconComponent
-                name={data.node?.flow ? "Ungroup" : name}
+                name={data.node?.flow ? "group_components" : name}
                 className={
                   "generic-node-icon " +
                   (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
@@ -213,13 +213,13 @@ export default function GenericNode({
                           takeSnapshot();
                         }}
                       >
-                        <div className="generic-node-tooltip-div pr-3 text-primary">
+                        <div className="generic-node-tooltip-div pr-2 text-primary">
                           {data.node?.display_name}
                         </div>
                         {data.node?.flow && (
                           <IconComponent
                             name="Pencil"
-                            className="h-5 w-5 text-ring"
+                            className="h-4 w-4 text-ring"
                           />
                         )}
                       </div>

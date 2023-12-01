@@ -105,7 +105,7 @@ export default function ComponentsComponent({
         <div className="flex w-full flex-col gap-4">
           {!isLoading && data.length === 0 ? (
             <div className="w-full text-center">
-              You haven't created any {name}s yet.
+              {/* TODO: create placeholder */}
             </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
