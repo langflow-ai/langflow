@@ -4,6 +4,8 @@ import importlib
 from types import FunctionType
 from typing import Dict
 
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+
 
 def add_type_ignores():
     if not hasattr(ast, "TypeIgnore"):
@@ -266,29 +268,7 @@ def get_default_imports(code_string):
         # Add more imports from the typing module as needed
     }
 
-    langflow_imports = [
-        "AgentExecutor",
-        "BaseChatMemory",
-        "BaseLanguageModel",
-        "BaseLLM",
-        "BaseLoader",
-        "BaseMemory",
-        "BaseOutputParser",
-        "BasePromptTemplate",
-        "BaseRetriever",
-        "Callable",
-        "Chain",
-        "ChatPromptTemplate",
-        "Data",
-        "Document",
-        "Embeddings",
-        "NestedDict",
-        "Object",
-        "PromptTemplate",
-        "TextSplitter",
-        "Tool",
-        "VectorStore",
-    ]
+    langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     necessary_imports = find_names_in_code(code_string, langflow_imports)
     langflow_module = importlib.import_module("langflow.field_typing")
     default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
