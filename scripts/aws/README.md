@@ -4,6 +4,12 @@ In this tutorial, you will learn how to deploy langflow on AWS using CDK.
 
 This tutorial assumes you have an AWS account and basic knowledge of AWS.
 
+The architecture of the application to be created: [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/application-load-balancer/?nc1=h_ls), [AWS Fargate](https://aws.amazon.com/fargate/?nc2=type_a) and [Amazon Aurora](https://aws.amazon.com/rds/aurora/?nc2=type_a) are created by [AWS CDK](https://aws.amazon.com/cdk/?nc2=type_a).
+![langflow-archi](./img/langflow-archi.png)
+The aurora's secrets are managed by [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/?nc2=type_a).
+The Fargate task is divided into a frontend and a backend, which communicate through service discovery.
+If you just want to deploy resources, you do not need in-depth knowledge of each of the above services.
+
 # How to set up your environment and deploy langflow
 1. Open [CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1).
 1. Run the following commands in Cloudshell:
@@ -28,6 +34,8 @@ This tutorial assumes you have an AWS account and basic knowledge of AWS.
     Outputs:
     LangflowAppStack.NetworkURLXXXXXX = http://alb-XXXXXXXXXXX.elb.amazonaws.com
     ```
+1. Enter your user name and password to sign in. If you have not set a user name and password in your `.env` file, the user name will be set to `admin` and the password to `123456`.
+    ![signin-langflow](./img/langflow-signin.png)
 
 # Cleanup
 1. Run the following command in the Cloud9 terminal.
