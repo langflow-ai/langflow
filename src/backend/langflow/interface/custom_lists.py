@@ -1,28 +1,23 @@
 import inspect
 from typing import Any
 
-from langchain import (
-    document_loaders,
-    embeddings,
-    llms,
-    memory,
-    requests,
-    text_splitter,
-)
+from langchain import (document_loaders, embeddings, llms, memory, requests,
+                       text_splitter)
 from langchain.agents import agent_toolkits
-from langchain.chat_models import (
-    AzureChatOpenAI,
-    ChatOpenAI,
-    ChatVertexAI,
-    ChatAnthropic,
-)
-
-from langflow.interface.importing.utils import import_class
+from langchain.chat_models import (AzureChatOpenAI, ChatAnthropic, ChatOpenAI,
+                                   ChatVertexAI)
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.chains.custom import CUSTOM_CHAINS
+from langflow.interface.importing.utils import import_class
 
 # LLMs
-llm_type_to_cls_dict = llms.type_to_cls_dict
+llm_type_to_cls_dict = {}
+
+for k, v in llms.get_type_to_cls_dict().items():
+    try:
+        llm_type_to_cls_dict[k] = v()
+    except Exception:
+        pass
 llm_type_to_cls_dict["anthropic-chat"] = ChatAnthropic  # type: ignore
 llm_type_to_cls_dict["azure-chat"] = AzureChatOpenAI  # type: ignore
 llm_type_to_cls_dict["openai-chat"] = ChatOpenAI  # type: ignore
