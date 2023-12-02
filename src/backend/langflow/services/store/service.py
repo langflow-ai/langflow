@@ -7,19 +7,16 @@ from httpx import HTTPError, HTTPStatusError
 from loguru import logger
 
 from langflow.services.base import Service
-from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
-from langflow.services.store.schema import (
-    CreateComponentResponse,
-    DownloadComponentResponse,
-    ListComponentResponse,
-    ListComponentResponseModel,
-    StoreComponentCreate,
-)
-from langflow.services.store.utils import (
-    process_component_data,
-    process_tags_for_post,
-    update_components_with_user_data,
-)
+from langflow.services.store.exceptions import (APIKeyError, FilterError,
+                                                ForbiddenError)
+from langflow.services.store.schema import (CreateComponentResponse,
+                                            DownloadComponentResponse,
+                                            ListComponentResponse,
+                                            ListComponentResponseModel,
+                                            StoreComponentCreate)
+from langflow.services.store.utils import (process_component_data,
+                                           process_tags_for_post,
+                                           update_components_with_user_data)
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -167,6 +164,7 @@ class StoreService(Service):
         conditions["_or"].append({"name": {"_icontains": query}})
         conditions["_or"].append({"description": {"_icontains": query}})
         conditions["_or"].append({"tags": {"tags_id": {"name": {"_icontains": query}}}})
+        conditions["_or"].append({"user_created": {"username": {"_icontains": query}}})
         return conditions
 
     def build_filter_conditions(
