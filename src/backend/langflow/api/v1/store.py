@@ -66,6 +66,7 @@ async def check_if_store_has_api_key(
     return {"has_api_key": api_key is not None, "is_valid": is_valid}
 
 
+
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)
 async def share_component(
     component: StoreComponentCreate,
@@ -99,6 +100,39 @@ async def share_component(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+@router.patch("/components/{component_id}", response_model=CreateComponentResponse, status_code=201)
+async def update_component(
+    component_id: UUID,
+    component: StoreComponentCreate,
+    store_service: StoreService = Depends(get_store_service),
+    store_api_Key: str = Depends(get_user_store_api_key),
+):
+    try:
+        # Verify if this is the latest version of Langflow
+        # If not, raise an error
+        if not component.last_tested_version:
+            # Get the local version of Langflow
+            from langflow import __version__ as current_version
+
+            component.last_tested_version = current_version
+        langflow_version = get_lf_version_from_pypi()
+        if langflow_version is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to verify the latest version of Langflow",
+            )
+        elif langflow_version != component.last_tested_version:
+            # If the user is using an older version of Langflow, we need to raise an error
+            # raise ValueError(
+            warnings.warn(
+                f"Your version of Langflow ({component.last_tested_version}) is outdated."
+                f" Please update to the latest version ({langflow_version}) and try again."
+            )
+
+        result = await store_service.update(store_api_Key, component_id, component)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(

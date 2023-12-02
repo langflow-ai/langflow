@@ -350,6 +350,39 @@ class StoreService(Service):
                     pass
             raise ValueError(f"Upload failed: {exc}")
 
+    async def update(self, api_key: str, component_id: UUID, component_data: StoreComponentCreate) -> CreateComponentResponse:
+        # Patch is the same as post, but we need to add the id to the url
+        headers = {"Authorization": f"Bearer {api_key}"}
+        component_dict = component_data.model_dump(exclude_unset=True)
+        # Parent is a UUID, but the store expects a string
+        response = None
+        if component_dict.get("parent"):
+            component_dict["parent"] = str(component_dict["parent"])
+
+        component_dict = process_tags_for_post(component_dict)
+        try:
+            # response = httpx.post(self.components_url, headers=headers, json=component_dict)
+            # response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(self.components_url + f"/{component_id}",
+                                             headers=headers, json=component_dict)
+                response.raise_for_status()
+            component = response.json()["data"]
+            return CreateComponentResponse(**component)
+        except HTTPError as exc:
+            if response:
+                try:
+                    errors = response.json()
+                    message = errors["errors"][0]["message"]
+                    if message == "An unexpected error occurred.":
+                        # This is a bug in Directus that returns this error
+                        # when an error was thrown in the flow
+                        message = "You already have a component with this name. Please choose a different name."
+                    raise FilterError(message)
+                except UnboundLocalError:
+                    pass
+            raise ValueError(f"Upload failed: {exc}")
+
     async def get_tags(self) -> List[Dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
         params = {"fields": ",".join(["id", "name"])}
