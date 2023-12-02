@@ -1,7 +1,6 @@
 # Langflow on AWS
 
 Langflow on AWS では、 Langflow を AWS 上にデプロイする方法を学べます。
-
 このチュートリアルは、AWS アカウントと AWS に関する基本的な知識を有していることを前提としています。
 
 作成するアプリケーションのアーキテクチャです。
@@ -32,7 +31,7 @@ Fargate のタスクはフロントエンドとバックエンドに分かれて
     npm ci
     cdk bootstrap
     cdk deploy
-```
+    ```
 1. 表示される URL にアクセスします。
     ```shell
     Outputs:
