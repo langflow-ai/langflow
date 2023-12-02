@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.5.8"
+version = "0.5.9"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -54,12 +54,12 @@ wikipedia = "^1.4.0"
 qdrant-client = "^1.4.0"
 websockets = "^10.3"
 weaviate-client = "^3.23.0"
-jina = "3.15.2"
+jina = "*"
 sentence-transformers = { version = "^2.2.2", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^4.27.0"
 python-multipart = "^0.0.6"
-sqlmodel = "^0.0.8"
+sqlmodel = "^0.0.12"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.3.0"
 orjson = "3.9.3"
@@ -75,7 +75,7 @@ google-cloud-aiplatform = "^1.26.1"
 psycopg = "^3.1.9"
 psycopg-binary = "^3.1.9"
 fastavro = "^1.8.0"
-langchain-experimental = "^0.0.8"
+langchain-experimental = "*"
 celery = { extras = ["redis"], version = "^5.3.1", optional = true }
 redis = { version = "^4.6.0", optional = true }
 flower = { version = "^2.0.0", optional = true }
