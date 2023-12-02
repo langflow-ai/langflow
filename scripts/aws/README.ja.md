@@ -6,7 +6,7 @@ Langflow on AWS では、 Langflow を AWS 上にデプロイする方法を学�
 
 作成するアプリケーションのアーキテクチャです。
 ![langflow-archi](./img/langflow-archi.png)
-[AWS CDK](https://aws.amazon.com/cdk/?nc2=type_a) によって  [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/application-load-balancer/?nc1=h_ls), [AWS Fargate](https://aws.amazon.com/fargate/?nc2=type_a) and [Amazon Aurora](https://aws.amazon.com/rds/aurora/?nc2=type_a) を作成します。
+[AWS CDK](https://aws.amazon.com/cdk/?nc2=type_a) によって  [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/application-load-balancer/?nc1=h_ls)、[AWS Fargate](https://aws.amazon.com/fargate/?nc2=type_a)、[Amazon Aurora](https://aws.amazon.com/rds/aurora/?nc2=type_a) を作成します。
 Auroraのシークレットは [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/?nc2=type_a) によって管理されます。
 Fargate のタスクはフロントエンドとバックエンドに分かれており、サービス検出によって通信します。
 リソースをデプロイするだけであれば、上記の各サービスについて深い知識は必要ありません。
