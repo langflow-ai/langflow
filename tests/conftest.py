@@ -305,7 +305,7 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
 
 @pytest.fixture
 def test_component_code():
-    path = Path(__file__).parent.absolute() / "data" / "test_component.py"
+    path = Path(__file__).parent.absolute() / "data" / "component_test.py"
     # load the content as a string
     with open(path, "r") as f:
         return f.read()
