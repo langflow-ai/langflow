@@ -1,7 +1,9 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.chat_models.anthropic import ChatAnthropic
 from langchain.llms.base import BaseLLM
+
+from langflow import CustomComponent
 
 
 class AnthropicLLM(CustomComponent):
@@ -60,7 +62,7 @@ class AnthropicLLM(CustomComponent):
 
         try:
             output = ChatAnthropic(
-                model=model,
+                model_name=model,
                 anthropic_api_key=anthropic_api_key,
                 max_tokens_to_sample=max_tokens,
                 temperature=temperature,
