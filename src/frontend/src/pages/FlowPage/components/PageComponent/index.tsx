@@ -25,6 +25,7 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
+import Loading from "../../../../components/ui/loading";
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
@@ -40,7 +41,7 @@ import {
   scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
@@ -163,10 +164,17 @@ export default function Page({
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
 
+  const [loading, setLoading] = useState(true);
+
   //update flow when tabs change
   useEffect(() => {
+    setLoading(true);
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
+    setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
+    setTimeout(() => {
+      setLoading(false);
+    }, 300); // Timeout to prevent ReactFlow to appear before viewport is set. Can't make it async because setViewport is not an async function.
   }, [flow, reactFlowInstance]);
 
   useEffect(() => {
@@ -185,15 +193,6 @@ export default function Page({
     return () => {
       clearInterval(interval);
     };
-  }, []);
-
-  //remove this if you dont want to see the whole flow on fork
-  useEffect(() => {
-    setTimeout(() => {
-      flow?.data!.nodes!.length > 3
-        ? reactFlowInstance?.fitView({ padding: 0.1 })
-        : reactFlowInstance?.fitView({ padding: 0.5 });
-    }, 200);
   }, []);
 
   const onEdgesChangeMod = useCallback(
@@ -439,6 +438,14 @@ export default function Page({
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
+                <div
+                  className={cn(
+                    "relative flex h-full w-full items-center justify-center bg-background",
+                    !loading ? "hidden" : ""
+                  )}
+                >
+                  <Loading />
+                </div>
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
