@@ -121,7 +121,7 @@ export default function ComponentsComponent({
                         }}
                         className="underline"
                       >
-                        Create a New Flow
+                        Start Here
                       </button>
                       .
                     </span>

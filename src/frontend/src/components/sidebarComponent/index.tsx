@@ -6,7 +6,7 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
     href: string;
     title: string;
-    Icon: React.FC<React.SVGProps<SVGSVGElement>>;
+    icon: React.ReactNode;
   }[];
 }
 
@@ -38,7 +38,7 @@ export default function SidebarNav({
             "justify-start gap-2"
           )}
         >
-          <item.Icon className="w-5 stroke-[1.5]" />
+          {item.icon}
           {item.title}
         </Link>
       ))}

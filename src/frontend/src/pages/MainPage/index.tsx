@@ -45,12 +45,12 @@ export default function HomePage(): JSX.Element {
     {
       title: "Flows",
       href: "/flows",
-      Icon: Group,
+      icon: <Group className="w-5 stroke-[1.5]" />,
     },
     {
       title: "Components",
       href: "/components",
-      Icon: ToyBrick,
+      icon: <ToyBrick className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
     },
   ];
 
