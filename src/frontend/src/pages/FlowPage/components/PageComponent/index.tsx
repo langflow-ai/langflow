@@ -84,7 +84,7 @@ export default function Page({
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
@@ -106,8 +106,8 @@ export default function Page({
         ) {
           event.preventDefault();
           paste(lastCopiedSelection, {
-            x: position.x,
-            y: position.y,
+            x: position.current.x,
+            y: position.current.y,
           });
         }
         if (
@@ -131,24 +131,18 @@ export default function Page({
       }
     };
 
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [lastCopiedSelection, lastSelection]);
-
-  useEffect(() => {
     const handleMouseMove = (event) => {
-      setPosition({ x: event.clientX, y: event.clientY });
+      position.current = { x: event.clientX, y: event.clientY };
     };
 
+    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
+      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [position]);
+  }, [lastCopiedSelection, lastSelection]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
