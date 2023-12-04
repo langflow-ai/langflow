@@ -7,7 +7,7 @@ from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.database.models.base import orjson_dumps
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class BuildStatus(Enum):
@@ -91,7 +91,8 @@ class ChatResponse(ChatMessage):
     is_bot: bool = True
     files: list = []
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
             raise ValueError("type must be start, stream, end, error, info, or file")
@@ -109,12 +110,13 @@ class PromptResponse(ChatMessage):
 class FileResponse(ChatMessage):
     """File response schema."""
 
-    data: Any
+    data: Any = None
     data_type: str
     type: str = "file"
     is_bot: bool = True
 
-    @validator("data_type")
+    @field_validator("data_type")
+    @classmethod
     def validate_data_type(cls, v):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")

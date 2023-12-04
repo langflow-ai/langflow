@@ -28,7 +28,7 @@ class SettingsService(Service):
             settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
             for key in settings_dict:
-                if key not in Settings.__fields__.keys():
+                if key not in Settings.model_fields.keys():
                     raise KeyError(f"Key {key} not found in settings")
                 logger.debug(
                     f"Loading {len(settings_dict[key])} {key} from {file_path}"

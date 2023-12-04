@@ -17,6 +17,8 @@
 from .constants import (
     Tool,
     PromptTemplate,
+    ChatPromptTemplate,
+    BasePromptTemplate,
     Chain,
     BaseChatMemory,
     BaseLLM,
@@ -31,6 +33,8 @@ from .constants import (
     AgentExecutor,
     NestedDict,
     Data,
+    BaseLanguageModel,
+    Callable,
 )
 
 __all__ = [
@@ -41,6 +45,7 @@ __all__ = [
     "Chain",
     "BaseChatMemory",
     "BaseLLM",
+    "BaseLanguageModel",
     "BaseLoader",
     "BaseMemory",
     "BaseOutputParser",
@@ -50,4 +55,7 @@ __all__ = [
     "TextSplitter",
     "Document",
     "AgentExecutor",
+    "Callable",
+    "BasePromptTemplate",
+    "ChatPromptTemplate",
 ]

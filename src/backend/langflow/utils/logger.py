@@ -2,9 +2,9 @@ from typing import Optional
 from loguru import logger
 from pathlib import Path
 from rich.logging import RichHandler
+from platformdirs import user_cache_dir
 import os
 import orjson
-import appdirs
 
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -50,7 +50,7 @@ def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
     )
 
     if not log_file:
-        cache_dir = Path(appdirs.user_cache_dir("langflow"))
+        cache_dir = Path(user_cache_dir("langflow"))
         log_file = cache_dir / "langflow.log"
 
     log_file = Path(log_file)

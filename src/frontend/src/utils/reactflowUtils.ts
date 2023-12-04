@@ -8,7 +8,6 @@ import {
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
-import ShortUniqueId from "short-unique-id";
 import { specialCharsRegex } from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
 import {
@@ -25,8 +24,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { toNormalCase, toTitleCase } from "./utils";
-const uid = new ShortUniqueId({ length: 5 });
+import { getFieldTitle, toTitleCase } from "./utils";
 
 export function cleanEdges({
   flow: { edges, nodes },
@@ -240,11 +238,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
             node.id
       )
     ) {
-      errors.push(
-        `${type} is missing ${
-          template.display_name || toNormalCase(template[t].name)
-        }.`
-      );
+      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
@@ -255,15 +249,14 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) contains duplicate keys with the same values.`
+          `${type} (${getFieldTitle(
+            template,
+            t
+          )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${
-            template.display_name || template[t].name
-          }) field must not be empty.`
+          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
         );
     }
     return errors;
@@ -512,7 +505,7 @@ export function generateFlow(
   name: string
 ): generateFlowType {
   const newFlowData = reactFlowInstance.toObject();
-
+  const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
 		in future we can save this edges to when ungrouping reconect to the old nodes
 	*/
@@ -875,7 +868,7 @@ export function ungroupNode(
     let { field, id } = template[key].proxy!;
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
-      let display_name: string;
+      let display_name: string | undefined;
       let show = gNodes[nodeIndex].data.node!.template[field].show;
       let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
       if (gNodes[nodeIndex].data.node!.template[field].display_name) {
@@ -965,7 +958,7 @@ export function expandGroupNode(
     let nodeIndex = gNodes.findIndex((n) => n.id === id);
     if (nodeIndex !== -1) {
       let proxy: { id: string; field: string } | undefined;
-      let display_name: string;
+      let display_name: string | undefined;
       let show = gNodes[nodeIndex].data.node!.template[field].show;
       let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
       if (gNodes[nodeIndex].data.node!.template[field].display_name) {
@@ -981,7 +974,8 @@ export function expandGroupNode(
       gNodes[nodeIndex].data.node!.template[field].show = show;
       gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
       gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-      gNodes[nodeIndex].selected = false;
+      // keep the nodes selected after ungrouping
+      // gNodes[nodeIndex].selected = false;
       if (proxy) {
         gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
       } else {

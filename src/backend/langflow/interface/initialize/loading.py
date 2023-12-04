@@ -293,13 +293,15 @@ def instantiate_embedding(node_type, class_object, params: Dict):
         params = {
             key: value
             for key, value in params.items()
-            if key in class_object.__fields__
+            if key in class_object.model_fields
         }
         return class_object(**params)
 
 
 def instantiate_vectorstore(class_object: Type[VectorStore], params: Dict):
     search_kwargs = params.pop("search_kwargs", {})
+    if search_kwargs == {"yourkey": "value"}:
+        search_kwargs = {}
     # clean up docs or texts to have only documents
     if "texts" in params:
         params["documents"] = params.pop("texts")

@@ -12,7 +12,10 @@ from langflow.api.utils import build_input_keys_response
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.auth.utils import (
+    get_current_active_user,
+    get_current_user_by_jwt,
+)
 from langflow.services.cache.utils import update_build_status
 from loguru import logger
 from langflow.services.getters import get_chat_service, get_session, get_cache_service
@@ -34,8 +37,8 @@ async def chat(
 ):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user_by_jwt(token, db)
         await websocket.accept()
-        user = await get_current_user(token, db)
         if not user:
             await websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
@@ -160,6 +163,11 @@ async def stream_build(
             number_of_nodes = len(graph.nodes)
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
+            try:
+                user_id = cache_service[flow_id]["user_id"]
+            except KeyError:
+                logger.debug("No user_id found in cache_service")
+                user_id = None
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
                     log_dict = {
@@ -167,9 +175,9 @@ async def stream_build(
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     if vertex.is_task:
-                        vertex = try_running_celery_task(vertex)
+                        vertex = try_running_celery_task(vertex, user_id)
                     else:
-                        vertex.build()
+                        vertex.build(user_id=user_id)
                     params = vertex._built_object_repr()
                     valid = True
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
@@ -233,7 +241,7 @@ async def stream_build(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-def try_running_celery_task(vertex):
+def try_running_celery_task(vertex, user_id):
     # Try running the task in celery
     # and set the task_id to the local vertex
     # if it fails, run the task locally
@@ -245,5 +253,5 @@ def try_running_celery_task(vertex):
     except Exception as exc:
         logger.debug(f"Error running task in celery: {exc}")
         vertex.task_id = None
-        vertex.build()
+        vertex.build(user_id=user_id)
     return vertex

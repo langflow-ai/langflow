@@ -20,7 +20,7 @@ class User(SQLModelSerializable, table=True):
     is_superuser: bool = Field(default=False)
     create_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    last_login_at: Optional[datetime] = Field()
+    last_login_at: Optional[datetime] = Field(nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
@@ -41,13 +41,13 @@ class UserRead(SQLModel):
     is_superuser: bool = Field()
     create_at: datetime = Field()
     updated_at: datetime = Field()
-    last_login_at: Optional[datetime] = Field()
+    last_login_at: Optional[datetime] = Field(nullable=True)
 
 
 class UserUpdate(SQLModel):
-    username: Optional[str] = Field()
-    profile_image: Optional[str] = Field()
-    password: Optional[str] = Field()
-    is_active: Optional[bool] = Field()
-    is_superuser: Optional[bool] = Field()
-    last_login_at: Optional[datetime] = Field()
+    username: Optional[str] = None
+    profile_image: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_superuser: Optional[bool] = None
+    last_login_at: Optional[datetime] = None

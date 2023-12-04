@@ -28,13 +28,13 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import { alertContext } from "../../../../contexts/alertContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
-import { TabsContext } from "../../../../contexts/tabsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
-import { TabsState } from "../../../../types/tabs";
+import { FlowsState } from "../../../../types/tabs";
 import {
   generateFlow,
   generateNodeFromFlow,
@@ -70,7 +70,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
-  } = useContext(TabsContext);
+  } = useContext(FlowsContext);
   const {
     types,
     reactFlowInstance,
@@ -208,7 +208,7 @@ export default function Page({
         return newX;
       });
       //@ts-ignore
-      setTabsState((prev: TabsState) => {
+      setTabsState((prev: FlowsState) => {
         return {
           ...prev,
           [tabId]: {
@@ -225,7 +225,7 @@ export default function Page({
     (change: NodeChange[]) => {
       onNodesChange(change);
       //@ts-ignore
-      setTabsState((prev: TabsState) => {
+      setTabsState((prev: FlowsState) => {
         return {
           ...prev,
           [tabId]: {
@@ -310,7 +310,6 @@ export default function Page({
           event.dataTransfer.getData("nodedata")
         );
 
-        // If data type is not "chatInput" or if there are no "chatInputNode" nodes present in the ReactFlow instance, create a new node
         // Calculate the position where the node should be created
         const position = reactFlowInstance!.project({
           x: event.clientX - reactflowBounds!.left,
