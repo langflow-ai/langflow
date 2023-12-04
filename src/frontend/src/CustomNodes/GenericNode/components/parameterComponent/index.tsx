@@ -125,6 +125,7 @@ export default function ParameterComponent({
       takeSnapshot();
     }
     data.node!.template[name].value = newValue;
+    updateNodeInternals(data.id);
     // Set state to pending
     //@ts-ignore
     if (data.node!.template[name].value !== newValue) {

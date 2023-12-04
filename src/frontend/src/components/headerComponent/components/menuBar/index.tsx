@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
@@ -38,9 +38,13 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   return (
     <div className="round-button-div">
-      <Link to="/">
+      <button
+        onClick={() => {
+          navigate(-1);
+        }}
+      >
         <IconComponent name="ChevronLeft" className="w-4" />
-      </Link>
+      </button>
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
