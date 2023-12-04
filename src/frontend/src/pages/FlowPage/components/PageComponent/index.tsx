@@ -105,6 +105,7 @@ export default function Page({
           lastCopiedSelection
         ) {
           event.preventDefault();
+          takeSnapshot();
           paste(lastCopiedSelection, {
             x: position.current.x,
             y: position.current.y,
