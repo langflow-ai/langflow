@@ -66,7 +66,6 @@ async def check_if_store_has_api_key(
     return {"has_api_key": api_key is not None, "is_valid": is_valid}
 
 
-
 @router.post("/components/", response_model=CreateComponentResponse, status_code=201)
 async def share_component(
     component: StoreComponentCreate,
@@ -99,6 +98,7 @@ async def share_component(
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
 
 @router.patch("/components/{component_id}", response_model=CreateComponentResponse, status_code=201)
 async def update_component(
@@ -133,6 +133,7 @@ async def update_component(
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
 
 @router.get("/components/", response_model=ListComponentResponseModel)
 async def get_components(

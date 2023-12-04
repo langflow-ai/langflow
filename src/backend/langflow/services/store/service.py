@@ -7,16 +7,19 @@ from httpx import HTTPError, HTTPStatusError
 from loguru import logger
 
 from langflow.services.base import Service
-from langflow.services.store.exceptions import (APIKeyError, FilterError,
-                                                ForbiddenError)
-from langflow.services.store.schema import (CreateComponentResponse,
-                                            DownloadComponentResponse,
-                                            ListComponentResponse,
-                                            ListComponentResponseModel,
-                                            StoreComponentCreate)
-from langflow.services.store.utils import (process_component_data,
-                                           process_tags_for_post,
-                                           update_components_with_user_data)
+from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
+from langflow.services.store.schema import (
+    CreateComponentResponse,
+    DownloadComponentResponse,
+    ListComponentResponse,
+    ListComponentResponseModel,
+    StoreComponentCreate,
+)
+from langflow.services.store.utils import (
+    process_component_data,
+    process_tags_for_post,
+    update_components_with_user_data,
+)
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -350,7 +353,9 @@ class StoreService(Service):
                     pass
             raise ValueError(f"Upload failed: {exc}")
 
-    async def update(self, api_key: str, component_id: UUID, component_data: StoreComponentCreate) -> CreateComponentResponse:
+    async def update(
+        self, api_key: str, component_id: UUID, component_data: StoreComponentCreate
+    ) -> CreateComponentResponse:
         # Patch is the same as post, but we need to add the id to the url
         headers = {"Authorization": f"Bearer {api_key}"}
         component_dict = component_data.model_dump(exclude_unset=True)
@@ -364,8 +369,9 @@ class StoreService(Service):
             # response = httpx.post(self.components_url, headers=headers, json=component_dict)
             # response.raise_for_status()
             async with httpx.AsyncClient() as client:
-                response = await client.patch(self.components_url + f"/{component_id}",
-                                             headers=headers, json=component_dict)
+                response = await client.patch(
+                    self.components_url + f"/{component_id}", headers=headers, json=component_dict
+                )
                 response.raise_for_status()
             component = response.json()["data"]
             return CreateComponentResponse(**component)
