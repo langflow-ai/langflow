@@ -271,8 +271,8 @@ vectorstores:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
   Weaviate:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
-  FAISS:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
+#  FAISS:
+#    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
   Pinecone:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
   SupabaseVectorStore:
