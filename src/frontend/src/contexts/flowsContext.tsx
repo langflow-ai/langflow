@@ -362,7 +362,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             ) {
               reject("You cannot upload a component as a flow or vice versa");
             } else {
-              id = await addFlow(newProject, fileData, undefined, position);
+              id = await addFlow(newProject, fileData);
               resolve(id);
             }
           }
