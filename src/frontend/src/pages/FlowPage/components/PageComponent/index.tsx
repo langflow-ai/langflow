@@ -143,7 +143,7 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [lastCopiedSelection, lastSelection]);
+  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
