@@ -1,19 +1,15 @@
 import json
 from pathlib import Path
-from langchain.schema import AgentAction
-from langflow.interface.run import (
-    build_sorted_vertices,
-    get_memory_key,
-    update_memory_keys,
-)
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from langchain.chains.base import Chain
+from langchain.schema import AgentAction, Document
+from langchain.vectorstores.base import VectorStore
+from langflow.graph import Graph
+from langflow.interface.run import (build_sorted_vertices, get_memory_key,
+                                    update_memory_keys)
 from langflow.services.getters import get_session_service
 from loguru import logger
-from langflow.graph import Graph
-from langchain.chains.base import Chain
-from langchain.vectorstores.base import VectorStore
-from typing import Any, Dict, List, Optional, Tuple, Union
-from langchain.schema import Document
-
 from pydantic import BaseModel
 
 
@@ -124,7 +120,9 @@ def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
         inputs = {}
 
     for key, value in artifacts.items():
-        if key not in inputs or not inputs[key]:
+        if key == "repr":
+            continue
+        elif key not in inputs or not inputs[key]:
             inputs[key] = value
 
     return inputs
