@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
 from langflow.interface.custom.component import Component, ComponentCodeNullError
-from langflow.interface.types import build_langchain_template_custom_component, create_and_validate_component
+from langflow.interface.types import build_custom_component_template, create_and_validate_component
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
@@ -539,13 +539,13 @@ def test_create_and_validate_component_valid_code(test_component_code):
 
 def test_build_langchain_template_custom_component_valid_code(test_component_code):
     component = create_and_validate_component(test_component_code)
-    frontend_node = build_langchain_template_custom_component(component)
+    frontend_node = build_custom_component_template(component)
     assert isinstance(frontend_node, dict)
     template = frontend_node["template"]
     assert isinstance(template, dict)
     assert "param" in template
     param_options = template["param"]["options"]
     # Now run it again with an update field
-    frontend_node = build_langchain_template_custom_component(component, update_field="param")
+    frontend_node = build_custom_component_template(component, update_field="param")
     new_param_options = frontend_node["template"]["param"]["options"]
     assert param_options != new_param_options

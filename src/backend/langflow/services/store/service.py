@@ -498,11 +498,13 @@ class StoreService(Service):
                     comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
                 if exc.response.status_code == 403:
-                    raise ForbiddenError("You are not authorized to access this public resource")
+                    raise ForbiddenError("You are not authorized to access this public resource") from exc
                 elif exc.response.status_code == 401:
-                    raise APIKeyError("You are not authorized to access this resource. Please check your API key.")
+                    raise APIKeyError(
+                        "You are not authorized to access this resource. Please check your API key."
+                    ) from exc
             except Exception as exc:
-                raise ValueError(f"Unexpected error: {exc}")
+                raise ValueError(f"Unexpected error: {exc}") from exc
             try:
                 if result and not metadata:
                     if len(result) >= limit:

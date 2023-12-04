@@ -8,6 +8,8 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.custom_component import CustomComponent
@@ -31,7 +33,6 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 # Used to get the base_classes list
@@ -335,7 +336,7 @@ def add_output_types(frontend_node, return_types: List[str]):
         frontend_node.get("output_types").append(return_type)
 
 
-def build_langchain_template_custom_component(
+def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
     update_field: Optional[str] = None,
@@ -394,83 +395,116 @@ def build_and_validate_all_files(reader: DirectoryReader, file_list):
 
 
 def build_valid_menu(valid_components):
-    """Build the valid menu"""
+    """Build the valid menu."""
     valid_menu = {}
     logger.debug("------------------- VALID COMPONENTS -------------------")
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
-        valid_menu[menu_name] = {}
-        # menu_path = menu_item["path"]
-        for component in menu_item["components"]:
-            logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
-            try:
-                component_name = component["name"]
-                component_code = component["code"]
-                component_output_types = component["output_types"]
-
-                component_extractor = CustomComponent(code=component_code)
-                component_extractor.validate()
-
-                component_template = build_langchain_template_custom_component(component_extractor)
-                component_template["output_types"] = component_output_types
-                # full_path = f"{menu_path}/{component.get('file')}"
-                # component_template["full_path"] = full_path
-                if len(component_output_types) == 1:
-                    component_name = component_output_types[0]
-                else:
-                    file_name = component.get("file").split(".")[0]
-                    if "_" in file_name:
-                        # turn .py file into camelcase
-                        component_name = "".join([word.capitalize() for word in file_name.split("_")])
-                    else:
-                        component_name = file_name
-
-                valid_menu[menu_name][component_name] = component_template
-                logger.debug(f"Added {component_name} to valid menu to {menu_name}")
-
-            except Exception as exc:
-                logger.error(f"Error loading Component: {component['output_types']}")
-                logger.exception(f"Error while building custom component {component_output_types}: {exc}")
-
+        valid_menu[menu_name] = build_menu_items(menu_item)
     return valid_menu
 
 
+def build_menu_items(menu_item):
+    """Build menu items for a given menu."""
+    menu_items = {}
+    for component in menu_item["components"]:
+        try:
+            component_name, component_template = build_component(component)
+            menu_items[component_name] = component_template
+            logger.debug(f"Added {component_name} to valid menu.")
+        except Exception as exc:
+            logger.error(f"Error loading Component: {component['output_types']}")
+            logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
+    return menu_items
+
+
+def build_component(component):
+    """Build a single component."""
+    logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
+    component_name = determine_component_name(component)
+    component_template = create_component_template(component)
+    return component_name, component_template
+
+
+def determine_component_name(component):
+    """Determine the name of the component."""
+    component_output_types = component["output_types"]
+    if len(component_output_types) == 1:
+        return component_output_types[0]
+    else:
+        file_name = component.get("file").split(".")[0]
+        return "".join(word.capitalize() for word in file_name.split("_")) if "_" in file_name else file_name
+
+
+def create_component_template(component):
+    """Create a template for a component."""
+    component_code = component["code"]
+    component_output_types = component["output_types"]
+
+    component_extractor = CustomComponent(code=component_code)
+    component_extractor.validate()
+
+    component_template = build_custom_component_template(component_extractor)
+    component_template["output_types"] = component_output_types
+    return component_template
+
+
 def build_invalid_menu(invalid_components):
-    """Build the invalid menu"""
-    if invalid_components.get("menu"):
-        logger.debug("------------------- INVALID COMPONENTS -------------------")
+    """Build the invalid menu."""
+    if not invalid_components.get("menu"):
+        return {}
+
+    logger.debug("------------------- INVALID COMPONENTS -------------------")
     invalid_menu = {}
     for menu_item in invalid_components["menu"]:
         menu_name = menu_item["name"]
-        invalid_menu[menu_name] = {}
-
-        for component in menu_item["components"]:
-            try:
-                component_name = component["name"]
-                component_code = component["code"]
-
-                component_template = (
-                    CustomComponentFrontendNode(
-                        description="ERROR - Check your Python Code",
-                        display_name=f"ERROR - {component_name}",
-                    )
-                    .to_dict()
-                    .get(type(CustomComponent()).__name__)
-                )
-
-                component_template["error"] = component.get("error", None)
-                logger.debug(component)
-                logger.debug(f"Component Path: {component.get('path', None)}")
-                logger.debug(f"Component Error: {component.get('error', None)}")
-                component_template.get("template").get("code")["value"] = component_code
-
-                invalid_menu[menu_name][component_name] = component_template
-                logger.debug(f"Added {component_name} to invalid menu to {menu_name}")
-
-            except Exception as exc:
-                logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
-
+        invalid_menu[menu_name] = build_invalid_menu_items(menu_item)
     return invalid_menu
+
+
+def build_invalid_menu_items(menu_item):
+    """Build invalid menu items for a given menu."""
+    menu_items = {}
+    for component in menu_item["components"]:
+        try:
+            component_name, component_template = build_invalid_component(component)
+            menu_items[component_name] = component_template
+            logger.debug(f"Added {component_name} to invalid menu.")
+        except Exception as exc:
+            logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
+    return menu_items
+
+
+def build_invalid_component(component):
+    """Build a single invalid component."""
+    component_name = component["name"]
+    component_template = create_invalid_component_template(component, component_name)
+    log_invalid_component_details(component)
+    return component_name, component_template
+
+
+def create_invalid_component_template(component, component_name):
+    """Create a template for an invalid component."""
+    component_code = component["code"]
+    component_template = (
+        CustomComponentFrontendNode(
+            description="ERROR - Check your Python Code",
+            display_name=f"ERROR - {component_name}",
+        )
+        .to_dict()
+        .get(type(CustomComponent()).__name__)
+    )
+
+    component_template["error"] = component.get("error", None)
+    component_template.get("template").get("code")["value"] = component_code
+    return component_template
+
+
+def log_invalid_component_details(component):
+    """Log details of an invalid component."""
+    logger.debug(component)
+    logger.debug(f"Component Path: {component.get('path', None)}")
+    logger.debug(f"Component Error: {component.get('error', None)}")
 
 
 def get_new_key(dictionary, original_key):
@@ -496,7 +530,7 @@ def merge_nested_dicts_with_renaming(dict1, dict2):
     return dict1
 
 
-def build_langchain_custom_component_list_from_path(path: str):
+def build_custom_component_list_from_path(path: str):
     """Build a list of custom components for the langchain from a given path"""
     file_list = load_files_from_path(path)
     reader = DirectoryReader(path, False)
@@ -510,34 +544,35 @@ def build_langchain_custom_component_list_from_path(path: str):
 
 
 def get_all_types_dict(settings_service):
+    """Get all types dictionary combining native and custom components."""
     native_components = build_langchain_types_dict()
-    # custom_components is a list of dicts
-    # need to merge all the keys into one dict
-    custom_components_from_file: dict[str, Any] = {}
-    if settings_service.settings.COMPONENTS_PATH:
-        logger.info(f"Building custom components from {settings_service.settings.COMPONENTS_PATH}")
+    custom_components_from_file = build_custom_components(settings_service)
+    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)
 
-        custom_component_dicts = []
-        processed_paths = []
-        for path in settings_service.settings.COMPONENTS_PATH:
-            if str(path) in processed_paths:
-                continue
-            custom_component_dict = build_langchain_custom_component_list_from_path(str(path))
-            custom_component_dicts.append(custom_component_dict)
-            processed_paths.append(str(path))
 
-        logger.info(f"Loading {len(custom_component_dicts)} category(ies)")
-        for custom_component_dict in custom_component_dicts:
-            # custom_component_dict is a dict of dicts
-            if not custom_component_dict:
-                continue
-            category = list(custom_component_dict.keys())[0]
+def build_custom_components(settings_service):
+    """Build custom components from the specified paths."""
+    if not settings_service.settings.COMPONENTS_PATH:
+        return {}
+
+    logger.info(f"Building custom components from {settings_service.settings.COMPONENTS_PATH}")
+    custom_components_from_file = {}
+    processed_paths = set()
+    for path in settings_service.settings.COMPONENTS_PATH:
+        path_str = str(path)
+        if path_str in processed_paths:
+            continue
+
+        custom_component_dict = build_custom_component_list_from_path(path_str)
+        if custom_component_dict:
+            category = next(iter(custom_component_dict))
             logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
+        processed_paths.add(path_str)
 
-    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)
+    return custom_components_from_file
 
 
 def merge_nested_dicts(dict1, dict2):
