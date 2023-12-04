@@ -10,15 +10,16 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -269,7 +270,7 @@ def flow(client, json_flow: str, active_user):
         user_id=active_user.id,
         description="description",
     )
-    flow = Flow(**flow_data.model_dump())
+    flow = Flow.model_validate(flow_data.model_dump())
     with session_getter(get_db_service()) as session:
         session.add(flow)
         session.commit()
