@@ -55,6 +55,8 @@ export type FlowsContextType = {
   ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
+  nodesOnFlow: string;
+  setNodesOnFlow: (nodes: string) => void;
 };
 
 export type FlowsState = {

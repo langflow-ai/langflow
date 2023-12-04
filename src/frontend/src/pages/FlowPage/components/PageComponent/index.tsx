@@ -83,6 +83,7 @@ export default function Page({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
+  const { nodesOnFlow, setNodesOnFlow } = useContext(FlowsContext);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -219,7 +220,7 @@ export default function Page({
           ...prev,
           [tabId]: {
             ...prev[tabId],
-            isPending: true,
+            isPending: false,
           },
         };
       });
@@ -229,20 +230,29 @@ export default function Page({
 
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
-      onNodesChange(change);
-      //@ts-ignore
-      setTabsState((prev: FlowsState) => {
-        return {
-          ...prev,
-          [tabId]: {
-            ...prev[tabId],
-            isPending: true,
-          },
-        };
-      });
+      const changeString = JSON.stringify(change);
+
+      if (changeString !== nodesOnFlow) {
+        onNodesChange(change);
+        updateNodeFlow(changeString);
+        //@ts-ignore
+        setTabsState((prev: FlowsState) => {
+          return {
+            ...prev,
+            [tabId]: {
+              ...prev[tabId],
+              isPending: true,
+            },
+          };
+        });
+      }
     },
-    [onNodesChange, setTabsState, tabId]
+    [onNodesChange, setTabsState, tabId, updateNodeFlow]
   );
+
+  function updateNodeFlow(changeString: string) {
+    setNodesOnFlow(changeString);
+  }
 
   const onConnect = useCallback(
     (params: Connection) => {

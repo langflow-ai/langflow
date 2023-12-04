@@ -92,6 +92,8 @@ const FlowsContextInitialValue: FlowsContextType = {
   saveComponent: async (component: NodeDataType, override: boolean) => "",
   deleteComponent: (key: string) => {},
   version: "",
+  nodesOnFlow: "",
+  setNodesOnFlow: (nodes: string) => "",
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -106,6 +108,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [tabId, setTabId] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [nodesOnFlow, setNodesOnFlow] = useState("");
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
@@ -666,6 +669,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             },
           };
         });
+
+        console.log(tabsState);
       }
     } catch (err) {
       setErrorData({
@@ -730,6 +735,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         isLoading,
         saveComponent,
         deleteComponent,
+        nodesOnFlow,
+        setNodesOnFlow,
       }}
     >
       {children}
