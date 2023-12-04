@@ -19,7 +19,7 @@ class User(SQLModel, table=True):
     is_superuser: bool = Field(default=False)
     create_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    last_login_at: Optional[datetime] = Field(nullable=True)
+    last_login_at: Optional[datetime] = Field(default=None, nullable=True)
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
