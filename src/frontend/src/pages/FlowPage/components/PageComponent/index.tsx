@@ -166,15 +166,28 @@ export default function Page({
 
   const [loading, setLoading] = useState(true);
 
-  //update flow when tabs change
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
   useEffect(() => {
     setLoading(true);
     setNodes(flow?.data?.nodes ?? []);
     setEdges(flow?.data?.edges ?? []);
     setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
-    setTimeout(() => {
+
+    // Clear the previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Create a new timeout
+    timeoutRef.current = setTimeout(() => {
       setLoading(false);
-    }, 300); // Timeout to prevent ReactFlow to appear before viewport is set. Can't make it async because setViewport is not an async function.
+    }, 300);
+
+    // Clear the timeout when the component is unmounted
+    return () => {
+      clearTimeout(timeoutRef.current);
+    };
   }, [flow, reactFlowInstance]);
 
   useEffect(() => {
