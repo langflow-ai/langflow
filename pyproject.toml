@@ -61,8 +61,7 @@ sentence-transformers = { version = "^2.2.2", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^4.37.0"
 python-multipart = "^0.0.6"
-# install sqlmodel using https://github.com/honglei/sqlmodel.git
-sqlmodel = { git = "https://github.com/tiangolo/sqlmodel.git", branch = "main" }
+sqlmodel = "^0.0.14"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.7.0"
 orjson = "3.9.3"
@@ -151,3 +150,4 @@ line-length = 120
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+# install sqlmodel using https://github.com/honglei/sqlmodel.git
