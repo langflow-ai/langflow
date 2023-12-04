@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from alembic.util.exc import CommandError
 from loguru import logger
-from sqlmodel import Session
+from sqlmodel import Session, text
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -42,14 +42,13 @@ def initialize_database(fix_migration: bool = False):
         # and run the migrations again
         logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
         with session_getter(database_service) as session:
-            session.execute("DROP TABLE alembic_version")
-        database_service.run_migrations()
+            session.exec(text("DROP TABLE alembic_version"))
+        database_service.run_migrations(fix=fix_migration)
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
             logger.error(exc)
-
         raise exc
     logger.debug("Database initialized")
 
