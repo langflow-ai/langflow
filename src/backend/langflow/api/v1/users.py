@@ -1,29 +1,20 @@
 from uuid import UUID
-from langflow.api.v1.schemas import UsersResponse
-from langflow.services.database.models.user import (
-    User,
-    UserCreate,
-    UserRead,
-    UserUpdate,
-)
 
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-
 from sqlmodel import Session, select
-from fastapi import APIRouter, Depends, HTTPException
 
-from langflow.services.deps import get_session, get_settings_service
+from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    update_user,
-)
+from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
+from langflow.services.database.models.user.crud import get_user_by_id, update_user
+from langflow.services.deps import get_session, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -72,14 +63,14 @@ def read_all_users(
     Retrieve a list of users from the database with pagination.
     """
     query = select(User).offset(skip).limit(limit)
-    users = session.execute(query).fetchall()
+    users = session.exec(query).fetchall()
 
     count_query = select(func.count()).select_from(User)  # type: ignore
-    total_count = session.execute(count_query).scalar()
+    total_count = session.exec(count_query).first()
 
     return UsersResponse(
         total_count=total_count,  # type: ignore
-        users=[UserRead(**dict(user.User)) for user in users],
+        users=[UserRead(**user.model_dump()) for user in users],
     )
 
 
