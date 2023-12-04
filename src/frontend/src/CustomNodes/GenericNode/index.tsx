@@ -464,10 +464,10 @@ export default function GenericNode({
                         data={data}
                         color={
                           nodeColors[
-                            types[data.node?.template[templateField].type!]
+                            data.node?.template[templateField].type!
                           ] ??
                           nodeColors[
-                            data.node?.template[templateField].type!
+                            types[data.node?.template[templateField].type!]
                           ] ??
                           nodeColors.unknown
                         }
@@ -519,7 +519,13 @@ export default function GenericNode({
                     dataType: data.type,
                   })}
                   data={data}
-                  color={nodeColors[types[data.type]] ?? nodeColors.unknown}
+                  color={
+                    (data.node?.output_types &&
+                    data.node.output_types.length > 0
+                      ? nodeColors[data.node.output_types[0]] ??
+                        nodeColors[types[data.node.output_types[0]]]
+                      : nodeColors[types[data.type]]) ?? nodeColors.unknown
+                  }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
                       ? data.node.output_types.join("|")
