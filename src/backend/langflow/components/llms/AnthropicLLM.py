@@ -64,7 +64,7 @@ class AnthropicLLM(CustomComponent):
         try:
             output = ChatAnthropic(
                 model_name=model,
-                anthropic_api_key=SecretStr(anthropic_api_key),
+                anthropic_api_key=SecretStr(anthropic_api_key) if anthropic_api_key else None,
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=api_endpoint,
