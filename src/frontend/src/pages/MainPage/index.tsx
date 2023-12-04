@@ -1,3 +1,4 @@
+import { Group, ToyBrick } from "lucide-react";
 import { useContext, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
@@ -44,10 +45,12 @@ export default function HomePage(): JSX.Element {
     {
       title: "Flows",
       href: "/flows",
+      Icon: Group,
     },
     {
       title: "Components",
       href: "/components",
+      Icon: ToyBrick,
     },
   ];
 
