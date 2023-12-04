@@ -6,17 +6,13 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
     href: string;
     title: string;
-  }[];
-  secondaryItems?: {
-    href: string;
-    title: string;
+    Icon: React.FC<React.SVGProps<SVGSVGElement>>;
   }[];
 }
 
 export default function SidebarNav({
   className,
   items,
-  secondaryItems,
   ...props
 }: SidebarNavProps) {
   const location = useLocation();
@@ -37,27 +33,15 @@ export default function SidebarNav({
           className={cn(
             buttonVariants({ variant: "ghost" }),
             pathname === item.href
-              ? "border border-border bg-background hover:bg-background"
-              : "hover:bg-transparent hover:underline",
-            "justify-start"
+              ? "border border-border bg-muted hover:bg-muted"
+              : "border border-transparent hover:border-border hover:bg-transparent",
+            "justify-start gap-2"
           )}
         >
+          <item.Icon className="w-5 stroke-[1.5]" />
           {item.title}
         </Link>
       ))}
-      {/* {secondaryItems && (
-        <>
-          <div className="py-2">
-            <Separator />
-          </div>
-          <div className="flex justify-center">
-            <button className="flex h-8 w-fit items-center justify-between rounded-md border border-ring/60 px-4 py-2 text-sm text-primary hover:bg-muted">
-              <IconComponent name="FolderPlus" className="mr-2 h-4 w-4 " />
-              New Folder
-            </button>
-          </div>
-        </>
-      )} */}
     </nav>
   );
 }
