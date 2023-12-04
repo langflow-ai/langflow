@@ -41,7 +41,7 @@ class FlowBase(SQLModel):
             return None
         return dt.isoformat()
 
-    @field_validator("updated_at")
+    @field_validator("updated_at", mode="before")
     def validate_dt(cls, v):
         if v is None:
             return v
