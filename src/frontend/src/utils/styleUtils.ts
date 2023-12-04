@@ -174,6 +174,8 @@ export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   llms: "#6344BE",
   chains: "#FE7500",
+  Document: "#7AAE42",
+  list: "#9AAE42",
   agents: "#903BBE",
   tools: "#FF3434",
   memories: "#F5B85A",
