@@ -15,7 +15,7 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { flows, removeFlow, uploadFlow, isLoading, tabId } =
+  const { flows, removeFlow, uploadFlow, addFlow, isLoading, tabId } =
     useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
@@ -104,8 +104,31 @@ export default function ComponentsComponent({
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
           {!isLoading && data.length === 0 ? (
-            <div className="w-full text-center">
-              {/* TODO: create placeholder */}
+            <div className="mt-6 flex w-full items-center justify-center text-center">
+              <div className="flex-max-width h-full flex-col">
+                <div className="flex w-full flex-col gap-4">
+                  <div className="grid w-full gap-4">
+                    Flows and components can be created using Langflow.
+                  </div>
+                  <div className="align-center flex w-full justify-center gap-1">
+                    <span>New?</span>
+                    <span className="transition-colors hover:text-muted-foreground">
+                      <button
+                        onClick={() => {
+                          addFlow(true).then((id) => {
+                            navigate("/flow/" + id);
+                          });
+                        }}
+                        className="underline"
+                      >
+                        Create a New Flow
+                      </button>
+                      .
+                    </span>
+                    <span className="animate-pulse">🚀</span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
