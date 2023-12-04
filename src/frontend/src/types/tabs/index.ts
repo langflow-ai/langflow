@@ -1,3 +1,4 @@
+import { XYPosition } from "reactflow";
 import { tweakType } from "../components";
 import { FlowType, NodeDataType } from "../flow";
 
@@ -11,7 +12,8 @@ export type FlowsContextType = {
   addFlow: (
     newProject: boolean,
     flow?: FlowType,
-    override?: boolean
+    override?: boolean,
+    position?: XYPosition
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -28,10 +30,12 @@ export type FlowsContextType = {
     newProject,
     file,
     isComponent,
+    position,
   }: {
     newProject: boolean;
     file?: File;
     isComponent?: boolean;
+    position?: XYPosition;
   }) => Promise<String | never>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;

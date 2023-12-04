@@ -8,7 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
+import {
+  Edge,
+  Node,
+  ReactFlowJsonObject,
+  XYPosition,
+  addEdge,
+} from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
   deleteFlowFromDatabase,
@@ -305,10 +311,12 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     newProject,
     file,
     isComponent = false,
+    position = { x: 10, y: 10 },
   }: {
     newProject: boolean;
     file?: File;
     isComponent?: boolean;
+    position?: XYPosition;
   }): Promise<String | never> {
     return new Promise(async (resolve, reject) => {
       let id;
@@ -316,19 +324,20 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         let text = await file.text();
         let fileData = JSON.parse(text);
         if (
-          (!fileData.is_component && isComponent === true) ||
-          (fileData.is_component !== undefined &&
-            fileData.is_component !== isComponent)
+          newProject &&
+          ((!fileData.is_component && isComponent === true) ||
+            (fileData.is_component !== undefined &&
+              fileData.is_component !== isComponent))
         ) {
           reject("You cannot upload a component as a flow or vice versa");
         } else {
           if (fileData.flows) {
             fileData.flows.forEach((flow: FlowType) => {
-              id = addFlow(newProject, flow);
+              id = addFlow(newProject, flow, undefined, position);
             });
             resolve("");
           } else {
-            id = await addFlow(newProject, fileData);
+            id = await addFlow(newProject, fileData, undefined, position);
             resolve(id);
           }
         }
@@ -353,7 +362,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
             ) {
               reject("You cannot upload a component as a flow or vice versa");
             } else {
-              id = await addFlow(newProject, fileData);
+              id = await addFlow(newProject, fileData, undefined, position);
               resolve(id);
             }
           }
@@ -510,7 +519,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const addFlow = async (
     newProject: Boolean,
     flow?: FlowType,
-    override?: boolean
+    override?: boolean,
+    position?: XYPosition
   ): Promise<String | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -550,7 +560,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     } else {
       paste(
         { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-        { x: 10, y: 10 }
+        position ?? { x: 10, y: 10 }
       );
     }
   };
