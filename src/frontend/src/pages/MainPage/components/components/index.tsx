@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
@@ -142,20 +142,20 @@ export default function ComponentsComponent({
                     disabled={isLoading}
                     button={
                       !is_component ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="whitespace-nowrap "
-                          onClick={() => {
-                            navigate("/flow/" + item.id);
-                          }}
-                        >
-                          <IconComponent
-                            name="ExternalLink"
-                            className="main-page-nav-button"
-                          />
-                          Edit Flow
-                        </Button>
+                        <Link to={"/flow/" + item.id}>
+                          <Button
+                            tabIndex={-1}
+                            variant="outline"
+                            size="sm"
+                            className="whitespace-nowrap "
+                          >
+                            <IconComponent
+                              name="ExternalLink"
+                              className="main-page-nav-button select-none"
+                            />
+                            Edit Flow
+                          </Button>
+                        </Link>
                       ) : (
                         <></>
                       )
