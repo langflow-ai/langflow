@@ -15,45 +15,39 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { flows, removeFlow, uploadFlow, addFlow, isLoading, tabId } =
+  const { flows, removeFlow, uploadFlow, addFlow, isLoading } =
     useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
-  const [allData, setAllData] = useState(flows);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isLoading) return;
-    setAllData(
-      flows
-        .filter((f) => f.is_component === is_component)
-        .sort((a, b) => {
-          if (a?.updated_at && b?.updated_at) {
-            return (
-              new Date(b?.updated_at!).getTime() -
-              new Date(a?.updated_at!).getTime()
-            );
-          } else if (a?.updated_at && !b?.updated_at) {
-            return 1;
-          } else if (!a?.updated_at && b?.updated_at) {
-            return -1;
-          } else {
-            return (
-              new Date(b?.date_created!).getTime() -
-              new Date(a?.date_created!).getTime()
-            );
-          }
-        })
-    );
-  }, [flows]);
-
-  useEffect(() => {
+    const all = flows
+      .filter((f) => f.is_component === is_component)
+      .sort((a, b) => {
+        if (a?.updated_at && b?.updated_at) {
+          return (
+            new Date(b?.updated_at!).getTime() -
+            new Date(a?.updated_at!).getTime()
+          );
+        } else if (a?.updated_at && !b?.updated_at) {
+          return 1;
+        } else if (!a?.updated_at && b?.updated_at) {
+          return -1;
+        } else {
+          return (
+            new Date(b?.date_created!).getTime() -
+            new Date(a?.date_created!).getTime()
+          );
+        }
+      });
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
-    setData(allData.slice(start, end));
-  }, [pageIndex, pageSize, allData]);
+    setData(all.slice(start, end));
+  }, [flows, pageIndex, pageSize]);
 
   const [data, setData] = useState<FlowType[]>([]);
 
@@ -93,7 +87,6 @@ export default function ComponentsComponent({
   function resetFilter() {
     setPageIndex(1);
     setPageSize(10);
-    setAllData(flows);
   }
 
   return (
@@ -178,14 +171,16 @@ export default function ComponentsComponent({
             </div>
           )}
         </div>
-        {!isLoading && allData.length > 0 && (
+        {!isLoading && data.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
               storeComponent={true}
               pageIndex={pageIndex}
               pageSize={pageSize}
               rowsCount={[10, 20, 50, 100]}
-              totalRowsCount={allData.length}
+              totalRowsCount={
+                flows.filter((f) => f.is_component === is_component).length
+              }
               paginate={(pageSize, pageIndex) => {
                 setPageIndex(pageIndex);
                 setPageSize(pageSize);
