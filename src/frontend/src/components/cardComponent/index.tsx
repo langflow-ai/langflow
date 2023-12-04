@@ -181,7 +181,7 @@ export default function CollectionCardComponent({
                 </div>
               )}
 
-              {onDelete && !data.metadata && (
+              {onDelete && data?.metadata === undefined && (
                 <DeleteConfirmationModal
                   onConfirm={() => {
                     onDelete();
@@ -236,7 +236,7 @@ export default function CollectionCardComponent({
             </div>
             {data.liked_by_count != undefined && (
               <div className="flex gap-0.5">
-                {onDelete && data.metadata ? (
+                {onDelete && data?.metadata !== undefined ? (
                   <ShadTooltip
                     content={
                       authorized ? "Delete" : "Please review your API key."
