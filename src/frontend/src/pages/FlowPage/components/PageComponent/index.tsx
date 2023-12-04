@@ -90,7 +90,10 @@ export default function Page({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!isWrappedWithClass(event, "nocopy")) {
+      if (
+        !isWrappedWithClass(event, "nocopy") &&
+        window.getSelection()?.toString().length === 0
+      ) {
         if (
           (event.ctrlKey || event.metaKey) &&
           event.key === "c" &&
