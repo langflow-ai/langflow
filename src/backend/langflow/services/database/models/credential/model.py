@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from langflow.services.database.models.credential.schema import CredentialType
 from sqlmodel import Field, Relationship, SQLModel
+
+from langflow.services.database.models.credential.schema import CredentialType
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -23,9 +24,6 @@ class Credential(CredentialBase, table=True):
     # foreign key to user table
     user_id: UUID = Field(description="User ID associated with this credential", foreign_key="user.id")
     user: "User" = Relationship(back_populates="credentials")
-
-    if TYPE_CHECKING:
-        user: "User" = Relationship(back_populates="credentials")
 
 
 class CredentialCreate(CredentialBase):

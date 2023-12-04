@@ -482,7 +482,7 @@ class StoreService(Service):
 
             result: List[ListComponentResponse] = []
             authorized = False
-            metadata = {}
+            metadata: Dict = {}
             comp_count = 0
             try:
                 result, metadata = await self.query_components(

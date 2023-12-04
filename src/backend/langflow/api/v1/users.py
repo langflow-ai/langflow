@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
@@ -62,7 +63,7 @@ def read_all_users(
     """
     Retrieve a list of users from the database with pagination.
     """
-    query = select(User).offset(skip).limit(limit)
+    query: SelectOfScalar = select(User).offset(skip).limit(limit)
     users = session.exec(query).fetchall()
 
     count_query = select(func.count()).select_from(User)  # type: ignore
