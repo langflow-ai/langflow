@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
+
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -35,7 +36,7 @@ class CodeParser:
         """
         Initializes the parser with the provided code.
         """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
                 raise ValueError("The provided code must be a class.")

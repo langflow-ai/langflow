@@ -5,6 +5,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
@@ -187,7 +188,7 @@ class CustomComponent(Component):
             # Retrieve and decrypt the credential by name for the current user
             db_service = get_db_service()
             with session_getter(db_service) as session:
-                return credential_service.get_credential(user_id=self._user_id, name=name, session=session)
+                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
 
         return get_credential
 

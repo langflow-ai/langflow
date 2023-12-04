@@ -24,7 +24,7 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
-    store_api_key: str = Field(default=None, nullable=True)
+    store_api_key: Optional[str] = Field(default=None, nullable=True)
     flows: list["Flow"] = Relationship(back_populates="user")
     credentials: list["Credential"] = Relationship(
         back_populates="user",

@@ -1,6 +1,8 @@
 from typing import Dict, Generator, List, Type, Union
 
 from langchain.chains.base import Chain
+from loguru import logger
+
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
@@ -8,7 +10,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
-from loguru import logger
 
 
 class Graph:
@@ -229,9 +230,9 @@ class Graph:
             vertex_lc_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
             VertexClass = self._get_vertex_class(vertex_type, vertex_lc_type)
-            vertex = VertexClass(vertex, graph=self)
-            vertex.set_top_level(self.top_level_vertices)
-            vertices.append(vertex)
+            vertex_instance = VertexClass(vertex, graph=self)
+            vertex_instance.set_top_level(self.top_level_vertices)
+            vertices.append(vertex_instance)
 
         return vertices
 
