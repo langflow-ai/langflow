@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from langflow.field_typing.constants import Data
+
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
 from langflow.interface.custom.component import Component, ComponentCodeNullError
@@ -412,7 +412,7 @@ class MyClass(CustomComponent):
 
     custom_component = CustomComponent(code=my_code, function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
-    assert return_type == [Data]
+    assert return_type == []
 
 
 def test_custom_component_get_main_class_name_no_main_class():
