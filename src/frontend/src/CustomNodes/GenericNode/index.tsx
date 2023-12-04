@@ -6,6 +6,7 @@ import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
+import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
@@ -438,9 +439,9 @@ export default function GenericNode({
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
                 .sort((a, b) => {
-                  if (a.toLowerCase() === "code") {
+                  if (priorityFields.has(a.toLowerCase())) {
                     return -1;
-                  } else if (b.toLowerCase() === "code") {
+                  } else if (priorityFields.has(b.toLowerCase())) {
                     return 1;
                   } else {
                     return a.localeCompare(b);
