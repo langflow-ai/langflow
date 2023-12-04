@@ -340,10 +340,15 @@ export default function Page({
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
+          const position = {
+            x: event.clientX,
+            y: event.clientY,
+          };
           uploadFlow({
             newProject: false,
             isComponent: false,
             file: event.dataTransfer.files.item(0)!,
+            position: position,
           }).catch((error) => {
             setErrorData({
               title: "Error uploading file",
