@@ -301,3 +301,11 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
     return response.json()
+
+
+@pytest.fixture
+def test_component_code():
+    path = Path(__file__).parent.absolute() / "data" / "test_component.py"
+    # load the content as a string
+    with open(path, "r") as f:
+        return f.read()
