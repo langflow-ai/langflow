@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class ApiKeyBase(SQLModel):
-    name: Optional[str] = Field(index=True)
+    name: Optional[str] = Field(index=True, nullable=True, default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
