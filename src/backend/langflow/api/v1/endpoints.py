@@ -3,25 +3,24 @@ from typing import Annotated, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
-from loguru import logger
-
 from langflow.api.utils import update_frontend_node_with_template_values
-from langflow.api.v1.schemas import (
-    CustomComponentCode,
-    ProcessResponse,
-    TaskResponse,
-    TaskStatusResponse,
-    UploadFileResponse,
-)
+from langflow.api.v1.schemas import (CustomComponentCode, ProcessResponse,
+                                     TaskResponse, TaskStatusResponse,
+                                     UploadFileResponse)
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.interface.types import build_custom_component_template, create_and_validate_component
+from langflow.interface.types import (build_custom_component_template,
+                                      create_and_validate_component)
 from langflow.processing.process import process_graph_cached, process_tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.auth.utils import (api_key_security,
+                                          get_current_active_user)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from langflow.services.deps import (get_session, get_session_service,
+                                    get_settings_service, get_task_service)
+from loguru import logger
+from sqlmodel import select
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -31,9 +30,8 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from sqlmodel import Session
-
 from langflow.services.task.service import TaskService
+from sqlmodel import Session
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -85,7 +83,10 @@ async def process(
             )
 
         # Get the flow that matches the flow_id and belongs to the user
-        flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
+        # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
+        flow = session.exec(
+            select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
+        ).first()
         if flow is None:
             raise ValueError(f"Flow {flow_id} not found")
 
