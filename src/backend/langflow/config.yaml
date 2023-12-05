@@ -117,10 +117,10 @@ llms:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
   Cohere:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
-  Anthropic:
-    documentation: ""
-  ChatAnthropic:
-    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
+  # Anthropic:
+  #   documentation: ""
+  # ChatAnthropic:
+  #   documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
   HuggingFaceHub:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/huggingface_hub"
   VertexAI:
@@ -271,8 +271,8 @@ vectorstores:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
   Weaviate:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
-#  FAISS:
-#    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
+  #  FAISS:
+  #    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
   Pinecone:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
   SupabaseVectorStore:
