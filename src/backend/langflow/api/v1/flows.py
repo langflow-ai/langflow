@@ -5,14 +5,14 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
-from sqlmodel import Session
-
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.flow import (Flow, FlowCreate, FlowRead,
+                                                    FlowUpdate)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
+from sqlmodel import Session, select
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -60,7 +60,7 @@ def read_flow(
     current_user: User = Depends(get_current_active_user),
 ):
     """Read a flow."""
-    if user_flow := (session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == current_user.id).first()):
+    if user_flow := (session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)).first()):
         return user_flow
     else:
         raise HTTPException(status_code=404, detail="Flow not found")
