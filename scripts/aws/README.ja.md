@@ -1,6 +1,9 @@
 # Langflow on AWS
 
-Langflow on AWS では、 Langflow を AWS 上にデプロイする方法を学べます。
+**想定時間**: 30 分
+
+## 説明
+Langflow on AWS では、 AWS Cloud Development Kit (CDK) を用いて Langflow を AWS 上にデプロイする方法を学べます。
 このチュートリアルは、AWS アカウントと AWS に関する基本的な知識を有していることを前提としています。
 
 作成するアプリケーションのアーキテクチャです。
@@ -11,7 +14,7 @@ Fargate のタスクはフロントエンドとバックエンドに分かれて
 リソースをデプロイするだけであれば、上記の各サービスについて深い知識は必要ありません。
 
 # 環境構築とデプロイ方法
-1. [CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1)を開きます。
+1. [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell/home?region=us-east-1)を開きます。
 
 1. 以下のコマンドを実行します。
     ```shell
@@ -20,7 +23,7 @@ Fargate のタスクはフロントエンドとバックエンドに分かれて
     ./bin/bootstrap
     ```
 
-1. `Done!` と表示されたら [Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/) から `cloud9-for-prototyping` を開きます。
+1. `Done!` と表示されたら [AWS Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/) から `cloud9-for-prototyping` を開きます。
     ![make-cloud9](./img/langflow-cloud9.png)
 
 1. 以下のコマンドを実行します。
@@ -43,10 +46,9 @@ Fargate のタスクはフロントエンドとバックエンドに分かれて
 # 環境の削除
 1. `Cloud9` で以下のコマンドを実行します。
     ```shell
-    cdk destroy
-    bash delete-ecr.sh
+    bash delete-resources.sh
     ```
 
 
-1. [CloudFormation](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/getting-started)を開き、`aws-cloud9-cloud9-for-prototyping-XXXX` を選択して削除します。
+1. [AWS CloudFormation](https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/getting-started)を開き、`aws-cloud9-cloud9-for-prototyping-XXXX` を選択して削除します。
     ![delete-cfn](./img/langflow-cfn.png)
