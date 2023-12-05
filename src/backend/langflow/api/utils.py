@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
@@ -77,8 +78,15 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
         value = value_dict.get("value")
         template_field_type = value_dict.get("type")
         frontend_node_field_type = frontend_field.get("type")
+        file_path = value_dict.get("file_path")
         if value is not None and key in frontend_template and template_field_type == frontend_node_field_type:
             frontend_template[key]["value"] = value
+        if file_path is not None and key in frontend_template and template_field_type == frontend_node_field_type:
+            # check if file_path exists
+            if not Path(file_path).exists():
+                frontend_template[key]["value"] = ""
+            else:
+                frontend_template[key]["file_path"] = file_path
 
     return frontend_node
 
