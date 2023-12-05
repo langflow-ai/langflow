@@ -64,10 +64,7 @@ class DatabaseService(Service):
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             with Session(self.engine) as session:
-                flows = (
-                    session.exec(select(models.Flow)
-                    .where(models.Flow.user_id == None)).all()
-                )
+                flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
