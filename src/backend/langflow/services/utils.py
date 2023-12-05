@@ -134,7 +134,7 @@ def teardown_superuser(settings_service, session):
             from langflow.services.database.models.user.model import User
 
             user = session.exec(select(User).where(User.username == username)).first()
-            if user and user.is_superuser:
+            if user and user.is_superuser is True:
                 session.delete(user)
                 session.commit()
                 logger.debug("Default superuser removed successfully.")

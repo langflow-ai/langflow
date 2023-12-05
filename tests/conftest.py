@@ -1,5 +1,4 @@
 import json
-
 # we need to import tmpdir
 import tempfile
 from contextlib import contextmanager, suppress
@@ -10,16 +9,15 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -305,7 +303,7 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
 
 @pytest.fixture
 def test_component_code():
-    path = Path(__file__).parent.absolute() / "data" / "component_test.py"
+    path = Path(__file__).parent.absolute() / "data" / "component.py"
     # load the content as a string
     with open(path, "r") as f:
         return f.read()
