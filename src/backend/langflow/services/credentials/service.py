@@ -21,13 +21,17 @@ class CredentialService(Service):
     def get_credential(self, user_id: Union[UUID, str], name: str, session: Session = Depends(get_session)) -> str:
         # we get the credential from the database
         # credential = session.query(Credential).filter(Credential.user_id == user_id, Credential.name == name).first()
-        credential = session.exec(select(Credential).where(Credential.user_id == user_id, Credential.name == name)).first()
+        credential = session.exec(
+            select(Credential).where(Credential.user_id == user_id, Credential.name == name)
+        ).first()
         # we decrypt the value
         if not credential or not credential.value:
             raise ValueError(f"{name} credential not found.")
         decrypted = auth_utils.decrypt_api_key(credential.value, settings_service=self.settings_service)
         return decrypted
 
-    def list_credentials(self, user_id: Union[UUID, str], session: Session = Depends(get_session)) -> list[Optional[str]]:
+    def list_credentials(
+        self, user_id: Union[UUID, str], session: Session = Depends(get_session)
+    ) -> list[Optional[str]]:
         credentials = session.exec(select(Credential).where(Credential.user_id == user_id)).all()
         return [credential.name for credential in credentials]

@@ -4,10 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.credential import (Credential,
-                                                          CredentialCreate,
-                                                          CredentialRead,
-                                                          CredentialUpdate)
+from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 from sqlmodel import Session, select
@@ -26,10 +23,9 @@ def create_credential(
     """Create a new credential."""
     try:
         # check if credential name already exists
-        credential_exists = (
-            session.exec(select(Credential).where(Credential.name == credential.name, Credential.user_id == current_user.id))
-            .first()
-        )
+        credential_exists = session.exec(
+            select(Credential).where(Credential.name == credential.name, Credential.user_id == current_user.id)
+        ).first()
         if credential_exists:
             raise HTTPException(status_code=400, detail="Credential name already exists")
 
@@ -73,10 +69,9 @@ def update_credential(
 ):
     """Update a credential."""
     try:
-        db_credential = (
-            session.exec(select(Credential).where(Credential.id == credential_id, Credential.user_id == current_user.id))
-            .first()
-        )
+        db_credential = session.exec(
+            select(Credential).where(Credential.id == credential_id, Credential.user_id == current_user.id)
+        ).first()
         if not db_credential:
             raise HTTPException(status_code=404, detail="Credential not found")
 
