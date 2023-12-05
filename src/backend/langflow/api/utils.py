@@ -74,7 +74,13 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
     return frontend_node
 
 
+
 def is_valid_data(frontend_node, raw_template_data):
+    """Check if the data is valid for processing."""
+    return (
+        frontend_node and "template" in frontend_node and raw_template_data and hasattr(raw_template_data, "template")
+    )
+
     """Check if the data is valid for processing."""
     return (
         frontend_node and "template" in frontend_node and raw_template_data and hasattr(raw_template_data, "template")
@@ -83,6 +89,7 @@ def is_valid_data(frontend_node, raw_template_data):
 
 def update_template_values(frontend_template, raw_template):
     """Updates the frontend template with values from the raw template."""
+    """Updates the frontend template with values from the raw template."""
     for key, value_dict in raw_template.items():
         if key == "code" or not isinstance(value_dict, dict):
             continue
@@ -90,7 +97,9 @@ def update_template_values(frontend_template, raw_template):
         update_template_field(frontend_template, key, value_dict)
 
 
+
 def update_template_field(frontend_template, key, value_dict):
+    """Updates a specific field in the frontend template."""
     """Updates a specific field in the frontend template."""
     template_field = frontend_template.get(key)
     if not template_field or template_field.get("type") != value_dict.get("type"):
@@ -109,9 +118,7 @@ def update_template_field(frontend_template, key, value_dict):
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
-    settings_service = get_settings_service()
-
-    return file_path if Path(file_path).exists() and settings_service.settings.CONFIG_DIR in file_path else ""
+    return file_path if Path(file_path).exists() else ""
 
 
 def validate_is_component(flows: List["Flow"]):
