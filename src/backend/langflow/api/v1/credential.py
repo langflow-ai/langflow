@@ -4,10 +4,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
+from langflow.services.database.models.credential import (Credential,
+                                                          CredentialCreate,
+                                                          CredentialRead,
+                                                          CredentialUpdate)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 
@@ -55,7 +58,7 @@ def read_credentials(
 ):
     """Read all credentials."""
     try:
-        credentials = session.query(Credential).filter(Credential.user_id == current_user.id).all()
+        credentials = session.exec(select(Credential).where(Credential.user_id == current_user.id)).all()
         return credentials
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -72,8 +75,7 @@ def update_credential(
     """Update a credential."""
     try:
         db_credential = (
-            session.query(Credential)
-            .filter(Credential.id == credential_id, Credential.user_id == current_user.id)
+            session.exec(select(Credential).where(Credential.id == credential_id and Credential.user_id == current_user.id))
             .first()
         )
         if not db_credential:
