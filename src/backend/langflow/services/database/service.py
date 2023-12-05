@@ -5,17 +5,16 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from loguru import logger
-from sqlalchemy import inspect
-from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, SQLModel, create_engine, text
-
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
+from loguru import logger
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select, text
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -66,14 +65,16 @@ class DatabaseService(Service):
         if settings_service.auth_settings.AUTO_LOGIN:
             with Session(self.engine) as session:
                 flows = (
-                    session.query(models.Flow)
-                    .filter(models.Flow.user_id == None)  # noqa
-                    .all()
+                    session.exec(select(models.Flow)
+                    .where(models.Flow.user_id == None)).all()
                 )
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
                     user = get_user_by_username(session, username)
+                    if not user:
+                        logger.error("Default superuser not found")
+                        raise RuntimeError("Default superuser not found")
                     for flow in flows:
                         flow.user_id = user.id
                     session.commit()
@@ -190,6 +191,7 @@ class DatabaseService(Service):
         inspector = inspect(self.engine)
         table_name = model.__tablename__
         expected_columns = list(model.__fields__.keys())
+        available_columns = []
         try:
             available_columns = [col["name"] for col in inspector.get_columns(table_name)]
             results.append(Result(name=table_name, type="table", success=True))
