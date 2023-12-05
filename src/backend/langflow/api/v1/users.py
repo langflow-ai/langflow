@@ -1,21 +1,19 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from langflow.api.v1.schemas import UsersResponse
+from langflow.services.auth.utils import (get_current_active_superuser,
+                                          get_current_active_user,
+                                          get_password_hash, verify_password)
+from langflow.services.database.models.user import (User, UserCreate, UserRead,
+                                                    UserUpdate)
+from langflow.services.database.models.user.crud import (get_user_by_id,
+                                                         update_user)
+from langflow.services.deps import get_session, get_settings_service
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
-
-from langflow.api.v1.schemas import UsersResponse
-from langflow.services.auth.utils import (
-    get_current_active_superuser,
-    get_current_active_user,
-    get_password_hash,
-    verify_password,
-)
-from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
-from langflow.services.database.models.user.crud import get_user_by_id, update_user
-from langflow.services.deps import get_session, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -137,7 +135,7 @@ def delete_user(
     elif not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="You don't have the permission to delete this user")
 
-    user_db = session.query(User).filter(User.id == user_id).first()
+    user_db = session.exec(select(User).where(User.id == user_id)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
