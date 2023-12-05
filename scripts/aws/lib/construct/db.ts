@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as rds from "aws-cdk-lib/aws-rds";
+import * as cdk from 'aws-cdk-lib';
 
 interface RdsProps {
   vpc: ec2.Vpc
@@ -20,7 +21,7 @@ export class Rds extends Construct{
     const rdsCredentials = rds.Credentials.fromGeneratedSecret('db_user',{
       secretName: 'langflow-DbSecret',
     })
-
+    
     // DB クラスターのパラメータグループ作成
     const clusterParameterGroup = new rds.ParameterGroup(scope, 'ClusterParameterGroup',{
       engine: rds.DatabaseClusterEngine.auroraMysql({
