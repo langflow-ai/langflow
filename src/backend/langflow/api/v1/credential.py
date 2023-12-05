@@ -27,8 +27,7 @@ def create_credential(
     try:
         # check if credential name already exists
         credential_exists = (
-            session.query(Credential)
-            .filter(Credential.name == credential.name, Credential.user_id == current_user.id)
+            session.exec(select(Credential).where(Credential.name == credential.name, Credential.user_id == current_user.id))
             .first()
         )
         if credential_exists:
@@ -75,7 +74,7 @@ def update_credential(
     """Update a credential."""
     try:
         db_credential = (
-            session.exec(select(Credential).where(Credential.id == credential_id and Credential.user_id == current_user.id))
+            session.exec(select(Credential).where(Credential.id == credential_id, Credential.user_id == current_user.id))
             .first()
         )
         if not db_credential:
