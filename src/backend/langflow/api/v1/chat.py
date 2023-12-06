@@ -1,13 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
+from fastapi import (APIRouter, Depends, HTTPException, Query, WebSocket,
+                     WebSocketException, status)
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response
-from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
+from langflow.api.v1.schemas import (BuildStatus, BuiltResponse, InitResponse,
+                                     StreamData)
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
+from langflow.services.auth.utils import (get_current_active_user,
+                                          get_current_user_by_jwt)
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_cache_service, get_chat_service, get_session
+from langflow.services.deps import (get_cache_service, get_chat_service,
+                                    get_session)
 from loguru import logger
 from sqlmodel import Session
 
@@ -112,19 +116,20 @@ async def stream_build(
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
         artifacts = {}
+        flow_cache = cache_service[flow_id]
+        flow_cache = flow_cache if isinstance(flow_cache, dict) else {}
         try:
             if flow_id not in cache_service:
                 error_message = "Invalid session ID"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            if cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS:
+            if flow_cache.get("status") == BuildStatus.IN_PROGRESS:
                 error_message = "Already building"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            graph_data = cache_service[flow_id].get("graph_data")
-            cache_service[flow_id]["user_id"]
+            graph_data = flow_cache.get("graph_data")
 
             if not graph_data:
                 error_message = "No data provided"
@@ -140,7 +145,7 @@ async def stream_build(
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
             try:
-                user_id = cache_service[flow_id]["user_id"]
+                user_id = flow_cache["user_id"]
             except KeyError:
                 logger.debug("No user_id found in cache_service")
                 user_id = None
