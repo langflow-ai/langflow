@@ -1,9 +1,8 @@
+from typing import Optional
+
 from langflow.services.deps import get_settings_service
 from langflow.services.plugins.base import BasePlugin
-from langflow.utils.logger import logger
-
-### Temporary implementation
-# This will be replaced by a plugin system once merged into 0.5.0
+from loguru import logger
 
 
 class LangfuseInstance:
@@ -61,3 +60,23 @@ class LangfusePlugin(BasePlugin):
 
     def get(self):
         return LangfuseInstance.get()
+
+    def get_callback(self, _id: Optional[str] = None):
+        if _id is None:
+            _id = "default"
+        from langfuse.callback import CreateTrace
+
+        logger.debug("Initializing langfuse callback")
+
+
+        try:
+            langfuse_instance = self.get()
+            if langfuse_instance is not None and hasattr(langfuse_instance, "trace"):
+                trace = langfuse_instance.trace(CreateTrace(name="langflow-" + _id, id=_id))
+                if trace:
+                    return trace.getNewHandler()
+
+        except Exception as exc:
+            logger.error(f"Error initializing langfuse callback: {exc}")
+
+        return None
