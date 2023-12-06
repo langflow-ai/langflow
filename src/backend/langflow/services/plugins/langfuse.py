@@ -64,7 +64,7 @@ class LangfusePlugin(CallbackPlugin):
     def get_callback(self, _id: Optional[str] = None):
         if _id is None:
             _id = "default"
-        from langfuse.callback import CreateTrace
+        from langfuse.callback import CreateTrace  # type: ignore
 
         logger.debug("Initializing langfuse callback")
 
