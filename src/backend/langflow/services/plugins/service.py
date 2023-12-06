@@ -45,3 +45,14 @@ class PluginService(Service):
     def teardown(self):
         for plugin in self.plugins.values():
             plugin.teardown()
+
+    def get_callbacks(self, _id=None):
+        callbacks = []
+        for plugin in self.plugins.values():
+            if hasattr(plugin, "get_callback"):
+                callback = plugin.get_callback(_id=_id)
+                if callback:
+                    callbacks.append(callback)
+        return callbacks
+
+
