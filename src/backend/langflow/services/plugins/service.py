@@ -15,20 +15,24 @@ class PluginService(Service):
 
     def __init__(self, settings_service: "SettingsService"):
         self.plugins: dict[str, BasePlugin] = {}
-        plugin_dir = settings_service.settings.PLUGIN_DIR
-        self.plugin_dir = plugin_dir or os.path.dirname(__file__)
+        # plugin_dir = settings_service.settings.PLUGIN_DIR
+        self.plugin_dir = os.path.dirname(__file__)
+        self.plugins_base_module = "langflow.services.plugins"
 
     def load_plugins(self):
         base_files = ["base.py", "service.py", "factory.py", "__init__.py"]
         for module in os.listdir(self.plugin_dir):
             if module.endswith(".py") and module not in base_files:
                 plugin_name = module[:-3]
-                module_path = f"{self.plugin_dir}.{plugin_name}"
-                mod = importlib.import_module(module_path)
-                for attr_name in dir(mod):
-                    attr = getattr(mod, attr_name)
-                    if inspect.isclass(attr) and issubclass(attr, BasePlugin) and attr is not BasePlugin:
-                        self.register_plugin(plugin_name, attr())
+                module_path = f"{self.plugins_base_module}.{plugin_name}"
+                try:
+                    mod = importlib.import_module(module_path)
+                    for attr_name in dir(mod):
+                        attr = getattr(mod, attr_name)
+                        if inspect.isclass(attr) and issubclass(attr, BasePlugin) and attr not in [CallbackPlugin, BasePlugin]:
+                            self.register_plugin(plugin_name, attr())
+                except Exception as exc:
+                    print(f"Error loading plugin {plugin_name}: {exc}")
 
     def register_plugin(self, plugin_name, plugin_instance):
         self.plugins[plugin_name] = plugin_instance
