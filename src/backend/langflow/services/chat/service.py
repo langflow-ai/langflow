@@ -1,20 +1,20 @@
-from collections import defaultdict
+import asyncio
 import uuid
+from collections import defaultdict
+from typing import Any, Dict, List
+
+import orjson
 from fastapi import WebSocket, status
-from starlette.websockets import WebSocketState
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
+from langflow.services import ServiceType, service_manager
 from langflow.services.base import Service
 from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
 from loguru import logger
+from starlette.websockets import WebSocketState
 
 from .cache import cache_service
-import asyncio
-from typing import Any, Dict, List
-
-from langflow.services import service_manager, ServiceType
-import orjson
 
 
 class ChatHistory(Subject):
@@ -59,9 +59,7 @@ class ChatService(Service):
         """Send the last chat message to the client."""
         client_id = self.chat_cache.current_client_id
         if client_id in self.active_connections:
-            chat_response = self.chat_history.get_history(
-                client_id, filter_messages=False
-            )[-1]
+            chat_response = self.chat_history.get_history(client_id, filter_messages=False)[-1]
             if chat_response.is_bot:
                 # Process FileResponse
                 if isinstance(chat_response, FileResponse):
@@ -88,9 +86,7 @@ class ChatService(Service):
                 data_type=self.last_cached_object_dict["type"],
             )
 
-            self.chat_history.add_message(
-                self.chat_cache.current_client_id, chat_response
-            )
+            self.chat_history.add_message(self.chat_cache.current_client_id, chat_response)
 
     async def connect(self, client_id: str, websocket: WebSocket):
         self.active_connections[client_id] = websocket
@@ -108,7 +104,7 @@ class ChatService(Service):
 
     async def send_json(self, client_id: str, message: ChatMessage):
         websocket = self.active_connections[client_id]
-        await websocket.send_json(message.dict())
+        await websocket.send_json(message.model_dump())
 
     async def close_connection(self, client_id: str, code: int, reason: str):
         if websocket := self.active_connections[client_id]:
@@ -121,9 +117,7 @@ class ChatService(Service):
                 if "after sending" in str(exc):
                     logger.error(f"Error closing connection: {exc}")
 
-    async def process_message(
-        self, client_id: str, payload: Dict, langchain_object: Any
-    ):
+    async def process_message(self, client_id: str, payload: Dict, langchain_object: Any):
         # Process the graph data and chat message
         chat_inputs = payload.pop("inputs", {})
         chatkey = payload.pop("chatKey", None)
@@ -139,7 +133,7 @@ class ChatService(Service):
         try:
             logger.debug("Generating result and thought")
 
-            result, intermediate_steps = await process_graph(
+            result, intermediate_steps, raw_output = await process_graph(
                 langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
                 client_id=client_id,
@@ -197,7 +191,7 @@ class ChatService(Service):
         try:
             chat_history = self.chat_history.get_history(client_id)
             # iterate and make BaseModel into dict
-            chat_history = [chat.dict() for chat in chat_history]
+            chat_history = [chat.model_dump() for chat in chat_history]
             await websocket.send_json(chat_history)
 
             while True:
@@ -211,15 +205,11 @@ class ChatService(Service):
                     continue
 
                 with self.chat_cache.set_client_id(client_id):
-                    if langchain_object := self.cache_service.get(client_id).get(
-                        "result"
-                    ):
+                    if langchain_object := self.cache_service.get(client_id).get("result"):
                         await self.process_message(client_id, payload, langchain_object)
 
                     else:
-                        raise RuntimeError(
-                            f"Could not find a build result for client_id {client_id}"
-                        )
+                        raise RuntimeError(f"Could not find a build result for client_id {client_id}")
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.exception(f"Error handling websocket: {exc}")
@@ -244,3 +234,26 @@ class ChatService(Service):
             except Exception as exc:
                 logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)
+
+
+def dict_to_markdown_table(my_dict):
+    markdown_table = "| Key | Value |\n|---|---|\n"
+    for key, value in my_dict.items():
+        markdown_table += f"| {key} | {value} |\n"
+    return markdown_table
+
+
+def list_of_dicts_to_markdown_table(dict_list):
+    if not dict_list:
+        return "No data provided."
+
+    # Extract headers from the keys of the first dictionary
+    headers = dict_list[0].keys()
+    markdown_table = "| " + " | ".join(headers) + " |\n"
+    markdown_table += "| " + " | ".join("---" for _ in headers) + " |\n"
+
+    for row_dict in dict_list:
+        row = [str(row_dict.get(header, "")) for header in headers]
+        markdown_table += "| " + " | ".join(row) + " |\n"
+
+    return markdown_table

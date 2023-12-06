@@ -4,7 +4,7 @@ from langchain.chains import ConversationChain
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.schema import BaseMemory
 from langflow.interface.base import CustomChain
-from pydantic import Field, root_validator
+from pydantic.v1 import Field, root_validator
 from langchain.chains.question_answering import load_qa_chain
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langchain.base_language import BaseLanguageModel
@@ -41,9 +41,7 @@ class BaseCustomConversationChain(ConversationChain):
         values["template"] = values["template"].format(**format_dict)
 
         values["template"] = values["template"]
-        values["input_variables"] = extract_input_variables_from_prompt(
-            values["template"]
-        )
+        values["input_variables"] = extract_input_variables_from_prompt(values["template"])
         values["prompt"].template = values["template"]
         values["prompt"].input_variables = values["input_variables"]
         return values
@@ -54,9 +52,7 @@ class SeriesCharacterChain(BaseCustomConversationChain):
 
     character: str
     series: str
-    template: Optional[
-        str
-    ] = """I want you to act like {character} from {series}.
+    template: Optional[str] = """I want you to act like {character} from {series}.
 I want you to respond and answer like {character}. do not write any explanations. only answer like {character}.
 You must know all of the knowledge of {character}.
 Current conversation:
@@ -71,9 +67,7 @@ Human: {input}
 class MidJourneyPromptChain(BaseCustomConversationChain):
     """MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."""
 
-    template: Optional[
-        str
-    ] = """I want you to act as a prompt generator for Midjourney's artificial intelligence program.
+    template: Optional[str] = """I want you to act as a prompt generator for Midjourney's artificial intelligence program.
     Your job is to provide detailed and creative descriptions that will inspire unique and interesting images from the AI.
     Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as imaginative and descriptive as possible.
     For example, you could describe a scene from a futuristic city, or a surreal landscape filled with strange creatures.
@@ -87,9 +81,7 @@ class MidJourneyPromptChain(BaseCustomConversationChain):
 
 
 class TimeTravelGuideChain(BaseCustomConversationChain):
-    template: Optional[
-        str
-    ] = """I want you to act as my time travel guide. You are helpful and creative. I will provide you with the historical period or future time I want to visit and you will suggest the best events, sights, or people to experience. Provide the suggestions and any necessary information.
+    template: Optional[str] = """I want you to act as my time travel guide. You are helpful and creative. I will provide you with the historical period or future time I want to visit and you will suggest the best events, sights, or people to experience. Provide the suggestions and any necessary information.
     Current conversation:
     {history}
     Human: {input}

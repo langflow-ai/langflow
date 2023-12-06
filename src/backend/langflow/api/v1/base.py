@@ -1,6 +1,6 @@
 from typing import Optional
 from langflow.template.frontend_node.base import FrontendNode
-from pydantic import BaseModel, validator
+from pydantic import field_validator, BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langchain.prompts import PromptTemplate
@@ -30,11 +30,13 @@ class CodeValidationResponse(BaseModel):
     imports: dict
     function: dict
 
-    @validator("imports")
+    @field_validator("imports")
+    @classmethod
     def validate_imports(cls, v):
         return v or {"errors": []}
 
-    @validator("function")
+    @field_validator("function")
+    @classmethod
     def validate_function(cls, v):
         return v or {"errors": []}
 
@@ -79,9 +81,7 @@ def validate_prompt(template: str):
     # Check if there are invalid characters in the input_variables
     input_variables = check_input_variables(input_variables)
     if any(var in INVALID_NAMES for var in input_variables):
-        raise ValueError(
-            f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
-        )
+        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
 
     try:
         PromptTemplate(template=template, input_variables=input_variables)
@@ -132,9 +132,7 @@ def check_input_variables(input_variables: list):
     return input_variables
 
 
-def build_error_message(
-    input_variables, invalid_chars, wrong_variables, fixed_variables, empty_variables
-):
+def build_error_message(input_variables, invalid_chars, wrong_variables, fixed_variables, empty_variables):
     input_variables_str = ", ".join([f"'{var}'" for var in input_variables])
     error_string = f"Invalid input variables: {input_variables_str}. "
 

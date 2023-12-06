@@ -144,8 +144,7 @@ class CSVAgentNode(FrontendNode):
                 show=True,
                 name="path",
                 value="",
-                suffixes=[".csv"],
-                file_types=["csv"],
+                file_types=[".csv"],
             ),
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -206,7 +205,7 @@ class InitializeAgentNode(FrontendNode):
         ],
     )
     description: str = """Construct a zero shot agent from an LLM and tools."""
-    base_classes: list[str] = ["AgentExecutor", "function"]
+    base_classes: list[str] = ["AgentExecutor", "Callable"]
 
     def to_dict(self):
         return super().to_dict()

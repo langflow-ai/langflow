@@ -1,19 +1,16 @@
+import asyncio
 import json
 from pathlib import Path
-from langchain.schema import AgentAction
-from langflow.interface.run import (
-    build_sorted_vertices,
-    get_memory_key,
-    update_memory_keys,
-)
-from langflow.services.getters import get_session_service
-from loguru import logger
-from langflow.graph import Graph
-from langchain.chains.base import Chain
-from langchain.vectorstores.base import VectorStore
-from typing import Any, Dict, List, Optional, Tuple, Union
-from langchain.schema import Document
+from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
 
+from langchain.agents import AgentExecutor
+from langchain.chains.base import Chain
+from langchain.schema import AgentAction, Document
+from langchain.vectorstores.base import VectorStore
+from langflow.graph import Graph
+from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
+from langflow.services.deps import get_session_service
+from loguru import logger
 from pydantic import BaseModel
 
 
@@ -70,7 +67,11 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
         if hasattr(langchain_object, "return_intermediate_steps"):
             langchain_object.return_intermediate_steps = False
 
-        fix_memory_inputs(langchain_object)
+        try:
+            if not isinstance(langchain_object, AgentExecutor):
+                fix_memory_inputs(langchain_object)
+        except Exception as exc:
+            logger.error(f"Error fixing memory inputs: {exc}")
 
         try:
             output = langchain_object(inputs, return_only_outputs=True)
@@ -105,26 +106,14 @@ def get_build_result(data_graph, session_id):
     return build_sorted_vertices(data_graph)
 
 
-def load_langchain_object(
-    data_graph: Dict[str, Any], session_id: str
-) -> Tuple[Union[Chain, VectorStore], Dict[str, Any], str]:
-    langchain_object, artifacts = get_build_result(data_graph, session_id)
-    logger.debug("Loaded LangChain object")
-
-    if langchain_object is None:
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
-
-    return langchain_object, artifacts, session_id
-
-
 def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
     if inputs is None:
         inputs = {}
 
     for key, value in artifacts.items():
-        if key not in inputs or not inputs[key]:
+        if key == "repr":
+            continue
+        elif key not in inputs or not inputs[key]:
             inputs[key] = value
 
     return inputs
@@ -144,6 +133,8 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
         result = langchain_object.dict()
     else:
         logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
+        if isinstance(langchain_object, Coroutine):
+            result = asyncio.run(langchain_object)
         result = langchain_object
 
     return result
@@ -164,13 +155,14 @@ async def process_graph_cached(
     if clear_cache:
         session_service.clear_session(session_id)
     if session_id is None:
-        session_id = session_service.generate_key(
-            session_id=session_id, data_graph=data_graph
-        )
+        session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
     # Load the graph using SessionService
-    graph, artifacts = session_service.load_session(session_id, data_graph)
-    built_object = graph.build()
-    processed_inputs = process_inputs(inputs, artifacts)
+    session = await session_service.load_session(session_id, data_graph)
+    graph, artifacts = session if session else (None, None)
+    if not graph:
+        raise ValueError("Graph not found in the session")
+    built_object = await graph.build()
+    processed_inputs = process_inputs(inputs, artifacts or {})
     result = generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
@@ -179,9 +171,7 @@ async def process_graph_cached(
     return Result(result=result, session_id=session_id)
 
 
-def load_flow_from_json(
-    flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True
-):
+def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True):
     """
     Load flow from a JSON file or a JSON object.
 
@@ -198,9 +188,7 @@ def load_flow_from_json(
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError(
-            "Input must be either a file path (str) or a JSON object (dict)"
-        )
+        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
 
     graph_data = flow_graph["data"]
     if tweaks is not None:
@@ -210,7 +198,7 @@ def load_flow_from_json(
     graph = Graph(nodes, edges)
 
     if build:
-        langchain_object = graph.build()
+        langchain_object = asyncio.run(graph.build())
 
         if hasattr(langchain_object, "verbose"):
             langchain_object.verbose = True
@@ -226,18 +214,14 @@ def load_flow_from_json(
     return graph
 
 
-def validate_input(
-    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+def validate_input(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         raise ValueError("graph_data and tweaks should be dictionaries")
 
     nodes = graph_data.get("data", {}).get("nodes") or graph_data.get("nodes")
 
     if not isinstance(nodes, list):
-        raise ValueError(
-            "graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key"
-        )
+        raise ValueError("graph_data should contain a list of nodes under 'data' key or directly under 'nodes' key")
 
     return nodes
 
@@ -246,9 +230,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
     template_data = node.get("data", {}).get("node", {}).get("template")
 
     if not isinstance(template_data, dict):
-        logger.warning(
-            f"Template data for node {node.get('id')} should be a dictionary"
-        )
+        logger.warning(f"Template data for node {node.get('id')} should be a dictionary")
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
@@ -257,9 +239,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
             template_data[tweak_name][key] = tweak_value
 
 
-def process_tweaks(
-    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
-) -> Dict[str, Any]:
+def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
 
@@ -280,8 +260,6 @@ def process_tweaks(
             if node_tweaks := tweaks.get(node_id):
                 apply_tweaks(node, node_tweaks)
         else:
-            logger.warning(
-                "Each node should be a dictionary with an 'id' key of type str"
-            )
+            logger.warning("Each node should be a dictionary with an 'id' key of type str")
 
     return graph_data

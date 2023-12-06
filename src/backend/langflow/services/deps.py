@@ -1,16 +1,22 @@
-from langflow.services import ServiceType, service_manager
 from typing import TYPE_CHECKING, Generator
 
+from langflow.services import ServiceType, service_manager
 
 if TYPE_CHECKING:
-    from langflow.services.database.service import DatabaseService
-    from langflow.services.settings.service import SettingsService
     from langflow.services.cache.service import BaseCacheService
-    from langflow.services.session.service import SessionService
-    from langflow.services.task.service import TaskService
     from langflow.services.chat.service import ChatService
+    from langflow.services.credentials.service import CredentialService
+    from langflow.services.database.service import DatabaseService
     from langflow.services.plugins.service import PluginService
+    from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
+    from langflow.services.store.service import StoreService
+    from langflow.services.task.service import TaskService
     from sqlmodel import Session
+
+
+def get_credential_service() -> "CredentialService":
+    return service_manager.get(ServiceType.CREDENTIAL_SERVICE)
 
 
 def get_plugins_service() -> "PluginService":
@@ -51,3 +57,7 @@ def get_task_service() -> "TaskService":
 
 def get_chat_service() -> "ChatService":
     return service_manager.get(ServiceType.CHAT_SERVICE)
+
+
+def get_store_service() -> "StoreService":
+    return service_manager.get(ServiceType.STORE_SERVICE)

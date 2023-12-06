@@ -1,17 +1,20 @@
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import sqlalchemy as sa
+from alembic import command, util
+from alembic.config import Config
 from langflow.services.base import Service
+from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
-from langflow.services.getters import get_settings_service
-from sqlalchemy import inspect
-import sqlalchemy as sa
-from sqlalchemy.exc import OperationalError
-from sqlmodel import SQLModel, Session, create_engine
+from langflow.services.deps import get_settings_service
+from langflow.services.utils import teardown_superuser
 from loguru import logger
-from alembic.config import Config
-from alembic import command
-from langflow.services.database import models  # noqa
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select, text
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -32,10 +35,7 @@ class DatabaseService(Service):
     def _create_engine(self) -> "Engine":
         """Create the engine for the database."""
         settings_service = get_settings_service()
-        if (
-            settings_service.settings.DATABASE_URL
-            and settings_service.settings.DATABASE_URL.startswith("sqlite")
-        ):
+        if settings_service.settings.DATABASE_URL and settings_service.settings.DATABASE_URL.startswith("sqlite"):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
@@ -47,9 +47,7 @@ class DatabaseService(Service):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:  # If an exception has been raised
-            logger.error(
-                f"Session rollback because of exception: {exc_type.__name__} {exc_value}"
-            )
+            logger.error(f"Session rollback because of exception: {exc_type.__name__} {exc_value}")
             self._session.rollback()
         else:
             self._session.commit()
@@ -66,15 +64,14 @@ class DatabaseService(Service):
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             with Session(self.engine) as session:
-                flows = (
-                    session.query(models.Flow)
-                    .filter(models.Flow.user_id == None)  # noqa
-                    .all()
-                )
+                flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
                     user = get_user_by_username(session, username)
+                    if not user:
+                        logger.error("Default superuser not found")
+                        raise RuntimeError("Default superuser not found")
                     for flow in flows:
                         flow.user_id = user.id
                     session.commit()
@@ -94,12 +91,10 @@ class DatabaseService(Service):
         legacy_tables = ["flowstyle"]
 
         for table, model in model_mapping.items():
-            expected_columns = list(model.__fields__.keys())
+            expected_columns = list(model.model_fields.keys())
 
             try:
-                available_columns = [
-                    col["name"] for col in inspector.get_columns(table)
-                ]
+                available_columns = [col["name"] for col in inspector.get_columns(table)]
             except sa.exc.NoSuchTableError:
                 logger.error(f"Missing table: {table}")
                 return False
@@ -121,9 +116,10 @@ class DatabaseService(Service):
         alembic_cfg.set_main_option("script_location", str(self.script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
         command.stamp(alembic_cfg, "head")
+        # command.upgrade(alembic_cfg, "head")
         logger.info("Alembic initialized")
 
-    def run_migrations(self):
+    def run_migrations(self, fix=False):
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
         # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
@@ -133,7 +129,7 @@ class DatabaseService(Service):
             # If the table does not exist it throws an error
             # so we need to catch it
             try:
-                session.execute("SELECT * FROM alembic_version")
+                session.exec(text("SELECT * FROM alembic_version"))
             except Exception:
                 logger.info("Alembic not initialized")
                 try:
@@ -148,27 +144,53 @@ class DatabaseService(Service):
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", str(self.script_location))
         alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
-        command.upgrade(alembic_cfg, "head")
+        try:
+            command.check(alembic_cfg)
+        except Exception as exc:
+            if isinstance(exc, util.exc.CommandError) or isinstance(exc, util.exc.AutogenerateDiffsDetected):
+                command.upgrade(alembic_cfg, "head")
+                time.sleep(3)
+
+        try:
+            command.check(alembic_cfg)
+        except util.exc.AutogenerateDiffsDetected:
+            logger.exception("AutogenerateDiffsDetected: {exc}")
+            if not fix:
+                raise RuntimeError("Something went wrong running migrations. Please, run `langflow migration --fix`")
+
+        if fix:
+            self.try_downgrade_upgrade_until_success(alembic_cfg)
+
+    def try_downgrade_upgrade_until_success(self, alembic_cfg, retries=5):
+        # Try -1 then head, if it fails, try -2 then head, etc.
+        # until we reach the number of retries
+        for i in range(1, retries + 1):
+            try:
+                command.check(alembic_cfg)
+                break
+            except util.exc.AutogenerateDiffsDetected as exc:
+                # downgrade to base and upgrade again
+                logger.warning(f"AutogenerateDiffsDetected: {exc}")
+                command.downgrade(alembic_cfg, f"-{i}")
+                # wait for the database to be ready
+                time.sleep(3)
+                command.upgrade(alembic_cfg, "head")
 
     def run_migrations_test(self):
         # This method is used for testing purposes only
         # We will check that all models are in the database
         # and that the database is up to date with all columns
         sql_models = [models.Flow, models.User, models.ApiKey]
-        return [
-            TableResults(sql_model.__tablename__, self.check_table(sql_model))
-            for sql_model in sql_models
-        ]
+        return [TableResults(sql_model.__tablename__, self.check_table(sql_model)) for sql_model in sql_models]
 
     def check_table(self, model):
         results = []
         inspector = inspect(self.engine)
         table_name = model.__tablename__
         expected_columns = list(model.__fields__.keys())
+        available_columns = []
         try:
-            available_columns = [
-                col["name"] for col in inspector.get_columns(table_name)
-            ]
+            available_columns = [col["name"] for col in inspector.get_columns(table_name)]
             results.append(Result(name=table_name, type="table", success=True))
         except sa.exc.NoSuchTableError:
             logger.error(f"Missing table: {table_name}")
@@ -199,9 +221,7 @@ class DatabaseService(Service):
             try:
                 table.create(self.engine, checkfirst=True)
             except OperationalError as oe:
-                logger.warning(
-                    f"Table {table} already exists, skipping. Exception: {oe}"
-                )
+                logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
                 logger.error(f"Error creating table {table}: {exc}")
                 raise RuntimeError(f"Error creating table {table}") from exc
@@ -213,9 +233,7 @@ class DatabaseService(Service):
             if table not in table_names:
                 logger.error("Something went wrong creating the database and tables.")
                 logger.error("Please check your database settings.")
-                raise RuntimeError(
-                    "Something went wrong creating the database and tables."
-                )
+                raise RuntimeError("Something went wrong creating the database and tables.")
 
         logger.debug("Database and tables created successfully")
 
@@ -225,14 +243,8 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            if settings_service.auth_settings.AUTO_LOGIN:
-                logger.debug("Removing default superuser")
-                username = settings_service.auth_settings.SUPERUSER
-                with Session(self.engine) as session:
-                    user = get_user_by_username(session, username)
-                    session.delete(user)
-                    session.commit()
-                    logger.debug("Default superuser removed")
+            with Session(self.engine) as session:
+                teardown_superuser(settings_service, session)
 
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")

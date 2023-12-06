@@ -47,6 +47,9 @@
     --chat-bot-icon: #afe6ef;
     --chat-user-icon: #aface9;
 
+    --component-icon: #d8598a;
+    --flow-icon: #2f67d0;
+
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
     --build-trigger: #dc735b;
@@ -106,6 +109,9 @@
     --high-indigo: #4338ca;
     --medium-indigo: #6366f1;
     --low-indigo: #e0e7ff;
+
+    --component-icon: #c35f85;
+    --flow-icon: #2467e4;
 
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923d2;

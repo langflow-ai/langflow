@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.textsplitters import TextSplittersFrontendNode
 from langflow.interface.custom_lists import textsplitter_type_to_cls_dict
 
@@ -35,8 +35,7 @@ class TextSplitterCreator(LangChainTypeCreator):
         return [
             textsplitter.__name__
             for textsplitter in self.type_to_loader_dict.values()
-            if textsplitter.__name__ in settings_service.settings.TEXTSPLITTERS
-            or settings_service.settings.DEV
+            if textsplitter.__name__ in settings_service.settings.TEXTSPLITTERS or settings_service.settings.DEV
         ]
 
 

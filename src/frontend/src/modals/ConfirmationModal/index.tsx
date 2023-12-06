@@ -1,30 +1,65 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { ConfirmationModalType } from "../../types/components";
+import { ConfirmationModalType, ContentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
-export default function ConfirmationModal({
+const Content: React.FC<ContentProps> = ({ children }) => {
+  return <div className="h-full w-full">{children}</div>;
+};
+const Trigger: React.FC<ContentProps> = ({
+  children,
+  tolltipContent,
+  side,
+}) => {
+  return tolltipContent ? (
+    <ShadTooltip side={side} content={tolltipContent}>
+      <div className="h-full w-full">{children}</div>
+    </ShadTooltip>
+  ) : (
+    <div className="h-full w-full">{children}</div>
+  );
+};
+function ConfirmationModal({
   title,
   asChild,
   titleHeader,
-  modalContent,
   modalContentTitle,
   cancelText,
   confirmationText,
   children,
+  destructive = false,
   icon,
   data,
   index,
   onConfirm,
+  size,
+  open,
+  onClose,
+  onCancel,
 }: ConfirmationModalType) {
   const Icon: any = nodeIconsLucide[icon];
+  const [modalOpen, setModalOpen] = useState(open ?? false);
 
-  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (open) setModalOpen(open);
+  }, [open]);
+
+  useEffect(() => {
+    if (onClose) onClose!(modalOpen);
+  }, [modalOpen]);
+  const triggerChild = React.Children.toArray(children).find(
+    (child) => (child as React.ReactElement).type === Trigger
+  );
+  const ContentChild = React.Children.toArray(children).find(
+    (child) => (child as React.ReactElement).type === Content
+  );
+
   return (
-    <BaseModal size="x-small" open={open} setOpen={setOpen}>
-      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={titleHeader}>
+    <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
+      <BaseModal.Trigger asChild={asChild}>{triggerChild}</BaseModal.Trigger>
+      <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         <Icon
           name="icon"
@@ -33,20 +68,21 @@ export default function ConfirmationModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
-        {modalContentTitle != "" && (
+        {modalContentTitle && modalContentTitle != "" && (
           <>
             <strong>{modalContentTitle}</strong>
             <br></br>
           </>
         )}
-        <span>{modalContent}</span>
+        {ContentChild}
       </BaseModal.Content>
 
       <BaseModal.Footer>
         <Button
           className="ml-3"
+          variant={destructive ? "destructive" : "default"}
           onClick={() => {
-            setOpen(false);
+            setModalOpen(false);
             onConfirm(index, data);
           }}
         >
@@ -54,9 +90,11 @@ export default function ConfirmationModal({
         </Button>
 
         <Button
+          className=""
           variant="outline"
           onClick={() => {
-            setOpen(false);
+            if (onCancel) onCancel();
+            setModalOpen(false);
           }}
         >
           {cancelText}
@@ -65,3 +103,7 @@ export default function ConfirmationModal({
     </BaseModal>
   );
 }
+ConfirmationModal.Content = Content;
+ConfirmationModal.Trigger = Trigger;
+
+export default ConfirmationModal;
