@@ -1,12 +1,11 @@
-from typing import List, Union, TYPE_CHECKING
-from langflow.api.v1.callback import (
-    AsyncStreamingLLMCallbackHandler,
-    StreamingLLMCallbackHandler,
-)
-from langflow.processing.process import fix_memory_inputs, format_actions
-from loguru import logger
+from typing import TYPE_CHECKING, List, Union
+
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
+from langflow.api.v1.callback import (AsyncStreamingLLMCallbackHandler,
+                                      StreamingLLMCallbackHandler)
+from langflow.processing.process import fix_memory_inputs, format_actions
+from loguru import logger
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
@@ -27,7 +26,7 @@ def setup_callbacks(sync, trace_id, **kwargs):
 
 
 def get_langfuse_callback(trace_id):
-    from langflow.services.getters import get_plugins_service
+    from langflow.services.deps import get_plugins_service
     from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
@@ -47,7 +46,7 @@ def flush_langfuse_callback_if_present(callbacks: List[Union[BaseCallbackHandler
     If langfuse callback is present, run callback.langfuse.flush()
     """
     for callback in callbacks:
-        if hasattr(callback, "langfuse"):
+        if hasattr(callback, "langfuse") and hasattr(callback.langfuse, "flush"):
             callback.langfuse.flush()
             break
 
