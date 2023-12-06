@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 
 def initialize_database(fix_migration: bool = False):
     logger.debug("Initializing database")
-    from langflow.services import ServiceType, service_manager
+    from langflow.services.deps import get_db_service
 
-    database_service: "DatabaseService" = service_manager.get(ServiceType.DATABASE_SERVICE)
+    database_service: "DatabaseService" = get_db_service()
     try:
         database_service.create_db_and_tables()
     except Exception as exc:

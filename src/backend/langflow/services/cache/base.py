@@ -1,7 +1,9 @@
 import abc
 
+from langflow.services.base import Service
 
-class BaseCacheService(abc.ABC):
+
+class BaseCacheService(Service):
     """
     Abstract base class for a cache.
     """
