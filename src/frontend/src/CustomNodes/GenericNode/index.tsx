@@ -139,8 +139,8 @@ export default function GenericNode({
             takeSnapshot();
             deleteNode(id);
           }}
-          setShowNode={(showNode: boolean) => {
-            data.showNode = showNode;
+          setShowNode={(show: boolean) => {
+            data.showNode = show;
           }}
           numberOfHandles={handles}
           showNode={showNode}
