@@ -1,9 +1,10 @@
 import importlib
 import inspect
 import os
+from typing import TYPE_CHECKING, Union
+
 from langflow.services.base import Service
 from langflow.services.plugins.base import BasePlugin
-from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -13,7 +14,7 @@ class PluginService(Service):
     name = "plugin_service"
 
     def __init__(self, settings_service: "SettingsService"):
-        self.plugins = {}
+        self.plugins: dict[str, BasePlugin] = {}
         plugin_dir = settings_service.settings.PLUGIN_DIR
         self.plugin_dir = plugin_dir or os.path.dirname(__file__)
 
@@ -26,11 +27,7 @@ class PluginService(Service):
                 mod = importlib.import_module(module_path)
                 for attr_name in dir(mod):
                     attr = getattr(mod, attr_name)
-                    if (
-                        inspect.isclass(attr)
-                        and issubclass(attr, BasePlugin)
-                        and attr is not BasePlugin
-                    ):
+                    if inspect.isclass(attr) and issubclass(attr, BasePlugin) and attr is not BasePlugin:
                         self.register_plugin(plugin_name, attr())
 
     def register_plugin(self, plugin_name, plugin_instance):
