@@ -10,3 +10,6 @@ class BasePlugin:
 
     def get(self) -> Any:
         pass
+
+    def get_callback(self, _id=None):
+        pass
