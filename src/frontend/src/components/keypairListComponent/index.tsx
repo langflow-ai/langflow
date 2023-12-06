@@ -53,6 +53,9 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-2">
               <Input
+                data-testid={
+                  editNode ? "editNodekeypair" + index : "keypair" + index
+                }
                 id={editNode ? "editNodekeypair" + index : "keypair" + index}
                 type="text"
                 value={key.trim()}
@@ -71,6 +74,11 @@ export default function KeypairListComponent({
               />
 
               <Input
+                data-testid={
+                  editNode
+                    ? "editNodekeypair" + (index + 100).toString()
+                    : "keypair" + (index + 100).toString()
+                }
                 id={
                   editNode
                     ? "editNodekeypair" + (index + 100).toString()
@@ -97,6 +105,11 @@ export default function KeypairListComponent({
                       ? "editNodeplusbtn" + index.toString()
                       : "plusbtn" + index.toString()
                   }
+                  data-testid={
+                    editNode
+                      ? "editNodeplusbtn" + index.toString()
+                      : "plusbtn" + index.toString()
+                  }
                 >
                   <IconComponent
                     name="Plus"
@@ -110,6 +123,11 @@ export default function KeypairListComponent({
                     newInputList.splice(index, 1);
                     onChange(newInputList);
                   }}
+                  data-testid={
+                    editNode
+                      ? "editNodeminusbtn" + index.toString()
+                      : "minusbtn" + index.toString()
+                  }
                   id={
                     editNode
                       ? "editNodeminusbtn" + index.toString()

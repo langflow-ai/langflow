@@ -39,9 +39,6 @@ test("IntComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-    .click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
@@ -78,9 +75,6 @@ test("IntComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-      .click();
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 
