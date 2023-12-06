@@ -17,7 +17,7 @@ class ChromaComponent(CustomComponent):
     display_name: str = "Chroma"
     description: str = "Implementation of Vector Store using Chroma"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
-    beta = True
+    beta: bool = True
 
     def build_config(self):
         """
@@ -86,8 +86,7 @@ class ChromaComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
-                or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
@@ -104,6 +103,4 @@ class ChromaComponent(CustomComponent):
                 client_settings=chroma_settings,
             )
 
-        return Chroma(
-            persist_directory=persist_directory, client_settings=chroma_settings
-        )
+        return Chroma(persist_directory=persist_directory, client_settings=chroma_settings)

@@ -26,9 +26,6 @@ class TemplateFieldCreator(BaseModel, ABC):
     value: Any = None
     """The value of the field. Default is None."""
 
-    suffixes: list[str] = []
-    """List of suffixes for a file field. Default is an empty list."""
-
     file_types: list[str] = []
     """List of file types associated with the field. Default is an empty list. (duplicate)"""
 
@@ -59,11 +56,14 @@ class TemplateFieldCreator(BaseModel, ABC):
     info: Optional[str] = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
+    refresh: Optional[bool] = None
+    """Specifies if the field should be refreshed. Defaults to False."""
+
     def to_dict(self):
-        result = self.dict()
+        result = self.model_dump()
         # Remove key if it is None
         for key in list(result.keys()):
-            if result[key] is None or result[key] == []:
+            if result[key] is None or result[key] == [] and key != "value":
                 del result[key]
         result["type"] = result.pop("field_type")
         result["list"] = result.pop("is_list")

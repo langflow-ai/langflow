@@ -1,4 +1,4 @@
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.services.plugins.base import BasePlugin
 from langflow.utils.logger import logger
 
@@ -24,10 +24,7 @@ class LangfuseInstance:
 
             settings_manager = get_settings_service()
 
-            if (
-                settings_manager.settings.LANGFUSE_PUBLIC_KEY
-                and settings_manager.settings.LANGFUSE_SECRET_KEY
-            ):
+            if settings_manager.settings.LANGFUSE_PUBLIC_KEY and settings_manager.settings.LANGFUSE_SECRET_KEY:
                 logger.debug("Langfuse credentials found")
                 cls._instance = Langfuse(
                     public_key=settings_manager.settings.LANGFUSE_PUBLIC_KEY,

@@ -13,7 +13,8 @@ test("IntComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="sideGET Request"]')
+    .getByTestId("utilitiesGET Request")
+    .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -30,7 +31,7 @@ test("IntComponent", async ({ page }) => {
   }
 
   await page.locator('//*[@id="int-input-2"]').click();
-  await page.locator('//*[@id="int-input-2"]').fill("-3");
+  await page.locator('//*[@id="int-input-2"]').fill("0");
 
   value = await page.locator('//*[@id="int-input-2"]').inputValue();
 
@@ -41,8 +42,8 @@ test("IntComponent", async ({ page }) => {
   await page
     .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
     .click();
-  await page.locator('//*[@id="advancedIcon"]').click();
-  await page.locator('//*[@id="editAdvancedBtn"]').click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   value = await page.locator('//*[@id="int-input-1"]').inputValue();
 
@@ -80,8 +81,8 @@ test("IntComponent", async ({ page }) => {
     await page
       .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
       .click();
-    await page.locator('//*[@id="advancedIcon"]').click();
-    await page.locator('//*[@id="editAdvancedBtn"]').click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     await page.locator('//*[@id="showtimeout"]').click();
     expect(

@@ -53,15 +53,10 @@ class ServiceManager:
                 self._create_service(dependency)
 
         # Collect the dependent services
-        dependent_services = {
-            dep.value: self.services[dep]
-            for dep in self.dependencies.get(service_name, [])
-        }
+        dependent_services = {dep.value: self.services[dep] for dep in self.dependencies.get(service_name, [])}
 
         # Create the actual service
-        self.services[service_name] = self.factories[service_name].create(
-            **dependent_services
-        )
+        self.services[service_name] = self.factories[service_name].create(**dependent_services)
         self.services[service_name].set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType):
@@ -69,9 +64,7 @@ class ServiceManager:
         Validate whether the service can be created.
         """
         if service_name not in self.factories:
-            raise ValueError(
-                f"No factory registered for the service class '{service_name.name}'"
-            )
+            raise ValueError(f"No factory registered for the service class '{service_name.name}'")
 
     def update(self, service_name: ServiceType):
         """
@@ -144,9 +137,7 @@ def initialize_session_service():
 
     initialize_settings_service()
 
-    service_manager.register_factory(
-        cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE]
-    )
+    service_manager.register_factory(cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE])
 
     service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),

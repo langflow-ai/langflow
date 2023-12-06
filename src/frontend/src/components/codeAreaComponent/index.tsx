@@ -45,6 +45,7 @@ export default function CodeAreaComponent({
         <div className="flex w-full items-center">
           <span
             id={id}
+            data-testid={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"

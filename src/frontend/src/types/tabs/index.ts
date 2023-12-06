@@ -1,5 +1,6 @@
+import { XYPosition } from "reactflow";
 import { tweakType } from "../components";
-import { FlowType } from "../flow";
+import { FlowType, NodeDataType } from "../flow";
 
 export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
@@ -10,7 +11,9 @@ export type FlowsContextType = {
   removeFlow: (id: string) => void;
   addFlow: (
     newProject: boolean,
-    flow?: FlowType
+    flow?: FlowType,
+    override?: boolean,
+    position?: XYPosition
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -23,7 +26,17 @@ export type FlowsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  uploadFlow: (newFlow: boolean, file?: File) => Promise<String | undefined>;
+  uploadFlow: ({
+    newProject,
+    file,
+    isComponent,
+    position,
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+    position?: XYPosition;
+  }) => Promise<String | never>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   tabsState: FlowsState;
@@ -36,6 +49,14 @@ export type FlowsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
+  saveComponent: (
+    component: NodeDataType,
+    override: boolean
+  ) => Promise<String | undefined>;
+  deleteComponent: (key: string) => void;
+  version: string;
+  nodesOnFlow: string;
+  setNodesOnFlow: (nodes: string) => void;
 };
 
 export type FlowsState = {
