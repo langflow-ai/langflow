@@ -86,7 +86,7 @@ export default function NodeToolbarComponent({
         break;
       case "show":
         takeSnapshot();
-        setShowNode((prev) => !prev);
+        setShowNode(data.showNode ? false : true);
         updateNodeInternals(data.id);
         break;
       case "Download":
