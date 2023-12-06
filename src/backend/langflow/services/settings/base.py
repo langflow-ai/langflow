@@ -86,31 +86,29 @@ class Settings(BaseSettings):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
-                # logger.debug("No DATABASE_URL env variable, using sqlite database")
-                logger.debug("No DATABASE_URL env variable, using custom database from secrets of {}".format(os.environ["host"]))
+                logger.debug("No DATABASE_URL env variable, using sqlite database")
                 # Originally, we used sqlite:///./langflow.db
                 # so we need to migrate to the new format
                 # if there is a database in that location
-                # if not values["CONFIG_DIR"]:
-                #     raise ValueError(
-                #         "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
-                #     )
+                if not values["CONFIG_DIR"]:
+                    raise ValueError(
+                        "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
+                    )
 
-                # new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                # if Path("./langflow.db").exists():
-                #     if Path(new_path).exists():
-                #         logger.debug(f"Database already exists at {new_path}, using it")
-                #     else:
-                #         try:
-                #             logger.debug("Copying existing database to new location")
-                #             copy2("./langflow.db", new_path)
-                #             logger.debug(f"Copied existing database to {new_path}")
-                #         except Exception:
-                #             logger.error("Failed to copy database, using default path")
-                #             new_path = "./langflow.db"
+                new_path = f"{values['CONFIG_DIR']}/langflow.db"
+                if Path("./langflow.db").exists():
+                    if Path(new_path).exists():
+                        logger.debug(f"Database already exists at {new_path}, using it")
+                    else:
+                        try:
+                            logger.debug("Copying existing database to new location")
+                            copy2("./langflow.db", new_path)
+                            logger.debug(f"Copied existing database to {new_path}")
+                        except Exception:
+                            logger.error("Failed to copy database, using default path")
+                            new_path = "./langflow.db"
 
-                # value = f"sqlite:///{new_path}"
-                value = "mysql+pymysql://{}:{}@{}:3306/{}".format(os.environ["username"],os.environ["password"],os.environ["host"],os.environ["dbname"])
+                value = f"sqlite:///{new_path}"
 
         return value
 
