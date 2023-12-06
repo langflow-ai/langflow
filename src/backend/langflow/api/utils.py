@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
-from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -74,7 +73,6 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
     return frontend_node
 
 
-
 def is_valid_data(frontend_node, raw_template_data):
     """Check if the data is valid for processing."""
     return (
@@ -95,7 +93,6 @@ def update_template_values(frontend_template, raw_template):
             continue
 
         update_template_field(frontend_template, key, value_dict)
-
 
 
 def update_template_field(frontend_template, key, value_dict):
