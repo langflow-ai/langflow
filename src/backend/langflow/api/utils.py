@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, List
 
+from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -79,14 +80,9 @@ def is_valid_data(frontend_node, raw_template_data):
         frontend_node and "template" in frontend_node and raw_template_data and hasattr(raw_template_data, "template")
     )
 
-    """Check if the data is valid for processing."""
-    return (
-        frontend_node and "template" in frontend_node and raw_template_data and hasattr(raw_template_data, "template")
-    )
 
 
 def update_template_values(frontend_template, raw_template):
-    """Updates the frontend template with values from the raw template."""
     """Updates the frontend template with values from the raw template."""
     for key, value_dict in raw_template.items():
         if key == "code" or not isinstance(value_dict, dict):
@@ -96,7 +92,6 @@ def update_template_values(frontend_template, raw_template):
 
 
 def update_template_field(frontend_template, key, value_dict):
-    """Updates a specific field in the frontend template."""
     """Updates a specific field in the frontend template."""
     template_field = frontend_template.get(key)
     if not template_field or template_field.get("type") != value_dict.get("type"):
@@ -115,7 +110,15 @@ def update_template_field(frontend_template, key, value_dict):
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
-    return file_path if Path(file_path).exists() else ""
+
+    path = Path(file_path)
+    # Check for safety
+    # If the path is not in the cache dir, return empty string
+    # This is to prevent access to files outside the cache dir
+    # If the path is not a file, return empty string
+    if not path.exists() or not str(path).startswith(user_cache_dir("langflow", "langflow")):
+        return ""
+    return file_path
 
 
 def validate_is_component(flows: List["Flow"]):
