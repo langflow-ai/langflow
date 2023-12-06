@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
@@ -13,12 +14,20 @@ from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_services()
+    setup_llm_caching()
+    LangfuseInstance.update()
+    yield
+    teardown_services()
+
 def create_app():
     """Create the FastAPI app and include the router."""
 
     configure()
 
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     origins = ["*"]
 
     app.add_middleware(
@@ -43,14 +52,9 @@ def create_app():
     def health():
         return {"status": "ok"}
 
+
     app.include_router(router)
 
-    app.on_event("startup")(initialize_services)
-    app.on_event("startup")(setup_llm_caching)
-    app.on_event("startup")(LangfuseInstance.update)
-
-    app.on_event("shutdown")(teardown_services)
-    app.on_event("shutdown")(LangfuseInstance.teardown)
 
     return app
 
