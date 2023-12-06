@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langflow.services.deps import get_settings_service
-from langflow.services.plugins.base import BasePlugin
+from langflow.services.plugins.base import CallbackPlugin
 from loguru import logger
 
 
@@ -51,7 +51,7 @@ class LangfuseInstance:
         cls._instance = None
 
 
-class LangfusePlugin(BasePlugin):
+class LangfusePlugin(CallbackPlugin):
     def initialize(self):
         LangfuseInstance.create()
 

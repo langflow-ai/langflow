@@ -11,5 +11,8 @@ class BasePlugin:
     def get(self) -> Any:
         pass
 
+
+
+class CallbackPlugin(BasePlugin):
     def get_callback(self, _id=None):
         pass

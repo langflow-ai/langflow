@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Union
 
 from langflow.services.base import Service
-from langflow.services.plugins.base import BasePlugin
+from langflow.services.plugins.base import BasePlugin, CallbackPlugin
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -49,7 +49,7 @@ class PluginService(Service):
     def get_callbacks(self, _id=None):
         callbacks = []
         for plugin in self.plugins.values():
-            if hasattr(plugin, "get_callback"):
+            if isinstance(plugin, CallbackPlugin):
                 callback = plugin.get_callback(_id=_id)
                 if callback:
                     callbacks.append(callback)
