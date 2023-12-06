@@ -19,12 +19,10 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.mouse.down();
 
   await page.getByTestId("prompt-input-4-ExternalLink").click();
-  // await page.getByTestId("edit-prompt-sanitized").click();
 
   await page
     .getByTestId("modal-prompt-input-4")
     .fill("{prompt} example {prompt1}");
-  // await page.getByTestId("edit-prompt-sanitized").click();
 
   let value = await page.getByTestId("modal-prompt-input-4").inputValue();
 

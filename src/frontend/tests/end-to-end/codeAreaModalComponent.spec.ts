@@ -31,10 +31,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
 
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-    .click();
-  await page.getByTestId("genericModalBtnSave").click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
@@ -112,9 +108,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-      .click();
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 

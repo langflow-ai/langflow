@@ -36,11 +36,6 @@ test("FloatComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]/div'
-    )
-    .click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
@@ -381,11 +376,6 @@ test("FloatComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator(
-        '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]/div'
-      )
-      .click();
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 
