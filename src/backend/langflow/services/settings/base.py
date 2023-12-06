@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_CACHE_EXPIRE: int = 3600
 
-    PLUGIN_DIR: Optional[str] = None
+    # PLUGIN_DIR: Optional[str] = None
 
     LANGFUSE_SECRET_KEY: Optional[str] = None
     LANGFUSE_PUBLIC_KEY: Optional[str] = None

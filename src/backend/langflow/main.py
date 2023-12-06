@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.plugins.langfuse import LangfuseInstance
+from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
