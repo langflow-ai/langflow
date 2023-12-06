@@ -217,7 +217,7 @@ class ChatService(Service):
                 await self.close_connection(
                     client_id=client_id,
                     code=status.WS_1011_INTERNAL_ERROR,
-                    reason=str(exc)[:120],
+                    reason=str(exc),
                 )
             elif websocket.client_state == WebSocketState.DISCONNECTED:
                 self.disconnect(client_id)
