@@ -169,87 +169,12 @@ def test_csv_agent(client: TestClient, logged_in_headers):
         "show": True,
         "multiline": False,
         "value": "",
-        "suffixes": [".csv"],
-        "fileTypes": ["csv"],
+        "fileTypes": [".csv"],
         "password": False,
         "name": "path",
         "type": "file",
         "list": False,
         "file_path": None,
-        "advanced": False,
-        "info": "",
-    }
-    assert template["llm"] == {
-        "required": True,
-        "dynamic": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "llm",
-        "type": "BaseLanguageModel",
-        "list": False,
-        "advanced": False,
-        "display_name": "LLM",
-        "info": "",
-    }
-
-
-def test_initialize_agent(client: TestClient, logged_in_headers):
-    response = client.get("api/v1/all", headers=logged_in_headers)
-    assert response.status_code == 200
-    json_response = response.json()
-    agents = json_response["agents"]
-
-    initialize_agent = agents["AgentInitializer"]
-    assert initialize_agent["base_classes"] == ["AgentExecutor", "Callable"]
-    template = initialize_agent["template"]
-
-    assert template["agent"] == {
-        "required": True,
-        "dynamic": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "value": "zero-shot-react-description",
-        "password": False,
-        "options": [
-            "zero-shot-react-description",
-            "react-docstore",
-            "self-ask-with-search",
-            "conversational-react-description",
-            "openai-functions",
-            "openai-multi-functions",
-        ],
-        "name": "agent",
-        "type": "str",
-        "list": True,
-        "advanced": False,
-        "info": "",
-    }
-    assert template["memory"] == {
-        "required": False,
-        "dynamic": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "memory",
-        "type": "BaseChatMemory",
-        "list": False,
-        "advanced": False,
-        "info": "",
-    }
-    assert template["tools"] == {
-        "required": True,
-        "dynamic": False,
-        "placeholder": "",
-        "show": True,
-        "multiline": False,
-        "password": False,
-        "name": "tools",
-        "type": "Tool",
-        "list": True,
         "advanced": False,
         "info": "",
     }

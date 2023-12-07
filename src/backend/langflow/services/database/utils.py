@@ -1,21 +1,20 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from loguru import logger
-from contextlib import contextmanager
+
 from alembic.util.exc import CommandError
-from sqlmodel import Session
+from loguru import logger
+from sqlmodel import Session, text
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
+    from langflow.services.database.service import DatabaseService
 
 
-def initialize_database():
+def initialize_database(fix_migration: bool = False):
     logger.debug("Initializing database")
-    from langflow.services import service_manager, ServiceType
+    from langflow.services.deps import get_db_service
 
-    database_service: "DatabaseService" = service_manager.get(
-        ServiceType.DATABASE_SERVICE
-    )
+    database_service: "DatabaseService" = get_db_service()
     try:
         database_service.create_db_and_tables()
     except Exception as exc:
@@ -30,7 +29,7 @@ def initialize_database():
         logger.error(f"Error checking schema health: {exc}")
         raise RuntimeError("Error checking schema health") from exc
     try:
-        database_service.run_migrations()
+        database_service.run_migrations(fix=fix_migration)
     except CommandError as exc:
         # if "overlaps with other requested revisions" or "Can't locate revision identified by"
         # are not in the exception, we can't handle it
@@ -41,18 +40,16 @@ def initialize_database():
         # This means there's wrong revision in the DB
         # We need to delete the alembic_version table
         # and run the migrations again
-        logger.warning(
-            "Wrong revision in DB, deleting alembic_version table and running migrations again"
-        )
+        logger.warning("Wrong revision in DB, deleting alembic_version table and running migrations again")
         with session_getter(database_service) as session:
-            session.execute("DROP TABLE alembic_version")
-        database_service.run_migrations()
+            session.exec(text("DROP TABLE alembic_version"))
+        database_service.run_migrations(fix=fix_migration)
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
         if "already exists" not in str(exc):
-            logger.error(f"Error running migrations: {exc}")
-            raise RuntimeError("Error running migrations") from exc
+            logger.error(exc)
+        raise exc
     logger.debug("Database initialized")
 
 

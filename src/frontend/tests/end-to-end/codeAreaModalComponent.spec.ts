@@ -13,7 +13,7 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="sidePythonFunctionTool"]')
+    .getByTestId("toolsPythonFunctionTool")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -31,11 +31,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
 
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-    .click();
-  await page.locator('//*[@id="advancedIcon"]').click();
-  await page.locator('//*[@id="editAdvancedBtn"]').click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page.locator('//*[@id="showcode"]').click();
   expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
@@ -111,11 +108,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-      .click();
-    await page.locator('//*[@id="advancedIcon"]').click();
-    await page.locator('//*[@id="editAdvancedBtn"]').click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     await page.locator('//*[@id="showcode"]').click();
     expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();

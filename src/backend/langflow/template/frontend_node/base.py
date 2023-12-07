@@ -1,17 +1,13 @@
-from collections import defaultdict
 import re
-from typing import ClassVar, DefaultDict, Dict, List, Optional
+from collections import defaultdict
+from typing import ClassVar, Dict, List, Optional
 
-from pydantic import BaseModel, Field
-
-from langflow.template.frontend_node.formatter import field_formatters
-from langflow.template.frontend_node.constants import (
-    CLASSES_TO_REMOVE,
-    FORCE_SHOW_FIELDS,
-)
 from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
+from pydantic import BaseModel, Field
 
 
 class FieldFormatters(BaseModel):
@@ -49,9 +45,11 @@ class FrontendNode(BaseModel):
     name: str = ""
     display_name: str = ""
     documentation: str = ""
-    custom_fields: Optional[DefaultDict[str, List[str]]] = defaultdict(list)
+    custom_fields: Optional[Dict] = defaultdict(list)
     output_types: List[str] = []
+    full_path: Optional[str] = None
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
+
     beta: bool = False
     error: Optional[str] = None
 
@@ -67,11 +65,7 @@ class FrontendNode(BaseModel):
 
     def process_base_classes(self) -> None:
         """Removes unwanted base classes from the list of base classes."""
-        self.base_classes = [
-            base_class
-            for base_class in self.base_classes
-            if base_class not in CLASSES_TO_REMOVE
-        ]
+        self.base_classes = [base_class for base_class in self.base_classes if base_class not in CLASSES_TO_REMOVE]
 
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
@@ -130,9 +124,7 @@ class FrontendNode(BaseModel):
         return _type
 
     @staticmethod
-    def handle_special_field(
-        field, key: str, _type: str, SPECIAL_FIELD_HANDLERS
-    ) -> str:
+    def handle_special_field(field, key: str, _type: str, SPECIAL_FIELD_HANDLERS) -> str:
         """Handles special field by using the respective handler if present."""
         handler = SPECIAL_FIELD_HANDLERS.get(key)
         return handler(field) if handler else _type
@@ -142,13 +134,8 @@ class FrontendNode(BaseModel):
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
-            field.suffixes = [".json", ".yaml", ".yml"]
-            field.file_types = ["json", "yaml", "yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+            field.file_types = [".json", ".yaml", ".yml"]
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"
         return _type
 
@@ -159,9 +146,7 @@ class FrontendNode(BaseModel):
             field.value = value["default"]
 
     @staticmethod
-    def handle_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def handle_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
             field.value = """{"Authorization": "Bearer <token>"}"""
@@ -169,9 +154,7 @@ class FrontendNode(BaseModel):
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
     @staticmethod
-    def _handle_model_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def _handle_model_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to models."""
         model_dict = {
             "OpenAI": constants.OPENAI_MODELS,
@@ -184,9 +167,7 @@ class FrontendNode(BaseModel):
             field.is_list = True
 
     @staticmethod
-    def _handle_api_key_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def _handle_api_key_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to API keys."""
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
@@ -225,10 +206,7 @@ class FrontendNode(BaseModel):
     @staticmethod
     def should_be_password(key: str, show: bool) -> bool:
         """Determines whether the field should be a password field."""
-        return (
-            any(text in key.lower() for text in {"password", "token", "api", "key"})
-            and show
-        )
+        return any(text in key.lower() for text in {"password", "token", "api", "key"}) and show
 
     @staticmethod
     def should_be_multiline(key: str) -> bool:

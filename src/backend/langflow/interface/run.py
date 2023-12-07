@@ -1,12 +1,12 @@
-from typing import Dict, Tuple, Optional, Union
-from langflow.graph import Graph
-from loguru import logger
+from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
 
+from loguru import logger
 
-def build_sorted_vertices(
-    data_graph, user_id: Optional[Union[str, UUID]] = None
-) -> Tuple[Graph, Dict]:
+from langflow.graph import Graph
+
+
+async def build_sorted_vertices(data_graph, user_id: Optional[Union[str, UUID]] = None) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """
@@ -16,26 +16,10 @@ def build_sorted_vertices(
     sorted_vertices = graph.topological_sort()
     artifacts = {}
     for vertex in sorted_vertices:
-        vertex.build(user_id=user_id)
+        await vertex.build(user_id=user_id)
         if vertex.artifacts:
             artifacts.update(vertex.artifacts)
     return graph, artifacts
-
-
-def build_langchain_object(data_graph):
-    """
-    Build langchain object from data_graph.
-    """
-
-    logger.debug("Building langchain object")
-    nodes = data_graph["nodes"]
-    # Add input variables
-    # nodes = payload.extract_input_variables(nodes)
-    # Nodes, edges and root node
-    edges = data_graph["edges"]
-    graph = Graph(nodes, edges)
-
-    return graph.build()
 
 
 def get_memory_key(langchain_object):

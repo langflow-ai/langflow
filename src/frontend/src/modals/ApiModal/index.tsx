@@ -13,7 +13,10 @@ import {
 // import "ace-builds/webpack-resolver";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { EXPORT_CODE_DIALOG } from "../../constants/constants";
+import {
+  EXPORT_CODE_DIALOG,
+  LANGFLOW_SUPPORTED_TYPES,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { TemplateVariableType } from "../../types/api";
@@ -99,15 +102,9 @@ const ApiModal = forwardRef(
             (templateField) =>
               templateField.charAt(0) !== "_" &&
               node.data.node.template[templateField].show &&
-              (node.data.node.template[templateField].type === "str" ||
-                node.data.node.template[templateField].type === "bool" ||
-                node.data.node.template[templateField].type === "float" ||
-                node.data.node.template[templateField].type === "code" ||
-                node.data.node.template[templateField].type === "prompt" ||
-                node.data.node.template[templateField].type === "file" ||
-                node.data.node.template[templateField].type === "int" ||
-                node.data.node.template[templateField].type === "dict" ||
-                node.data.node.template[templateField].type === "NestedDict")
+              LANGFLOW_SUPPORTED_TYPES.has(
+                node.data.node.template[templateField].type
+              )
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);
@@ -146,9 +143,9 @@ const ApiModal = forwardRef(
       );
 
       if (existingTweak) {
-        existingTweak[tw][template["name"]] = changes as string;
+        existingTweak[tw][template["name"]!] = changes as string;
 
-        if (existingTweak[tw][template["name"]] == template.value) {
+        if (existingTweak[tw][template["name"]!] == template.value) {
           tweak.current.forEach((element) => {
             if (element[tw] && Object.keys(element[tw])?.length === 0) {
               tweak.current = tweak.current.filter((obj) => {
@@ -161,7 +158,7 @@ const ApiModal = forwardRef(
       } else {
         const newTweak = {
           [tw]: {
-            [template["name"]]: changes,
+            [template["name"]!]: changes,
           },
         } as uniqueTweakType;
         tweak.current.push(newTweak);

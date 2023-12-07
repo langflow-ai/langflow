@@ -1,5 +1,6 @@
-from collections import deque
 import copy
+from collections import deque
+from typing import Dict, List
 
 
 def find_last_node(nodes, edges):
@@ -28,23 +29,14 @@ def ungroup_node(group_node_data, base_flow):
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
-    updated_edges = get_updated_edges(
-        base_flow, g_nodes, g_edges, group_node_data["id"]
-    )
+    updated_edges = get_updated_edges(base_flow, g_nodes, g_edges, group_node_data["id"])
 
     # Update template values
     update_template(template, g_nodes)
 
-    nodes = [
-        n for n in base_flow["nodes"] if n["id"] != group_node_data["id"]
-    ] + g_nodes
+    nodes = [n for n in base_flow["nodes"] if n["id"] != group_node_data["id"]] + g_nodes
     edges = (
-        [
-            e
-            for e in base_flow["edges"]
-            if e["target"] != group_node_data["id"]
-            and e["source"] != group_node_data["id"]
-        ]
+        [e for e in base_flow["edges"] if e["target"] != group_node_data["id"] and e["source"] != group_node_data["id"]]
         + g_edges
         + updated_edges
     )
@@ -53,6 +45,38 @@ def ungroup_node(group_node_data, base_flow):
     base_flow["edges"] = edges
 
     return nodes
+
+
+def raw_topological_sort(nodes, edges) -> List[Dict]:
+    # Redefine the above function but using the nodes and self._edges
+    # which are dicts instead of Vertex and Edge objects
+    # nodes have an id, edges have a source and target keys
+    # return a list of node ids in topological order
+
+    # States: 0 = unvisited, 1 = visiting, 2 = visited
+    state = {node["id"]: 0 for node in nodes}
+    nodes_dict = {node["id"]: node for node in nodes}
+    sorted_vertices = []
+
+    def dfs(node):
+        if state[node] == 1:
+            # We have a cycle
+            raise ValueError("Graph contains a cycle, cannot perform topological sort")
+        if state[node] == 0:
+            state[node] = 1
+            for edge in edges:
+                if edge["source"] == node:
+                    dfs(edge["target"])
+            state[node] = 2
+            sorted_vertices.append(node)
+
+    # Visit each node
+    for node in nodes:
+        if state[node["id"]] == 0:
+            dfs(node["id"])
+
+    reverse_sorted = list(reversed(sorted_vertices))
+    return [nodes_dict[node_id] for node_id in reverse_sorted]
 
 
 def process_flow(flow_object):
@@ -66,11 +90,7 @@ def process_flow(flow_object):
         if node_id in processed_nodes:
             return
 
-        if (
-            node.get("data")
-            and node["data"].get("node")
-            and node["data"]["node"].get("flow")
-        ):
+        if node.get("data") and node["data"].get("node") and node["data"]["node"].get("flow"):
             process_flow(node["data"]["node"]["flow"]["data"])
             new_nodes = ungroup_node(node["data"], cloned_flow)
             # Add new nodes to the queue for future processing
@@ -79,7 +99,8 @@ def process_flow(flow_object):
         # Mark node as processed
         processed_nodes.add(node_id)
 
-    nodes_to_process = deque(cloned_flow["nodes"])
+    sorted_nodes_list = raw_topological_sort(cloned_flow["nodes"], cloned_flow["edges"])
+    nodes_to_process = deque(sorted_nodes_list)
 
     while nodes_to_process:
         node = nodes_to_process.popleft()
@@ -108,29 +129,23 @@ def update_template(template, g_nodes):
         if node_index != -1:
             display_name = None
             show = g_nodes[node_index]["data"]["node"]["template"][field]["show"]
-            advanced = g_nodes[node_index]["data"]["node"]["template"][field][
-                "advanced"
-            ]
+            advanced = g_nodes[node_index]["data"]["node"]["template"][field]["advanced"]
             if "display_name" in g_nodes[node_index]["data"]["node"]["template"][field]:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field][
-                    "display_name"
-                ]
+                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["display_name"]
             else:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field][
-                    "name"
-                ]
+                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["name"]
 
             g_nodes[node_index]["data"]["node"]["template"][field] = value
             g_nodes[node_index]["data"]["node"]["template"][field]["show"] = show
-            g_nodes[node_index]["data"]["node"]["template"][field][
-                "advanced"
-            ] = advanced
-            g_nodes[node_index]["data"]["node"]["template"][field][
-                "display_name"
-            ] = display_name
+            g_nodes[node_index]["data"]["node"]["template"][field]["advanced"] = advanced
+            g_nodes[node_index]["data"]["node"]["template"][field]["display_name"] = display_name
 
 
-def update_target_handle(new_edge, g_nodes, group_node_id):
+def update_target_handle(
+    new_edge,
+    g_nodes,
+    group_node_id,
+):
     """
     Updates the target handle of a given edge if it is a proxy node.
 
@@ -147,6 +162,8 @@ def update_target_handle(new_edge, g_nodes, group_node_id):
         proxy_id = target_handle["proxy"]["id"]
         if node := next((n for n in g_nodes if n["id"] == proxy_id), None):
             set_new_target_handle(proxy_id, new_edge, target_handle, node)
+        else:
+            raise ValueError(f"Group node {group_node_id} has an invalid target proxy node {proxy_id}")
     return new_edge
 
 

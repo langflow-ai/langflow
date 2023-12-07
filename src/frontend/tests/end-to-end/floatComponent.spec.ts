@@ -13,7 +13,7 @@ test("FloatComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="sideLlamaCpp"]')
+    .locator('//*[@id="llmsLlamaCpp"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -36,12 +36,8 @@ test("FloatComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]/div'
-    )
-    .click();
-  await page.locator('//*[@id="editAdvancedIcon"]').click();
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page.locator('//*[@id="showcache"]').click();
   expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
@@ -380,12 +376,8 @@ test("FloatComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator(
-        '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]/div'
-      )
-      .click();
-    await page.locator('//*[@id="editAdvancedIcon"]').click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     // showtemperature
     await page.locator('//*[@id="showtemperature"]').click();

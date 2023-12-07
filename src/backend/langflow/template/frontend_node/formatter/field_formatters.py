@@ -1,14 +1,10 @@
+import re
 from typing import ClassVar, Dict, Optional
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter.base import FieldFormatter
-import re
-
-from langflow.utils.constants import (
-    ANTHROPIC_MODELS,
-    CHAT_OPENAI_MODELS,
-    OPENAI_MODELS,
-)
+from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
 
 
 class OpenAIAPIKeyFormatter(FieldFormatter):
@@ -112,10 +108,7 @@ class PasswordFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
         key = field.name
         show = field.show
-        if (
-            any(text in key.lower() for text in {"password", "token", "api", "key"})
-            and show
-        ):
+        if any(text in key.lower() for text in {"password", "token", "api", "key"}) and show:
             field.password = True
 
 
@@ -155,11 +148,6 @@ class DictCodeFileFormatter(FieldFormatter):
         _type = value["type"]
         if "dict" in _type.lower() and key == "dict_":
             field.field_type = "file"
-            field.suffixes = [".json", ".yaml", ".yml"]
-            field.file_types = ["json", "yaml", "yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+            field.file_types = [".json", ".yaml", ".yml"]
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"
