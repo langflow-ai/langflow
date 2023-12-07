@@ -99,7 +99,7 @@ export default function ExtraSidebar(): JSX.Element {
       setFilterData(data);
       setSearch("");
     }
-  }, [getFilterEdge]);
+  }, [getFilterEdge, data]);
 
   useEffect(() => {
     handleSearchInput(search);
