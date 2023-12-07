@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Union
 
 from langflow.services.base import Service
 from langflow.services.plugins.base import BasePlugin, CallbackPlugin
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -18,6 +19,7 @@ class PluginService(Service):
         # plugin_dir = settings_service.settings.PLUGIN_DIR
         self.plugin_dir = os.path.dirname(__file__)
         self.plugins_base_module = "langflow.services.plugins"
+        self.load_plugins()
 
     def load_plugins(self):
         base_files = ["base.py", "service.py", "factory.py", "__init__.py"]
@@ -32,7 +34,7 @@ class PluginService(Service):
                         if inspect.isclass(attr) and issubclass(attr, BasePlugin) and attr not in [CallbackPlugin, BasePlugin]:
                             self.register_plugin(plugin_name, attr())
                 except Exception as exc:
-                    print(f"Error loading plugin {plugin_name}: {exc}")
+                    logger.error(f"Error loading plugin {plugin_name}: {exc}")
 
     def register_plugin(self, plugin_name, plugin_instance):
         self.plugins[plugin_name] = plugin_instance
