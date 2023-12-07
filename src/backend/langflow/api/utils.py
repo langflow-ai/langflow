@@ -1,5 +1,9 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, List
+from fastapi import HTTPException
+from langflow.services.store.schema import StoreComponentCreate
+from langflow.services.store.utils import get_lf_version_from_pypi
+import warnings
 
 from platformdirs import user_cache_dir
 
@@ -139,3 +143,19 @@ def validate_is_component(flows: List["Flow"]):
 def get_is_component_from_data(data: dict):
     """Returns True if the data is a component."""
     return data.get("is_component")
+
+
+async def check_langflow_version(component: StoreComponentCreate):
+    from langflow import __version__ as current_version
+
+    if not component.last_tested_version:
+        component.last_tested_version = current_version
+
+    langflow_version = get_lf_version_from_pypi()
+    if langflow_version is None:
+        raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
+    elif langflow_version != component.last_tested_version:
+        warnings.warn(
+            f"Your version of Langflow ({component.last_tested_version}) is outdated. "
+            f"Please update to the latest version ({langflow_version}) and try again."
+        )
