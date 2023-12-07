@@ -34,9 +34,10 @@ export default function TextAreaComponent({
           onChange(value);
         }}
       >
-        <div className="flex w-full items-center">
+        <div className="flex w-full items-center" data-testid={"div-" + id}>
           <Input
             id={id}
+            data-testid={id}
             value={value}
             disabled={disabled}
             className={
