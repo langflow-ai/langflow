@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: ./
-      dockerfile: ./cdk.Dockerfile
+      dockerfile: ./dev.Dockerfile
     env_file:
       - .env
     ports:
@@ -19,7 +19,7 @@ services:
   frontend:
     build:
       context: ./src/frontend
-      dockerfile: ./cdk.Dockerfile
+      dockerfile: ./dev.Dockerfile
       args:
         - BACKEND_URL=http://backend:7860
     environment:
