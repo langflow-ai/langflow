@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import (initialize_services,
-                                     initialize_settings_service)
+from langflow.services.utils import initialize_services, initialize_settings_service
 from langflow.utils.logger import configure, logger
 from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
@@ -97,25 +96,27 @@ def update_settings(
         settings_service.settings.update_settings(STORE=False)
 
 
-
 def version_callback(value: bool):
     """
     Show the version and exit.
     """
     from langflow import __version__
+
     if value:
         typer.echo(f"Langflow Version: {__version__}")
         raise typer.Exit()
 
+
 @app.callback()
 def main_entry_point(
-    version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True, help="Show the version and exit.")
+    version: bool = typer.Option(
+        None, "--version", callback=version_callback, is_eager=True, help="Show the version and exit."
+    ),
 ):
     """
     Main entry point for the Langflow CLI.
     """
     pass
-
 
 
 @app.command()

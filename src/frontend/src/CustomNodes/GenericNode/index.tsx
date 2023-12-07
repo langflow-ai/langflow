@@ -164,7 +164,7 @@ export default function GenericNode({
         )}
         <div>
           <div
-          data-testid={'div-generic-node'}
+            data-testid={"div-generic-node"}
             className={
               "generic-node-div-title " +
               (!showNode

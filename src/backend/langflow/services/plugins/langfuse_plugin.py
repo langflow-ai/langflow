@@ -68,7 +68,6 @@ class LangfusePlugin(CallbackPlugin):
 
         logger.debug("Initializing langfuse callback")
 
-
         try:
             langfuse_instance = self.get()
             if langfuse_instance is not None and hasattr(langfuse_instance, "trace"):
