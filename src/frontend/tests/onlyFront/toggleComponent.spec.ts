@@ -26,12 +26,8 @@ test("ToggleComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page.getByTestId("div-generic-node").click();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[1]/div'
-    )
-    .click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
@@ -57,11 +53,8 @@ test("ToggleComponent", async ({ page }) => {
   await page.locator('//*[@id="toggle-1"]').click();
   expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[1]/div'
-    )
-    .click();
+  await page.getByTestId("div-generic-node").click();
+
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
@@ -141,9 +134,8 @@ test("ToggleComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div')
-      .click();
+    await page.getByTestId("div-generic-node").click();
+
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 

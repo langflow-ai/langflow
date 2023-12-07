@@ -222,6 +222,7 @@ const EditNodeModal = forwardRef(
                                         .multiline ? (
                                       <TextAreaComponent
                                         id={"textarea-edit-" + index}
+                                        data-testid={"textarea-edit-" + index}
                                         disabled={disabled}
                                         editNode={true}
                                         value={
@@ -449,6 +450,9 @@ const EditNodeModal = forwardRef(
                                         handleOnNewValue(value, templateParam);
                                       }}
                                       id={"prompt-area-edit" + index}
+                                      data-testid={
+                                        "modal-prompt-input-" + index
+                                      }
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]
