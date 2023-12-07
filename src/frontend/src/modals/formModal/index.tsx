@@ -197,8 +197,8 @@ export default function FormModal({
     const isSecureProtocol =
       window.location.protocol === "https:" || window.location.port === "443";
     const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
-    // const host = isDevelopment ? "localhost:7860" : window.location.host;
-    const host = window.location.host;
+    const host = isDevelopment ? "localhost:7860" : window.location.host;
+
     const chatEndpoint = `/api/v1/chat/${chatId}`;
 
     return `${
