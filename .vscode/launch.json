@@ -16,7 +16,8 @@
         "debug"
       ],
       "jinja": true,
-      "justMyCode": true
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
     },
     {
       "name": "Python: Remote Attach",

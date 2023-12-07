@@ -111,7 +111,7 @@
     "@types/uuid": "^9.0.2",
     "@vitejs/plugin-react-swc": "^3.3.2",
     "autoprefixer": "^10.4.15",
-    "daisyui": "^3.6.3",
+    "daisyui": "^4.0.4",
     "postcss": "^8.4.29",
     "prettier": "^2.8.8",
     "prettier-plugin-organize-imports": "^3.2.3",
