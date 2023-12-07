@@ -3,6 +3,7 @@ from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -101,7 +102,7 @@ async def share_component(
 
 
 @router.patch("/components/{component_id}", response_model=CreateComponentResponse, status_code=201)
-async def update_component(
+async def update_shared_component(
     component_id: UUID,
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
