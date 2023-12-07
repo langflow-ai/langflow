@@ -81,7 +81,6 @@ def is_valid_data(frontend_node, raw_template_data):
     )
 
 
-
 def update_template_values(frontend_template, raw_template):
     """Updates the frontend template with values from the raw template."""
     for key, value_dict in raw_template.items():
@@ -110,8 +109,11 @@ def update_template_field(frontend_template, key, value_dict):
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
+    try:
+        path = Path(file_path)
+    except TypeError:
+        return ""
 
-    path = Path(file_path)
     # Check for safety
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
