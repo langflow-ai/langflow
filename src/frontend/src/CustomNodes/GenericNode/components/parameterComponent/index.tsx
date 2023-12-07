@@ -378,6 +378,7 @@ export default function ParameterComponent({
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
                 id={"textarea-" + index}
+                data-testid={"textarea-" + index}
               />
             ) : (
               <InputComponent
@@ -488,6 +489,7 @@ export default function ParameterComponent({
                 handleOnNewValue(e);
               }}
               id={"prompt-input-" + index}
+              data-testid={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
