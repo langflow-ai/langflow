@@ -260,12 +260,12 @@ def get_default_imports(code_string):
     """
     Returns a dictionary of default imports for the dynamic class constructor.
     """
+    typing_module = importlib.import_module("typing")
     default_imports = {
-        "Optional": importlib.import_module("typing").Optional,
-        "List": importlib.import_module("typing").List,
-        "Dict": importlib.import_module("typing").Dict,
-        "Union": importlib.import_module("typing").Union,
-        # Add more imports from the typing module as needed
+        "Optional": typing_module.Optional,
+        "List": typing_module.List,
+        "Dict": typing_module.Dict,
+        "Union": typing_module.Union,
     }
 
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
