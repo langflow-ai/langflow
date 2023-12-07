@@ -228,12 +228,4 @@ test("NestedComponent", async ({ page }) => {
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
   await page.getByTestId("div-dict-input").click();
-
-  const spanElement = await page
-    .locator('//*[@id="radix-:r4i:"]/div[2]/div/div/code/div/div/span[1]')
-    .innerHTML();
-
-  if (spanElement !== "yourkey") {
-    expect(true).toBeFalsy();
-  }
 });

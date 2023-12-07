@@ -181,7 +181,9 @@ export default function GenericModal({
           }
         })()}
       >
-        <span className="pr-2">{myModalTitle}</span>
+        <span className="pr-2" data-testid="modal-title">
+          {myModalTitle}
+        </span>
         <IconComponent
           name="FileText"
           className="h-6 w-6 pl-1 text-primary "

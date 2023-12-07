@@ -18,13 +18,15 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTestId("prompt-input-4-ExternalLink").click();
+  await page.getByTestId("prompt-input-0").click();
 
+  // await page.getByTestId("edit-prompt-sanitized").click();
+  // await page.getByTestId("modal-title").click();
   await page
-    .getByTestId("modal-prompt-input-4")
+    .getByTestId("modal-prompt-input-0")
     .fill("{prompt} example {prompt1}");
 
-  let value = await page.getByTestId("modal-prompt-input-4").inputValue();
+  let value = await page.getByTestId("modal-prompt-input-0").inputValue();
 
   if (value != "{prompt} example {prompt1}") {
     expect(false).toBeTruthy();
@@ -40,9 +42,9 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="genericModalBtnSave"]').click();
+  await page.getByTestId("genericModalBtnSave").click();
 
-  await page.getByTestId("textarea-4-ExternalLink").click();
+  await page.getByTestId("div-textarea-5").click();
   await page.getByTestId("text-area-modal").fill("prompt_value_!@#!@#");
 
   value = await page.getByTestId("text-area-modal").inputValue();
@@ -53,7 +55,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.getByTestId("genericModalBtnSave").click();
 
-  await page.getByTestId("textarea-5-ExternalLink").click();
+  await page.getByTestId("div-textarea-6").click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_name_test_123123!@#!@#");
@@ -143,12 +145,6 @@ test("PromptTemplateComponent", async ({ page }) => {
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
-
-    await page
-      .locator(
-        '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]'
-      )
-      .click();
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
