@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     yield
     teardown_services()
 
+
 def create_app():
     """Create the FastAPI app and include the router."""
 
@@ -52,9 +53,7 @@ def create_app():
     def health():
         return {"status": "ok"}
 
-
     app.include_router(router)
-
 
     return app
 

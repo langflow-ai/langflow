@@ -31,7 +31,11 @@ class PluginService(Service):
                     mod = importlib.import_module(module_path)
                     for attr_name in dir(mod):
                         attr = getattr(mod, attr_name)
-                        if inspect.isclass(attr) and issubclass(attr, BasePlugin) and attr not in [CallbackPlugin, BasePlugin]:
+                        if (
+                            inspect.isclass(attr)
+                            and issubclass(attr, BasePlugin)
+                            and attr not in [CallbackPlugin, BasePlugin]
+                        ):
                             self.register_plugin(plugin_name, attr())
                 except Exception as exc:
                     logger.error(f"Error loading plugin {plugin_name}: {exc}")
@@ -60,5 +64,3 @@ class PluginService(Service):
                 if callback:
                     callbacks.append(callback)
         return callbacks
-
-
