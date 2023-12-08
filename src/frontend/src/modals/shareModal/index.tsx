@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -11,6 +12,7 @@ import {
   getStoreComponents,
   getStoreTags,
   saveFlowStore,
+  updateFlowStore,
 } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import {
@@ -50,7 +52,9 @@ export default function ShareModal({
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
   const [sharePublic, setSharePublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
+  const [unavaliableNames, setUnavaliableNames] = useState<
+    { id: string; name: string }[]
+  >([]);
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
   const [loadingNames, setLoadingNames] = useState(false);
@@ -74,17 +78,18 @@ export default function ShareModal({
 
   async function handleGetNames() {
     setLoadingNames(true);
-    const unavaliableNames: Array<string> = [];
-    await getStoreComponents({ fields: ["name"], filterByUser: true }).then(
-      (res) => {
-        res?.results?.forEach((element: any) => {
-          if (element.is_component === is_component)
-            unavaliableNames.push(element.name);
-        });
-        setUnavaliableNames(unavaliableNames);
-        setLoadingNames(false);
-      }
-    );
+    const unavaliableNames: Array<{ id: string; name: string }> = [];
+    await getStoreComponents({
+      fields: ["name", "id"],
+      filterByUser: true,
+    }).then((res) => {
+      res?.results?.forEach((element: any) => {
+        if (element.is_component === is_component)
+          unavaliableNames.push({ name: element.name, id: element.id });
+      });
+      setUnavaliableNames(unavaliableNames);
+      setLoadingNames(false);
+    });
   }
 
   useEffect(() => {
@@ -92,7 +97,7 @@ export default function ShareModal({
     setDescription(component?.description ?? "");
   }, [component, open, internalOpen]);
 
-  const handleShareComponent = async () => {
+  const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
     const flow: FlowType = checked
@@ -113,28 +118,42 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    function successShare() {
+      if (is_component) {
+        addFlow(true, flow);
+      }
+      setSuccessData({
+        title: `${nameComponent} shared successfully`,
+      });
+    }
 
-    saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
-      () => {
-        if (is_component) {
-          addFlow(true, flow);
+    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    if (!update)
+      saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
+        successShare,
+        (err) => {
+          setErrorData({
+            title: "Error sharing " + is_component ? "component" : "flow",
+            list: [err["response"]["data"]["detail"]],
+          });
         }
-        setSuccessData({
-          title: `${nameComponent} shared successfully`,
-        });
-      },
-      (err) => {
+      );
+    else
+      updateFlowStore(
+        flow!,
+        getTagsIds(selectedTags, tags),
+        sharePublic,
+        unavaliableNames.find((e) => e.name === name)!.id
+      ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
           list: [err["response"]["data"]["detail"]],
         });
-      }
-    );
+      });
   };
 
   const handleUpdateComponent = () => {
-    handleShareComponent();
+    handleShareComponent(true);
     if (setOpen) setOpen(false);
     else internalSetOpen(false);
   };
@@ -142,7 +161,7 @@ export default function ShareModal({
   let modalConfirmationButton = useMemo(() => {
     return (
       <>
-        {unavaliableNames.includes(name) ? (
+        {unavaliableNames.find((element) => element.name === name) ? (
           <ConfirmationModal
             title="Update"
             titleHeader={name}
@@ -168,8 +187,18 @@ export default function ShareModal({
             <ConfirmationModal.Trigger>
               <div className="text-right">
                 <Button disabled={loadingNames} type="button">
-                  {is_component ? "Save and " : ""}Share{" "}
-                  {!is_component ? "Flow" : ""}
+                  {loadingNames ? (
+                    <>
+                      <div className="center w-16">
+                        <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                      {!is_component && !loadingNames ? "Flow" : ""}
+                    </>
+                  )}
                 </Button>
               </div>
             </ConfirmationModal.Trigger>
@@ -185,8 +214,18 @@ export default function ShareModal({
               }}
               type="button"
             >
-              {is_component ? "Save and " : ""}Share{" "}
-              {!is_component ? "Flow" : ""}
+              {loadingNames ? (
+                <>
+                  <div className="center w-16">
+                    <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                  {!is_component && !loadingNames ? "Flow" : ""}
+                </>
+              )}
             </Button>
           </>
         )}
@@ -214,7 +253,7 @@ export default function ShareModal({
       <BaseModal.Content>
         <EditFlowSettings
           name={name}
-          invalidNameList={unavaliableNames}
+          invalidNameList={unavaliableNames.map((element) => element.name)}
           description={description}
           setName={setName}
           setDescription={setDescription}
