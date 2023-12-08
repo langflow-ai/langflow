@@ -1,8 +1,9 @@
-import warnings
 from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
+from langflow.api.utils import check_langflow_version
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_store_service
@@ -16,7 +17,6 @@ from langflow.services.store.schema import (
     UsersLikesResponse,
 )
 from langflow.services.store.service import StoreService
-from langflow.services.store.utils import get_lf_version_from_pypi
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 
@@ -70,66 +70,26 @@ async def check_if_store_has_api_key(
 async def share_component(
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
+    store_api_key: str = Depends(get_user_store_api_key),
 ):
     try:
-        # Verify if this is the latest version of Langflow
-        # If not, raise an error
-        if not component.last_tested_version:
-            # Get the local version of Langflow
-            from langflow import __version__ as current_version
-
-            component.last_tested_version = current_version
-        langflow_version = get_lf_version_from_pypi()
-        if langflow_version is None:
-            raise HTTPException(
-                status_code=500,
-                detail="Unable to verify the latest version of Langflow",
-            )
-        elif langflow_version != component.last_tested_version:
-            # If the user is using an older version of Langflow, we need to raise an error
-            # raise ValueError(
-            warnings.warn(
-                f"Your version of Langflow ({component.last_tested_version}) is outdated."
-                f" Please update to the latest version ({langflow_version}) and try again."
-            )
-
-        result = await store_service.upload(store_api_Key, component)
+        await check_langflow_version(component)
+        result = await store_service.upload(store_api_key, component)
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.patch("/components/{component_id}", response_model=CreateComponentResponse, status_code=201)
-async def update_component(
+async def update_shared_component(
     component_id: UUID,
     component: StoreComponentCreate,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
+    store_api_key: str = Depends(get_user_store_api_key),
 ):
     try:
-        # Verify if this is the latest version of Langflow
-        # If not, raise an error
-        if not component.last_tested_version:
-            # Get the local version of Langflow
-            from langflow import __version__ as current_version
-
-            component.last_tested_version = current_version
-        langflow_version = get_lf_version_from_pypi()
-        if langflow_version is None:
-            raise HTTPException(
-                status_code=500,
-                detail="Unable to verify the latest version of Langflow",
-            )
-        elif langflow_version != component.last_tested_version:
-            # If the user is using an older version of Langflow, we need to raise an error
-            # raise ValueError(
-            warnings.warn(
-                f"Your version of Langflow ({component.last_tested_version}) is outdated."
-                f" Please update to the latest version ({langflow_version}) and try again."
-            )
-
-        result = await store_service.update(store_api_Key, component_id, component)
+        await check_langflow_version(component)
+        result = await store_service.update(store_api_key, component_id, component)
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -149,7 +109,7 @@ async def get_components(
     page: int = 1,
     limit: int = 10,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: Optional[str] = Depends(get_optional_user_store_api_key),
+    store_api_key: Optional[str] = Depends(get_optional_user_store_api_key),
 ):
     try:
         return await store_service.get_list_component_response_model(
@@ -164,7 +124,7 @@ async def get_components(
             filter_by_user=filter_by_user,
             page=page,
             limit=limit,
-            store_api_key=store_api_Key,
+            store_api_key=store_api_key,
         )
     except CustomException as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -176,10 +136,10 @@ async def get_components(
 async def download_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
+    store_api_key: str = Depends(get_user_store_api_key),
 ):
     try:
-        component = await store_service.download(store_api_Key, component_id)
+        component = await store_service.download(store_api_key, component_id)
     except CustomException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -206,10 +166,10 @@ async def get_tags(
 @router.get("/users/likes", response_model=List[UsersLikesResponse])
 async def get_list_of_components_liked_by_user(
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
+    store_api_key: str = Depends(get_user_store_api_key),
 ):
     try:
-        return await store_service.get_user_likes(store_api_Key)
+        return await store_service.get_user_likes(store_api_key)
     except CustomException as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -220,11 +180,11 @@ async def get_list_of_components_liked_by_user(
 async def like_component(
     component_id: UUID,
     store_service: StoreService = Depends(get_store_service),
-    store_api_Key: str = Depends(get_user_store_api_key),
+    store_api_key: str = Depends(get_user_store_api_key),
 ):
     try:
-        result = await store_service.like_component(store_api_Key, str(component_id))
-        likes_count = await store_service.get_component_likes_count(str(component_id), store_api_Key)
+        result = await store_service.like_component(store_api_key, str(component_id))
+        likes_count = await store_service.get_component_likes_count(str(component_id), store_api_key)
 
         return UsersLikesResponse(likes_count=likes_count, liked_by_user=result)
     except CustomException as exc:
