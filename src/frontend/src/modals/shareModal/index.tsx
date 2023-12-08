@@ -92,7 +92,7 @@ export default function ShareModal({
     setDescription(component?.description ?? "");
   }, [component, open, internalOpen]);
 
-  const handleShareComponent = () => {
+  const handleShareComponent = async () => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
     const flow: FlowType = checked
@@ -113,7 +113,7 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
 
     saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
       () => {
