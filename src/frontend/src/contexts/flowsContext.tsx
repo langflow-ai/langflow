@@ -670,7 +670,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        console.log(tabsState);
+        console.log(flows.find((flow) => flow.id === newFlow.id));
       }
     } catch (err) {
       setErrorData({
