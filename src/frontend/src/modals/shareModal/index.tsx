@@ -54,7 +54,6 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
-  const [nameIsAvailable, setNameIsAvailable] = useState(false);
   const [loadingNames, setLoadingNames] = useState(false);
 
   useEffect(() => {
@@ -114,7 +113,7 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    await saveFlow(flow!, true);
 
     saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
       () => {
@@ -213,7 +212,7 @@ export default function ShareModal({
         )}
       </>
     );
-  }, [unavaliableNames, name, loadingNames]);
+  }, [unavaliableNames, name, loadingNames, handleShareComponent]);
 
   return (
     <BaseModal
