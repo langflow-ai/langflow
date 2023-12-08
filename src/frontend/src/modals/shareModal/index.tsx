@@ -131,8 +131,6 @@ export default function ShareModal({
       });
     }
 
-    await saveFlow({ ...flows.find((flow) => flow.id === tabId)! }, true);
-
     if (!update)
       saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
         successShare,
