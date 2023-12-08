@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -56,6 +57,9 @@ export default function ShareModal({
   >([]);
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
+  const [nameIsAvailable, setNameIsAvailable] = useState(false);
+  const [loadingNames, setLoadingNames] = useState(false);
+
   useEffect(() => {
     if (open || internalOpen) {
       if (hasApiKey && hasStore) {
@@ -72,16 +76,20 @@ export default function ShareModal({
       setLoadingTags(false);
     });
   }
-  function handleGetNames() {
+
+  async function handleGetNames() {
+    setLoadingNames(true);
     const unavaliableNames: Array<{ id: string; name: string }> = [];
-    getStoreComponents({ fields: ["name", "id"], filterByUser: true }).then(
-      (res) => {
-        res?.results?.forEach((element: any) => {
-          unavaliableNames.push({ name: element.name, id: element.id });
-        });
-        setUnavaliableNames(unavaliableNames);
-      }
-    );
+    await getStoreComponents({
+      fields: ["name", "id"],
+      filterByUser: true,
+    }).then((res) => {
+      res?.results?.forEach((element: any) => {
+        unavaliableNames.push({ name: element.name, id: element.id });
+      });
+      setUnavaliableNames(unavaliableNames);
+      setLoadingNames(false);
+    });
   }
 
   useEffect(() => {
@@ -89,7 +97,7 @@ export default function ShareModal({
     setDescription(component?.description ?? "");
   }, [component, open, internalOpen]);
 
-  const handleShareComponent = (update = false) => {
+  const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
     const flow: FlowType = checked
@@ -119,7 +127,7 @@ export default function ShareModal({
       });
     }
 
-    saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
     if (!update)
       saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
         successShare,
@@ -178,9 +186,19 @@ export default function ShareModal({
             </ConfirmationModal.Content>
             <ConfirmationModal.Trigger>
               <div className="text-right">
-                <Button type="button">
-                  {is_component ? "Save and " : ""}Share{" "}
-                  {!is_component ? "Flow" : ""}
+                <Button disabled={loadingNames} type="button">
+                  {loadingNames ? (
+                    <>
+                      <div className="center w-16">
+                        <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                      {!is_component && !loadingNames ? "Flow" : ""}
+                    </>
+                  )}
                 </Button>
               </div>
             </ConfirmationModal.Trigger>
@@ -188,6 +206,7 @@ export default function ShareModal({
         ) : (
           <>
             <Button
+              disabled={loadingNames}
               onClick={() => {
                 handleShareComponent();
                 if (setOpen) setOpen(false);
@@ -195,14 +214,24 @@ export default function ShareModal({
               }}
               type="button"
             >
-              {is_component ? "Save and " : ""}Share{" "}
-              {!is_component ? "Flow" : ""}
+              {loadingNames ? (
+                <>
+                  <div className="center w-16">
+                    <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                  {!is_component && !loadingNames ? "Flow" : ""}
+                </>
+              )}
             </Button>
           </>
         )}
       </>
     );
-  }, [unavaliableNames, name]);
+  }, [unavaliableNames, name, loadingNames]);
 
   return (
     <BaseModal
