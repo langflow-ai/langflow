@@ -36,9 +36,6 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
           )}
-          {invalidNameList?.includes(name ?? "") && (
-            <span className="edit-flow-span">Name already in use</span>
-          )}
         </div>
         <Input
           className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
