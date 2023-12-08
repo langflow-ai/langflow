@@ -53,6 +53,9 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
+  const [nameIsAvailable, setNameIsAvailable] = useState(false);
+  const [loadingNames, setLoadingNames] = useState(false);
+
   useEffect(() => {
     if (open || internalOpen) {
       if (hasApiKey && hasStore) {
@@ -69,14 +72,19 @@ export default function ShareModal({
       setLoadingTags(false);
     });
   }
-  function handleGetNames() {
+
+  async function handleGetNames() {
+    setLoadingNames(true);
     const unavaliableNames: Array<string> = [];
-    getStoreComponents({ fields: ["name"], filterByUser: true }).then((res) => {
-      res?.results?.forEach((element: any) => {
-        unavaliableNames.push(element.name);
-      });
-      setUnavaliableNames(unavaliableNames);
-    });
+    await getStoreComponents({ fields: ["name"], filterByUser: true }).then(
+      (res) => {
+        res?.results?.forEach((element: any) => {
+          unavaliableNames.push(element.name);
+        });
+        setUnavaliableNames(unavaliableNames);
+        setLoadingNames(false);
+      }
+    );
   }
 
   useEffect(() => {
@@ -159,7 +167,7 @@ export default function ShareModal({
             </ConfirmationModal.Content>
             <ConfirmationModal.Trigger>
               <div className="text-right">
-                <Button type="button">
+                <Button disabled={loadingNames} type="button">
                   {is_component ? "Save and " : ""}Share{" "}
                   {!is_component ? "Flow" : ""}
                 </Button>
@@ -169,6 +177,7 @@ export default function ShareModal({
         ) : (
           <>
             <Button
+              disabled={loadingNames}
               onClick={() => {
                 handleShareComponent();
                 if (setOpen) setOpen(false);
@@ -183,7 +192,7 @@ export default function ShareModal({
         )}
       </>
     );
-  }, [unavaliableNames]);
+  }, [unavaliableNames, name, loadingNames]);
 
   return (
     <BaseModal
