@@ -26,6 +26,7 @@ export type FlowsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
+  saveCurrentFlow: () => void;
   uploadFlow: ({
     newProject,
     file,
