@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -168,8 +169,18 @@ export default function ShareModal({
             <ConfirmationModal.Trigger>
               <div className="text-right">
                 <Button disabled={loadingNames} type="button">
-                  {is_component ? "Save and " : ""}Share{" "}
-                  {!is_component ? "Flow" : ""}
+                  {loadingNames ? (
+                    <>
+                      <div className="center w-16">
+                        <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                      {!is_component && !loadingNames ? "Flow" : ""}
+                    </>
+                  )}
                 </Button>
               </div>
             </ConfirmationModal.Trigger>
@@ -185,8 +196,18 @@ export default function ShareModal({
               }}
               type="button"
             >
-              {is_component ? "Save and " : ""}Share{" "}
-              {!is_component ? "Flow" : ""}
+              {loadingNames ? (
+                <>
+                  <div className="center w-16">
+                    <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {is_component && !loadingNames ? "Save and " : ""}Share{" "}
+                  {!is_component && !loadingNames ? "Flow" : ""}
+                </>
+              )}
             </Button>
           </>
         )}
