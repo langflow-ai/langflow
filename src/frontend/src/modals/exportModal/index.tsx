@@ -68,7 +68,7 @@ const ExportModal = forwardRef(
                 downloadFlow(
                   {
                     id: tabId,
-                    data: reactFlowInstance?.toObject()!,
+                    data: flow!.data!,
                     description,
                     name,
                     last_tested_version: version,
@@ -85,7 +85,7 @@ const ExportModal = forwardRef(
                 downloadFlow(
                   removeApiKeys({
                     id: tabId,
-                    data: reactFlowInstance?.toObject()!,
+                    data: flow!.data!,
                     description,
                     name,
                     last_tested_version: version,

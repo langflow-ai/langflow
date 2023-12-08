@@ -26,7 +26,7 @@ export default function ComponentsComponent({
   useEffect(() => {
     if (isLoading) return;
     const all = flows
-      .filter((f) => f.is_component === is_component)
+      .filter((f) => (f.is_component ?? false) === is_component)
       .sort((a, b) => {
         if (a?.updated_at && b?.updated_at) {
           return (
@@ -179,7 +179,8 @@ export default function ComponentsComponent({
               pageSize={pageSize}
               rowsCount={[10, 20, 50, 100]}
               totalRowsCount={
-                flows.filter((f) => f.is_component === is_component).length
+                flows.filter((f) => (f.is_component ?? false) === is_component)
+                  .length
               }
               paginate={(pageSize, pageIndex) => {
                 setPageIndex(pageIndex);

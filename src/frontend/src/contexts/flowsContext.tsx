@@ -82,6 +82,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
   setTabsState: (state: FlowsState) => {},
+  saveCurrentFlow: () => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -638,9 +639,14 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  async function saveFlow(newFlow: FlowType, silent?: boolean) {
-    if (newFlow?.data?.nodes?.length === 0) return;
+  function saveCurrentFlow() {
+    const currentFlow = flows.find((flow) => flow.id === tabId);
+    if (currentFlow && reactFlowInstance && currentFlow.data) {
+      updateFlow({ ...currentFlow, data: reactFlowInstance?.toObject()! });
+    }
+  }
 
+  async function saveFlow(newFlow: FlowType, silent?: boolean) {
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
@@ -712,6 +718,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
+        saveCurrentFlow,
         hardReset,
         tabId,
         setTabId,

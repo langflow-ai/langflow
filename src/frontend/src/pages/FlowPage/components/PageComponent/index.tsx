@@ -60,7 +60,6 @@ export default function Page({
   let {
     updateFlow,
     uploadFlow,
-    addFlow,
     getNodeId,
     paste,
     lastCopiedSelection,
@@ -69,7 +68,7 @@ export default function Page({
     saveFlow,
     setTabsState,
     tabId,
-    flows,
+    saveCurrentFlow,
   } = useContext(FlowsContext);
   const {
     types,
@@ -88,6 +87,12 @@ export default function Page({
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
+
+  const saveCurrentFlowTimeout = () => {
+    setTimeout(() => {
+      saveCurrentFlow();
+    }, 500); // need to do this because ReactFlow is not asynchronous.
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -132,6 +137,7 @@ export default function Page({
           takeSnapshot();
           deleteNode(lastSelection.nodes.map((node) => node.id));
           deleteEdge(lastSelection.edges.map((edge) => edge.id));
+          saveCurrentFlowTimeout();
         }
       }
     };
@@ -147,7 +153,12 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
+  }, [
+    lastCopiedSelection,
+    lastSelection,
+    takeSnapshot,
+    saveCurrentFlowTimeout,
+  ]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
@@ -190,16 +201,8 @@ export default function Page({
   }, [flow, reactFlowInstance]);
 
   useEffect(() => {
-    const index = flows.findIndex((flowId) => flowId.id === flow.id);
-
     const interval = setInterval(() => {
-      saveFlow(
-        {
-          ...flows[index]!,
-          data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
-        },
-        true
-      );
+      saveFlow(flow, true);
     }, 30000);
 
     return () => {
@@ -209,10 +212,6 @@ export default function Page({
 
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
-      updateFlow({
-        ...flow!,
-        data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
-      });
       onEdgesChange(change);
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
@@ -220,18 +219,18 @@ export default function Page({
           ...prev,
           [tabId]: {
             ...prev[tabId],
-            isPending: false,
+            isPending: true,
           },
         };
       });
+      saveCurrentFlowTimeout();
     },
-    [onEdgesChange, setNodes, setTabsState, tabId]
+    [onEdgesChange, setNodes, setTabsState, saveCurrentFlowTimeout, tabId]
   );
 
   const onNodesChangeMod = useCallback(
     (change: NodeChange[]) => {
       const changeString = JSON.stringify(change);
-
       if (changeString !== nodesOnFlow) {
         onNodesChange(change);
         updateNodeFlow(changeString);
@@ -245,9 +244,10 @@ export default function Page({
             },
           };
         });
+        saveCurrentFlowTimeout();
       }
     },
-    [onNodesChange, setTabsState, tabId, updateNodeFlow]
+    [onNodesChange, setTabsState, tabId, updateNodeFlow, saveCurrentFlowTimeout]
   );
 
   function updateNodeFlow(changeString: string) {
@@ -283,7 +283,7 @@ export default function Page({
         return newX;
       });
     },
-    [setEdges, setNodes, takeSnapshot]
+    [setEdges, setNodes, takeSnapshot, addEdge]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -394,10 +394,7 @@ export default function Page({
 
     return () => {
       if (tabsState && tabsState[flow.id]?.isPending) {
-        saveFlow({
-          ...flow!,
-          data: reactFlowInstance ? reactFlowInstance!.toObject() : flow!.data,
-        });
+        saveFlow(flow);
       }
     };
   }, []);
@@ -475,11 +472,7 @@ export default function Page({
                 <ReactFlow
                   nodes={nodes}
                   onMove={() => {
-                    if (reactFlowInstance)
-                      updateFlow({
-                        ...flow,
-                        data: reactFlowInstance.toObject(),
-                      });
+                    saveCurrentFlowTimeout();
                   }}
                   edges={edges}
                   onNodesChange={onNodesChangeMod}

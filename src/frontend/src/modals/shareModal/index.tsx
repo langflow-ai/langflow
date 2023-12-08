@@ -8,6 +8,7 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
+import { typesContext } from "../../contexts/typesContext";
 import {
   getStoreComponents,
   getStoreTags,
@@ -41,6 +42,7 @@ export default function ShareModal({
   const { version, addFlow } = useContext(FlowsContext);
   const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [checked, setChecked] = useState(false);
   const [name, setName] = useState(component?.name ?? "");
   const [description, setDescription] = useState(component?.description ?? "");
@@ -84,7 +86,8 @@ export default function ShareModal({
       filterByUser: true,
     }).then((res) => {
       res?.results?.forEach((element: any) => {
-        unavaliableNames.push({ name: element.name, id: element.id });
+        if ((element.is_component ?? false) === is_component)
+          unavaliableNames.push({ name: element.name, id: element.id });
       });
       setUnavaliableNames(unavaliableNames);
       setLoadingNames(false);
@@ -127,6 +130,8 @@ export default function ShareModal({
         title: `${nameComponent} shared successfully`,
       });
     }
+
+    await saveFlow({ ...flows.find((flow) => flow.id === tabId)! }, true);
 
     if (!update)
       saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
