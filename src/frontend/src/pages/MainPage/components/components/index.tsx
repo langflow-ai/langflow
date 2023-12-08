@@ -20,6 +20,7 @@ export default function ComponentsComponent({
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
+  const [loadingScreen, setLoadingScreen] = useState(true);
 
   const navigate = useNavigate();
 
@@ -89,6 +90,12 @@ export default function ComponentsComponent({
     setPageSize(10);
   }
 
+  useEffect(() => {
+    setTimeout(() => {
+      setLoadingScreen(false);
+    }, 600);
+  }, []);
+
   return (
     <CardsWrapComponent
       onFileDrop={onFileDrop}
@@ -96,7 +103,7 @@ export default function ComponentsComponent({
     >
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
-          {!isLoading && data.length === 0 ? (
+          {!loadingScreen && data.length === 0 ? (
             <div className="mt-6 flex w-full items-center justify-center text-center">
               <div className="flex-max-width h-full flex-col">
                 <div className="flex w-full flex-col gap-4">
@@ -125,7 +132,7 @@ export default function ComponentsComponent({
             </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-              {!isLoading || data?.length > 0 ? (
+              {loadingScreen === false && data?.length > 0 ? (
                 data?.map((item, idx) => (
                   <CollectionCardComponent
                     onDelete={() => {
@@ -171,7 +178,7 @@ export default function ComponentsComponent({
             </div>
           )}
         </div>
-        {!isLoading && data.length > 0 && (
+        {!loadingScreen && data.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
               storeComponent={true}
