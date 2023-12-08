@@ -294,7 +294,7 @@ export type ConfirmationModalType = {
   ];
   icon: string;
   data?: any;
-  index: number;
+  index?: number;
   onConfirm: (index, data) => void;
   open?: boolean;
   onClose?: (close: boolean) => void;

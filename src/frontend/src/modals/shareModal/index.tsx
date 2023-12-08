@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
@@ -18,6 +18,7 @@ import {
   removeFileNameFromComponents,
 } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
+import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
 
 export default function ShareModal({
@@ -124,6 +125,66 @@ export default function ShareModal({
     );
   };
 
+  const handleUpdateComponent = () => {
+    handleShareComponent();
+    if (setOpen) setOpen(false);
+    else internalSetOpen(false);
+  };
+
+  let modalConfirmationButton = useMemo(() => {
+    return (
+      <>
+        {unavaliableNames.includes(name) ? (
+          <ConfirmationModal
+            title="Update"
+            titleHeader={name}
+            modalContentTitle="Attention!"
+            cancelText="Cancel"
+            confirmationText="Update"
+            icon={"Group"}
+            onConfirm={() => {
+              handleUpdateComponent();
+            }}
+            size={"x-small"}
+          >
+            <ConfirmationModal.Content>
+              <span>
+                Are you sure you want to update this{" "}
+                {nameComponent.toLowerCase()}?
+              </span>
+              <br></br>
+              <span className=" text-xs text-destructive ">
+                Warning: This action cannot be undone.
+              </span>
+            </ConfirmationModal.Content>
+            <ConfirmationModal.Trigger>
+              <div className="text-right">
+                <Button type="button">
+                  {is_component ? "Save and " : ""}Share{" "}
+                  {!is_component ? "Flow" : ""}
+                </Button>
+              </div>
+            </ConfirmationModal.Trigger>
+          </ConfirmationModal>
+        ) : (
+          <>
+            <Button
+              onClick={() => {
+                handleShareComponent();
+                if (setOpen) setOpen(false);
+                else internalSetOpen(false);
+              }}
+              type="button"
+            >
+              {is_component ? "Save and " : ""}Share{" "}
+              {!is_component ? "Flow" : ""}
+            </Button>
+          </>
+        )}
+      </>
+    );
+  }, [unavaliableNames]);
+
   return (
     <BaseModal
       size="smaller-h-full"
@@ -191,17 +252,7 @@ export default function ShareModal({
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <Button
-          disabled={unavaliableNames.includes(name)}
-          onClick={() => {
-            handleShareComponent();
-            if (setOpen) setOpen(false);
-            else internalSetOpen(false);
-          }}
-          type="button"
-        >
-          {is_component ? "Save and " : ""}Share {!is_component ? "Flow" : ""}
-        </Button>
+        <>{modalConfirmationButton}</>
       </BaseModal.Footer>
     </BaseModal>
   );
