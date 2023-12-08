@@ -817,3 +817,46 @@ export async function getStoreTags() {
 export const postLikeComponent = (componentId: string) => {
   return api.post(`${BASE_URL_API}store/users/likes/${componentId}`);
 };
+
+/**
+ * Updates an existing flow in the Store.
+ *
+ * @param {FlowType} updatedFlow - The updated flow data.
+ * @returns {Promise<any>} The updated flow data.
+ * @throws Will throw an error if the update fails.
+ */
+export async function updateFlowStore(
+  newFlow: {
+    name?: string;
+    data: ReactFlowJsonObject | null;
+    description?: string;
+    style?: FlowStyleType;
+    is_component?: boolean;
+    parent?: string;
+    last_tested_version?: string;
+  },
+  tags: string[],
+  publicFlow = false,
+  id: string
+): Promise<FlowType> {
+  try {
+    const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
+      is_component: newFlow.is_component,
+      parent: newFlow.parent,
+      tags: tags,
+      private: !publicFlow,
+      last_tested_version: newFlow.last_tested_version,
+    });
+
+    if (response.status !== 201) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
