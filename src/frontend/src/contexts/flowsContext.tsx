@@ -639,8 +639,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }
 
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
-    if (newFlow?.data?.nodes?.length === 0) return;
-
+    console.log(newFlow);
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
