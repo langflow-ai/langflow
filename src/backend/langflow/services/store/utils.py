@@ -17,7 +17,7 @@ def process_tags_for_post(component_dict):
 async def update_components_with_user_data(
     components: List["ListComponentResponse"],
     store_service: "StoreService",
-    store_api_Key: str,
+    store_api_key: str,
     liked: bool,
 ):
     """
@@ -31,7 +31,7 @@ async def update_components_with_user_data(
     else:
         liked_by_user_ids = await store_service.get_liked_by_user_components(
             component_ids=component_ids,
-            api_key=store_api_Key,
+            api_key=store_api_key,
         )
     # Now we need to set the liked_by_user attribute
     for component in components:

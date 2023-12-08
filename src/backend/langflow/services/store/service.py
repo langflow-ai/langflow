@@ -179,7 +179,7 @@ class StoreService(Service):
         is_component: Optional[bool] = None,
         filter_by_user: Optional[bool] = False,
         liked: Optional[bool] = False,
-        store_api_Key: Optional[str] = None,
+        store_api_key: Optional[str] = None,
     ):
         filter_conditions = []
 
@@ -197,18 +197,18 @@ class StoreService(Service):
             filter_conditions.append({"id": {"_eq": component_id}})
         if is_component is not None:
             filter_conditions.append({"is_component": {"_eq": is_component}})
-        if liked and store_api_Key:
+        if liked and store_api_key:
             liked_filter = self.build_liked_filter()
             filter_conditions.append(liked_filter)
-        elif liked and not store_api_Key:
+        elif liked and not store_api_key:
             raise APIKeyError("You must provide an API key to filter by likes")
 
-        if filter_by_user and store_api_Key:
+        if filter_by_user and store_api_key:
             user_data = user_data_var.get()
             if not user_data:
                 raise ValueError("No user data")
             filter_conditions.append({"user_created": {"_eq": user_data["id"]}})
-        elif filter_by_user and not store_api_Key:
+        elif filter_by_user and not store_api_key:
             raise APIKeyError("You must provide an API key to filter your components")
         else:
             filter_conditions.append({"private": {"_eq": False}})
@@ -477,7 +477,7 @@ class StoreService(Service):
                 is_component=is_component,
                 filter_by_user=filter_by_user,
                 liked=liked,
-                store_api_Key=store_api_key,
+                store_api_key=store_api_key,
             )
 
             result: List[ListComponentResponse] = []
