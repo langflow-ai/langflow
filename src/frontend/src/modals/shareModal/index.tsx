@@ -53,7 +53,6 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<string[]>([]);
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
-  const [nameIsAvailable, setNameIsAvailable] = useState(false);
   const [loadingNames, setLoadingNames] = useState(false);
 
   useEffect(() => {
@@ -79,7 +78,8 @@ export default function ShareModal({
     await getStoreComponents({ fields: ["name"], filterByUser: true }).then(
       (res) => {
         res?.results?.forEach((element: any) => {
-          unavaliableNames.push(element.name);
+          if (element.is_component === is_component)
+            unavaliableNames.push(element.name);
         });
         setUnavaliableNames(unavaliableNames);
         setLoadingNames(false);
