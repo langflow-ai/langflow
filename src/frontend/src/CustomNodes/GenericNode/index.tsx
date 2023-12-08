@@ -7,13 +7,18 @@ import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
+import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
+import {
+  cleanEdges,
+  handleKeyDown,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
@@ -45,6 +50,7 @@ export default function GenericNode({
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
+  const { modalContextOpen } = useContext(alertContext);
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
@@ -83,7 +89,7 @@ export default function GenericNode({
 
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-  /* useEffect(() => {
+  useEffect(() => {
     let flow = flows.find((flow) => flow.id === tabId);
     if (reactFlowInstance && flow && flow.data) {
       cleanEdges({
@@ -99,7 +105,7 @@ export default function GenericNode({
       updateFlow(flow);
     }
     countHandles();
-  }, [data]); */
+  }, [modalContextOpen]);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);
