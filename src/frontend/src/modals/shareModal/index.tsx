@@ -8,6 +8,7 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
+import { typesContext } from "../../contexts/typesContext";
 import {
   getStoreComponents,
   getStoreTags,
@@ -41,6 +42,7 @@ export default function ShareModal({
   const { version, addFlow } = useContext(FlowsContext);
   const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [checked, setChecked] = useState(false);
   const [name, setName] = useState(component?.name ?? "");
   const [description, setDescription] = useState(component?.description ?? "");
@@ -127,7 +129,8 @@ export default function ShareModal({
       });
     }
 
-    await saveFlow(flows.find((flow) => flow.id === tabId)!, true);
+    await saveFlow({ ...flows.find((flow) => flow.id === tabId)! }, true);
+
     if (!update)
       saveFlowStore(flow!, getTagsIds(selectedTags, tags), sharePublic).then(
         successShare,
