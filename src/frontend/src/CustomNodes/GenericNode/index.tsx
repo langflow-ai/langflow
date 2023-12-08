@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
@@ -14,11 +13,7 @@ import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import {
-  cleanEdges,
-  handleKeyDown,
-  scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
+import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
@@ -34,7 +29,8 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const { updateFlow, flows, tabId } = useContext(FlowsContext);
+  const { updateFlow, flows, tabId, saveCurrentFlow } =
+    useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
     useContext(typesContext);
@@ -87,18 +83,15 @@ export default function GenericNode({
 
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-  useEffect(() => {
-    let myFlow = flows.find((flow) => flow.id === tabId);
-    if (reactFlowInstance && myFlow) {
-      let flow = cloneDeep(myFlow);
-      flow.data = reactFlowInstance.toObject();
+  /* useEffect(() => {
+    let flow = flows.find((flow) => flow.id === tabId);
+    if (reactFlowInstance && flow && flow.data) {
       cleanEdges({
         flow: {
-          edges: flow.data.edges,
-          nodes: flow.data.nodes,
+          edges: flow.data!.edges,
+          nodes: flow.data!.nodes,
         },
         updateEdge: (edge) => {
-          flow.data!.edges = edge;
           reactFlowInstance.setEdges(edge);
           updateNodeInternals(data.id);
         },
@@ -106,7 +99,7 @@ export default function GenericNode({
       updateFlow(flow);
     }
     countHandles();
-  }, [data]);
+  }, [data]); */
 
   useEffect(() => {
     setNodeDescription(data.node!.description);
@@ -138,6 +131,7 @@ export default function GenericNode({
           deleteNode={(id) => {
             takeSnapshot();
             deleteNode(id);
+            saveCurrentFlow();
           }}
           setShowNode={(show: boolean) => {
             data.showNode = show;
@@ -150,10 +144,7 @@ export default function GenericNode({
       <div
         className={classNames(
           selected ? "border border-ring" : "border",
-          " transition-transform ",
-          showNode
-            ? " w-96 scale-100 transform rounded-lg duration-500 ease-in-out "
-            : " transform-width w-26 h-26 scale-90 transform rounded-full duration-500 ",
+          showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
           "generic-node-div"
         )}
       >

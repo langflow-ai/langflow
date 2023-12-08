@@ -34,7 +34,7 @@ export default function FlowSettingsModal({
   useEffect(() => {
     const tempNameList: string[] = [];
     flows.forEach((flow: FlowType) => {
-      tempNameList.push(flow.name);
+      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
     });
     setNameList(tempNameList.filter((name) => name !== flow!.name));
   }, [flows]);

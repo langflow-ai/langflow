@@ -289,32 +289,34 @@ export default function ExtraSidebar(): JSX.Element {
           </div>
         </ShadTooltip>
         <div className="side-bar-button">
-          <ShadTooltip content="Save" side="top">
-            <div>
-              <button
-                disabled={flow?.data?.nodes.length === 0}
-                className={
-                  "extra-side-bar-buttons " +
-                  (isPending && flow!.data!.nodes?.length > 0
-                    ? ""
-                    : "button-disable")
-                }
-                onClick={(event) => {
-                  saveFlow({ ...flow!, data: reactFlowInstance!.toObject() });
-                }}
-              >
-                <IconComponent
-                  name="Save"
+          {flow && flow.data && (
+            <ShadTooltip content="Save" side="top">
+              <div>
+                <button
+                  disabled={flow?.data?.nodes.length === 0}
                   className={
-                    "side-bar-button-size" +
+                    "extra-side-bar-buttons " +
                     (isPending && flow!.data!.nodes?.length > 0
-                      ? " "
-                      : " extra-side-bar-save-disable")
+                      ? ""
+                      : "button-disable")
                   }
-                />
-              </button>
-            </div>
-          </ShadTooltip>
+                  onClick={(event) => {
+                    saveFlow(flow!);
+                  }}
+                >
+                  <IconComponent
+                    name="Save"
+                    className={
+                      "side-bar-button-size" +
+                      (isPending && flow!.data!.nodes?.length > 0
+                        ? " "
+                        : " extra-side-bar-save-disable")
+                    }
+                  />
+                </button>
+              </div>
+            </ShadTooltip>
+          )}
         </div>
         <ShadTooltip content="Share" side="top" styleClasses="cursor-default">
           <div className="side-bar-button">{ModalMemo}</div>

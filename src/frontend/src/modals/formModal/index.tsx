@@ -393,7 +393,7 @@ export default function FormModal({
       const message = inputs;
       addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
-        ...reactFlowInstance?.toObject()!,
+        ...flow.data!,
         inputs: inputs!,
         chatHistory,
         name: flow.name,
