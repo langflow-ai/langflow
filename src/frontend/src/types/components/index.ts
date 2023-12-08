@@ -54,6 +54,7 @@ export type ParameterComponentType = {
   proxy?: { field: string; id: string };
   showNode?: boolean;
   index?: string;
+  onCloseModal?: (close: boolean) => void;
 };
 export type InputListComponentType = {
   value: string[];

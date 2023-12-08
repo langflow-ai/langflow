@@ -40,7 +40,7 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
-  const { setErrorData, setSuccessData, setNoticeData } =
+  const { setErrorData, setSuccessData, setNoticeData, setModalContextOpen } =
     useContext(alertContext);
   const ref = useRef();
   const divRef = useRef(null);
@@ -159,6 +159,10 @@ export default function GenericModal({
         });
       });
   }
+
+  useEffect(() => {
+    setModalContextOpen(modalOpen);
+  }, [modalOpen]);
 
   return (
     <BaseModal
