@@ -84,7 +84,8 @@ export default function ShareModal({
       filterByUser: true,
     }).then((res) => {
       res?.results?.forEach((element: any) => {
-        if (element.is_component === is_component)
+        console.log(element, is_component);
+        if ((element.is_component ?? false) === is_component)
           unavaliableNames.push({ name: element.name, id: element.id });
       });
       setUnavaliableNames(unavaliableNames);
