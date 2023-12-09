@@ -16,7 +16,7 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -361,36 +361,18 @@ export default function GenericNode({
           <div
             className={
               showNode
-                ? "generic-node-desc overflow-hidden " +
-                  (data.node?.description !== "" ? "py-5" : "pb-5")
+                ? "overflow-hidden " +
+                  (data.node?.description === "" && !data.node?.flow
+                    ? "pb-5"
+                    : "py-5")
                 : ""
             }
           >
-            {data.node?.description !== "" &&
-            showNode &&
-            data.node?.flow &&
-            inputDescription ? (
-              <Textarea
-                autoFocus
-                onBlur={() => {
-                  setInputDescription(false);
-                  if (nodeDescription.trim() !== "") {
-                    setNodeDescription(nodeDescription);
-                    data.node!.description = nodeDescription;
-                  } else {
-                    setNodeDescription(data.node!.description);
-                  }
-                }}
-                value={nodeDescription}
-                onChange={(e) => setNodeDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  handleKeyDown(e, nodeDescription, "");
-                  if (
-                    e.key === "Enter" &&
-                    e.shiftKey === false &&
-                    e.ctrlKey === false &&
-                    e.altKey === false
-                  ) {
+            <div className="generic-node-desc">
+              {showNode && data.node?.flow && inputDescription ? (
+                <Textarea
+                  autoFocus
+                  onBlur={() => {
                     setInputDescription(false);
                     if (nodeDescription.trim() !== "") {
                       setNodeDescription(nodeDescription);
@@ -398,20 +380,42 @@ export default function GenericNode({
                     } else {
                       setNodeDescription(data.node!.description);
                     }
-                  }
-                }}
-              />
-            ) : (
-              <div
-                className="generic-node-desc-text truncate-multiline word-break-break-word"
-                onDoubleClick={() => {
-                  setInputDescription(true);
-                  takeSnapshot();
-                }}
-              >
-                {data.node?.description}
-              </div>
-            )}
+                  }}
+                  value={nodeDescription}
+                  onChange={(e) => setNodeDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    handleKeyDown(e, nodeDescription, "");
+                    if (
+                      e.key === "Enter" &&
+                      e.shiftKey === false &&
+                      e.ctrlKey === false &&
+                      e.altKey === false
+                    ) {
+                      setInputDescription(false);
+                      setNodeDescription(nodeDescription);
+                      data.node!.description = nodeDescription;
+                    }
+                  }}
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "generic-node-desc-text truncate-multiline word-break-break-word",
+                    data.node?.description === "" && data.node?.flow
+                      ? "font-light italic"
+                      : ""
+                  )}
+                  onDoubleClick={() => {
+                    setInputDescription(true);
+                    takeSnapshot();
+                  }}
+                >
+                  {data.node?.description === "" && data.node?.flow
+                    ? "Double Click to Edit Description"
+                    : data.node?.description}
+                </div>
+              )}
+            </div>
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")

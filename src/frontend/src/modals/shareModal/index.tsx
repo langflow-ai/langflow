@@ -120,11 +120,11 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    await saveFlow(flow!, true);
-
     function successShare() {
       if (is_component) {
-        addFlow(true, flow);
+        addFlow(true, flow, update);
+      } else {
+        saveFlow(flow!, true);
       }
       setSuccessData({
         title: `${nameComponent} shared successfully`,
@@ -223,13 +223,9 @@ export default function ShareModal({
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <EditFlowSettings
-            name={name}
-            invalidNameList={unavaliableNames.map((element) => element.name)}
-            description={description}
-            setName={setName}
-            setDescription={setDescription}
-          />
+          <div className="w-full rounded-lg border border-border p-4">
+            <EditFlowSettings name={name} description={description} />
+          </div>
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
               tags={tags}

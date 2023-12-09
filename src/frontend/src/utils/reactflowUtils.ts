@@ -761,7 +761,7 @@ export function generateNodeFromFlow(
         display_name: "Group",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
-        description: "double click to edit description",
+        description: "",
         template: generateNodeTemplate(data),
         flow: data,
       },
