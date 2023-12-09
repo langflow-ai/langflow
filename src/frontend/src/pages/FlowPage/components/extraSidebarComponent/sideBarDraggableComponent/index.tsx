@@ -73,6 +73,7 @@ export default function SidebarDraggableComponent({
       onValueChange={handleSelectChange}
       onOpenChange={(change) => setOpen(change)}
       open={open}
+      key={itemName}
     >
       <div
         onPointerDown={handlePointerDown}
