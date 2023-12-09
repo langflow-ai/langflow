@@ -450,6 +450,20 @@ export default function Page({
     setFilterEdge([]);
   }, []);
 
+  const onMove = useCallback(() => {
+    saveCurrentFlowTimeout();
+    //@ts-ignore
+    setTabsState((prev: FlowsState) => {
+      return {
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          isPending: true,
+        },
+      };
+    });
+  }, [setTabsState, saveCurrentFlowTimeout]);
+
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}
@@ -471,9 +485,7 @@ export default function Page({
                 </div>
                 <ReactFlow
                   nodes={nodes}
-                  onMove={() => {
-                    saveCurrentFlowTimeout();
-                  }}
+                  onMove={onMove}
                   edges={edges}
                   onNodesChange={onNodesChangeMod}
                   onEdgesChange={onEdgesChangeMod}
