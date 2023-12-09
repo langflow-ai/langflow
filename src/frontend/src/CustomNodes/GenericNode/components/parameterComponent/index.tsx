@@ -68,11 +68,13 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const { setErrorData } = useContext(alertContext);
+  const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { setTabsState, tabId, flows, tabsState, updateFlow } =
     useContext(FlowsContext);
+
+  const [dataRef, setDataRef] = useState(data);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -89,6 +91,10 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
+
+  useEffect(() => {
+    setDataRef(data);
+  }, [modalContextOpen]);
 
   const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
   let disabled =
@@ -129,6 +135,13 @@ export default function ParameterComponent({
     }
     data.node!.template[name].value = newValue;
     updateNodeInternals(data.id);
+
+    setDataRef((old) => {
+      let newData = cloneDeep(old);
+      newData.node!.template[name].value = newValue;
+      return newData;
+    });
+
     // Set state to pending
     //@ts-ignore
     if (data.node!.template[name].value !== newValue) {
@@ -549,10 +562,10 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name].value?.length === 0 ||
-                !data.node!.template[name].value
+                dataRef.node!.template[name].value?.length === 0 ||
+                !dataRef.node!.template[name].value
                   ? [{ "": "" }]
-                  : convertObjToArray(data.node!.template[name].value)
+                  : convertObjToArray(dataRef.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {

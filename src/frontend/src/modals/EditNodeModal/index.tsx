@@ -29,6 +29,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
@@ -63,6 +64,7 @@ const EditNodeModal = forwardRef(
 
     const { setTabsState, tabId } = useContext(FlowsContext);
     const { reactFlowInstance } = useContext(typesContext);
+    const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {
       setMyData((old) => {
@@ -86,6 +88,7 @@ const EditNodeModal = forwardRef(
       if (open) {
         setMyData(data); // reset data to what it is on node when opening modal
       }
+      setModalContextOpen(open);
     }, [open]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
