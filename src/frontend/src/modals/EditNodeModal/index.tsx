@@ -150,9 +150,9 @@ const EditNodeModal = forwardRef(
                         .map((templateParam, index) => {
                           let id = {
                             inputTypes:
-                              data.node!.template[templateParam].input_types,
-                            type: data.node!.template[templateParam].type,
-                            id: data.id,
+                              myData.node!.template[templateParam].input_types,
+                            type: myData.node!.template[templateParam].type,
+                            id: myData.id,
                             fieldName: templateParam,
                           };
                           let disabled =
@@ -160,11 +160,11 @@ const EditNodeModal = forwardRef(
                               (edge) =>
                                 edge.targetHandle ===
                                 scapedJSONStringfy(
-                                  data.node!.template[templateParam].proxy
+                                  myData.node!.template[templateParam].proxy
                                     ? {
                                         ...id,
                                         proxy:
-                                          data.node?.template[templateParam]
+                                          myData.node?.template[templateParam]
                                             .proxy,
                                       }
                                     : id

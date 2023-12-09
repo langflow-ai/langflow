@@ -88,8 +88,7 @@ export default function CodeAreaModal({
       .then((apiReturn) => {
         const { data } = apiReturn;
         if (data) {
-          setNodeClass(data);
-          setValue(code);
+          setNodeClass(data, code);
           setError({ detail: { error: undefined, traceback: undefined } });
           setOpen(false);
         }
