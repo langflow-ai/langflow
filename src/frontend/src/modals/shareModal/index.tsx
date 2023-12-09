@@ -48,7 +48,7 @@ export default function ShareModal({
   const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
-  const nameComponent = is_component ? "Component" : "Flow";
+  const nameComponent = is_component ? "component" : "flow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
@@ -121,9 +121,7 @@ export default function ShareModal({
         });
 
     function successShare() {
-      if (is_component) {
-        addFlow(true, flow, update);
-      } else {
+      if (!is_component) {
         saveFlow(flow!, true);
       }
       setSuccessData({
@@ -293,8 +291,8 @@ export default function ShareModal({
                 </>
               ) : (
                 <>
-                  {is_component && !loadingNames ? "Save and " : ""}Share{" "}
-                  {!is_component && !loadingNames ? "Flow" : ""}
+                  Share{" "}
+                  {!loadingNames && (!is_component ? "Flow" : "Component")}
                 </>
               )}
             </Button>

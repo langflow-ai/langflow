@@ -3,6 +3,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { InputProps } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -32,7 +33,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     <>
       <Label>
         <div className="edit-flow-arrangement">
-          <span className="font-medium">Name</span>{" "}
+          <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
           )}
@@ -57,7 +58,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       <Label>
         <div className="edit-flow-arrangement mt-3">
           <span className="font-medium ">
-            Description {setDescription ? "(optional)" : ""}
+            Description{setDescription ? " (optional)" : ":"}
           </span>
         </div>
         {setDescription ? (
@@ -71,8 +72,13 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             rows={3}
           />
         ) : (
-          <span className="font-normal text-muted-foreground word-break-break-word">
-            {description}
+          <span
+            className={cn(
+              "font-normal text-muted-foreground word-break-break-word",
+              description === "" ? "font-light italic" : ""
+            )}
+          >
+            {description === "" ? "No description" : description}
           </span>
         )}
       </Label>
