@@ -31,9 +31,7 @@ export default function PromptAreaComponent({
         value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
-        setValue={(value: string) => {
-          onChange(value);
-        }}
+        setValue={onChange}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
       >

@@ -14,11 +14,7 @@ import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import {
-  cleanEdges,
-  handleKeyDown,
-  scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
+import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
@@ -85,27 +81,10 @@ export default function GenericNode({
 
   useEffect(() => {
     countHandles();
-  }, []);
+  }, [data, data.node]);
 
   // State for outline color
   const { sseData, isBuilding } = useSSE();
-  useEffect(() => {
-    let flow = flows.find((flow) => flow.id === tabId);
-    if (reactFlowInstance && flow && flow.data) {
-      cleanEdges({
-        flow: {
-          edges: flow.data!.edges,
-          nodes: flow.data!.nodes,
-        },
-        updateEdge: (edge) => {
-          reactFlowInstance.setEdges(edge);
-          updateNodeInternals(data.id);
-        },
-      });
-      updateFlow(flow);
-    }
-    countHandles();
-  }, [modalContextOpen]);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);

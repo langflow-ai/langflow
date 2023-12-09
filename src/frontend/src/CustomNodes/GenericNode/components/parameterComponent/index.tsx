@@ -31,9 +31,11 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
+import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
 import {
+  cleanEdges,
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
@@ -69,7 +71,8 @@ export default function ParameterComponent({
   const { setErrorData } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows, tabsState } = useContext(FlowsContext);
+  const { setTabsState, tabId, flows, tabsState, updateFlow } =
+    useContext(FlowsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -137,6 +140,40 @@ export default function ParameterComponent({
       });
     }
     renderTooltips();
+  };
+
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+    if (data.node!.template[name].value !== newNodeClass.template[name].value) {
+      takeSnapshot();
+    }
+    data.node = newNodeClass;
+    data.node.template[name].value = code;
+    updateNodeInternals(data.id);
+    // Set state to pending
+    //@ts-ignore
+    if (data.node!.template[name].value !== code) {
+      const tabs = cloneDeep(tabsState);
+      tabs[tabId].isPending = false;
+      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
+    renderTooltips();
+    let flow = flows.find((flow) => flow.id === tabId);
+    if (reactFlowInstance && flow && flow.data) {
+      cleanEdges({
+        flow: {
+          edges: flow.data!.edges,
+          nodes: flow.data!.nodes,
+        },
+        updateEdge: (edge) => {
+          reactFlowInstance.setEdges(edge);
+          updateNodeInternals(data.id);
+        },
+      });
+      updateFlow(flow);
+    }
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
@@ -443,9 +480,7 @@ export default function ParameterComponent({
                   : false
               }
               dynamic={data.node?.template[name].dynamic ?? false}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
@@ -479,15 +514,11 @@ export default function ParameterComponent({
             <PromptAreaComponent
               readonly={data.node?.flow ? true : false}
               field_name={name}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
-              onChange={(e) => {
-                handleOnNewValue(e);
-              }}
+              onChange={handleOnNewValue}
               id={"prompt-input-" + index}
               data-testid={"prompt-input-" + index}
             />

@@ -114,7 +114,6 @@ export default function GenericModal({
         // if field_name is an empty string, then we need to set it
         // to the first key of the custom_fields object
         if (field_name === "") {
-          console.log(apiReturn.data?.frontend_node?.custom_fields);
           field_name = Array.isArray(
             apiReturn.data?.frontend_node?.custom_fields?.[""]
           )
@@ -134,9 +133,8 @@ export default function GenericModal({
               JSON.stringify(apiReturn.data?.frontend_node) !==
               JSON.stringify({})
             ) {
-              setNodeClass!(apiReturn.data?.frontend_node);
+              setNodeClass!(apiReturn.data?.frontend_node, inputValue);
               setModalOpen(closeModal);
-              setValue(inputValue);
               setIsEdit(false);
               setSuccessData({
                 title: "Prompt is ready",
