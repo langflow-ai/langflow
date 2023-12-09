@@ -1,13 +1,13 @@
 import contextlib
 import json
 import os
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
 import yaml
-from pydantic import validator, model_validator
-from pydantic_settings import BaseSettings
 from langflow.utils.logger import logger
+from pydantic import model_validator, validator
+from pydantic_settings import BaseSettings
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 
@@ -46,11 +46,8 @@ class Settings(BaseSettings):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
-                # logger.debug("No DATABASE_URL env variable, using sqlite database")
-                logger.debug("No DATABASE_URL env variable, using custom database from secrets of {}".format(os.environ["host"]))
-                # value = "sqlite:///./langflow.db"
-                value = "mysql+pymysql://{}:{}@{}:3306/{}".format(os.environ["username"],os.environ["password"],os.environ["host"],os.environ["dbname"])
-
+                logger.debug("No DATABASE_URL env variable, using sqlite database")
+                value = "sqlite:///./langflow.db"
         return value
 
     @validator("COMPONENTS_PATH", pre=True)
@@ -58,7 +55,7 @@ class Settings(BaseSettings):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if (
+            if langflow_component_path and (
                 Path(langflow_component_path).exists()
                 and langflow_component_path not in value
             ):
