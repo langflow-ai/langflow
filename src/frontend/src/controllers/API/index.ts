@@ -141,14 +141,19 @@ export async function saveFlowToDatabase(newFlow: {
  * @throws Will throw an error if the update fails.
  */
 export async function updateFlowInDatabase(
-  updatedFlow: FlowType
+  updatedFlow: FlowType,
+  updateStore?: boolean,
+  uuidStore?: string
 ): Promise<FlowType> {
   try {
-    const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
-      name: updatedFlow.name,
-      data: updatedFlow.data,
-      description: updatedFlow.description,
-    });
+    const response = await api.patch(
+      `${BASE_URL_API}flows/${updateStore ? uuidStore : updatedFlow.id}`,
+      {
+        name: updatedFlow.name,
+        data: updatedFlow.data,
+        description: updatedFlow.description,
+      }
+    );
 
     if (response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
@@ -839,6 +844,7 @@ export async function updateFlowStore(
   publicFlow = false,
   id: string
 ): Promise<FlowType> {
+  debugger;
   try {
     const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
       name: newFlow.name,

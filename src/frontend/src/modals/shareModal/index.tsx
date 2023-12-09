@@ -120,7 +120,12 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    await saveFlow(flow!, true);
+    await saveFlow(
+      flow!,
+      true,
+      true,
+      unavaliableNames.find((e) => e.name === name)!.id
+    );
 
     function successShare() {
       if (is_component) {

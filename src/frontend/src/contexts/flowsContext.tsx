@@ -77,7 +77,12 @@ const FlowsContextInitialValue: FlowsContextType = {
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
-  saveFlow: async (flow: FlowType, silent?: boolean) => {},
+  saveFlow: async (
+    flow: FlowType,
+    silent?: boolean,
+    updateStore?: boolean,
+    uuidStore?: string
+  ) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
@@ -646,10 +651,19 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function saveFlow(newFlow: FlowType, silent?: boolean) {
+  async function saveFlow(
+    newFlow: FlowType,
+    silent?: boolean,
+    updateStore?: boolean,
+    uuidStore?: string
+  ) {
     try {
       // updates flow in db
-      const updatedFlow = await updateFlowInDatabase(newFlow);
+      const updatedFlow = await updateFlowInDatabase(
+        newFlow,
+        updateStore,
+        uuidStore
+      );
       if (updatedFlow) {
         // updates flow in state
         if (!silent) {

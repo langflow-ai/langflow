@@ -3,7 +3,12 @@ import { tweakType } from "../components";
 import { FlowType, NodeDataType } from "../flow";
 
 export type FlowsContextType = {
-  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
+  saveFlow: (
+    flow: FlowType,
+    silent?: boolean,
+    updateStore?: boolean,
+    uuidStore?: string
+  ) => Promise<void>;
   tabId: string;
   isLoading: boolean;
   setTabId: (index: string) => void;
