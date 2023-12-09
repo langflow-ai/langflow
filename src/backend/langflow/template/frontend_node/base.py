@@ -3,11 +3,12 @@ from collections import defaultdict
 from typing import ClassVar, Dict, List, Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.constants import (CLASSES_TO_REMOVE,
+                                                       FORCE_SHOW_FIELDS)
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class FieldFormatters(BaseModel):
@@ -63,26 +64,31 @@ class FrontendNode(BaseModel):
         """Sets the documentation of the frontend node."""
         self.documentation = documentation
 
-    def process_base_classes(self) -> None:
+    @field_serializer("base_classes")
+    def process_base_classes(self, base_classes: List[str]) -> List[str]:
         """Removes unwanted base classes from the list of base classes."""
-        self.base_classes = [base_class for base_class in self.base_classes if base_class not in CLASSES_TO_REMOVE]
+
+        return [base_class for base_class in base_classes if base_class not in CLASSES_TO_REMOVE]
+
+    @field_serializer("display_name")
+    def process_display_name(self, display_name: str) -> str:
+        """Sets the display name of the frontend node."""
+
+        return display_name or self.name
+
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        result = handler(self)
+        result["template"] = self.template.to_dict(self.format_field)
+        name = result.pop("name")
+
+        return {name: result}
 
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
-        self.process_base_classes()
-        return {
-            self.name: {
-                "template": self.template.to_dict(self.format_field),
-                "description": self.description,
-                "base_classes": self.base_classes,
-                "display_name": self.display_name or self.name,
-                "custom_fields": self.custom_fields,
-                "output_types": self.output_types,
-                "documentation": self.documentation,
-                "beta": self.beta,
-                "error": self.error,
-            },
-        }
+
+        return self.model_dump(by_alias=True, exclude_none=True)
 
     def add_extra_fields(self) -> None:
         pass

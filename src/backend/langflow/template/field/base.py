@@ -1,11 +1,11 @@
 from abc import ABC
 from typing import Any, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class TemplateFieldCreator(BaseModel, ABC):
-    field_type: str = "str"
+    field_type: str = Field(default="str", alias="type")
     """The type of field this is. Default is a string."""
 
     required: bool = False
@@ -14,7 +14,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     placeholder: str = ""
     """A placeholder string for the field. Default is an empty string."""
 
-    is_list: bool = False
+    is_list: bool = Field(default=False, alias="list")
     """Defines if the field is a list. Default is False."""
 
     show: bool = True
@@ -26,7 +26,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     value: Any = None
     """The value of the field. Default is None."""
 
-    file_types: list[str] = []
+    file_types: list[str] = Field(default=[], alias="fileTypes")
     """List of file types associated with the field. Default is an empty list. (duplicate)"""
 
     file_path: Union[str, None] = None
@@ -35,7 +35,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     password: bool = False
     """Specifies if the field is a password. Defaults to False."""
 
-    options: list[str] = []
+    options: list[str] = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
     name: str = ""
@@ -47,7 +47,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
 
-    input_types: list[str] = []
+    input_types: Optional[list[str]] = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 
     dynamic: bool = False
@@ -59,21 +59,30 @@ class TemplateFieldCreator(BaseModel, ABC):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    def to_dict(self):
-        result = self.model_dump()
-        # Remove key if it is None
-        for key in list(result.keys()):
-            if result[key] is None or result[key] == [] and key != "value":
-                del result[key]
-        result["type"] = result.pop("field_type")
-        result["list"] = result.pop("is_list")
-
-        if result.get("file_types"):
-            result["fileTypes"] = result.pop("file_types")
-
-        if self.field_type == "file":
-            result["file_path"] = self.file_path
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        # This will be the result of model_dump or dict()
+        # so we need to build a dict to return
+        result = handler(self)
+        result["value"] = self.value
         return result
+
+
+
+        # for key in list(result.keys()):
+        #     if result[key] is None or result[key] == [] and key != "value":
+        #         del result[key]
+        # return result
+
+    def to_dict(self):
+        return self.model_dump(by_alias=True, exclude_none=True)
+
+
+    @field_serializer("file_path")
+    def serialize_file_path(self, value):
+        if self.field_type == "file":
+            return value
+        return None
 
 
 class TemplateField(TemplateFieldCreator):
