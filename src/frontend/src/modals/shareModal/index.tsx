@@ -82,7 +82,7 @@ export default function ShareModal({
     setLoadingNames(true);
     const unavaliableNames: Array<{ id: string; name: string }> = [];
     await getStoreComponents({
-      fields: ["name", "id"],
+      fields: ["name", "id", "is_component"],
       filterByUser: true,
     }).then((res) => {
       res?.results?.forEach((element: any) => {
