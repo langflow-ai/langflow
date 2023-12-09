@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langchain.agents import types
-
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
@@ -29,17 +28,17 @@ class SQLAgentNode(FrontendNode):
         type_name="sql_agent",
         fields=[
             TemplateField(
-                field_type="str",
+                field_type="str", # pyright: ignore
                 required=True,
                 placeholder="",
-                is_list=False,
+                is_list=False, # pyright: ignore
                 show=True,
                 multiline=False,
                 value="",
                 name="database_uri",
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
@@ -60,14 +59,14 @@ class VectorStoreRouterAgentNode(FrontendNode):
         type_name="vectorstorerouter_agent",
         fields=[
             TemplateField(
-                field_type="VectorStoreRouterToolkit",
+                field_type="VectorStoreRouterToolkit", # pyright: ignore
                 required=True,
                 show=True,
                 name="vectorstoreroutertoolkit",
                 display_name="Vector Store Router Toolkit",
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
@@ -88,14 +87,14 @@ class VectorStoreAgentNode(FrontendNode):
         type_name="vectorstore_agent",
         fields=[
             TemplateField(
-                field_type="VectorStoreInfo",
+                field_type="VectorStoreInfo", # pyright: ignore
                 required=True,
                 show=True,
                 name="vectorstoreinfo",
                 display_name="Vector Store Info",
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
@@ -116,9 +115,9 @@ class SQLDatabaseNode(FrontendNode):
         type_name="sql_database",
         fields=[
             TemplateField(
-                field_type="str",
+                field_type="str", # pyright: ignore
                 required=True,
-                is_list=False,
+                is_list=False, # pyright: ignore
                 show=True,
                 multiline=False,
                 value="",
@@ -139,15 +138,15 @@ class CSVAgentNode(FrontendNode):
         type_name="csv_agent",
         fields=[
             TemplateField(
-                field_type="file",
+                field_type="file", # pyright: ignore
                 required=True,
                 show=True,
                 name="path",
                 value="",
-                file_types=[".csv"],
+                file_types=[".csv"], # pyright: ignore
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
@@ -169,9 +168,9 @@ class InitializeAgentNode(FrontendNode):
         type_name="initialize_agent",
         fields=[
             TemplateField(
-                field_type="str",
+                field_type="str", # pyright: ignore
                 required=True,
-                is_list=True,
+                is_list=True, # pyright: ignore
                 show=True,
                 multiline=False,
                 options=list(NON_CHAT_AGENTS.keys()),
@@ -180,22 +179,22 @@ class InitializeAgentNode(FrontendNode):
                 advanced=False,
             ),
             TemplateField(
-                field_type="BaseChatMemory",
+                field_type="BaseChatMemory", # pyright: ignore
                 required=False,
                 show=True,
                 name="memory",
                 advanced=False,
             ),
             TemplateField(
-                field_type="Tool",
+                field_type="Tool", # pyright: ignore
                 required=True,
                 show=True,
                 name="tools",
-                is_list=True,
+                is_list=True, # pyright: ignore
                 advanced=False,
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
@@ -222,13 +221,13 @@ class JsonAgentNode(FrontendNode):
         type_name="json_agent",
         fields=[
             TemplateField(
-                field_type="BaseToolkit",
+                field_type="BaseToolkit", # pyright: ignore
                 required=True,
                 show=True,
                 name="toolkit",
             ),
             TemplateField(
-                field_type="BaseLanguageModel",
+                field_type="BaseLanguageModel", # pyright: ignore
                 required=True,
                 show=True,
                 name="llm",
