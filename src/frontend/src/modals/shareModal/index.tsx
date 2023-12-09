@@ -166,21 +166,21 @@ export default function ShareModal({
       <>
         {unavaliableNames.find((element) => element.name === name) ? (
           <ConfirmationModal
-            title="Update"
-            titleHeader={name}
-            modalContentTitle="Attention!"
+            title={`Replace`}
             cancelText="Cancel"
-            confirmationText="Update"
-            icon={"Group"}
+            confirmationText="Replace"
+            size={"x-small"}
+            icon={"SaveAll"}
+            index={6}
             onConfirm={() => {
               handleUpdateComponent();
             }}
-            size={"x-small"}
+            onCancel={() => {}}
           >
             <ConfirmationModal.Content>
               <span>
-                Are you sure you want to update this{" "}
-                {nameComponent.toLowerCase()}?
+                It seems {name} already exists. Do you want to replace it with
+                the current?
               </span>
               <br></br>
               <span className=" text-xs text-destructive ">
