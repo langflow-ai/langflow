@@ -47,7 +47,7 @@ export default function ShareModal({
   const [name, setName] = useState(component?.name ?? "");
   const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
-
+  const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "Component" : "Flow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
@@ -161,61 +161,133 @@ export default function ShareModal({
     else internalSetOpen(false);
   };
 
-  let modalConfirmationButton = useMemo(() => {
+  let modalConfirmation = useMemo(() => {
     return (
       <>
-        {unavaliableNames.find((element) => element.name === name) ? (
-          <ConfirmationModal
-            title={`Replace`}
-            cancelText="Cancel"
-            confirmationText="Replace"
-            size={"x-small"}
-            icon={"SaveAll"}
-            index={6}
-            onConfirm={() => {
-              handleUpdateComponent();
-            }}
-            onCancel={() => {}}
-          >
-            <ConfirmationModal.Content>
-              <span>
-                It seems {name} already exists. Do you want to replace it with
-                the current?
-              </span>
-              <br></br>
-              <span className=" text-xs text-destructive ">
-                Warning: This action cannot be undone.
-              </span>
-            </ConfirmationModal.Content>
-            <ConfirmationModal.Trigger>
-              <div className="text-right">
-                <Button disabled={loadingNames} type="button">
-                  {loadingNames ? (
-                    <>
-                      <div className="center w-16">
-                        <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {is_component && !loadingNames ? "Save and " : ""}Share{" "}
-                      {!is_component && !loadingNames ? "Flow" : ""}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </ConfirmationModal.Trigger>
-          </ConfirmationModal>
-        ) : (
-          <>
+        <ConfirmationModal
+          open={openConfirmationModal}
+          title={`Replace`}
+          cancelText="Cancel"
+          confirmationText="Replace"
+          size={"x-small"}
+          icon={"SaveAll"}
+          index={6}
+          onConfirm={() => {
+            handleUpdateComponent();
+            setOpenConfirmationModal(false);
+          }}
+          onCancel={() => {
+            setOpenConfirmationModal(false);
+          }}
+        >
+          <ConfirmationModal.Content>
+            <span>
+              It seems {name} already exists. Do you want to replace it with the
+              current?
+            </span>
+            <br></br>
+            <span className=" text-xs text-destructive ">
+              Warning: This action cannot be undone.
+            </span>
+          </ConfirmationModal.Content>
+          <ConfirmationModal.Trigger>
+            <></>
+          </ConfirmationModal.Trigger>
+        </ConfirmationModal>
+      </>
+    );
+  }, [
+    unavaliableNames,
+    name,
+    loadingNames,
+    handleShareComponent,
+    openConfirmationModal,
+  ]);
+
+  return (
+    <>
+      <BaseModal
+        size="smaller-h-full"
+        open={(!disabled && open) ?? internalOpen}
+        setOpen={setOpen ?? internalSetOpen}
+      >
+        <BaseModal.Trigger>{children ? children : <></>}</BaseModal.Trigger>
+        <BaseModal.Header
+          description={`Share your ${nameComponent} to the Langflow Store.`}
+        >
+          <span className="pr-2">Share</span>
+          <IconComponent
+            name="Share2"
+            className="h-6 w-6 pl-1 text-foreground"
+            aria-hidden="true"
+          />
+        </BaseModal.Header>
+        <BaseModal.Content>
+          <EditFlowSettings
+            name={name}
+            invalidNameList={unavaliableNames.map((element) => element.name)}
+            description={description}
+            setName={setName}
+            setDescription={setDescription}
+          />
+          <div className="mt-3 flex h-8 w-full">
+            <TagsSelector
+              tags={tags}
+              loadingTags={loadingTags}
+              disabled={false}
+              selectedTags={selectedTags}
+              setSelectedTags={setSelectedTags}
+            />
+          </div>
+          <div className="mt-5 flex items-center space-x-2">
+            <Checkbox
+              id="public"
+              checked={sharePublic}
+              onCheckedChange={(event: boolean) => {
+                setSharePublic(event);
+                setChecked(false);
+              }}
+            />
+            <label htmlFor="public" className="export-modal-save-api text-sm ">
+              Make {nameComponent} public
+            </label>
+          </div>
+          <div className="mt-3 flex items-center space-x-2">
+            <Checkbox
+              id="terms"
+              checked={checked}
+              onCheckedChange={(event: boolean) => {
+                setChecked(event);
+              }}
+              disabled={sharePublic}
+            />
+            <label htmlFor="terms" className="export-modal-save-api text-sm ">
+              Save with my API keys
+            </label>
+          </div>
+          <span className=" text-xs text-destructive ">
+            Warning: Deselecting this box will exclusively eliminate API keys
+            from fields explicitly designated for API keys.
+          </span>
+        </BaseModal.Content>
+
+        <BaseModal.Footer>
+          <div className="text-right">
             <Button
               disabled={loadingNames}
-              onClick={() => {
-                handleShareComponent();
-                if (setOpen) setOpen(false);
-                else internalSetOpen(false);
-              }}
               type="button"
+              onClick={() => {
+                const isNameAvailable = !unavaliableNames.some(
+                  (element) => element.name === name
+                );
+
+                if (isNameAvailable) {
+                  handleShareComponent();
+                  (setOpen || internalSetOpen)(false);
+                } else {
+                  setOpenConfirmationModal(true);
+                }
+              }}
             >
               {loadingNames ? (
                 <>
@@ -230,81 +302,10 @@ export default function ShareModal({
                 </>
               )}
             </Button>
-          </>
-        )}
-      </>
-    );
-  }, [unavaliableNames, name, loadingNames, handleShareComponent]);
-
-  return (
-    <BaseModal
-      size="smaller-h-full"
-      open={(!disabled && open) ?? internalOpen}
-      setOpen={setOpen ?? internalSetOpen}
-    >
-      <BaseModal.Trigger>{children ? children : <></>}</BaseModal.Trigger>
-      <BaseModal.Header
-        description={`Share your ${nameComponent} to the Langflow Store.`}
-      >
-        <span className="pr-2">Share</span>
-        <IconComponent
-          name="Share2"
-          className="h-6 w-6 pl-1 text-foreground"
-          aria-hidden="true"
-        />
-      </BaseModal.Header>
-      <BaseModal.Content>
-        <EditFlowSettings
-          name={name}
-          invalidNameList={unavaliableNames.map((element) => element.name)}
-          description={description}
-          setName={setName}
-          setDescription={setDescription}
-        />
-        <div className="mt-3 flex h-8 w-full">
-          <TagsSelector
-            tags={tags}
-            loadingTags={loadingTags}
-            disabled={false}
-            selectedTags={selectedTags}
-            setSelectedTags={setSelectedTags}
-          />
-        </div>
-        <div className="mt-5 flex items-center space-x-2">
-          <Checkbox
-            id="public"
-            checked={sharePublic}
-            onCheckedChange={(event: boolean) => {
-              setSharePublic(event);
-              setChecked(false);
-            }}
-          />
-          <label htmlFor="public" className="export-modal-save-api text-sm ">
-            Make {nameComponent} public
-          </label>
-        </div>
-        <div className="mt-3 flex items-center space-x-2">
-          <Checkbox
-            id="terms"
-            checked={checked}
-            onCheckedChange={(event: boolean) => {
-              setChecked(event);
-            }}
-            disabled={sharePublic}
-          />
-          <label htmlFor="terms" className="export-modal-save-api text-sm ">
-            Save with my API keys
-          </label>
-        </div>
-        <span className=" text-xs text-destructive ">
-          Warning: Deselecting this box will exclusively eliminate API keys from
-          fields explicitly designated for API keys.
-        </span>
-      </BaseModal.Content>
-
-      <BaseModal.Footer>
-        <>{modalConfirmationButton}</>
-      </BaseModal.Footer>
-    </BaseModal>
+          </div>
+        </BaseModal.Footer>
+      </BaseModal>
+      <>{modalConfirmation}</>
+    </>
   );
 }
