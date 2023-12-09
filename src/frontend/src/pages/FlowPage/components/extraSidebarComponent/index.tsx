@@ -95,9 +95,13 @@ export default function ExtraSidebar(): JSX.Element {
   }
 
   useEffect(() => {
-    if (getFilterEdge.length === 0 && search === "") {
-      setFilterData(data);
+    if (getFilterEdge.length !== 0) {
       setSearch("");
+    }
+
+    if (getFilterEdge.length === 0 && search === "") {
+      setSearch("");
+      setFilterData(data);
     }
   }, [getFilterEdge, data]);
 
@@ -326,6 +330,7 @@ export default function ExtraSidebar(): JSX.Element {
       <div className="side-bar-search-div-placement">
         <Input
           onFocusCapture={() => handleBlur()}
+          value={search}
           type="text"
           name="search"
           id="search"
