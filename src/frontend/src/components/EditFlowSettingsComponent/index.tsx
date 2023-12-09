@@ -21,11 +21,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-    setName(value);
+    setName!(value);
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value);
+    setDescription!(event.target.value);
   };
 
   return (
@@ -37,31 +37,44 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             <span className="edit-flow-span">Character limit reached</span>
           )}
         </div>
-        <Input
-          className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
-          onChange={handleNameChange}
-          type="text"
-          name="name"
-          value={name ?? ""}
-          placeholder="Flow name"
-          id="name"
-          maxLength={maxLength}
-        />
+        {setName ? (
+          <Input
+            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            onChange={handleNameChange}
+            type="text"
+            name="name"
+            value={name ?? ""}
+            placeholder="Flow name"
+            id="name"
+            maxLength={maxLength}
+          />
+        ) : (
+          <span className="font-normal text-muted-foreground word-break-break-word">
+            {name}
+          </span>
+        )}
       </Label>
       <Label>
         <div className="edit-flow-arrangement mt-3">
-          <span className="font-medium ">Description (optional)</span>
+          <span className="font-medium ">
+            Description {setDescription ? "(optional)" : ""}
+          </span>
         </div>
-
-        <Textarea
-          name="description"
-          id="description"
-          onChange={handleDescriptionChange}
-          value={description!}
-          placeholder="Flow description"
-          className="mt-2 max-h-[100px] font-normal"
-          rows={3}
-        />
+        {setDescription ? (
+          <Textarea
+            name="description"
+            id="description"
+            onChange={handleDescriptionChange}
+            value={description!}
+            placeholder="Flow description"
+            className="mt-2 max-h-[100px] font-normal"
+            rows={3}
+          />
+        ) : (
+          <span className="font-normal text-muted-foreground word-break-break-word">
+            {description}
+          </span>
+        )}
       </Label>
     </>
   );
