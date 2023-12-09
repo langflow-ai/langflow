@@ -361,7 +361,7 @@ export default function GenericNode({
           <div
             className={
               showNode
-                ? "generic-node-desc " +
+                ? "generic-node-desc overflow-hidden " +
                   (data.node?.description !== "" ? "py-5" : "pb-5")
                 : ""
             }
@@ -403,7 +403,7 @@ export default function GenericNode({
               />
             ) : (
               <div
-                className="generic-node-desc-text break-all"
+                className="generic-node-desc-text truncate-multiline word-break-break-word"
                 onDoubleClick={() => {
                   setInputDescription(true);
                   takeSnapshot();
