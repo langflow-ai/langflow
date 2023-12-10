@@ -22,6 +22,7 @@ from .constants import (
     Tool,
     VectorStore,
 )
+from .range_spec import RangeSpec
 
 __all__ = [
     "NestedDict",
@@ -46,4 +47,5 @@ __all__ = [
     "BasePromptTemplate",
     "ChatPromptTemplate",
     "Prompt",
+    "RangeSpec",
 ]

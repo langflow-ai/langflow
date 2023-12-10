@@ -10,6 +10,7 @@ from cachetools import LRUCache, cached
 from fastapi import HTTPException
 from loguru import logger
 
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.custom_component import CustomComponent
@@ -254,6 +255,11 @@ def update_field_dict(field_dict):
 
     if "value" in field_dict and callable(field_dict["value"]):
         field_dict["value"] = field_dict["value"](field_dict.get("options", []))
+        field_dict["refresh"] = True
+
+    # Let's check if "range_spec" is a RangeSpec object
+    if "range_spec" in field_dict and isinstance(field_dict["range_spec"], RangeSpec):
+        field_dict["range_spec"] = field_dict["range_spec"].model_dump()
         field_dict["refresh"] = True
 
 
