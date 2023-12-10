@@ -46,7 +46,7 @@ class Component(CustomComponent):
 
 class CustomComponentFrontendNode(FrontendNode):
     name: str = "CustomComponent"
-    display_name: str = None
+    display_name: Optional[str] = None
     beta: bool = True
     template: Template = Template(
         type_name="CustomComponent",
@@ -67,10 +67,8 @@ class CustomComponentFrontendNode(FrontendNode):
     description: Optional[str] = None
     base_classes: list[str] = []
 
-    def to_dict(self):
-        return super().to_dict()
 
-    def to_dict_nameless(self):
+    def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
         self.process_base_classes()
         return {
