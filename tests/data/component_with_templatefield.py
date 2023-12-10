@@ -1,7 +1,7 @@
 import random
 
 from langflow import CustomComponent
-from langflow.template.field.base import TemplateField
+from langflow.field_typing import TemplateField
 
 
 class TestComponent(CustomComponent):
