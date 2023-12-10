@@ -35,6 +35,7 @@ def test_llm_checker_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["_type"] == "LLMCheckerChain"
 
@@ -69,6 +70,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["verbose"] == {
         "required": False,
@@ -83,6 +85,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": True,
         "info": "",
+        "fileTypes": [],
     }
     assert template["llm"] == {
         "required": True,
@@ -96,6 +99,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["input_key"] == {
         "required": True,
@@ -110,6 +114,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": True,
         "info": "",
+        "fileTypes": [],
     }
     assert template["output_key"] == {
         "required": True,
@@ -124,6 +129,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": True,
         "info": "",
+        "fileTypes": [],
     }
     assert template["_type"] == "LLMMathChain"
 
@@ -163,6 +169,9 @@ def test_series_character_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "file_path": "",
+        "value": "",
     }
     assert template["character"] == {
         "required": True,
@@ -176,6 +185,9 @@ def test_series_character_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "file_path": "",
+        "value": "",
     }
     assert template["series"] == {
         "required": True,
@@ -189,6 +201,9 @@ def test_series_character_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "file_path": "",
+        "value": "",
     }
     assert template["_type"] == "SeriesCharacterChain"
 
@@ -232,6 +247,9 @@ def test_mid_journey_prompt_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
     # Test the description object
     assert chain["description"] == "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
@@ -270,6 +288,9 @@ def test_time_travel_guide_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
     assert template["memory"] == {
         "required": False,
@@ -283,6 +304,9 @@ def test_time_travel_guide_chain(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
 
     assert chain["description"] == "Time travel guide chain."
