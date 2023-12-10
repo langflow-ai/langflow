@@ -11,6 +11,7 @@ export default function Dropdown({
   editNode = false,
   numberOfOptions = 0,
   apiModal = false,
+  id = "",
 }: DropDownComponentType): JSX.Element {
   let [internalValue, setInternalValue] = useState(
     value === "" || !value ? "Choose an option" : value
@@ -31,15 +32,19 @@ export default function Dropdown({
       >
         {({ open }) => (
           <>
-            <div className={editNode ? "mt-1" : "relative mt-1"}>
+            <div className={"relative mt-1"}>
               <Listbox.Button
+                data-test={`${id ?? ""}`}
                 className={
                   editNode
                     ? "dropdown-component-outline"
                     : "dropdown-component-false-outline"
                 }
               >
-                <span className="dropdown-component-display">
+                <span
+                  className="dropdown-component-display"
+                  data-testid={`${id ?? ""}-display`}
+                >
                   {internalValue}
                 </span>
                 <span className={"dropdown-component-arrow"}>
@@ -63,7 +68,7 @@ export default function Dropdown({
                     editNode
                       ? "dropdown-component-true-options nowheel custom-scroll"
                       : "dropdown-component-false-options nowheel custom-scroll",
-                    apiModal ? "mb-2 w-[250px]" : "absolute"
+                    apiModal ? "mb-2 w-[250px]" : "absolute w-full"
                   )}
                 >
                   {options.map((option, id) => (
@@ -86,6 +91,7 @@ export default function Dropdown({
                               selected ? "font-semibold" : "font-normal",
                               "block truncate "
                             )}
+                            data-testid={`${option}-${id ?? ""}-option`}
                           >
                             {option}
                           </span>

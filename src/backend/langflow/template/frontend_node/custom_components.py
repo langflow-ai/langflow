@@ -1,8 +1,48 @@
+from typing import Optional
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.interface.custom.constants import DEFAULT_CUSTOM_COMPONENT_CODE
-from typing import Optional
+from pydantic import field_serializer
+
+DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
+from typing import Optional, List, Dict, Union
+from langflow.field_typing import (
+    AgentExecutor,
+    BaseChatMemory,
+    BaseLanguageModel,
+    BaseLLM,
+    BaseLoader,
+    BaseMemory,
+    BaseOutputParser,
+    BasePromptTemplate,
+    BaseRetriever,
+    Callable,
+    Chain,
+    ChatPromptTemplate,
+    Data,
+    Document,
+    Embeddings,
+    NestedDict,
+    Object,
+    PromptTemplate,
+    TextSplitter,
+    Tool,
+    VectorStore,
+)
+
+
+class Component(CustomComponent):
+    display_name: str = "Custom Component"
+    description: str = "Create any custom component you want!"
+
+    def build_config(self):
+        return {"param": {"display_name": "Parameter"}}
+
+    def build(self, param: Data) -> Data:
+        return param
+
+"""
 
 
 class CustomComponentFrontendNode(FrontendNode):
@@ -28,5 +68,8 @@ class CustomComponentFrontendNode(FrontendNode):
     description: Optional[str] = None
     base_classes: list[str] = []
 
-    def to_dict(self):
-        return super().to_dict()
+    @field_serializer("display_name")
+    def process_display_name(self, display_name: str) -> str:
+        """Sets the display name of the frontend node."""
+
+        return display_name

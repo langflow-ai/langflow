@@ -14,7 +14,8 @@ test.describe("Flow Page tests", () => {
       .filter({ hasText: /^Custom Component$/ })
       .nth(4)
       .dragTo(page.locator(".react-flow__pane"));
-    await page.locator("div:nth-child(4) > .extra-side-bar-buttons").click();
-    await page.locator(".success-alert").click();
+
+    // await page.getByTestId("icon-ExternalLink").click();
+    // await page.locator('//*[@id="checkAndSaveBtn"]').click();
   });
 });

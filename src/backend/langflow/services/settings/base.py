@@ -49,9 +49,18 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_CACHE_EXPIRE: int = 3600
 
+    # PLUGIN_DIR: Optional[str] = None
+
     LANGFUSE_SECRET_KEY: Optional[str] = None
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_HOST: Optional[str] = None
+
+    STORE: Optional[bool] = True
+    STORE_URL: Optional[str] = "https://api.langflow.store"
+    DOWNLOAD_WEBHOOK_URL: Optional[
+        str
+    ] = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
@@ -79,9 +88,7 @@ class Settings(BaseSettings):
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value, values):
         if not value:
-            logger.debug(
-                "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
-            )
+            logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
@@ -91,9 +98,7 @@ class Settings(BaseSettings):
                 # so we need to migrate to the new format
                 # if there is a database in that location
                 if not values["CONFIG_DIR"]:
-                    raise ValueError(
-                        "CONFIG_DIR not set, please set it or provide a DATABASE_URL"
-                    )
+                    raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
 
                 new_path = f"{values['CONFIG_DIR']}/langflow.db"
                 if Path("./langflow.db").exists():
@@ -117,22 +122,15 @@ class Settings(BaseSettings):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if (
-                Path(langflow_component_path).exists()
-                and langflow_component_path not in value
-            ):
+            if Path(langflow_component_path).exists() and langflow_component_path not in value:
                 if isinstance(langflow_component_path, list):
                     for path in langflow_component_path:
                         if path not in value:
                             value.append(path)
-                    logger.debug(
-                        f"Extending {langflow_component_path} to components_path"
-                    )
+                    logger.debug(f"Extending {langflow_component_path} to components_path")
                 elif langflow_component_path not in value:
                     value.append(langflow_component_path)
-                    logger.debug(
-                        f"Appending {langflow_component_path} to components_path"
-                    )
+                    logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
@@ -144,9 +142,7 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
-    model_config = SettingsConfigDict(
-        validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_"
-    )
+    model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     # @model_validator()
     # @classmethod
@@ -211,7 +207,7 @@ class Settings(BaseSettings):
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
     with open(file_path, "w") as f:
-        settings_dict = settings.dict()
+        settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
 

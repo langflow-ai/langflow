@@ -15,7 +15,7 @@ from langflow.interface.tools.constants import (
     OTHER_TOOLS,
 )
 from langflow.interface.tools.util import get_tool_params
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
@@ -32,9 +32,7 @@ TOOL_INPUTS = {
         placeholder="",
         value="",
     ),
-    "llm": TemplateField(
-        field_type="BaseLanguageModel", required=True, is_list=False, show=True
-    ),
+    "llm": TemplateField(field_type="BaseLanguageModel", required=True, is_list=False, show=True),
     "func": TemplateField(
         field_type="Callable",
         required=True,
@@ -56,8 +54,7 @@ TOOL_INPUTS = {
         is_list=False,
         show=True,
         value="",
-        suffixes=[".json", ".yaml", ".yml"],
-        file_types=["json", "yaml", "yml"],
+        file_types=[".json", ".yaml", ".yml"],
     ),
 }
 
@@ -81,10 +78,7 @@ class ToolCreator(LangChainTypeCreator):
 
                 tool_name = tool_params.get("name") or tool
 
-                if (
-                    tool_name in settings_service.settings.TOOLS
-                    or settings_service.settings.DEV
-                ):
+                if tool_name in settings_service.settings.TOOLS or settings_service.settings.DEV:
                     if tool_name == "JsonSpec":
                         tool_params["path"] = tool_params.pop("dict_")  # type: ignore
                     all_tools[tool_name] = {

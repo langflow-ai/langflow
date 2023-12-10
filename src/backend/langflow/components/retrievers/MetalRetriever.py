@@ -18,9 +18,7 @@ class MetalRetrieverComponent(CustomComponent):
             "code": {"show": False},
         }
 
-    def build(
-        self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None
-    ) -> BaseRetriever:
+    def build(self, api_key: str, client_id: str, index_id: str, params: Optional[dict] = None) -> BaseRetriever:
         try:
             metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
         except Exception as e:
