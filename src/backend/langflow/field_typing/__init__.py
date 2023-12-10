@@ -27,7 +27,7 @@ from .constants import (
 from .range_spec import RangeSpec
 
 
-def import_template_field():
+def _import_template_field():
     from langflow.template.field.base import TemplateField
 
     return TemplateField
@@ -36,7 +36,7 @@ def import_template_field():
 def __getattr__(name: str) -> Any:
     # This is to avoid circular imports
     if name == "TemplateField":
-        return import_template_field()
+        return _import_template_field()
     elif name == "RangeSpec":
         return RangeSpec
     # The other names should work as if they were imported from constants
