@@ -362,7 +362,7 @@ const EditNodeModal = forwardRef(
                                       editNode={true}
                                       rangeSpec={
                                         myData.node!.template[templateParam]
-                                          .range_spec
+                                          .rangeSpec
                                       }
                                       value={
                                         myData.node.template[templateParam]
