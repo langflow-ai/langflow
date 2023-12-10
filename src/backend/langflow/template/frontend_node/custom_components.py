@@ -67,7 +67,6 @@ class CustomComponentFrontendNode(FrontendNode):
     description: Optional[str] = None
     base_classes: list[str] = []
 
-
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
         self.process_base_classes()

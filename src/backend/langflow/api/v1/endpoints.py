@@ -246,8 +246,6 @@ async def custom_component_update(
 ):
     component = create_and_validate_component(raw_code.code)
 
-    component_node = build_custom_component_template(
-        component, user_id=user.id, update_field=raw_code.field
-    )
+    component_node = build_custom_component_template(component, user_id=user.id, update_field=raw_code.field)
     # Update the field
     return component_node
