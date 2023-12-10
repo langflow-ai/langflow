@@ -1,5 +1,7 @@
 from typing import Optional
 
+from pydantic import field_serializer
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
@@ -67,19 +69,8 @@ class CustomComponentFrontendNode(FrontendNode):
     description: Optional[str] = None
     base_classes: list[str] = []
 
-    def to_dict(self) -> dict:
-        """Returns a dict representation of the frontend node."""
-        self.process_base_classes()
-        return {
-            self.name: {
-                "template": self.template.to_dict(self.format_field),
-                "description": self.description,
-                "base_classes": self.base_classes,
-                "display_name": self.display_name,
-                "custom_fields": self.custom_fields,
-                "output_types": self.output_types,
-                "documentation": self.documentation,
-                "beta": self.beta,
-                "error": self.error,
-            },
-        }
+    @field_serializer("display_name")
+    def process_display_name(self, display_name: str) -> str:
+        """Sets the display name of the frontend node."""
+
+        return display_name

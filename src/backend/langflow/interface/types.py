@@ -129,7 +129,7 @@ def add_new_custom_field(
         display_name=display_name,
         **field_config,
     )
-    template.get("template")[field_name] = new_field.to_dict()
+    template.get("template")[field_name] = new_field.model_dump(by_alias=True, exclude_none=True)
     template.get("custom_fields")[field_name] = None
 
     return template
