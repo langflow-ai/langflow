@@ -27,15 +27,14 @@ class Template(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         for field in self.fields:
-            result[field.name] = field.to_dict()
+            result[field.name] = field.model_dump(by_alias=True, exclude_none=True)
         result["_type"] = result.pop("type_name")
         return result
 
+    # For backwards compatibility
     def to_dict(self, format_field_func=None):
         self.process_fields(format_field_func)
         self.sort_fields()
-        # result = {field.name: field.to_dict() for field in self.fields}
-        # result["_type"] = self.type_name  # type: ignore
         return self.model_dump(by_alias=True, exclude_none=True, exclude={"fields"})
 
     def add_field(self, field: TemplateField) -> None:

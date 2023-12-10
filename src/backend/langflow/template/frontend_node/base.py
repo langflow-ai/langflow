@@ -3,8 +3,7 @@ from collections import defaultdict
 from typing import ClassVar, Dict, List, Optional
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import (CLASSES_TO_REMOVE,
-                                                       FORCE_SHOW_FIELDS)
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
@@ -76,15 +75,16 @@ class FrontendNode(BaseModel):
 
         return display_name or self.name
 
-
     @model_serializer(mode="wrap")
     def serialize(self, handler):
         result = handler(self)
-        result["template"] = self.template.to_dict(self.format_field)
+        if hasattr(self, "template") and hasattr(self.template, "to_dict"):
+            result["template"] = self.template.to_dict(self.format_field)
         name = result.pop("name")
 
         return {name: result}
 
+    # For backwards compatibility
     def to_dict(self) -> dict:
         """Returns a dict representation of the frontend node."""
 
