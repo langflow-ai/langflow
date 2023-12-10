@@ -138,10 +138,26 @@ export type DisclosureComponentType = {
     }[];
   };
 };
+
+export type RangeSpecType = {
+  min: number;
+  max: number;
+  step: number;
+};
+
+export type IntComponentType = {
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  editNode?: boolean;
+  id?: string;
+};
+
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
 };

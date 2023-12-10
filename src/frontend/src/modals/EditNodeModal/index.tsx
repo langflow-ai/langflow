@@ -360,6 +360,10 @@ const EditNodeModal = forwardRef(
                                     <FloatComponent
                                       disabled={disabled}
                                       editNode={true}
+                                      rangeSpec={
+                                        myData.node!.template[templateParam]
+                                          .range_spec
+                                      }
                                       value={
                                         myData.node.template[templateParam]
                                           .value ?? ""
