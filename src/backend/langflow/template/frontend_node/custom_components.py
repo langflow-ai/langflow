@@ -69,3 +69,20 @@ class CustomComponentFrontendNode(FrontendNode):
 
     def to_dict(self):
         return super().to_dict()
+
+    def to_dict_nameless(self):
+        """Returns a dict representation of the frontend node."""
+        self.process_base_classes()
+        return {
+            self.name: {
+                "template": self.template.to_dict(self.format_field),
+                "description": self.description,
+                "base_classes": self.base_classes,
+                "display_name": self.display_name,
+                "custom_fields": self.custom_fields,
+                "output_types": self.output_types,
+                "documentation": self.documentation,
+                "beta": self.beta,
+                "error": self.error,
+            },
+        }

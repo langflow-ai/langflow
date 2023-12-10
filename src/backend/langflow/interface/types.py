@@ -174,10 +174,14 @@ def extract_type_from_optional(field_type):
     return match[1] if match else None
 
 
-def build_frontend_node(custom_component: CustomComponent):
+def build_frontend_node(custom_component: CustomComponent, nameless: Optional[bool] = False):
     """Build a frontend node for a custom component"""
     try:
-        return CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
+        return (
+            CustomComponentFrontendNode().to_dict_nameless().get(type(custom_component).__name__)
+            if nameless
+            else CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
+        )
 
     except Exception as exc:
         logger.error(f"Error while building base frontend node: {exc}")
@@ -340,11 +344,12 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
     update_field: Optional[str] = None,
+    nameless: Optional[bool] = False,
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
         logger.debug("Building custom component template")
-        frontend_node = build_frontend_node(custom_component)
+        frontend_node = build_frontend_node(custom_component, nameless)
 
         if frontend_node is None:
             return None
