@@ -8,6 +8,9 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
+from loguru import logger
+
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.custom_component import CustomComponent
@@ -31,7 +34,6 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 # Used to get the base_classes list
@@ -271,6 +273,10 @@ def update_field_dict(field_dict):
     if "value" in field_dict and callable(field_dict["value"]):
         field_dict["value"] = field_dict["value"](field_dict.get("options", []))
         field_dict["refresh"] = True
+
+    # Let's check if "range_spec" is a RangeSpec object
+    if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
+        field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
 
 
 def add_extra_fields(frontend_node, field_config, function_args):

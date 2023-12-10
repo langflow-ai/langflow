@@ -457,6 +457,7 @@ export default function ParameterComponent({
             <FloatComponent
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
+              rangeSpec={data.node?.template[name].rangeSpec}
               onChange={handleOnNewValue}
             />
           </div>
