@@ -129,12 +129,19 @@ def add_new_custom_field(
         advanced=field_advanced,
         placeholder=placeholder,
         display_name=display_name,
-        **field_config,
+        **sanitize_field_config(field_config),
     )
     template.get("template")[field_name] = new_field.model_dump(by_alias=True, exclude_none=True)
     template.get("custom_fields")[field_name] = None
 
     return template
+
+
+def sanitize_field_config(field_config: Dict):
+    # If any of the already existing keys are in field_config, remove them
+    for key in ["name", "field_type", "value", "required", "placeholder", "display_name", "advanced", "show"]:
+        field_config.pop(key, None)
+    return field_config
 
 
 # TODO: Move to correct place
@@ -224,7 +231,10 @@ def build_field_config(
     try:
         build_config: Dict = custom_class(user_id=user_id).build_config()
 
-        for field_name, field_dict in build_config.items():
+        for field_name, field in build_config.items():
+            # Allow user to build TemplateField as well
+            # as a dict with the same keys as TemplateField
+            field_dict = get_field_dict(field)
             if update_field is not None and field_name != update_field:
                 continue
             try:
@@ -244,6 +254,13 @@ def build_field_config(
                 "traceback": traceback.format_exc(),
             },
         ) from exc
+
+
+def get_field_dict(field):
+    """Get the field dictionary from a TemplateField or a dict"""
+    if isinstance(field, TemplateField):
+        return field.model_dump(by_alias=True, exclude_none=True)
+    return field
 
 
 def update_field_dict(field_dict):

@@ -1,3 +1,5 @@
+from langflow.template.field.base import TemplateField
+
 from .constants import (
     AgentExecutor,
     BaseChatMemory,
@@ -48,4 +50,5 @@ __all__ = [
     "ChatPromptTemplate",
     "Prompt",
     "RangeSpec",
+    "TemplateField",
 ]
