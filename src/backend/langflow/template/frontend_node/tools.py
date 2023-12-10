@@ -1,9 +1,7 @@
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
-from langflow.utils.constants import (
-    DEFAULT_PYTHON_FUNCTION,
-)
+from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 
 
 class ToolNode(FrontendNode):
@@ -56,9 +54,6 @@ class ToolNode(FrontendNode):
     )
     description: str = "Converts a chain, agent or function into a tool."
     base_classes: list[str] = ["Tool", "BaseTool"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class PythonFunctionToolNode(FrontendNode):
@@ -113,9 +108,6 @@ class PythonFunctionToolNode(FrontendNode):
     description: str = "Python function to be executed."
     base_classes: list[str] = ["BaseTool", "Tool"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
@@ -136,6 +128,3 @@ class PythonFunctionNode(FrontendNode):
     )
     description: str = "Python function to be executed."
     base_classes: list[str] = ["Callable"]
-
-    def to_dict(self):
-        return super().to_dict()
