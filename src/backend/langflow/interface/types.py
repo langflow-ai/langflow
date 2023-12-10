@@ -260,7 +260,6 @@ def update_field_dict(field_dict):
     # Let's check if "range_spec" is a RangeSpec object
     if "range_spec" in field_dict and isinstance(field_dict["range_spec"], RangeSpec):
         field_dict["range_spec"] = field_dict["range_spec"].model_dump()
-        field_dict["refresh"] = True
 
 
 def add_extra_fields(frontend_node, field_config, function_args):
