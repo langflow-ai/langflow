@@ -156,11 +156,16 @@ export default function ParameterComponent({
   };
 
   const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+    if (!data.node) return;
     if (data.node!.template[name].value !== newNodeClass.template[name].value) {
       takeSnapshot();
     }
-    data.node = newNodeClass;
-    data.node.template[name].value = code;
+    data.node! = {
+      ...newNodeClass,
+      description: newNodeClass.description ?? data.node!.description,
+      display_name: newNodeClass.display_name ?? data.node!.display_name,
+    };
+    data.node!.template[name].value = code;
     updateNodeInternals(data.id);
     // Set state to pending
     //@ts-ignore
