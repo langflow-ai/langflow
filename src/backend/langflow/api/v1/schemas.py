@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from pydantic import BaseModel, Field, field_validator
+
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from pydantic import BaseModel, Field, field_validator
 
 
 class BuildStatus(Enum):
@@ -157,7 +158,7 @@ class StreamData(BaseModel):
 class CustomComponentCode(BaseModel):
     code: str
     field: Optional[str] = None
-    template: Optional[dict] = None
+    frontend_node: Optional[dict] = None
 
 
 class CustomComponentResponseError(BaseModel):
