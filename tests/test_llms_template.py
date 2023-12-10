@@ -84,6 +84,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["max_tokens"] == {
         "required": False,
@@ -112,6 +113,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["frequency_penalty"] == {
         "required": False,
@@ -126,6 +128,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["presence_penalty"] == {
         "required": False,
@@ -140,6 +143,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["n"] == {
         "required": False,
@@ -223,6 +227,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["logit_bias"] == {
         "required": False,
@@ -338,6 +343,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["model_kwargs"] == {
         "required": False,
@@ -379,6 +385,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "range_spec": {"max": 1.0, "min": -1.0, "step": 0.1},
     }
     assert template["max_retries"] == {
         "required": False,
