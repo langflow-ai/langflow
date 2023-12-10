@@ -216,7 +216,7 @@ async def custom_component(
 ):
     component = create_and_validate_component(raw_code.code)
 
-    built_frontend_node = build_custom_component_template(component, user_id=user.id, nameless=True)
+    built_frontend_node = build_custom_component_template(component, user_id=user.id)
 
     built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code)
     return built_frontend_node
@@ -234,7 +234,7 @@ async def reload_custom_component(path: str, user: User = Depends(get_current_ac
 
         extractor = CustomComponent(code=content)
         extractor.validate()
-        return build_custom_component_template(extractor, user_id=user.id, nameless=True)
+        return build_custom_component_template(extractor, user_id=user.id)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -247,7 +247,7 @@ async def custom_component_update(
     component = create_and_validate_component(raw_code.code)
 
     component_node = build_custom_component_template(
-        component, user_id=user.id, update_field=raw_code.field, nameless=True
+        component, user_id=user.id, update_field=raw_code.field
     )
     # Update the field
     return component_node
