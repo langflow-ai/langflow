@@ -8,8 +8,6 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.custom_component import CustomComponent
@@ -31,8 +29,10 @@ from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import \
+    CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 # Used to get the base_classes list
@@ -174,14 +174,10 @@ def extract_type_from_optional(field_type):
     return match[1] if match else None
 
 
-def build_frontend_node(custom_component: CustomComponent, nameless: Optional[bool] = False):
+def build_frontend_node(custom_component: CustomComponent):
     """Build a frontend node for a custom component"""
     try:
-        return (
-            CustomComponentFrontendNode().to_dict_nameless().get(type(custom_component).__name__)
-            if nameless
-            else CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
-        )
+        return CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
 
     except Exception as exc:
         logger.error(f"Error while building base frontend node: {exc}")
@@ -344,12 +340,11 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
     update_field: Optional[str] = None,
-    nameless: Optional[bool] = False,
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
         logger.debug("Building custom component template")
-        frontend_node = build_frontend_node(custom_component, nameless)
+        frontend_node = build_frontend_node(custom_component)
 
         if frontend_node is None:
             return None
