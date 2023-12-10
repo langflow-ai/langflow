@@ -549,3 +549,17 @@ def test_build_langchain_template_custom_component_valid_code(test_component_cod
     frontend_node = build_custom_component_template(component, update_field="param")
     new_param_options = frontend_node["template"]["param"]["options"]
     assert param_options != new_param_options
+
+
+def test_build_langchain_template_custom_component_templatefield(test_component_with_templatefield_code):
+    component = create_and_validate_component(test_component_with_templatefield_code)
+    frontend_node = build_custom_component_template(component)
+    assert isinstance(frontend_node, dict)
+    template = frontend_node["template"]
+    assert isinstance(template, dict)
+    assert "param" in template
+    param_options = template["param"]["options"]
+    # Now run it again with an update field
+    frontend_node = build_custom_component_template(component, update_field="param")
+    new_param_options = frontend_node["template"]["param"]["options"]
+    assert param_options != new_param_options

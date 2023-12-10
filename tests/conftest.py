@@ -308,3 +308,11 @@ def test_component_code():
     # load the content as a string
     with open(path, "r") as f:
         return f.read()
+
+
+@pytest.fixture
+def test_component_with_templatefield_code():
+    path = Path(__file__).parent.absolute() / "data" / "component_with_templatefield.py"
+    # load the content as a string
+    with open(path, "r") as f:
+        return f.read()
