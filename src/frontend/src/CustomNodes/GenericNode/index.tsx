@@ -174,6 +174,7 @@ export default function GenericNode({
                           if (nodeName.trim() !== "") {
                             setNodeName(nodeName);
                             data.node!.display_name = nodeName;
+                            updateNodeInternals(data.id);
                           } else {
                             setNodeName(data.node!.display_name);
                           }
@@ -376,12 +377,9 @@ export default function GenericNode({
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
-                    if (nodeDescription.trim() !== "") {
-                      setNodeDescription(nodeDescription);
-                      data.node!.description = nodeDescription;
-                    } else {
-                      setNodeDescription(data.node!.description);
-                    }
+                    setNodeDescription(nodeDescription);
+                    data.node!.description = nodeDescription;
+                    updateNodeInternals(data.id);
                   }}
                   value={nodeDescription}
                   onChange={(e) => setNodeDescription(e.target.value)}
@@ -396,6 +394,7 @@ export default function GenericNode({
                       setInputDescription(false);
                       setNodeDescription(nodeDescription);
                       data.node!.description = nodeDescription;
+                      updateNodeInternals(data.id);
                     }
                   }}
                 />

@@ -77,7 +77,15 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
-  }, [data, data.node, showModalAdvanced]);
+  }, [
+    data,
+    data.node,
+    data.node?.display_name,
+    data.node?.description,
+    data.node?.template,
+    showModalAdvanced,
+    showconfirmShare,
+  ]);
 
   const handleSelectChange = (event) => {
     switch (event) {
