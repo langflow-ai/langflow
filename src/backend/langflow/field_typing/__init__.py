@@ -40,7 +40,8 @@ def __getattr__(name: str) -> Any:
     elif name == "RangeSpec":
         return RangeSpec
     # The other names should work as if they were imported from constants
-    import langflow.field_typing.constants as constants
+    # Import the constants module langflow.field_typing.constants
+    from . import constants
 
     return getattr(constants, name)
 
