@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from abc import ABC
+from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
@@ -37,7 +38,7 @@ class TemplateField(BaseModel):
     password: bool = False
     """Specifies if the field is a password. Defaults to False."""
 
-    options: Optional[list[str]] = None
+    options: Union[list[str], Callable] = []
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
     name: str = ""
