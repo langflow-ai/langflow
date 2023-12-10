@@ -247,9 +247,6 @@ class CombineDocsChainNode(FrontendNode):
     description: str = """Load question answering chain."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "Callable"]
 
-    def to_dict(self):
-        return super().to_dict()
-
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         # do nothing and don't return anything
