@@ -28,7 +28,7 @@ Fargate のタスクはフロントエンドとバックエンドに分かれて
 
 1. 以下のコマンドを実行します。
     ```shell
-    git clone -b aws-cdk-dev2 https://github.com/kazuki306/langflow
+    git clone -b aws-cdk https://github.com/logspace-ai/langflow.git
     cd langflow/scripts/aws
     cp .env.example .env # 環境設定を変える場合はこのファイル(.env)を編集してください。
     npm ci

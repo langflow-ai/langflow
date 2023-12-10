@@ -27,14 +27,14 @@ If you just want to deploy resources, you do not need in-depth knowledge of each
 1. When you see `Done!` in Cloudshell, open `cloud9-for-prototyping` from [AWS Cloud9](https://us-east-1.console.aws.amazon.com/cloud9control/home?region=us-east-1#/).
    ![make-cloud9](./img/langflow-cloud9-en.png)
 1. Run the following command in the Cloud9 terminal.
-   ```shell
-   git clone -b aws-cdk-dev2 https://github.com/kazuki306/langflow
-   cd langflow/scripts/aws
-   cp .env.example .env # Edit this file if you need environment settings
-   npm ci
-   cdk bootstrap
-   cdk deploy
-   ```
+    ```shell
+    git clone -b aws-cdk https://github.com/logspace-ai/langflow.git
+    cd langflow/scripts/aws
+    cp .env.example .env # Edit this file if you need environment settings
+    npm ci
+    cdk bootstrap
+    cdk deploy
+    ```
 1. Access the URL displayed.
    ```shell
    Outputs:

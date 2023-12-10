@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: ./
-      dockerfile: ./cdk.Dockerfile
+      dockerfile: ./dev.Dockerfile
     env_file:
       - .env
     ports:
