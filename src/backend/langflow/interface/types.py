@@ -8,8 +8,6 @@ from uuid import UUID
 
 from cachetools import LRUCache, cached
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.custom_component import CustomComponent
@@ -33,6 +31,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 # Used to get the base_classes list
@@ -130,7 +129,7 @@ def add_new_custom_field(
         display_name=display_name,
         **field_config,
     )
-    template.get("template")[field_name] = new_field.to_dict()
+    template.get("template")[field_name] = new_field.model_dump(by_alias=True, exclude_none=True)
     template.get("custom_fields")[field_name] = None
 
     return template
