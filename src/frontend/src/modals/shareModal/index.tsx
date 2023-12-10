@@ -44,8 +44,6 @@ export default function ShareModal({
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { reactFlowInstance } = useContext(typesContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(component?.name ?? "");
-  const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";
@@ -60,6 +58,9 @@ export default function ShareModal({
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
   const [loadingNames, setLoadingNames] = useState(false);
+
+  const name = component?.name ?? "";
+  const description = component?.description ?? "";
 
   useEffect(() => {
     if (open || internalOpen) {
@@ -93,11 +94,6 @@ export default function ShareModal({
       setLoadingNames(false);
     });
   }
-
-  useEffect(() => {
-    setName(component?.name ?? "");
-    setDescription(component?.description ?? "");
-  }, [component, open, internalOpen]);
 
   const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
