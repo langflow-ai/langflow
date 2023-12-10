@@ -472,6 +472,11 @@ export default function CodeTabsComponent({
                                                           templateField
                                                         ].value
                                                   }
+                                                  rangeSpec={
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].rangeSpec
+                                                  }
                                                   onChange={(target) => {
                                                     setData((old) => {
                                                       let newInputList =

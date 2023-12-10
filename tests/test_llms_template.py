@@ -88,6 +88,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["max_tokens"] == {
@@ -118,6 +119,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["frequency_penalty"] == {
@@ -133,6 +135,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["presence_penalty"] == {
@@ -148,6 +151,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["n"] == {
@@ -237,6 +241,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["logit_bias"] == {
@@ -359,6 +364,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["model_kwargs"] == {
@@ -403,6 +409,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "rangeSpec": {"max": 1.0, "min": -1.0, "step": 0.1},
         "fileTypes": [],
     }
     assert template["max_retries"] == {

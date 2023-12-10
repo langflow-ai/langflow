@@ -3,6 +3,8 @@ from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
+from langflow.field_typing.range_spec import RangeSpec
+
 
 class TemplateField(BaseModel):
     model_config = ConfigDict()
@@ -60,6 +62,9 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
+    range_spec: Optional[RangeSpec] = Field(None, serialization_alias="rangeSpec")
+    """Range specification for the field. Defaults to None."""
+
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
@@ -68,3 +73,11 @@ class TemplateField(BaseModel):
         if self.field_type == "file":
             return value
         return ""
+
+    @field_serializer("field_type")
+    def serialize_field_type(self, value, _info):
+        if value == "float":
+            # check if range_spec is set
+            if self.range_spec is None:
+                self.range_spec = RangeSpec()
+        return value
