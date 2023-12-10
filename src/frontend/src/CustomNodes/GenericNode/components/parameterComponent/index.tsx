@@ -179,19 +179,22 @@ export default function ParameterComponent({
     }
     renderTooltips();
     let flow = flows.find((flow) => flow.id === tabId);
-    if (reactFlowInstance && flow && flow.data) {
-      cleanEdges({
-        flow: {
-          edges: flow.data!.edges,
-          nodes: flow.data!.nodes,
-        },
-        updateEdge: (edge) => {
-          reactFlowInstance.setEdges(edge);
-          updateNodeInternals(data.id);
-        },
-      });
-      updateFlow(flow);
-    }
+    setTimeout(() => {
+      //timeout necessary because ReactFlow updates are not async
+      if (reactFlowInstance && flow && flow.data) {
+        cleanEdges({
+          flow: {
+            edges: flow.data!.edges,
+            nodes: flow.data!.nodes,
+          },
+          updateEdge: (edge) => {
+            reactFlowInstance.setEdges(edge);
+            updateNodeInternals(data.id);
+          },
+        });
+        updateFlow(flow);
+      }
+    }, 50);
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
