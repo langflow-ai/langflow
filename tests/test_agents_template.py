@@ -29,7 +29,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "info": "",
         "fileTypes": [],
-        "value": None,
     }
 
     # Additional assertions for other template variables
@@ -46,7 +45,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "info": "",
         "fileTypes": [],
-        "value": None,
     }
     assert template["llm"] == {
         "required": True,
@@ -61,7 +59,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "info": "",
         "fileTypes": [],
-        "value": None,
     }
     assert template["output_parser"] == {
         "required": False,
@@ -76,7 +73,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "info": "",
         "fileTypes": [],
-        "value": None,
     }
     assert template["input_variables"] == {
         "required": False,
@@ -91,7 +87,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "info": "",
         "fileTypes": [],
-        "value": None,
     }
     assert template["prefix"] == {
         "required": False,
