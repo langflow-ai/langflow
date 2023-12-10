@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
