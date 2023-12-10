@@ -66,6 +66,3 @@ class CustomComponentFrontendNode(FrontendNode):
     )
     description: Optional[str] = None
     base_classes: list[str] = []
-
-    def to_dict(self):
-        return super().to_dict()

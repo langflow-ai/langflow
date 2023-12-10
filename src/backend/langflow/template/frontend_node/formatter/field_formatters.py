@@ -129,7 +129,7 @@ class MultilineFieldFormatter(FieldFormatter):
 
 class DefaultValueFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        value = field.to_dict()
+        value = field.model_dump(by_alias=True, exclude_none=True)
         if "default" in value:
             field.value = value["default"]
 
@@ -144,7 +144,7 @@ class HeadersDefaultValueFormatter(FieldFormatter):
 class DictCodeFileFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
         key = field.name
-        value = field.to_dict()
+        value = field.model_dump(by_alias=True, exclude_none=True)
         _type = value["type"]
         if "dict" in _type.lower() and key == "dict_":
             field.field_type = "file"
