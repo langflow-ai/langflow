@@ -9,7 +9,6 @@ export default function InputFileComponent({
   value,
   onChange,
   disabled,
-  suffixes,
   fileTypes,
   onFileChange,
   editNode = false,
@@ -29,8 +28,9 @@ export default function InputFileComponent({
   }, [disabled, onChange]);
 
   function checkFileType(fileName: string): boolean {
-    for (let index = 0; index < suffixes.length; index++) {
-      if (fileName.endsWith(suffixes[index])) {
+    if (fileTypes === undefined) return true;
+    for (let index = 0; index < fileTypes.length; index++) {
+      if (fileName.endsWith(fileTypes[index])) {
         return true;
       }
     }
@@ -45,7 +45,7 @@ export default function InputFileComponent({
     // Create a file input element
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = suffixes.join(",");
+    input.accept = fileTypes?.join(",");
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
 

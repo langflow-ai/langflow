@@ -20,29 +20,39 @@ export default function TextAreaComponent({
   }, [disabled]);
 
   return (
-    <div className="flex w-full items-center">
-      <Input
-        id={id}
+    <div
+      className={
+        "flex w-full items-center " + (disabled ? "pointer-events-none" : "")
+      }
+    >
+      <GenericModal
+        type={TypeModal.TEXT}
+        buttonText="Finishing Editing"
+        modalTitle="Edit Text"
         value={value}
-        disabled={disabled}
-        className={editNode ? "input-edit-node" : ""}
-        placeholder={"Type something..."}
-        onChange={(event) => {
-          onChange(event.target.value);
+        setValue={(value: string) => {
+          onChange(value);
         }}
-      />
-      <div>
-        <GenericModal
-          type={TypeModal.TEXT}
-          buttonText="Finishing Editing"
-          modalTitle="Edit Text"
-          value={value}
-          setValue={(value: string) => {
-            onChange(value);
-          }}
-        >
+      >
+        <div className="flex w-full items-center" data-testid={"div-" + id}>
+          <Input
+            id={id}
+            data-testid={id}
+            value={value}
+            disabled={disabled}
+            className={
+              editNode
+                ? "input-edit-node pointer-events-none "
+                : " pointer-events-none"
+            }
+            placeholder={"Type something..."}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          />
           {!editNode && (
             <IconComponent
+              id={id}
               name="ExternalLink"
               className={
                 "icons-parameters-comp" +
@@ -50,8 +60,8 @@ export default function TextAreaComponent({
               }
             />
           )}
-        </GenericModal>
-      </div>
+        </div>
+      </GenericModal>
     </div>
   );
 }

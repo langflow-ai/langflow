@@ -18,9 +18,7 @@ class PromptRunner(CustomComponent):
         "code": {"show": False},
     }
 
-    def build(
-        self, llm: BaseLLM, prompt: PromptTemplate, inputs: dict = {}
-    ) -> Document:
+    def build(self, llm: BaseLLM, prompt: PromptTemplate, inputs: dict = {}) -> Document:
         chain = prompt | llm
         # The input is an empty dict because the prompt is already filled
         result = chain.invoke(input=inputs)

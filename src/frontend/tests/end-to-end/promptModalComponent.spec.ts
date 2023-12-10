@@ -13,19 +13,20 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="sidePromptTemplate"]')
+    .locator('//*[@id="promptsPromptTemplate"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.locator('//*[@id="prompt-input-4"]').click();
+  await page.getByTestId("prompt-input-0").click();
+
+  // await page.getByTestId("edit-prompt-sanitized").click();
+  // await page.getByTestId("modal-title").click();
   await page
-    .locator('//*[@id="modal-prompt-input-4"]')
+    .getByTestId("modal-prompt-input-0")
     .fill("{prompt} example {prompt1}");
 
-  let value = await page
-    .locator('//*[@id="modal-prompt-input-4"]')
-    .inputValue();
+  let value = await page.getByTestId("modal-prompt-input-0").inputValue();
 
   if (value != "{prompt} example {prompt1}") {
     expect(false).toBeTruthy();
@@ -41,35 +42,40 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="genericModalBtnSave"]').click();
+  await page.getByTestId("genericModalBtnSave").click();
 
-  await page.locator('//*[@id="textarea-7"]').click();
-  await page.locator('//*[@id="textarea-7"]').fill("prompt_value_!@#!@#");
+  await page.getByTestId("div-textarea-5").click();
+  await page.getByTestId("text-area-modal").fill("prompt_value_!@#!@#");
 
-  value = await page.locator('//*[@id="textarea-7"]').inputValue();
+  value = await page.getByTestId("text-area-modal").inputValue();
 
   if (value != "prompt_value_!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="textarea-8"]').click();
+  await page.getByTestId("genericModalBtnSave").click();
+
+  await page.getByTestId("div-textarea-6").click();
   await page
-    .locator('//*[@id="textarea-8"]')
+    .getByTestId("text-area-modal")
     .fill("prompt_name_test_123123!@#!@#");
 
-  value = await page.locator('//*[@id="textarea-8"]').inputValue();
+  value = await page.getByTestId("text-area-modal").inputValue();
 
   if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  value = await page.locator('//*[@id="prompt-input-4"]').innerText();
+  value = await page.getByTestId("text-area-modal").inputValue();
 
-  if (value != "{prompt} example {prompt1}") {
+  if (value != "prompt_name_test_123123!@#!@#") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="editAdvancedIcon"]').click();
+  await page.getByTestId("genericModalBtnSave").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   value = await page.locator('//*[@id="textarea-edit-1"]').inputValue();
 
@@ -140,13 +146,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page
-      .locator(
-        '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div/div/div[1]/div/div[1]'
-      )
-      .click();
-
-    await page.locator('//*[@id="editAdvancedIcon"]').click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(

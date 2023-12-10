@@ -1,13 +1,6 @@
 from typing import Any, List, Optional
 
-from langchain.chains.llm import LLMChain
-from langchain.agents import (
-    AgentExecutor,
-    Tool,
-    ZeroShotAgent,
-    initialize_agent,
-    AgentType,
-)
+from langchain.agents import AgentExecutor, AgentType, Tool, ZeroShotAgent, initialize_agent
 from langchain.agents.agent_toolkits import (
     SQLDatabaseToolkit,
     VectorStoreInfo,
@@ -16,25 +9,18 @@ from langchain.agents.agent_toolkits import (
 )
 from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
 from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
-from langchain_experimental.agents.agent_toolkits.pandas.prompt import (
-    PREFIX as PANDAS_PREFIX,
-)
-from langchain_experimental.agents.agent_toolkits.pandas.prompt import (
-    SUFFIX_WITH_DF as PANDAS_SUFFIX,
-)
 from langchain.agents.agent_toolkits.sql.prompt import SQL_PREFIX, SQL_SUFFIX
-from langchain.agents.agent_toolkits.vectorstore.prompt import (
-    PREFIX as VECTORSTORE_PREFIX,
-)
-from langchain.agents.agent_toolkits.vectorstore.prompt import (
-    ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX,
-)
+from langchain.agents.agent_toolkits.vectorstore.prompt import PREFIX as VECTORSTORE_PREFIX
+from langchain.agents.agent_toolkits.vectorstore.prompt import ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.base_language import BaseLanguageModel
+from langchain.chains.llm import LLMChain
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
-from langchain_experimental.tools.python.tool import PythonAstREPLTool
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
+from langchain_experimental.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
+from langchain_experimental.agents.agent_toolkits.pandas.prompt import SUFFIX_WITH_DF as PANDAS_SUFFIX
+from langchain_experimental.tools.python.tool import PythonAstREPLTool
 from langflow.interface.base import CustomAgentExecutor
 
 
@@ -55,7 +41,7 @@ class JsonAgent(CustomAgentExecutor):
     @classmethod
     def from_toolkit_and_llm(cls, toolkit: JsonToolkit, llm: BaseLanguageModel):
         tools = toolkit if isinstance(toolkit, list) else toolkit.get_tools()
-        tool_names = {tool.name for tool in tools}
+        tool_names = list({tool.name for tool in tools})
         prompt = ZeroShotAgent.create_prompt(
             tools,
             prefix=JSON_PREFIX,
@@ -68,7 +54,8 @@ class JsonAgent(CustomAgentExecutor):
             prompt=prompt,
         )
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,  # type: ignore
         )
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -92,11 +79,7 @@ class CSVAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(
-        cls,
-        path: str,
-        llm: BaseLanguageModel,
-        pandas_kwargs: Optional[dict] = None,
-        **kwargs: Any
+        cls, path: str, llm: BaseLanguageModel, pandas_kwargs: Optional[dict] = None, **kwargs: Any
     ):
         import pandas as pd  # type: ignore
 
@@ -115,9 +98,11 @@ class CSVAgent(CustomAgentExecutor):
             llm=llm,
             prompt=partial_prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = list({tool.name for tool in tools})
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
 
         return cls.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
@@ -141,9 +126,7 @@ class VectorStoreAgent(CustomAgentExecutor):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_toolkit_and_llm(
-        cls, llm: BaseLanguageModel, vectorstoreinfo: VectorStoreInfo, **kwargs: Any
-    ):
+    def from_toolkit_and_llm(cls, llm: BaseLanguageModel, vectorstoreinfo: VectorStoreInfo, **kwargs: Any):
         """Construct a vectorstore agent from an LLM and tools."""
 
         toolkit = VectorStoreToolkit(vectorstore_info=vectorstoreinfo, llm=llm)
@@ -154,13 +137,13 @@ class VectorStoreAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = list({tool.name for tool in tools})
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
-        return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
-        )
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)
@@ -181,9 +164,7 @@ class SQLAgent(CustomAgentExecutor):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_toolkit_and_llm(
-        cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any
-    ):
+    def from_toolkit_and_llm(cls, llm: BaseLanguageModel, database_uri: str, **kwargs: Any):
         """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
@@ -201,9 +182,7 @@ class SQLAgent(CustomAgentExecutor):
 
         llmchain = LLMChain(
             llm=llm,
-            prompt=PromptTemplate(
-                template=QUERY_CHECKER, input_variables=["query", "dialect"]
-            ),
+            prompt=PromptTemplate(template=QUERY_CHECKER, input_variables=["query", "dialect"]),
         )
 
         tools = [
@@ -224,9 +203,11 @@ class SQLAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}  # type: ignore
+        tool_names = list({tool.name for tool in tools})  # type: ignore
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
@@ -257,10 +238,7 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
 
     @classmethod
     def from_toolkit_and_llm(
-        cls,
-        llm: BaseLanguageModel,
-        vectorstoreroutertoolkit: VectorStoreRouterToolkit,
-        **kwargs: Any
+        cls, llm: BaseLanguageModel, vectorstoreroutertoolkit: VectorStoreRouterToolkit, **kwargs: Any
     ):
         """Construct a vector store router agent from an LLM and tools."""
 
@@ -274,13 +252,13 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
             llm=llm,
             prompt=prompt,
         )
-        tool_names = {tool.name for tool in tools}
+        tool_names = list({tool.name for tool in tools})
         agent = ZeroShotAgent(
-            llm_chain=llm_chain, allowed_tools=tool_names, **kwargs  # type: ignore
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            **kwargs,  # type: ignore
         )
-        return AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
-        )
+        return AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
     def run(self, *args, **kwargs):
         return super().run(*args, **kwargs)

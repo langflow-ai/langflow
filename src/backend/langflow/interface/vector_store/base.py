@@ -4,7 +4,7 @@ from langchain import vectorstores
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
 from loguru import logger
@@ -22,9 +22,7 @@ class VectorstoreCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
             self.type_dict: dict[str, Any] = {
-                vectorstore_name: import_class(
-                    f"langchain.vectorstores.{vectorstore_name}"
-                )
+                vectorstore_name: import_class(f"langchain.vectorstores.{vectorstore_name}")
                 for vectorstore_name in vectorstores.__all__
             }
         return self.type_dict
@@ -48,8 +46,7 @@ class VectorstoreCreator(LangChainTypeCreator):
         return [
             vectorstore
             for vectorstore in self.type_to_loader_dict.keys()
-            if vectorstore in settings_service.settings.VECTORSTORES
-            or settings_service.settings.DEV
+            if vectorstore in settings_service.settings.VECTORSTORES or settings_service.settings.DEV
         ]
 
 

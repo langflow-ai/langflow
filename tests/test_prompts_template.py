@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 def test_prompts_settings(client: TestClient, logged_in_headers):
@@ -31,6 +31,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["output_parser"] == {
@@ -45,6 +46,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["partial_variables"] == {
@@ -59,6 +61,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["template"] == {
@@ -73,6 +76,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["template_format"] == {
@@ -88,6 +92,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["validate_template"] == {
@@ -103,4 +108,5 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }

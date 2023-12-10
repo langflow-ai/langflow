@@ -1,14 +1,9 @@
 from typing import Optional
 
 from langchain.agents.mrkl import prompt
-
-from langflow.template.frontend_node.constants import (
-    DEFAULT_PROMPT,
-    HUMAN_PROMPT,
-    SYSTEM_PROMPT,
-)
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.frontend_node.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.template.template.base import Template
 
 
@@ -36,10 +31,7 @@ class PromptFrontendNode(FrontendNode):
             field.field_type = "prompt"
             field.advanced = False
 
-        if (
-            "Union" in field.field_type
-            and "BaseMessagePromptTemplate" in field.field_type
-        ):
+        if "Union" in field.field_type and "BaseMessagePromptTemplate" in field.field_type:
             field.field_type = "BaseMessagePromptTemplate"
 
         # All prompt fields should be password=False
@@ -53,9 +45,6 @@ class PromptTemplateNode(FrontendNode):
     description: str
     base_classes: list[str] = ["BasePromptTemplate"]
 
-    def to_dict(self):
-        return super().to_dict()
-
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
@@ -68,9 +57,6 @@ class BasePromptFrontendNode(FrontendNode):
     template: Template
     description: str
     base_classes: list[str]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class ZeroShotPromptNode(BasePromptFrontendNode):
@@ -112,9 +98,6 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
     )
     description: str = "Prompt template for Zero Shot Agent."
     base_classes: list[str] = ["BasePromptTemplate"]
-
-    def to_dict(self):
-        return super().to_dict()
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
-import IconComponent from "../../../../components/genericIconComponent";
+import { GradientGroup } from "../../../../icons/GradientSparkles";
 export default function SelectionMenu({ onClick, nodes, isVisible }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -37,15 +37,19 @@ export default function SelectionMenu({ onClick, nodes, isVisible }) {
       <div className="h-10 w-28 overflow-hidden">
         <div
           className={
-            "h-10 w-24 rounded-md border border-indigo-300 bg-white px-2.5 text-gray-700 shadow-inner transition-all duration-500 ease-in-out dark:bg-gray-800 dark:text-gray-300" +
-            (isTransitioning ? " translate-y-0" : " translate-y-10")
+            "duration-400 h-10 w-24 rounded-md border border-indigo-300 bg-background px-2.5 text-primary shadow-inner transition-all ease-in-out" +
+            (isTransitioning ? " opacity-100" : " opacity-0 ")
           }
         >
           <button
             className="flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
             onClick={onClick}
           >
-            <IconComponent name="Group" className="w-6" />
+            <GradientGroup
+              strokeWidth={1.5}
+              size={22}
+              className="text-primary"
+            />
             Group
           </button>
         </div>

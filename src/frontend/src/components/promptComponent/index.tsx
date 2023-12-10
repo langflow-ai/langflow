@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 
 import { TypeModal } from "../../constants/enums";
-import { postValidatePrompt } from "../../controllers/API";
 import GenericModal from "../../modals/genericModal";
 import { PromptAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -23,18 +22,6 @@ export default function PromptAreaComponent({
     }
   }, [disabled]);
 
-  useEffect(() => {
-    //prevent update from prompt template after group node if prompt is wrongly marked as not dynamic
-    if (value !== "" && !editNode && !readonly && !nodeClass?.flow) {
-      postValidatePrompt(field_name!, value, nodeClass!).then((apiReturn) => {
-        if (apiReturn.data) {
-          setNodeClass!(apiReturn.data.frontend_node);
-          // need to update reactFlowInstance to re-render the nodes.
-        }
-      });
-    }
-  }, []);
-
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
@@ -44,15 +31,14 @@ export default function PromptAreaComponent({
         value={value}
         buttonText="Check & Save"
         modalTitle="Edit Prompt"
-        setValue={(value: string) => {
-          onChange(value);
-        }}
+        setValue={onChange}
         nodeClass={nodeClass}
         setNodeClass={setNodeClass}
       >
         <div className="flex w-full items-center">
           <span
             id={id}
+            data-testid={id}
             className={
               editNode
                 ? "input-edit-node input-dialog"
@@ -64,6 +50,7 @@ export default function PromptAreaComponent({
           </span>
           {!editNode && (
             <IconComponent
+              id={id}
               name="ExternalLink"
               className={
                 "icons-parameters-comp" +

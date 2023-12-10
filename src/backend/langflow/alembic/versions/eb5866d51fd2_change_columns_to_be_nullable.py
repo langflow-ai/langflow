@@ -7,10 +7,9 @@ Create Date: 2023-10-04 10:18:25.640458
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import exc
-import sqlmodel  # noqa: F401
 
 # revision identifiers, used by Alembic.
 revision: str = "eb5866d51fd2"
@@ -28,14 +27,16 @@ def upgrade() -> None:
             batch_op.drop_index("ix_component_frontend_node_id")
             batch_op.drop_index("ix_component_name")
     except exc.SQLAlchemyError:
-        connection.execute("ROLLBACK")
+        # connection.execute(text("ROLLBACK"))
+        pass
     except Exception:
         pass
 
     try:
         op.drop_table("component")
     except exc.SQLAlchemyError:
-        connection.execute("ROLLBACK")
+        # connection.execute(text("ROLLBACK"))
+        pass
     except Exception:
         pass
     # ### end Alembic commands ###

@@ -1,14 +1,30 @@
 import ast
 import inspect
+import operator
 import traceback
+from typing import Any, Dict, List, Type, Union
 
-from typing import Dict, Any, List, Type, Union
+from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
+
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
 class CodeSyntaxError(HTTPException):
     pass
+
+
+def get_data_type():
+    from langflow.field_typing import Data
+
+    return Data
+
+
+def imports_key(*args, **kwargs):
+    imports = kwargs.pop("imports")
+    key = keys.methodkey(*args, **kwargs)
+    key += tuple(imports)
+    return key
 
 
 class CodeParser:
@@ -20,6 +36,7 @@ class CodeParser:
         """
         Initializes the parser with the provided code.
         """
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         if isinstance(code, type):
             if not inspect.isclass(code):
                 raise ValueError("The provided code must be a class.")
@@ -65,14 +82,20 @@ class CodeParser:
 
     def parse_imports(self, node: Union[ast.Import, ast.ImportFrom]) -> None:
         """
-        Extracts "imports" from the code.
+        Extracts "imports" from the code, including aliases.
         """
         if isinstance(node, ast.Import):
             for alias in node.names:
-                self.data["imports"].append(alias.name)
+                if alias.asname:
+                    self.data["imports"].append(f"{alias.name} as {alias.asname}")
+                else:
+                    self.data["imports"].append(alias.name)
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
-                self.data["imports"].append((node.module, alias.name))
+                if alias.asname:
+                    self.data["imports"].append((node.module, f"{alias.name} as {alias.asname}"))
+                else:
+                    self.data["imports"].append((node.module, alias.name))
 
     def parse_functions(self, node: ast.FunctionDef) -> None:
         """
@@ -89,22 +112,54 @@ class CodeParser:
             arg_dict["type"] = ast.unparse(arg.annotation)
         return arg_dict
 
+    @cachedmethod(operator.attrgetter("cache"))
+    def construct_eval_env(self, return_type_str: str, imports) -> dict:
+        """
+        Constructs an evaluation environment with the necessary imports for the return type,
+        taking into account module aliases.
+        """
+        eval_env: dict = {}
+        for import_entry in imports:
+            if isinstance(import_entry, tuple):  # from module import name
+                module, name = import_entry
+                if name in return_type_str:
+                    exec(f"import {module}", eval_env)
+                    exec(f"from {module} import {name}", eval_env)
+            else:  # import module
+                module = import_entry
+                alias = None
+                if " as " in module:
+                    module, alias = module.split(" as ")
+                if module in return_type_str or (alias and alias in return_type_str):
+                    exec(f"import {module} as {alias if alias else module}", eval_env)
+        return eval_env
+
+    @cachedmethod(cache=operator.attrgetter("cache"))
     def parse_callable_details(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """
         Extracts details from a single function or method node.
         """
+        return_type = None
+        if node.returns:
+            return_type_str = ast.unparse(node.returns)
+            eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
+
+            try:
+                return_type = eval(return_type_str, eval_env)
+            except NameError:
+                # Handle cases where the type is not found in the constructed environment
+                pass
+
         func = CallableCodeDetails(
             name=node.name,
             doc=ast.get_docstring(node),
-            args=[],
-            body=[],
-            return_type=ast.unparse(node.returns) if node.returns else None,
+            args=self.parse_function_args(node),
+            body=self.parse_function_body(node),
+            return_type=return_type or get_data_type(),
+            has_return=self.parse_return_statement(node),
         )
 
-        func.args = self.parse_function_args(node)
-        func.body = self.parse_function_body(node)
-
-        return func.dict()
+        return func.model_dump()
 
     def parse_function_args(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
         """
@@ -115,7 +170,9 @@ class CodeParser:
         args += self.parse_positional_args(node)
         args += self.parse_varargs(node)
         args += self.parse_keyword_args(node)
-        args += self.parse_kwargs(node)
+        # Commented out because we don't want kwargs
+        # showing up as fields in the frontend
+        # args += self.parse_kwargs(node)
 
         return args
 
@@ -127,22 +184,14 @@ class CodeParser:
         num_defaults = len(node.args.defaults)
         num_missing_defaults = num_args - num_defaults
         missing_defaults = [None] * num_missing_defaults
-        default_values = [
-            ast.unparse(default).strip("'") if default else None
-            for default in node.args.defaults
-        ]
+        default_values = [ast.unparse(default).strip("'") if default else None for default in node.args.defaults]
         # Now check all default values to see if there
         # are any "None" values in the middle
-        default_values = [
-            None if value == "None" else value for value in default_values
-        ]
+        default_values = [None if value == "None" else value for value in default_values]
 
         defaults = missing_defaults + default_values
 
-        args = [
-            self.parse_arg(arg, default)
-            for arg, default in zip(node.args.args, defaults)
-        ]
+        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
         return args
 
     def parse_varargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
@@ -160,17 +209,11 @@ class CodeParser:
         """
         Parses the keyword-only arguments of a function or method node.
         """
-        kw_defaults = [None] * (
-            len(node.args.kwonlyargs) - len(node.args.kw_defaults)
-        ) + [
-            ast.unparse(default) if default else None
-            for default in node.args.kw_defaults
+        kw_defaults = [None] * (len(node.args.kwonlyargs) - len(node.args.kw_defaults)) + [
+            ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        args = [
-            self.parse_arg(arg, default)
-            for arg, default in zip(node.args.kwonlyargs, kw_defaults)
-        ]
+        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
         return args
 
     def parse_kwargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
@@ -189,6 +232,13 @@ class CodeParser:
         Parses the body of a function or method node.
         """
         return [ast.unparse(line) for line in node.body]
+
+    def parse_return_statement(self, node: ast.FunctionDef) -> bool:
+        """
+        Parses the return statement of a function or method node.
+        """
+
+        return any(isinstance(n, ast.Return) for n in node.body)
 
     def parse_assign(self, stmt):
         """
@@ -240,23 +290,21 @@ class CodeParser:
             elif isinstance(stmt, ast.AnnAssign):
                 if attr := self.parse_ann_assign(stmt):
                     class_details.attributes.append(attr)
-            elif isinstance(stmt, ast.FunctionDef):
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 method, is_init = self.parse_function_def(stmt)
                 if is_init:
                     class_details.init = method
                 else:
                     class_details.methods.append(method)
 
-        self.data["classes"].append(class_details.dict())
+        self.data["classes"].append(class_details.model_dump())
 
     def parse_global_vars(self, node: ast.Assign) -> None:
         """
         Extracts global variables from the code.
         """
         global_var = {
-            "targets": [
-                t.id if hasattr(t, "id") else ast.dump(t) for t in node.targets
-            ],
+            "targets": [t.id if hasattr(t, "id") else ast.dump(t) for t in node.targets],
             "value": ast.unparse(node.value),
         }
         self.data["global_vars"].append(global_var)

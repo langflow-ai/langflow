@@ -135,7 +135,9 @@ class SeriesCharacterChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    description: str = (
+        "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    )
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",
@@ -244,9 +246,6 @@ class CombineDocsChainNode(FrontendNode):
     )
     description: str = """Load question answering chain."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "Callable"]
-
-    def to_dict(self):
-        return super().to_dict()
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

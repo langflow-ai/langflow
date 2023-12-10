@@ -5,8 +5,6 @@ agents:
     documentation: "https://python.langchain.com/docs/modules/agents/toolkits/openapi"
   CSVAgent:
     documentation: "https://python.langchain.com/docs/modules/agents/toolkits/csv"
-  AgentInitializer:
-    documentation: "https://python.langchain.com/docs/modules/agents/agent_types/"
   VectorStoreAgent:
     documentation: ""
   VectorStoreRouterAgent:
@@ -297,4 +295,4 @@ output_parsers:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
 custom_components:
   CustomComponent:
-    documentation: ""
+    documentation: "https://docs.langflow.org/guidelines/custom-component"

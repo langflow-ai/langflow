@@ -30,13 +30,12 @@ else
 endif
 
 format:
-	poetry run black .
 	poetry run ruff . --fix
+	poetry run ruff format .
 	cd src/frontend && npm run format
 
 lint:
 	poetry run mypy src/backend/langflow
-	poetry run black . --check
 	poetry run ruff . --fix
 
 install_frontend:
@@ -46,6 +45,7 @@ install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
 run_frontend:
+	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
 run_cli:
@@ -73,12 +73,13 @@ install_backend:
 
 backend:
 	make install_backend
+	@-kill -9 `lsof -t -i:7860`
 ifeq ($(login),1)
 	@echo "Running backend without autologin";
-	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --log-level debug --workers 3
+	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
 else
 	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --log-level debug --workers 3
+	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
 endif
 
 build_and_run:
