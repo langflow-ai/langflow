@@ -3,6 +3,8 @@ from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
+from langflow.field_typing.range_spec import RangeSpec
+
 
 class TemplateFieldCreator(BaseModel, ABC):
     field_type: str = "str"
@@ -59,6 +61,9 @@ class TemplateFieldCreator(BaseModel, ABC):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
+    range_spec: Optional[RangeSpec] = None
+    """Range specification for the field. Defaults to None."""
+
     def to_dict(self):
         result = self.model_dump()
         # Remove key if it is None
@@ -73,6 +78,10 @@ class TemplateFieldCreator(BaseModel, ABC):
 
         if self.field_type == "file":
             result["file_path"] = self.file_path
+
+        # If type is float but range_spec is not set, set it to default
+        if self.field_type == "float" and not self.range_spec:
+            result["range_spec"] = RangeSpec().model_dump()
         return result
 
 
