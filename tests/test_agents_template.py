@@ -28,6 +28,8 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "value": None,
     }
 
     # Additional assertions for other template variables
@@ -43,6 +45,8 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "value": None,
     }
     assert template["llm"] == {
         "required": True,
@@ -56,6 +60,8 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "value": None,
     }
     assert template["output_parser"] == {
         "required": False,
@@ -69,6 +75,8 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "value": None,
     }
     assert template["input_variables"] == {
         "required": False,
@@ -82,6 +90,8 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
+        "value": None,
     }
     assert template["prefix"] == {
         "required": False,
@@ -96,6 +106,7 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["suffix"] == {
         "required": False,
@@ -110,6 +121,7 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
 
@@ -135,6 +147,9 @@ def test_json_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -149,6 +164,9 @@ def test_json_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "display_name": "LLM",
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
 
 
@@ -174,7 +192,7 @@ def test_csv_agent(client: TestClient, logged_in_headers):
         "name": "path",
         "type": "file",
         "list": False,
-        "file_path": None,
+        "file_path": "",
         "advanced": False,
         "info": "",
     }
@@ -191,4 +209,7 @@ def test_csv_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "display_name": "LLM",
         "info": "",
+        "file_path": "",
+        "fileTypes": [],
+        "value": "",
     }
