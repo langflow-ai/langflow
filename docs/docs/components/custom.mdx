@@ -56,7 +56,7 @@ The CustomComponent class serves as the foundation for creating custom component
 - **build_config**: Used to define the configuration fields of the component (if applicable). It should always return a dictionary with specific keys representing the field names and corresponding configurations. This method is called when the code is processed (i.e., when you click _Check and Save_ in the code editor). It must follow the format described below:
 
   - Top-level keys are field names.
-  - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
+  - Their values are can be of type _`langflow.field_typing.TemplateField`_ or _`dict`_. They specify the behavior of the generated fields.
 
   Below are the available keys used to configure component fields:
 
