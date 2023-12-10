@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel
 
@@ -35,7 +35,7 @@ class TemplateFieldCreator(BaseModel, ABC):
     password: bool = False
     """Specifies if the field is a password. Defaults to False."""
 
-    options: list[str] = []
+    options: Union[list[str], Callable] = []
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
     name: str = ""
