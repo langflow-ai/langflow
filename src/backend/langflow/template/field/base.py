@@ -37,7 +37,7 @@ class TemplateField(BaseModel):
     password: bool = False
     """Specifies if the field is a password. Defaults to False."""
 
-    options: Union[list[str], Callable] = []
+    options: Union[list[str], Callable] = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
     name: str = ""
