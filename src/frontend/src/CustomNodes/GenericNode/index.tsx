@@ -107,6 +107,8 @@ export default function GenericNode({
 
   const showNode = data.showNode ?? true;
 
+  const nameEditable = data.node?.flow || data.type === "CustomComponent";
+
   return (
     <>
       <NodeToolbar>
@@ -164,7 +166,7 @@ export default function GenericNode({
               />
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  {data.node?.flow && inputName ? (
+                  {nameEditable && inputName ? (
                     <div>
                       <InputComponent
                         onBlur={() => {
@@ -194,7 +196,7 @@ export default function GenericNode({
                         <div className="generic-node-tooltip-div pr-2 text-primary">
                           {data.node?.display_name}
                         </div>
-                        {data.node?.flow && (
+                        {nameEditable && (
                           <IconComponent
                             name="Pencil"
                             className="h-4 w-4 text-ring"
@@ -362,14 +364,14 @@ export default function GenericNode({
             className={
               showNode
                 ? "overflow-hidden " +
-                  (data.node?.description === "" && !data.node?.flow
+                  (data.node?.description === "" && !nameEditable
                     ? "pb-5"
                     : "py-5")
                 : ""
             }
           >
             <div className="generic-node-desc">
-              {showNode && data.node?.flow && inputDescription ? (
+              {showNode && nameEditable && inputDescription ? (
                 <Textarea
                   autoFocus
                   onBlur={() => {
@@ -401,7 +403,9 @@ export default function GenericNode({
                 <div
                   className={cn(
                     "generic-node-desc-text truncate-multiline word-break-break-word",
-                    data.node?.description === "" && data.node?.flow
+                    (data.node?.description === "" ||
+                      !data.node?.description) &&
+                      nameEditable
                       ? "font-light italic"
                       : ""
                   )}
@@ -410,7 +414,8 @@ export default function GenericNode({
                     takeSnapshot();
                   }}
                 >
-                  {data.node?.description === "" && data.node?.flow
+                  {(data.node?.description === "" || !data.node?.description) &&
+                  nameEditable
                     ? "Double Click to Edit Description"
                     : data.node?.description}
                 </div>

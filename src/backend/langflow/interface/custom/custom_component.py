@@ -19,8 +19,8 @@ from langflow.utils import validate
 
 
 class CustomComponent(Component):
-    display_name: Optional[str] = "Custom Component"
-    description: Optional[str] = "Custom Component"
+    display_name: Optional[str] = None
+    description: Optional[str] = None
     code: Optional[str] = None
     field_config: dict = {}
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"

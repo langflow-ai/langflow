@@ -75,7 +75,7 @@ class FrontendNode(BaseModel):
                 "template": self.template.to_dict(self.format_field),
                 "description": self.description,
                 "base_classes": self.base_classes,
-                "display_name": self.display_name or self.name,
+                "display_name": self.display_name,
                 "custom_fields": self.custom_fields,
                 "output_types": self.output_types,
                 "documentation": self.documentation,
