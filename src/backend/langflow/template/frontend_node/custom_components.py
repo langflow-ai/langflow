@@ -46,7 +46,7 @@ class Component(CustomComponent):
 
 class CustomComponentFrontendNode(FrontendNode):
     name: str = "CustomComponent"
-    display_name: Optional[str] = None
+    display_name: Optional[str] = "CustomComponent"
     beta: bool = True
     template: Template = Template(
         type_name="CustomComponent",
