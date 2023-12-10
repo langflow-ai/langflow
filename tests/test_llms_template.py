@@ -22,6 +22,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["verbose"] == {
         "required": False,
@@ -35,6 +36,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["client"] == {
         "required": False,
@@ -48,6 +50,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["model_name"] == {
         "required": False,
@@ -69,6 +72,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     # Add more assertions for other properties here
     assert template["temperature"] == {
@@ -84,6 +88,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["max_tokens"] == {
         "required": False,
@@ -98,6 +103,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["top_p"] == {
         "required": False,
@@ -112,6 +118,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["frequency_penalty"] == {
         "required": False,
@@ -126,6 +133,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["presence_penalty"] == {
         "required": False,
@@ -140,6 +148,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["n"] == {
         "required": False,
@@ -154,6 +163,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["best_of"] == {
         "required": False,
@@ -168,6 +178,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["model_kwargs"] == {
         "required": False,
@@ -181,6 +192,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": True,
         "info": "",
+        "fileTypes": [],
     }
     assert template["openai_api_key"] == {
         "required": False,
@@ -196,6 +208,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["batch_size"] == {
         "required": False,
@@ -210,6 +223,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["request_timeout"] == {
         "required": False,
@@ -223,6 +237,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["logit_bias"] == {
         "required": False,
@@ -236,6 +251,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["max_retries"] == {
         "required": False,
@@ -250,6 +266,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["streaming"] == {
         "required": False,
@@ -264,6 +281,7 @@ def test_openai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
 
@@ -289,6 +307,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["client"] == {
         "required": False,
@@ -302,6 +321,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["model_name"] == {
         "required": False,
@@ -324,6 +344,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["temperature"] == {
         "required": False,
@@ -338,6 +359,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["model_kwargs"] == {
         "required": False,
@@ -351,6 +373,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": True,
         "info": "",
+        "fileTypes": [],
     }
     assert template["openai_api_key"] == {
         "required": False,
@@ -366,6 +389,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["request_timeout"] == {
         "required": False,
@@ -379,6 +403,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["max_retries"] == {
         "required": False,
@@ -393,6 +418,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["streaming"] == {
         "required": False,
@@ -407,6 +433,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["n"] == {
         "required": False,
@@ -421,6 +448,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
 
     assert template["max_tokens"] == {
@@ -435,6 +463,7 @@ def test_chat_open_ai(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
+        "fileTypes": [],
     }
     assert template["_type"] == "ChatOpenAI"
     assert (
