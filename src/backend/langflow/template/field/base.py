@@ -61,7 +61,7 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    range_spec: Optional[RangeSpec] = None
+    range_spec: Optional[RangeSpec] = Field(None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
     def to_dict(self):
@@ -73,8 +73,10 @@ class TemplateField(BaseModel):
             return value
         return ""
 
-    @field_serializer("range_spec")
-    def serialize_range_spec(self, value):
-        if self.field_type == "float" and value is None:
-            return RangeSpec().model_dump()
+    @field_serializer("field_type")
+    def serialize_field_type(self, value, _info):
+        if value == "float":
+            # check if range_spec is set
+            if self.range_spec is None:
+                self.range_spec = RangeSpec()
         return value
