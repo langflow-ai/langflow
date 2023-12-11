@@ -3,12 +3,13 @@ import inspect
 import types
 from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional
 
+from loguru import logger
+
 from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
@@ -190,7 +191,7 @@ class Vertex:
                         params[key] = float(val)
                     except ValueError:
                         params[key] = val
-                else:
+                elif val is not None and val != "":
                     params[key] = val
 
             if not value.get("required") and params.get(key) is None:
