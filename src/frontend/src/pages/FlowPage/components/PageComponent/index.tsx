@@ -208,7 +208,7 @@ export default function Page({
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [flow, flow.data]);
 
   const onEdgesChangeMod = useCallback(
     (change: EdgeChange[]) => {
