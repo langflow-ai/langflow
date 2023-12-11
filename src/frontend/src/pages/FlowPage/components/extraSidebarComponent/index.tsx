@@ -193,17 +193,16 @@ export default function ExtraSidebar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "extra-side-bar-buttons gap-1.5 text-sm font-semibold",
+            "extra-side-bar-buttons gap-[4px] text-sm font-semibold",
             !hasApiKey || !validApiKey || !hasStore
               ? "button-disable  cursor-default text-muted-foreground"
               : ""
           )}
         >
           <IconComponent
-            name="Forward"
-            strokeWidth={2.5}
+            name="Share3"
             className={classNames(
-              "side-bar-button-size",
+              "-m-0.5 -ml-1 h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
                 : ""

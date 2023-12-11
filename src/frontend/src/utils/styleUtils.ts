@@ -130,6 +130,8 @@ import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
 import { QDrantIcon } from "../icons/QDrant";
 import { SearxIcon } from "../icons/Searx";
+import { ShareIcon } from "../icons/Share";
+import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
@@ -258,6 +260,8 @@ export const nodeIconsLucide: iconsType = {
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
+  Share3: ShareIcon,
+  Share4: Share2Icon,
   agents: Rocket,
   Workflow,
   User,
