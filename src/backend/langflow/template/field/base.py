@@ -37,10 +37,10 @@ class TemplateField(BaseModel):
     password: bool = False
     """Specifies if the field is a password. Defaults to False."""
 
-    options: Union[list[str], Callable] = None
+    options: Optional[Union[list[str], Callable]] = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
-    name: str = None
+    name: Optional[str] = None
     """Name of the field. Default is an empty string."""
 
     display_name: Optional[str] = None
@@ -61,7 +61,7 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    range_spec: Optional[RangeSpec] = Field(None, serialization_alias="rangeSpec")
+    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
     def to_dict(self):

@@ -129,7 +129,8 @@ def add_new_custom_field(
         **sanitize_field_config(field_config),
     )
     frontend_node.template.upsert_field(field_name, new_field)
-    frontend_node.custom_fields[field_name] = None
+    if isinstance(frontend_node.custom_fields, dict):
+        frontend_node.custom_fields[field_name] = None
 
     return frontend_node
 
