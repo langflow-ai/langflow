@@ -44,7 +44,6 @@ export default function ShareModal({
   const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { reactFlowInstance } = useContext(typesContext);
-  const [checked, setChecked] = useState(false);
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";
@@ -99,23 +98,14 @@ export default function ShareModal({
   const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
-    const flow: FlowType = checked
-      ? {
-          id: component!.id,
-          data: component!.data,
-          description,
-          name,
-          last_tested_version: version,
-          is_component: is_component,
-        }
-      : removeApiKeys({
-          id: component!.id,
-          data: component!.data,
-          description,
-          name,
-          last_tested_version: version,
-          is_component: is_component,
-        });
+    const flow: FlowType = removeApiKeys({
+      id: component!.id,
+      data: component!.data,
+      description,
+      name,
+      last_tested_version: version,
+      is_component: is_component,
+    });
 
     function successShare() {
       if (!is_component) {
@@ -157,9 +147,7 @@ export default function ShareModal({
   };
 
   const handleExportComponent = () => {
-    if (!checked) {
-      component = removeApiKeys(component);
-    }
+    component = removeApiKeys(component);
     downloadNode(component);
   };
 
@@ -221,7 +209,7 @@ export default function ShareModal({
         >
           <span className="pr-2">Share</span>
           <IconComponent
-            name="Share2"
+            name="Share"
             className="h-6 w-6 pl-1 text-foreground"
             aria-hidden="true"
           />
@@ -239,35 +227,21 @@ export default function ShareModal({
               setSelectedTags={setSelectedTags}
             />
           </div>
-          <div className="mt-5 flex items-center space-x-2">
+          <div className="mb-2 mt-5 flex items-center space-x-2">
             <Checkbox
               id="public"
               checked={sharePublic}
               onCheckedChange={(event: boolean) => {
                 setSharePublic(event);
-                setChecked(false);
               }}
             />
             <label htmlFor="public" className="export-modal-save-api text-sm ">
               Make {nameComponent} public
             </label>
           </div>
-          <div className="mt-3 flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              checked={checked}
-              onCheckedChange={(event: boolean) => {
-                setChecked(event);
-              }}
-              disabled={sharePublic}
-            />
-            <label htmlFor="terms" className="export-modal-save-api text-sm ">
-              Save with my API keys
-            </label>
-          </div>
           <span className=" text-xs text-destructive ">
-            Warning: Deselecting this box will exclusively eliminate API keys
-            from fields explicitly designated for API keys.
+            <b>Warning:</b> The {nameComponent} will be shared without the API
+            keys for its specific fields.
           </span>
         </BaseModal.Content>
 
