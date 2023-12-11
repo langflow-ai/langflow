@@ -17,6 +17,7 @@ import {
 } from "../../controllers/API";
 import { FlowType } from "../../types/flow";
 import {
+  downloadNode,
   removeApiKeys,
   removeFileNameFromComponents,
 } from "../../utils/reactflowUtils";
@@ -39,7 +40,7 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
-  const { version, addFlow } = useContext(FlowsContext);
+  const { version, addFlow, downloadFlow } = useContext(FlowsContext);
   const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { reactFlowInstance } = useContext(typesContext);
@@ -155,6 +156,13 @@ export default function ShareModal({
     else internalSetOpen(false);
   };
 
+  const handleExportComponent = () => {
+    if (!checked) {
+      component = removeApiKeys(component);
+    }
+    downloadNode(component);
+  };
+
   let modalConfirmation = useMemo(() => {
     return (
       <>
@@ -205,7 +213,9 @@ export default function ShareModal({
         open={(!disabled && open) ?? internalOpen}
         setOpen={setOpen ?? internalSetOpen}
       >
-        <BaseModal.Trigger>{children ? children : <></>}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>
+          {children ? children : <></>}
+        </BaseModal.Trigger>
         <BaseModal.Header
           description={`Share your ${nameComponent} to the Langflow Store.`}
         >
@@ -262,10 +272,23 @@ export default function ShareModal({
         </BaseModal.Content>
 
         <BaseModal.Footer>
-          <div className="text-right">
+          <div className="flex w-full justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                handleExportComponent();
+                (setOpen || internalSetOpen)(false);
+              }}
+            >
+              <IconComponent name="Download" className="h-4 w-4" />
+              Export
+            </Button>
             <Button
               disabled={loadingNames}
               type="button"
+              className={is_component ? "w-40" : "w-28"}
               onClick={() => {
                 const isNameAvailable = !unavaliableNames.some(
                   (element) => element.name === name
@@ -281,7 +304,7 @@ export default function ShareModal({
             >
               {loadingNames ? (
                 <>
-                  <div className="center w-16">
+                  <div className="center">
                     <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
                   </div>
                 </>

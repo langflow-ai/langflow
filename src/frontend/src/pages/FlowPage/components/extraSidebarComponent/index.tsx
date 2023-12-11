@@ -184,14 +184,18 @@ export default function ExtraSidebar(): JSX.Element {
   }, [getFilterEdge, data]);
 
   const ModalMemo = useMemo(
-    () =>
-      !hasApiKey || !validApiKey ? (
+    () => (
+      <ShareModal
+        is_component={false}
+        component={flow!}
+        disabled={!hasApiKey || !validApiKey || !hasStore}
+      >
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "extra-side-bar-buttons",
+            "extra-side-bar-buttons gap-2 text-sm",
             !hasApiKey || !validApiKey || !hasStore
-              ? "button-disable  cursor-default"
+              ? "button-disable  cursor-default text-muted-foreground"
               : ""
           )}
         >
@@ -204,34 +208,10 @@ export default function ExtraSidebar(): JSX.Element {
                 : ""
             )}
           />
+          Share
         </button>
-      ) : (
-        <ShareModal
-          is_component={false}
-          component={flow!}
-          disabled={!hasApiKey || !validApiKey || !hasStore}
-        >
-          <button
-            disabled={!hasApiKey || !validApiKey || !hasStore}
-            className={classNames(
-              "extra-side-bar-buttons",
-              !hasApiKey || !validApiKey || !hasStore
-                ? "button-disable  cursor-default"
-                : ""
-            )}
-          >
-            <IconComponent
-              name="Share2"
-              className={classNames(
-                "side-bar-button-size",
-                !hasApiKey || !validApiKey || !hasStore
-                  ? "extra-side-bar-save-disable"
-                  : ""
-              )}
-            />
-          </button>
-        </ShareModal>
-      ),
+      </ShareModal>
+    ),
     [hasApiKey, validApiKey, flow, hasStore]
   );
 
@@ -270,7 +250,7 @@ export default function ExtraSidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        <div className="side-bar-button">{ExportMemo}</div>
+        {!hasStore && ExportMemo}
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (
@@ -295,36 +275,44 @@ export default function ExtraSidebar(): JSX.Element {
         <div className="side-bar-button">
           {flow && flow.data && (
             <ShadTooltip content="Save" side="top">
-              <div>
-                <button
-                  disabled={flow?.data?.nodes.length === 0}
+              <button
+                disabled={flow?.data?.nodes.length === 0}
+                className={
+                  "extra-side-bar-buttons " +
+                  (isPending && flow!.data!.nodes?.length > 0
+                    ? ""
+                    : "button-disable")
+                }
+                onClick={(event) => {
+                  saveFlow(flow!);
+                }}
+              >
+                <IconComponent
+                  name="Save"
                   className={
-                    "extra-side-bar-buttons " +
+                    "side-bar-button-size" +
                     (isPending && flow!.data!.nodes?.length > 0
-                      ? ""
-                      : "button-disable")
+                      ? " "
+                      : " extra-side-bar-save-disable")
                   }
-                  onClick={(event) => {
-                    saveFlow(flow!);
-                  }}
-                >
-                  <IconComponent
-                    name="Save"
-                    className={
-                      "side-bar-button-size" +
-                      (isPending && flow!.data!.nodes?.length > 0
-                        ? " "
-                        : " extra-side-bar-save-disable")
-                    }
-                  />
-                </button>
-              </div>
+                />
+              </button>
             </ShadTooltip>
           )}
         </div>
-        <ShadTooltip content="Share" side="top" styleClasses="cursor-default">
-          <div className="side-bar-button">{ModalMemo}</div>
-        </ShadTooltip>
+        {hasStore && (
+          <ShadTooltip
+            content={
+              !hasApiKey || !validApiKey
+                ? "Please review your API key."
+                : "Share"
+            }
+            side="top"
+            styleClasses="cursor-default"
+          >
+            <div className="side-bar-button">{ModalMemo}</div>
+          </ShadTooltip>
+        )}
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">

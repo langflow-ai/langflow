@@ -257,15 +257,17 @@ export default function NodeToolbarComponent({
                   </div>{" "}
                 </SelectItem>
               )}
-              <SelectItem value={"Download"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Download"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Download{" "}
-                </div>{" "}
-              </SelectItem>
+              {!hasStore && (
+                <SelectItem value={"Download"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="Download"
+                      className="relative top-0.5 mr-2 h-4 w-4"
+                    />{" "}
+                    Download{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <div className="flex">
