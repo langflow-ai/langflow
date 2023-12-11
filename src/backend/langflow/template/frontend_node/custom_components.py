@@ -1,5 +1,7 @@
 from typing import Optional
 
+from pydantic import Field
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
@@ -45,6 +47,7 @@ class Component(CustomComponent):
 
 
 class CustomComponentFrontendNode(FrontendNode):
+    format_template: bool = Field(default=False, exclude=True)
     name: str = "CustomComponent"
     display_name: Optional[str] = "CustomComponent"
     beta: bool = True
