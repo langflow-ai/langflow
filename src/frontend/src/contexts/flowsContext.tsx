@@ -538,7 +538,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         const newFlow = createNewFlow(flowData, flow!);
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
-        addFlowToLocalState(newFlow);
+        //setTimeout  to prevent update state with wrong state
+        setTimeout(() => {
+          addFlowToLocalState(newFlow);
+        }, 200);
+        // addFlowToLocalState(newFlow);
         return;
       }
 
