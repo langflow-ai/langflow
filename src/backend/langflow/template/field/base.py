@@ -40,7 +40,7 @@ class TemplateField(BaseModel):
     options: Union[list[str], Callable] = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
 
-    name: str = ""
+    name: str = None
     """Name of the field. Default is an empty string."""
 
     display_name: Optional[str] = None
