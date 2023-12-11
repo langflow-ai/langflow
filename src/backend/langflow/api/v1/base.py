@@ -1,9 +1,10 @@
 from typing import Optional
-from langflow.template.frontend_node.base import FrontendNode
-from pydantic import field_validator, BaseModel
+
+from langchain.prompts import PromptTemplate
+from pydantic import BaseModel, field_validator, model_serializer
 
 from langflow.interface.utils import extract_input_variables_from_prompt
-from langchain.prompts import PromptTemplate
+from langflow.template.frontend_node.base import FrontendNode
 
 
 class CacheResponse(BaseModel):
@@ -16,6 +17,12 @@ class Code(BaseModel):
 
 class FrontendNodeRequest(FrontendNode):
     template: dict  # type: ignore
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        # Override the default serialization method in FrontendNode
+        # because we don't need the name in the response (i.e. {name: {}})
+        return handler(self)
 
 
 class ValidatePromptRequest(BaseModel):
