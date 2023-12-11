@@ -11,6 +11,9 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
+from loguru import logger
+from pydantic import ValidationError
+
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
@@ -22,8 +25,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
-from loguru import logger
-from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -120,6 +121,9 @@ async def instantiate_custom_component(node_type, class_object, params, user_id)
     params_copy = params.copy()
     class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
     custom_component = class_object(user_id=user_id)
+
+    if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
+        params_copy["retriever"] = params_copy["retriever"].as_retriever()
 
     # Determine if the build method is asynchronous
     is_async = inspect.iscoroutinefunction(custom_component.build)
