@@ -76,7 +76,7 @@ class FrontendNode(BaseModel):
         return display_name or self.name
 
     @model_serializer(mode="wrap")
-    def serialize(self, handler):
+    def serialize_model(self, handler):
         result = handler(self)
         if hasattr(self, "template") and hasattr(self.template, "to_dict"):
             result["template"] = self.template.to_dict(self.format_field)
