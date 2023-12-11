@@ -16,7 +16,7 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -107,6 +107,8 @@ export default function GenericNode({
 
   const showNode = data.showNode ?? true;
 
+  const nameEditable = data.node?.flow || data.type === "CustomComponent";
+
   return (
     <>
       <NodeToolbar>
@@ -164,7 +166,7 @@ export default function GenericNode({
               />
               {showNode && (
                 <div className="generic-node-tooltip-div">
-                  {data.node?.flow && inputName ? (
+                  {nameEditable && inputName ? (
                     <div>
                       <InputComponent
                         onBlur={() => {
@@ -172,6 +174,7 @@ export default function GenericNode({
                           if (nodeName.trim() !== "") {
                             setNodeName(nodeName);
                             data.node!.display_name = nodeName;
+                            updateNodeInternals(data.id);
                           } else {
                             setNodeName(data.node!.display_name);
                           }
@@ -194,7 +197,7 @@ export default function GenericNode({
                         <div className="generic-node-tooltip-div pr-2 text-primary">
                           {data.node?.display_name}
                         </div>
-                        {data.node?.flow && (
+                        {nameEditable && (
                           <IconComponent
                             name="Pencil"
                             className="h-4 w-4 text-ring"
@@ -361,57 +364,62 @@ export default function GenericNode({
           <div
             className={
               showNode
-                ? "generic-node-desc overflow-hidden " +
-                  (data.node?.description !== "" ? "py-5" : "pb-5")
+                ? "overflow-hidden " +
+                  (data.node?.description === "" && !nameEditable
+                    ? "pb-5"
+                    : "py-5")
                 : ""
             }
           >
-            {data.node?.description !== "" &&
-            showNode &&
-            data.node?.flow &&
-            inputDescription ? (
-              <Textarea
-                autoFocus
-                onBlur={() => {
-                  setInputDescription(false);
-                  if (nodeDescription.trim() !== "") {
+            <div className="generic-node-desc">
+              {showNode && nameEditable && inputDescription ? (
+                <Textarea
+                  autoFocus
+                  onBlur={() => {
+                    setInputDescription(false);
                     setNodeDescription(nodeDescription);
                     data.node!.description = nodeDescription;
-                  } else {
-                    setNodeDescription(data.node!.description);
-                  }
-                }}
-                value={nodeDescription}
-                onChange={(e) => setNodeDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  handleKeyDown(e, nodeDescription, "");
-                  if (
-                    e.key === "Enter" &&
-                    e.shiftKey === false &&
-                    e.ctrlKey === false &&
-                    e.altKey === false
-                  ) {
-                    setInputDescription(false);
-                    if (nodeDescription.trim() !== "") {
+                    updateNodeInternals(data.id);
+                  }}
+                  value={nodeDescription}
+                  onChange={(e) => setNodeDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    handleKeyDown(e, nodeDescription, "");
+                    if (
+                      e.key === "Enter" &&
+                      e.shiftKey === false &&
+                      e.ctrlKey === false &&
+                      e.altKey === false
+                    ) {
+                      setInputDescription(false);
                       setNodeDescription(nodeDescription);
                       data.node!.description = nodeDescription;
-                    } else {
-                      setNodeDescription(data.node!.description);
+                      updateNodeInternals(data.id);
                     }
-                  }
-                }}
-              />
-            ) : (
-              <div
-                className="generic-node-desc-text truncate-multiline word-break-break-word"
-                onDoubleClick={() => {
-                  setInputDescription(true);
-                  takeSnapshot();
-                }}
-              >
-                {data.node?.description}
-              </div>
-            )}
+                  }}
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "generic-node-desc-text truncate-multiline word-break-break-word",
+                    (data.node?.description === "" ||
+                      !data.node?.description) &&
+                      nameEditable
+                      ? "font-light italic"
+                      : ""
+                  )}
+                  onDoubleClick={() => {
+                    setInputDescription(true);
+                    takeSnapshot();
+                  }}
+                >
+                  {(data.node?.description === "" || !data.node?.description) &&
+                  nameEditable
+                    ? "Double Click to Edit Description"
+                    : data.node?.description}
+                </div>
+              )}
+            </div>
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")

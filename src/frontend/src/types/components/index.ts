@@ -240,8 +240,8 @@ export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  setName: (name: string) => void;
-  setDescription: (description: string) => void;
+  setName?: (name: string) => void;
+  setDescription?: (description: string) => void;
   invalidNameList?: string[];
 };
 
