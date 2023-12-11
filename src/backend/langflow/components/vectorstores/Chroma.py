@@ -1,12 +1,12 @@
 from typing import Optional, Union
-from langflow import CustomComponent
 
-from langchain.vectorstores import Chroma
-from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
-from langchain.schema import BaseRetriever
-from langchain.embeddings.base import Embeddings
 import chromadb  # type: ignore
+from langchain.embeddings.base import Embeddings
+from langchain.schema import BaseRetriever, Document
+from langchain.vectorstores import Chroma
+from langchain.vectorstores.base import VectorStore
+
+from langflow import CustomComponent
 
 
 class ChromaComponent(CustomComponent):
@@ -95,6 +95,10 @@ class ChromaComponent(CustomComponent):
 
         # If documents, then we need to create a Chroma instance using .from_documents
         if documents is not None and embedding is not None:
+            if len(documents) == 0:
+                raise ValueError(
+                    "If documents are provided, there must be at" " least one document. Got {len(documents)}."
+                )
             return Chroma.from_documents(
                 documents=documents,  # type: ignore
                 persist_directory=persist_directory if persist else None,
