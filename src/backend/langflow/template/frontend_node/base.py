@@ -1,13 +1,14 @@
 import re
 from collections import defaultdict
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
-from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class FieldFormatters(BaseModel):
@@ -85,16 +86,32 @@ class FrontendNode(BaseModel):
         return {name: result}
 
     # For backwards compatibility
-    def to_dict(self) -> dict:
+    def to_dict(self, add_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
-
-        return self.model_dump(by_alias=True, exclude_none=True)
+        dump = self.model_dump(by_alias=True, exclude_none=True)
+        if not add_name:
+            return dump.pop(self.name)
+        return dump
 
     def add_extra_fields(self) -> None:
         pass
 
     def add_extra_base_classes(self) -> None:
         pass
+
+    def add_base_class(self, base_class: Union[str, List[str]]) -> None:
+        """Adds a base class to the frontend node."""
+        if isinstance(base_class, str):
+            self.base_classes.append(base_class)
+        elif isinstance(base_class, list):
+            self.base_classes.extend(base_class)
+
+    def add_output_type(self, output_type: Union[str, List[str]]) -> None:
+        """Adds an output type to the frontend node."""
+        if isinstance(output_type, str):
+            self.output_types.append(output_type)
+        elif isinstance(output_type, list):
+            self.output_types.extend(output_type)
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
