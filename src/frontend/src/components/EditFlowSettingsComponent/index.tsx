@@ -3,6 +3,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { InputProps } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 export const EditFlowSettings: React.FC<InputProps> = ({
   name,
@@ -21,47 +22,65 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     } else {
       setIsMaxLength(false);
     }
-    setName(value);
+    setName!(value);
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value);
+    setDescription!(event.target.value);
   };
 
   return (
     <>
       <Label>
         <div className="edit-flow-arrangement">
-          <span className="font-medium">Name</span>{" "}
+          <span className="font-medium">Name{setName ? "" : ":"}</span>{" "}
           {isMaxLength && (
             <span className="edit-flow-span">Character limit reached</span>
           )}
         </div>
-        <Input
-          className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
-          onChange={handleNameChange}
-          type="text"
-          name="name"
-          value={name ?? ""}
-          placeholder="Flow name"
-          id="name"
-          maxLength={maxLength}
-        />
+        {setName ? (
+          <Input
+            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            onChange={handleNameChange}
+            type="text"
+            name="name"
+            value={name ?? ""}
+            placeholder="Flow name"
+            id="name"
+            maxLength={maxLength}
+          />
+        ) : (
+          <span className="font-normal text-muted-foreground word-break-break-word">
+            {name}
+          </span>
+        )}
       </Label>
       <Label>
         <div className="edit-flow-arrangement mt-3">
-          <span className="font-medium ">Description (optional)</span>
+          <span className="font-medium ">
+            Description{setDescription ? " (optional)" : ":"}
+          </span>
         </div>
-
-        <Textarea
-          name="description"
-          id="description"
-          onChange={handleDescriptionChange}
-          value={description!}
-          placeholder="Flow description"
-          className="mt-2 max-h-[100px] font-normal"
-          rows={3}
-        />
+        {setDescription ? (
+          <Textarea
+            name="description"
+            id="description"
+            onChange={handleDescriptionChange}
+            value={description!}
+            placeholder="Flow description"
+            className="mt-2 max-h-[100px] font-normal"
+            rows={3}
+          />
+        ) : (
+          <span
+            className={cn(
+              "font-normal text-muted-foreground word-break-break-word",
+              description === "" ? "font-light italic" : ""
+            )}
+          >
+            {description === "" ? "No description" : description}
+          </span>
+        )}
       </Label>
     </>
   );

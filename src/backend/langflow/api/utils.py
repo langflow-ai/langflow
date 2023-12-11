@@ -1,11 +1,12 @@
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, List
+
 from fastapi import HTTPException
+from platformdirs import user_cache_dir
+
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
-import warnings
-
-from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -62,7 +63,7 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def update_frontend_node_with_template_values(frontend_node, raw_template_data):
+def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     """
     Updates the given frontend node with values from the raw template data.
 
@@ -70,19 +71,28 @@ def update_frontend_node_with_template_values(frontend_node, raw_template_data):
     :param raw_template_data: A dict representing raw template data.
     :return: Updated frontend node.
     """
-    if not is_valid_data(frontend_node, raw_template_data):
+    if not is_valid_data(frontend_node, raw_frontend_node):
         return frontend_node
 
-    update_template_values(frontend_node["template"], raw_template_data.template)
+    # Check if the display_name is different than "CustomComponent"
+    # if so, update the display_name in the frontend_node
+    if raw_frontend_node["display_name"] != "CustomComponent":
+        frontend_node["display_name"] = raw_frontend_node["display_name"]
+
+    update_template_values(frontend_node["template"], raw_frontend_node["template"])
 
     return frontend_node
 
 
-def is_valid_data(frontend_node, raw_template_data):
+def raw_frontend_data_is_valid(raw_frontend_data):
+    """Check if the raw frontend data is valid for processing."""
+    return "template" in raw_frontend_data and "display_name" in raw_frontend_data
+
+
+def is_valid_data(frontend_node, raw_frontend_data):
     """Check if the data is valid for processing."""
-    return (
-        frontend_node and "template" in frontend_node and raw_template_data and hasattr(raw_template_data, "template")
-    )
+
+    return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
 
 
 def update_template_values(frontend_template, raw_template):

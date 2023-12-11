@@ -41,37 +41,35 @@ export function cleanEdges({
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
       newEdges = newEdges.filter((edg) => edg.id !== edge.id);
+      return;
     }
     // check if the source and target handle still exists
-    if (sourceNode && targetNode) {
-      const sourceHandle = edge.sourceHandle; //right
-      const targetHandle = edge.targetHandle; //left
-      if (targetHandle) {
-        const targetHandleObject: targetHandleType =
-          scapeJSONParse(targetHandle);
-        const field = targetHandleObject.fieldName;
-        const id: targetHandleType = {
-          type: targetNode.data.node!.template[field]?.type,
-          fieldName: field,
-          id: targetNode.data.id,
-          inputTypes: targetNode.data.node!.template[field]?.input_types,
-        };
-        if (targetNode.data.node!.template[field]?.proxy) {
-          id.proxy = targetNode.data.node!.template[field]?.proxy;
-        }
-        if (scapedJSONStringfy(id) !== targetHandle) {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
-        }
+    const sourceHandle = edge.sourceHandle; //right
+    const targetHandle = edge.targetHandle; //left
+    if (targetHandle) {
+      const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
+      const field = targetHandleObject.fieldName;
+      const id: targetHandleType = {
+        type: targetNode.data.node!.template[field]?.type,
+        fieldName: field,
+        id: targetNode.data.id,
+        inputTypes: targetNode.data.node!.template[field]?.input_types,
+      };
+      if (targetNode.data.node!.template[field]?.proxy) {
+        id.proxy = targetNode.data.node!.template[field]?.proxy;
       }
-      if (sourceHandle) {
-        const id: sourceHandleType = {
-          id: sourceNode.data.id,
-          baseClasses: sourceNode.data.node!.base_classes,
-          dataType: sourceNode.data.type,
-        };
-        if (scapedJSONStringfy(id) !== sourceHandle) {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
-        }
+      if (scapedJSONStringfy(id) !== targetHandle) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      }
+    }
+    if (sourceHandle) {
+      const id: sourceHandleType = {
+        id: sourceNode.data.id,
+        baseClasses: sourceNode.data.node!.base_classes,
+        dataType: sourceNode.data.type,
+      };
+      if (scapedJSONStringfy(id) !== sourceHandle) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
   });
@@ -761,7 +759,7 @@ export function generateNodeFromFlow(
         display_name: "Group",
         documentation: "",
         base_classes: outputNode!.data.node!.base_classes,
-        description: "double click to edit description",
+        description: "",
         template: generateNodeTemplate(data),
         flow: data,
       },

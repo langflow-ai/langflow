@@ -44,11 +44,9 @@ export default function ShareModal({
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const { reactFlowInstance } = useContext(typesContext);
   const [checked, setChecked] = useState(false);
-  const [name, setName] = useState(component?.name ?? "");
-  const [description, setDescription] = useState(component?.description ?? "");
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
-  const nameComponent = is_component ? "Component" : "Flow";
+  const nameComponent = is_component ? "component" : "flow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
@@ -60,6 +58,9 @@ export default function ShareModal({
   const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
   const [loadingNames, setLoadingNames] = useState(false);
+
+  const name = component?.name ?? "";
+  const description = component?.description ?? "";
 
   useEffect(() => {
     if (open || internalOpen) {
@@ -94,11 +95,6 @@ export default function ShareModal({
     });
   }
 
-  useEffect(() => {
-    setName(component?.name ?? "");
-    setDescription(component?.description ?? "");
-  }, [component, open, internalOpen]);
-
   const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
@@ -120,11 +116,9 @@ export default function ShareModal({
           is_component: is_component,
         });
 
-    await saveFlow(flow!, true);
-
     function successShare() {
-      if (is_component) {
-        addFlow(true, flow);
+      if (!is_component) {
+        saveFlow(flow!, true);
       }
       setSuccessData({
         title: `${nameComponent} shared successfully`,
@@ -223,13 +217,9 @@ export default function ShareModal({
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <EditFlowSettings
-            name={name}
-            invalidNameList={unavaliableNames.map((element) => element.name)}
-            description={description}
-            setName={setName}
-            setDescription={setDescription}
-          />
+          <div className="w-full rounded-lg border border-border p-4">
+            <EditFlowSettings name={name} description={description} />
+          </div>
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
               tags={tags}
@@ -297,8 +287,8 @@ export default function ShareModal({
                 </>
               ) : (
                 <>
-                  {is_component && !loadingNames ? "Save and " : ""}Share{" "}
-                  {!is_component && !loadingNames ? "Flow" : ""}
+                  Share{" "}
+                  {!loadingNames && (!is_component ? "Flow" : "Component")}
                 </>
               )}
             </Button>

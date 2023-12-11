@@ -282,6 +282,17 @@ export default function Page({
         let newX = _.cloneDeep(node);
         return newX;
       });
+      //@ts-ignore
+      setTabsState((prev: FlowsState) => {
+        return {
+          ...prev,
+          [tabId]: {
+            ...prev[tabId],
+            isPending: true,
+          },
+        };
+      });
+      saveCurrentFlowTimeout();
     },
     [setEdges, setNodes, takeSnapshot, addEdge]
   );
