@@ -48,5 +48,5 @@ jobs:
         run: docker compose up --exit-code-from tests tests result_backend broker celeryworker db --build
         continue-on-error: true
 
-      - name: Stop services
-        run: docker compose down
+      # - name: Stop services
+      #   run: docker compose down
