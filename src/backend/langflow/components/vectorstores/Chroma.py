@@ -96,9 +96,7 @@ class ChromaComponent(CustomComponent):
         # If documents, then we need to create a Chroma instance using .from_documents
         if documents is not None and embedding is not None:
             if len(documents) == 0:
-                raise ValueError(
-                    "If documents are provided, there must be at" " least one document. Got {len(documents)}."
-                )
+                raise ValueError("If documents are provided, there must be at least one document.")
             return Chroma.from_documents(
                 documents=documents,  # type: ignore
                 persist_directory=persist_directory if persist else None,
