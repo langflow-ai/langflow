@@ -13,9 +13,6 @@ export default function FloatComponent({
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
-  console.log("FloatComponent", value, disabled, rangeSpec, editNode);
-  console.log("FloatComponent", step, min, max);
-
   // Clear component state
   useEffect(() => {
     if (disabled) {
