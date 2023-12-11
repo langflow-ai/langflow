@@ -72,19 +72,10 @@ export async function postValidatePrompt(
   template: string,
   frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return new Promise((resolve, reject) => {
-    api
-      .post(`${BASE_URL_API}validate/prompt`, {
-        name,
-        template,
-        frontend_node,
-      })
-      .then((response) => {
-        resolve(response);
-      })
-      .catch((error) => {
-        reject(error);
-      });
+  return api.post(`${BASE_URL_API}validate/prompt`, {
+    name,
+    template,
+    frontend_node,
   });
 }
 
