@@ -240,8 +240,8 @@ export default function ShareModal({
             </label>
           </div>
           <span className=" text-xs text-destructive ">
-            <b>Warning:</b> The {nameComponent} will be shared without the API
-            keys for its specific fields.
+            <b>Warning:</b> API keys in designated fields are removed when
+            sharing.
           </span>
         </BaseModal.Content>
 
