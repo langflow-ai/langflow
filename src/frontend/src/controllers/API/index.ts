@@ -80,7 +80,6 @@ export async function postValidatePrompt(
         frontend_node,
       })
       .then((response) => {
-        response.data.frontend_node = response.data.frontend_node[""];
         resolve(response);
       })
       .catch((error) => {
