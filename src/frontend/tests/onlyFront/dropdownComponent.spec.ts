@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
 
 test("dropDownComponent", async ({ page }) => {
+  await page.routeFromHAR("harFiles/backend_12112023.har", {
+    url: "**/api/v1/**",
+    update: false,
+  });
+  await page.route("**/api/v1/flows/", async (route) => {
+    const json = {
+      id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
+    };
+    await route.fulfill({ json, status: 201 });
+  });
+
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(2000);
 
@@ -43,21 +54,17 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  // showcredentials_profile_name
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
-  ).toBeFalsy();
+  // showcode
+  await page.locator('//*[@id="showcode"]').click();
+  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
   expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
 
-  // showcredentials_profile_name
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
-  ).toBeTruthy();
+  // showcode
+  await page.locator('//*[@id="showcode"]').click();
+  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
@@ -65,21 +72,17 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showmodel_id"]').isChecked()
   ).toBeTruthy();
 
-  // showcredentials_profile_name
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
-  ).toBeFalsy();
+  // showcode
+  await page.locator('//*[@id="showcode"]').click();
+  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
   expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
 
-  // showcredentials_profile_name
-  await page.locator('//*[@id="showcredentials_profile_name"]').click();
-  expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
-  ).toBeTruthy();
+  // showcode
+  await page.locator('//*[@id="showcode"]').click();
+  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();

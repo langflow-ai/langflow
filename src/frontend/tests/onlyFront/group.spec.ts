@@ -15,7 +15,7 @@ test.describe("group node test", () => {
       await route.fulfill({ json, status: 201 });
     });
     await page.goto("http:localhost:3000/");
-    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    await page.locator('//*[@id="new-project-btn"]').click();
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/onlyFront/assets/flow.json",

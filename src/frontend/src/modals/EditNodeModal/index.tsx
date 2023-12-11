@@ -399,7 +399,7 @@ const EditNodeModal = forwardRef(
                                     .type === "int" ? (
                                   <div className="mx-auto">
                                     <IntComponent
-                                      id={"int-input-" + index}
+                                      id={"edit-int-input-" + index}
                                       disabled={disabled}
                                       editNode={true}
                                       value={
