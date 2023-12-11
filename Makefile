@@ -20,7 +20,7 @@ coverage:
 
 tests:
 	@make install_backend
-	poetry run pytest tests
+	poetry run pytest tests --testmon --instafail
 
 tests_frontend:
 ifeq ($(UI), true)
