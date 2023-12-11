@@ -9,7 +9,7 @@ from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENA
 
 class OpenAIAPIKeyFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "api_key" in field.name and "OpenAI" in str(name):
+        if field.name and "api_key" in field.name and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
             field.required = False
             if field.value is None:
@@ -25,14 +25,14 @@ class ModelSpecificFieldFormatter(FieldFormatter):
     }
 
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if name in self.MODEL_DICT and field.name == "model_name":
+        if field.name and name in self.MODEL_DICT and field.name == "model_name":
             field.options = self.MODEL_DICT[name]
             field.is_list = True
 
 
 class KwargsFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "kwargs" in field.name.lower():
+        if field.name and "kwargs" in field.name.lower():
             field.advanced = True
             field.required = False
             field.show = False
@@ -40,11 +40,11 @@ class KwargsFormatter(FieldFormatter):
 
 class APIKeyFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "api" in field.name.lower() and "key" in field.name.lower():
+        if field.name and "api" in field.name.lower() and "key" in field.name.lower():
             field.required = False
             field.advanced = False
 
-            field.display_name = field.name.replace("_", " ").title()
+            field.display_name = (field.name or "").replace("_", " ").title()
             field.display_name = field.display_name.replace("Api", "API")
 
 
@@ -94,7 +94,7 @@ class SpecialFieldFormatter(FieldFormatter):
 
 class ShowFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         required = field.required
         field.show = (
             (required and key not in ["input_variables"])
@@ -106,7 +106,7 @@ class ShowFieldFormatter(FieldFormatter):
 
 class PasswordFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         show = field.show
         if any(text in key.lower() for text in {"password", "token", "api", "key"}) and show:
             field.password = True
@@ -114,7 +114,7 @@ class PasswordFieldFormatter(FieldFormatter):
 
 class MultilineFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         if key in {
             "suffix",
             "prefix",

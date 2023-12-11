@@ -165,6 +165,9 @@ class CustomComponent(Component):
         return next(iter(classes), "")
 
     @property
+    def template_config(self):
+        return self.build_template_config()
+
     def build_template_config(self):
         if not self.code:
             return {}

@@ -120,7 +120,7 @@ def test_custom_component_build_template_config():
     Test the build_template_config property of the CustomComponent class.
     """
     custom_component = CustomComponent(code=code_default, function_entrypoint_name="build")
-    config = custom_component.build_template_config
+    config = custom_component.template_config
     assert isinstance(config, dict)
 
 
