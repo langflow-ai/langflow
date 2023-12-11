@@ -44,7 +44,7 @@ class FrontendNode(BaseModel):
     description: Optional[str] = None
     base_classes: List[str]
     name: str = ""
-    display_name: str = ""
+    display_name: Optional[str] = ""
     documentation: str = ""
     custom_fields: Optional[Dict] = defaultdict(list)
     output_types: List[str] = []
@@ -201,7 +201,8 @@ class FrontendNode(BaseModel):
     @staticmethod
     def handle_kwargs_field(field: TemplateField) -> None:
         """Handles kwargs field by setting certain attributes."""
-        if "kwargs" in field.name.lower():
+
+        if "kwargs" in (field.name or "").lower():
             field.advanced = True
             field.required = False
             field.show = False
