@@ -250,7 +250,7 @@ export default function NodeToolbarComponent({
                 >
                   <div className="flex">
                     <IconComponent
-                      name="Share2"
+                      name="Share"
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />{" "}
                     Share{" "}

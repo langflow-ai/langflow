@@ -200,7 +200,7 @@ export default function ExtraSidebar(): JSX.Element {
           )}
         >
           <IconComponent
-            name="Share2"
+            name="Share"
             className={classNames(
               "side-bar-button-size",
               !hasApiKey || !validApiKey || !hasStore
