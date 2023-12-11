@@ -233,6 +233,7 @@ export type IconComponentProps = {
   iconColor?: string;
   onClick?: () => void;
   stroke?: string;
+  strokeWidth?: number;
   id?: string;
 };
 
