@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
 
 test("IntComponent", async ({ page }) => {
+  await page.routeFromHAR("harFiles/backend_12112023.har", {
+    url: "**/api/v1/**",
+    update: false,
+  });
+  await page.route("**/api/v1/flows/", async (route) => {
+    const json = {
+      id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
+    };
+    await route.fulfill({ json, status: 201 });
+  });
+
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(2000);
 
@@ -42,15 +53,15 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.locator('//*[@id="int-input-1"]').inputValue();
+  value = await page.locator('//*[@id="edit-int-input-2"]').inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="int-input-1"]').click();
+  await page.locator('//*[@id="edit-int-input-2"]').click();
   await page
-    .locator('//*[@id="int-input-1"]')
+    .locator('//*[@id="edit-int-input-2"]')
     .fill("123456789123456789123456789");
 
   await page.locator('//*[@id="showheaders"]').click();
@@ -84,7 +95,7 @@ test("IntComponent", async ({ page }) => {
     ).toBeTruthy();
 
     const valueEditNode = await page
-      .locator('//*[@id="int-input-1"]')
+      .locator('//*[@id="edit-int-input-2"]')
       .inputValue();
 
     if (valueEditNode != "123456789123456789123456789") {
