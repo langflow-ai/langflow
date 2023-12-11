@@ -1,7 +1,10 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from langchain.llms.base import BaseLLM
+from pydantic.v1 import SecretStr
+
+from langflow import CustomComponent
 
 
 class QianfanChatEndpointComponent(CustomComponent):
@@ -80,8 +83,8 @@ class QianfanChatEndpointComponent(CustomComponent):
         try:
             output = QianfanChatEndpoint(  # type: ignore
                 model=model,
-                qianfan_ak=qianfan_ak,
-                qianfan_sk=qianfan_sk,
+                qianfan_ak=SecretStr(qianfan_ak) if qianfan_ak else None,
+                qianfan_sk=SecretStr(qianfan_sk) if qianfan_sk else None,
                 top_p=top_p,
                 temperature=temperature,
                 penalty_score=penalty_score,
