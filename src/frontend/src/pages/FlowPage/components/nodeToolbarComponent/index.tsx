@@ -178,7 +178,7 @@ export default function NodeToolbarComponent({
                   if (hasApiKey || hasStore) setShowconfirmShare(true);
                 }}
               >
-                <IconComponent name="Share4" className="h-4 w-4" />
+                <IconComponent name="Share3" className="-m-1 h-6 w-6" />
               </button>
             </ShadTooltip>
           )}
