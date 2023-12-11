@@ -112,7 +112,7 @@ export default function ShareModal({
         saveFlow(flow!, true);
       }
       setSuccessData({
-        title: `${nameComponent} shared successfully`,
+        title: `${is_component ? "Component" : "Flow"} shared successfully!`,
       });
     }
 
