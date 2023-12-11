@@ -193,14 +193,15 @@ export default function ExtraSidebar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "extra-side-bar-buttons gap-2 text-sm",
+            "extra-side-bar-buttons gap-1.5 text-sm font-semibold",
             !hasApiKey || !validApiKey || !hasStore
               ? "button-disable  cursor-default text-muted-foreground"
               : ""
           )}
         >
           <IconComponent
-            name="Share"
+            name="Forward"
+            strokeWidth={2.5}
             className={classNames(
               "side-bar-button-size",
               !hasApiKey || !validApiKey || !hasStore
@@ -231,6 +232,19 @@ export default function ExtraSidebar(): JSX.Element {
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
+        {hasStore && (
+          <ShadTooltip
+            content={
+              !hasApiKey || !validApiKey
+                ? "Please review your API key."
+                : "Share"
+            }
+            side="top"
+            styleClasses="cursor-default"
+          >
+            <div className="side-bar-button">{ModalMemo}</div>
+          </ShadTooltip>
+        )}
         <div className="side-bar-button">
           <ShadTooltip content="Import" side="top">
             <button
@@ -300,19 +314,6 @@ export default function ExtraSidebar(): JSX.Element {
             </ShadTooltip>
           )}
         </div>
-        {hasStore && (
-          <ShadTooltip
-            content={
-              !hasApiKey || !validApiKey
-                ? "Please review your API key."
-                : "Share"
-            }
-            side="top"
-            styleClasses="cursor-default"
-          >
-            <div className="side-bar-button">{ModalMemo}</div>
-          </ShadTooltip>
-        )}
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">
