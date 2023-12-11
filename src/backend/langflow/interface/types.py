@@ -31,7 +31,6 @@ from langflow.interface.utilities.base import utility_creator
 from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
 
@@ -89,7 +88,7 @@ def process_type(field_type: str):
 
 # TODO: Move to correct place
 def add_new_custom_field(
-    template,
+    frontend_node: CustomComponentFrontendNode,
     field_name: str,
     field_type: str,
     field_value: Any,
@@ -115,8 +114,6 @@ def add_new_custom_field(
 
     if "name" in field_config:
         warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
-        field_config.pop("name", None)
-
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
@@ -131,10 +128,10 @@ def add_new_custom_field(
         display_name=display_name,
         **sanitize_field_config(field_config),
     )
-    template.get("template")[field_name] = new_field.model_dump(by_alias=True, exclude_none=True)
-    template.get("custom_fields")[field_name] = None
+    frontend_node.template.upsert_field(field_name, new_field)
+    frontend_node.custom_fields[field_name] = None
 
-    return template
+    return frontend_node
 
 
 def sanitize_field_config(field_config: Dict):
@@ -145,27 +142,22 @@ def sanitize_field_config(field_config: Dict):
 
 
 # TODO: Move to correct place
-def add_code_field(template, raw_code, field_config):
-    # Field with the Python code to allow update
+def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_config):
+    code_field = TemplateField(
+        dynamic=True,
+        required=True,
+        placeholder="",
+        multiline=True,
+        value=raw_code,
+        password=False,
+        name="code",
+        advanced=field_config.pop("advanced", False),
+        field_type="code",
+        is_list=False,
+    )
+    frontend_node.template.add_field(code_field)
 
-    code_field = {
-        "code": {
-            "dynamic": True,
-            "required": True,
-            "placeholder": "",
-            "show": field_config.pop("show", True),
-            "multiline": True,
-            "value": raw_code,
-            "password": False,
-            "name": "code",
-            "advanced": field_config.pop("advanced", False),
-            "type": "code",
-            "list": False,
-        }
-    }
-    template.get("template")["code"] = code_field.get("code")
-
-    return template
+    return frontend_node
 
 
 def extract_type_from_optional(field_type):
@@ -182,28 +174,30 @@ def extract_type_from_optional(field_type):
     return match[1] if match else None
 
 
-def build_frontend_node(custom_component: CustomComponent):
+def build_frontend_node(template_config):
     """Build a frontend node for a custom component"""
     try:
-        return CustomComponentFrontendNode().to_dict().get(type(custom_component).__name__)
-
+        sanitized_template_config = sanitize_template_config(template_config)
+        return CustomComponentFrontendNode(**sanitized_template_config)
     except Exception as exc:
         logger.error(f"Error while building base frontend node: {exc}")
-        return None
+        raise exc
 
 
-def update_attributes(frontend_node, template_config):
-    """Update the display name and description of a frontend node"""
-    attributes = [
+def sanitize_template_config(template_config):
+    """Sanitize the template config"""
+    attributes = {
         "display_name",
         "description",
         "beta",
         "documentation",
         "output_types",
-    ]
-    for attribute in attributes:
-        if attribute in template_config:
-            frontend_node[attribute] = template_config[attribute]
+    }
+    for key in template_config.copy():
+        if key not in attributes:
+            template_config.pop(key, None)
+
+    return template_config
 
 
 def build_field_config(
@@ -318,7 +312,7 @@ def get_field_properties(extra_field):
     return field_name, field_type, field_value, field_required
 
 
-def add_base_classes(frontend_node, return_types: List[str]):
+def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
         if return_type_instance is None:
@@ -333,11 +327,10 @@ def add_base_classes(frontend_node, return_types: List[str]):
         base_classes = get_base_classes(return_type_instance)
 
         for base_class in base_classes:
-            if base_class not in CLASSES_TO_REMOVE:
-                frontend_node.get("base_classes").append(base_class)
+            frontend_node.add_base_class(base_class)
 
 
-def add_output_types(frontend_node, return_types: List[str]):
+def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
     """Add output types to the frontend node"""
     for return_type in return_types:
         if return_type is None:
@@ -355,7 +348,7 @@ def add_output_types(frontend_node, return_types: List[str]):
         else:
             return_type = str(return_type)
 
-        frontend_node.get("output_types").append(return_type)
+        frontend_node.add_output_type(return_type)
 
 
 def build_custom_component_template(
@@ -366,14 +359,10 @@ def build_custom_component_template(
     """Build a custom component template for the langchain"""
     try:
         logger.debug("Building custom component template")
-        frontend_node = build_frontend_node(custom_component)
+        frontend_node = build_frontend_node(custom_component.template_config)
 
-        if frontend_node is None:
-            return None
         logger.debug("Built base frontend node")
-        template_config = custom_component.build_template_config
 
-        update_attributes(frontend_node, template_config)
         logger.debug("Updated attributes")
         field_config = build_field_config(custom_component, user_id=user_id, update_field=update_field)
         logger.debug("Built field config")
@@ -386,7 +375,7 @@ def build_custom_component_template(
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
         logger.debug("Added base classes")
-        return frontend_node
+        return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise exc
