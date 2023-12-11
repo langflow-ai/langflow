@@ -6252,6 +6252,20 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtualenv"]
 
 [[package]]
+name = "pytest-instafail"
+version = "0.5.0"
+description = "pytest plugin to show failures instantly"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pytest-instafail-0.5.0.tar.gz", hash = "sha256:33a606f7e0c8e646dc3bfee0d5e3a4b7b78ef7c36168cfa1f3d93af7ca706c9e"},
+    {file = "pytest_instafail-0.5.0-py3-none-any.whl", hash = "sha256:6855414487e9e4bb76a118ce952c3c27d3866af15487506c4ded92eb72387819"},
+]
+
+[package.dependencies]
+pytest = ">=5"
+
+[[package]]
 name = "pytest-mock"
 version = "3.12.0"
 description = "Thin-wrapper around the mock package for easier use with pytest"
@@ -6286,6 +6300,21 @@ termcolor = ">=2.1.0"
 
 [package.extras]
 dev = ["black", "flake8", "pre-commit"]
+
+[[package]]
+name = "pytest-testmon"
+version = "2.1.0"
+description = "selects tests affected by changed files and methods"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest-testmon-2.1.0.tar.gz", hash = "sha256:b3d20a3ceb099e36727217096a7b3fc662877bd8b0768d2439983924c2a807a6"},
+    {file = "pytest_testmon-2.1.0-py3-none-any.whl", hash = "sha256:a9848735b53381bf97a421c5c40828f0e1973d8a30748d345edc2108315cbe8d"},
+]
+
+[package.dependencies]
+coverage = ">=6,<8"
+pytest = ">=5,<8"
 
 [[package]]
 name = "pytest-xdist"
@@ -9181,4 +9210,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "e67ae4eb911e893ad20b2bace32a5a62e34290e98ad00e551194a6d70bbbec0b"
+content-hash = "21eb15fcfd6f4f1ee27b02e3b8a585459bb919d8d20ecb8d8b2f386217de7324"
