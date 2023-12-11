@@ -75,6 +75,10 @@ export default function NodeToolbarComponent({
 
   const [flowComponent, setFlowComponent] = useState<FlowType>();
 
+  const openInNewTab = (url) => {
+    window.open(url, "_blank", "noreferrer");
+  };
+
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [
@@ -100,11 +104,11 @@ export default function NodeToolbarComponent({
       case "Download":
         downloadNode(createFlowComponent(cloneDeep(data), version));
         break;
-      case "Share":
-        if (hasApiKey || hasStore) setShowconfirmShare(true);
-        break;
       case "SaveAll":
         saveComponent(cloneDeep(data), false);
+        break;
+      case "documentation":
+        if (data.node?.documentation) openInNewTab(data.node?.documentation);
         break;
       case "disabled":
         break;
@@ -162,33 +166,22 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
           </ShadTooltip>
-
-          <ShadTooltip
-            content={
-              data.node?.documentation === "" ? "Coming Soon" : "Documentation"
-            }
-            side="top"
-          >
-            <a
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10" +
-                  (data.node?.documentation === ""
-                    ? " text-muted-foreground"
-                    : " text-foreground")
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-              href={data.node?.documentation}
-              // deactivate link if no documentation is provided
-              onClick={(event) => {
-                if (data.node?.documentation === "") {
+          {hasStore && (
+            <ShadTooltip content="Share" side="top">
+              <button
+                className={classNames(
+                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                  !hasApiKey || !validApiKey ? " text-muted-foreground" : ""
+                )}
+                onClick={(event) => {
                   event.preventDefault();
-                }
-              }}
-            >
-              <IconComponent name="FileText" className="h-4 w-4 " />
-            </a>
-          </ShadTooltip>
+                  if (hasApiKey || hasStore) setShowconfirmShare(true);
+                }}
+              >
+                <IconComponent name="Share4" className="h-4 w-4" />
+              </button>
+            </ShadTooltip>
+          )}
 
           <Select onValueChange={handleSelectChange} value={selectedValue}>
             <ShadTooltip content="More" side="top">
@@ -242,21 +235,6 @@ export default function NodeToolbarComponent({
                   </div>{" "}
                 </SelectItem>
               )}
-
-              {hasStore && (
-                <SelectItem
-                  disabled={!hasApiKey || !validApiKey}
-                  value={"Share"}
-                >
-                  <div className="flex">
-                    <IconComponent
-                      name="Forward"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Share{" "}
-                  </div>{" "}
-                </SelectItem>
-              )}
               {!hasStore && (
                 <SelectItem value={"Download"}>
                   <div className="flex">
@@ -268,6 +246,20 @@ export default function NodeToolbarComponent({
                   </div>{" "}
                 </SelectItem>
               )}
+              <SelectItem
+                value={"documentation"}
+                disabled={data.node?.documentation === ""}
+              >
+                <div className="flex">
+                  <IconComponent
+                    name="FileText"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />{" "}
+                  {data.node?.documentation === ""
+                    ? "Coming Soon"
+                    : "Documentation"}
+                </div>{" "}
+              </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <div className="flex">

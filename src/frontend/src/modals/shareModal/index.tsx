@@ -209,8 +209,8 @@ export default function ShareModal({
         >
           <span className="pr-2">Share</span>
           <IconComponent
-            name="Forward"
-            className="h-6 w-6 pl-1 text-foreground"
+            name="Share3"
+            className="-m-0.5 h-6 w-6 text-foreground"
             aria-hidden="true"
           />
         </BaseModal.Header>
