@@ -1,10 +1,9 @@
 from typing import Optional
-from langflow.services.database.models.base import orjson_dumps
 
+from langflow.services.database.models.base import orjson_dumps
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG
-from langflow.template.frontend_node.constants import OPENAI_API_BASE_INFO
+from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG, OPENAI_API_BASE_INFO
 
 
 class LLMFrontendNode(FrontendNode):
@@ -18,13 +17,13 @@ class LLMFrontendNode(FrontendNode):
                     show=True,
                     name="credentials",
                     value="",
-                    suffixes=[".json"],
-                    file_types=["json"],
+                    file_types=[".json"],
                 )
             )
 
     @staticmethod
     def format_vertex_field(field: TemplateField, name: str):
+        key = field.name or ""
         if "VertexAI" in name:
             advanced_fields = [
                 "tuned_model_name",
@@ -33,7 +32,7 @@ class LLMFrontendNode(FrontendNode):
                 "top_k",
                 "max_output_tokens",
             ]
-            if field.name in advanced_fields:
+            if key in advanced_fields:
                 field.advanced = True
             show_fields = [
                 "tuned_model_name",
@@ -48,20 +47,19 @@ class LLMFrontendNode(FrontendNode):
                 "top_k",
             ]
 
-            if field.name in show_fields:
+            if key in show_fields:
                 field.show = True
 
     @staticmethod
     def format_openai_field(field: TemplateField):
-        if "openai" in field.name.lower():
-            field.display_name = (
-                field.name.title().replace("Openai", "OpenAI").replace("_", " ")
-            ).replace("Api", "API")
+        key = field.name or ""
+        if "openai" in key.lower():
+            field.display_name = (key.title().replace("Openai", "OpenAI").replace("_", " ")).replace("Api", "API")
 
-        if "key" not in field.name.lower() and "token" not in field.name.lower():
+        if "key" not in key.lower() and "token" not in key.lower():
             field.password = False
 
-        if field.name == "openai_api_base":
+        if key == "openai_api_base":
             field.info = OPENAI_API_BASE_INFO
 
     def add_extra_base_classes(self) -> None:
@@ -70,13 +68,14 @@ class LLMFrontendNode(FrontendNode):
 
     @staticmethod
     def format_azure_field(field: TemplateField):
-        if field.name == "model_name":
+        key = field.name or ""
+        if key == "model_name":
             field.show = False  # Azure uses deployment_name instead of model_name.
-        elif field.name == "openai_api_type":
+        elif key == "openai_api_type":
             field.show = False
             field.password = False
             field.value = "azure"
-        elif field.name == "openai_api_version":
+        elif key == "openai_api_version":
             field.password = False
 
     @staticmethod
@@ -86,7 +85,8 @@ class LLMFrontendNode(FrontendNode):
 
     @staticmethod
     def format_ctransformers_field(field: TemplateField):
-        if field.name == "config":
+        key = field.name or ""
+        if key == "config":
             field.show = True
             field.advanced = True
             field.value = orjson_dumps(CTRANSFORMERS_DEFAULT_CONFIG, indent_2=True)
@@ -106,13 +106,11 @@ class LLMFrontendNode(FrontendNode):
         if name and "vertex" in name.lower():
             LLMFrontendNode.format_vertex_field(field, name)
         SHOW_FIELDS = ["repo_id"]
-        if field.name in SHOW_FIELDS:
+        key = field.name or ""
+        if key in SHOW_FIELDS:
             field.show = True
 
-        if "api" in field.name and (
-            "key" in field.name
-            or ("token" in field.name and "tokens" not in field.name)
-        ):
+        if "api" in key and ("key" in key or ("token" in key and "tokens" not in key)):
             field.password = True
             field.show = True
             # Required should be False to support
@@ -120,7 +118,7 @@ class LLMFrontendNode(FrontendNode):
             field.required = False
             field.advanced = False
 
-        if field.name == "task":
+        if key == "task":
             field.required = True
             field.show = True
             field.is_list = True
@@ -128,13 +126,13 @@ class LLMFrontendNode(FrontendNode):
             field.value = field.options[0]
             field.advanced = True
 
-        if display_name := display_names_dict.get(field.name):
+        if display_name := display_names_dict.get(key):
             field.display_name = display_name
-        if field.name == "model_kwargs":
+        if key == "model_kwargs":
             field.field_type = "dict"
             field.advanced = True
             field.show = True
-        elif field.name in [
+        elif key in [
             "model_name",
             "temperature",
             "model_file",
@@ -144,9 +142,9 @@ class LLMFrontendNode(FrontendNode):
         ]:
             field.advanced = False
             field.show = True
-        if field.name == "credentials":
+        if key == "credentials":
             field.field_type = "file"
-        if name == "VertexAI" and field.name not in [
+        if name == "VertexAI" and key not in [
             "callbacks",
             "client",
             "stop",

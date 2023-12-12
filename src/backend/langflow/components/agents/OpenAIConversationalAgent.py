@@ -1,17 +1,15 @@
-from langflow import CustomComponent
-from typing import Optional
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.tools import Tool
-from langchain.schema.memory import BaseMemory
-from langchain.chat_models import ChatOpenAI
+from typing import List, Optional
 
 from langchain.agents.agent import AgentExecutor
+from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import _get_default_system_message
 from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
+from langchain.chat_models import ChatOpenAI
 from langchain.memory.token_buffer import ConversationTokenBufferMemory
+from langchain.prompts import SystemMessagePromptTemplate
 from langchain.prompts.chat import MessagesPlaceholder
-from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import (
-    _get_default_system_message,
-)
+from langchain.schema.memory import BaseMemory
+from langchain.tools import Tool
+from langflow import CustomComponent
 
 
 class ConversationalAgent(CustomComponent):
@@ -20,13 +18,14 @@ class ConversationalAgent(CustomComponent):
 
     def build_config(self):
         openai_function_models = [
-            "gpt-3.5-turbo-0613",
-            "gpt-3.5-turbo-16k-0613",
-            "gpt-4-0613",
-            "gpt-4-32k-0613",
+            "gpt-4-1106-preview",
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-16k",
+            "gpt-4",
+            "gpt-4-32k",
         ]
         return {
-            "tools": {"is_list": True, "display_name": "Tools"},
+            "tools": {"display_name": "Tools"},
             "memory": {"display_name": "Memory"},
             "system_message": {"display_name": "System Message"},
             "max_token_limit": {"display_name": "Max Token Limit"},
@@ -42,7 +41,7 @@ class ConversationalAgent(CustomComponent):
         self,
         model_name: str,
         openai_api_key: str,
-        tools: Tool,
+        tools: List[Tool],
         openai_api_base: Optional[str] = None,
         memory: Optional[BaseMemory] = None,
         system_message: Optional[SystemMessagePromptTemplate] = None,
@@ -50,8 +49,8 @@ class ConversationalAgent(CustomComponent):
     ) -> AgentExecutor:
         llm = ChatOpenAI(
             model=model_name,
-            openai_api_key=openai_api_key,
-            openai_api_base=openai_api_base,
+            api_key=openai_api_key,
+            base_url=openai_api_base,
         )
         if not memory:
             memory_key = "chat_history"
@@ -71,7 +70,9 @@ class ConversationalAgent(CustomComponent):
             extra_prompt_messages=[MessagesPlaceholder(variable_name=memory_key)],
         )
         agent = OpenAIFunctionsAgent(
-            llm=llm, tools=tools, prompt=prompt  # type: ignore
+            llm=llm,
+            tools=tools,
+            prompt=prompt,  # type: ignore
         )
         return AgentExecutor(
             agent=agent,

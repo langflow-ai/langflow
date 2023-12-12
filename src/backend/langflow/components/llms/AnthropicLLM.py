@@ -1,7 +1,10 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.chat_models.anthropic import ChatAnthropic
-from langchain.llms.base import BaseLLM
+from langchain.llms.base import BaseLanguageModel
+from pydantic.v1 import SecretStr
+
+from langflow import CustomComponent
 
 
 class AnthropicLLM(CustomComponent):
@@ -53,16 +56,16 @@ class AnthropicLLM(CustomComponent):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         api_endpoint: Optional[str] = None,
-    ) -> BaseLLM:
+    ) -> BaseLanguageModel:
         # Set default API endpoint if not provided
         if not api_endpoint:
             api_endpoint = "https://api.anthropic.com"
 
         try:
             output = ChatAnthropic(
-                model=model,
-                anthropic_api_key=anthropic_api_key,
-                max_tokens_to_sample=max_tokens,
+                model_name=model,
+                anthropic_api_key=SecretStr(anthropic_api_key) if anthropic_api_key else None,
+                max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=api_endpoint,
             )

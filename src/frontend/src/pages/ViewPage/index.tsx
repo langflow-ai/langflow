@@ -1,10 +1,11 @@
 import { useContext, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { FlowsContext } from "../../contexts/flowsContext";
 import Page from "../FlowPage/components/PageComponent";
 
 export default function ViewPage() {
-  const { setDark } = useContext(darkContext);
-  const { id, theme } = useParams();
+  const { flows, tabId, setTabId } = useContext(FlowsContext);
+  const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {

@@ -1,11 +1,11 @@
-from langflow.services.database.models.base import SQLModelSerializable, SQLModel
-from sqlmodel import Field
-from typing import Optional
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
 
 
-class Component(SQLModelSerializable, table=True):
+class Component(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     frontend_node_id: uuid.UUID = Field(index=True)
     name: str = Field(index=True)

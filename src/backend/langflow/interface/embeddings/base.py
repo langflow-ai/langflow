@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import embedding_type_to_cls_dict
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.embeddings import EmbeddingFrontendNode
@@ -37,8 +37,7 @@ class EmbeddingCreator(LangChainTypeCreator):
         return [
             embedding.__name__
             for embedding in self.type_to_loader_dict.values()
-            if embedding.__name__ in settings_service.settings.EMBEDDINGS
-            or settings_service.settings.DEV
+            if embedding.__name__ in settings_service.settings.EMBEDDINGS or settings_service.settings.DEV
         ]
 
 
