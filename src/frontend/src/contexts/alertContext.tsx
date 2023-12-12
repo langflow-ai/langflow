@@ -26,6 +26,8 @@ const initialValue: alertContextType = {
   pushNotificationList: () => {},
   clearNotificationList: () => {},
   removeFromNotificationList: () => {},
+  modalContextOpen: false,
+  setModalContextOpen: (open: boolean) => {},
 };
 
 export const alertContext = createContext<alertContextType>(initialValue);
@@ -49,6 +51,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const [notificationCenter, setNotificationCenter] = useState(false);
   const [notificationList, setNotificationList] = useState<AlertItemType[]>([]);
   const [isTweakPage, setIsTweakPage] = useState<boolean>(false);
+  const [modalContextOpen, setModalContextOpen] = useState<boolean>(false);
   const pushNotificationList = (notification: AlertItemType) => {
     setNotificationList((old) => {
       let newNotificationList = _.cloneDeep(old);
@@ -141,6 +144,8 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         setSuccessData,
         successOpen,
         setSuccessOpen,
+        modalContextOpen,
+        setModalContextOpen,
       }}
     >
       {children}

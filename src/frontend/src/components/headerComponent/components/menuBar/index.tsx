@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { TabsContext } from "../../../../contexts/tabsContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
@@ -17,7 +17,7 @@ import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
-  const { addFlow } = useContext(TabsContext);
+  const { addFlow } = useContext(FlowsContext);
   const { setErrorData } = useContext(alertContext);
   const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
@@ -26,7 +26,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   function handleAddFlow() {
     try {
-      addFlow(undefined, true).then((id) => {
+      addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
       // saveFlowStyleInDataBase();
@@ -38,9 +38,13 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
 
   return (
     <div className="round-button-div">
-      <Link to="/">
+      <button
+        onClick={() => {
+          navigate(-1);
+        }}
+      >
         <IconComponent name="ChevronLeft" className="w-4" />
-      </Link>
+      </button>
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -11,6 +11,7 @@ const SanitizedHTMLWrapper = ({
 
   return (
     <div
+      data-testid="edit-prompt-sanitized"
       className={className}
       dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       suppressContentEditableWarning={suppressWarning}
