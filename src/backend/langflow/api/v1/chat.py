@@ -1,6 +1,11 @@
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from langflow.api.utils import build_input_keys_response
+from loguru import logger
+from sqlmodel import Session
+
+from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
@@ -8,8 +13,6 @@ from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
-from loguru import logger
-from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -151,12 +154,16 @@ async def stream_build(
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
+                    # time this
+                    start_time = time.perf_counter()
                     if vertex.is_task:
                         vertex = await try_running_celery_task(vertex, user_id)
                     else:
                         await vertex.build(user_id=user_id)
+                    time_elapded = format_elapsed_time(time.perf_counter() - start_time)
                     params = vertex._built_object_repr()
                     valid = True
+
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
                     logger.debug(f"Output: {params[:100]}{'...' if len(params) > 100 else ''}")
                     if vertex.artifacts:
@@ -174,9 +181,10 @@ async def stream_build(
                 if vertex_id in graph.top_level_vertices:
                     response = {
                         "valid": valid,
-                        "params": params,
+                        "params": f"Duration: {time_elapded}\n{params}",
                         "id": vertex_id,
                         "progress": round(i / number_of_nodes, 2),
+                        "duration": time_elapded,
                     }
 
                     yield str(StreamData(event="message", data=response))
