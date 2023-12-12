@@ -110,10 +110,10 @@ def update_template_field(frontend_template, key, value_dict):
     if not template_field or template_field.get("type") != value_dict.get("type"):
         return
 
-    if "value" in value_dict:
+    if "value" in value_dict and value_dict["value"]:
         template_field["value"] = value_dict["value"]
 
-    if "file_path" in value_dict:
+    if "file_path" in value_dict and value_dict["file_path"]:
         file_path_value = get_file_path_value(value_dict["file_path"])
         if not file_path_value:
             # If the file does not exist, remove the value from the template_field["value"]
