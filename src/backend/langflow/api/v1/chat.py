@@ -160,7 +160,7 @@ async def stream_build(
                         vertex = await try_running_celery_task(vertex, user_id)
                     else:
                         await vertex.build(user_id=user_id)
-                    time_elapded = format_elapsed_time(time.perf_counter() - start_time)
+                    time_elapsed = format_elapsed_time(time.perf_counter() - start_time)
                     params = vertex._built_object_repr()
                     valid = True
 
@@ -181,10 +181,10 @@ async def stream_build(
                 if vertex_id in graph.top_level_vertices:
                     response = {
                         "valid": valid,
-                        "params": f"Duration: {time_elapded}\n{params}",
+                        "params": params,
                         "id": vertex_id,
                         "progress": round(i / number_of_nodes, 2),
-                        "duration": time_elapded,
+                        "duration": time_elapsed,
                     }
 
                     yield str(StreamData(event="message", data=response))
