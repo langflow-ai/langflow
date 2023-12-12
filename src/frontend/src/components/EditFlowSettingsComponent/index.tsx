@@ -29,6 +29,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
     setDescription!(event.target.value);
   };
 
+  //this function is necessary to select the text when double clicking, this was not working with the onFocus event
+  const handleFocus = (event) => event.target.select();
+
   return (
     <>
       <Label>
@@ -48,6 +51,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             placeholder="Flow name"
             id="name"
             maxLength={maxLength}
+            onDoubleClickCapture={(event) => {
+              handleFocus(event);
+            }}
           />
         ) : (
           <span className="font-normal text-muted-foreground word-break-break-word">
@@ -70,6 +76,9 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             placeholder="Flow description"
             className="mt-2 max-h-[100px] font-normal"
             rows={3}
+            onDoubleClickCapture={(event) => {
+              handleFocus(event);
+            }}
           />
         ) : (
           <span
