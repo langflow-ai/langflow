@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import pickle
@@ -11,14 +12,18 @@ from langchain.llms.fake import FakeListLLM
 
 from langflow.graph import Graph
 from langflow.graph.edge.base import Edge
-from langflow.graph.graph.utils import (find_last_node, process_flow,
-                                        set_new_target_handle, ungroup_node,
-                                        update_source_handle,
-                                        update_target_handle, update_template)
+from langflow.graph.graph.utils import (
+    find_last_node,
+    process_flow,
+    set_new_target_handle,
+    ungroup_node,
+    update_source_handle,
+    update_target_handle,
+    update_template,
+)
 from langflow.graph.utils import UnbuiltObject
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (FileToolVertex, LLMVertex,
-                                         ToolkitVertex)
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.processing.process import get_result_and_thought
 from langflow.utils.payload import get_root_vertex
 

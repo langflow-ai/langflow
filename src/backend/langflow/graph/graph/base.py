@@ -7,8 +7,7 @@ from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (FileToolVertex, LLMVertex,
-                                         ToolkitVertex)
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -28,7 +27,8 @@ class Graph:
         self.top_level_vertices = []
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
-                self.top_level_vertices.append(vertex_id)
+                if isinstance(vertex_id, str):
+                    self.top_level_vertices.append(vertex_id)
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]

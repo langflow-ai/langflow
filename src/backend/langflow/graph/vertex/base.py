@@ -35,6 +35,7 @@ class Vertex:
         self.artifacts: Dict[str, Any] = {}
         self.task_id: Optional[str] = None
         self.is_task = is_task
+        self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.params = params or {}
 
     @property

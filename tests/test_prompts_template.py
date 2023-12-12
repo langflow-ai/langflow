@@ -22,7 +22,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
     template = prompt["template"]
     assert template["input_variables"] == {
         "required": True,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -37,7 +37,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["output_parser"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -52,7 +52,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["partial_variables"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
@@ -67,7 +67,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["template"] == {
         "required": True,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": True,
         "multiline": True,
@@ -98,7 +98,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
 
     assert template["validate_template"] == {
         "required": False,
-        "dynamic": False,
+        "dynamic": True,
         "placeholder": "",
         "show": False,
         "multiline": False,
