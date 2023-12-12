@@ -631,6 +631,7 @@ export type validationStatusType = {
   params: string;
   progress: number;
   valid: boolean;
+  duration: string;
 };
 
 export type ApiKey = {
