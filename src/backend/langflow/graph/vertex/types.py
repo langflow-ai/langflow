@@ -131,6 +131,7 @@ class VectorStoreVertex(Vertex):
         super().__init__(data, graph=graph, base_type="vectorstores")
 
         self.params = params or {}
+        self.params.pop("code", None)
 
     # VectorStores may contain databse connections
     # so we need to define the __reduce__ method and the __setstate__ method
@@ -199,9 +200,6 @@ class ChainVertex(Vertex):
             # Temporarily remove the code from the params
             self.params.pop("code", None)
             # Check if the chain requires a PromptVertex
-
-            # Temporarily remove the code from the params
-            self.params.pop("code", None)
 
             for key, value in self.params.items():
                 if isinstance(value, PromptVertex):
