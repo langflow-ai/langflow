@@ -43,7 +43,7 @@ huggingface-hub = { version = "^0.19.0", extras = ["inference"] }
 rich = "^13.7.0"
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
-unstructured = "^0.10.0"
+unstructured = "^0.11.0"
 pypdf = "^3.17.0"
 lxml = "^4.9.2"
 pysrt = "^1.1.2"
@@ -104,10 +104,10 @@ pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest-asyncio = "^0.21.1"
+pytest-asyncio = "^0.23.1"
 types-redis = "^4.6.0.5"
-ipykernel = "^6.26.0"
-mypy = "^1.1.1"
+ipykernel = "^6.27.0"
+mypy = "^1.7.1"
 ruff = "^0.1.5"
 httpx = "*"
 pytest = "^7.4.2"
@@ -119,9 +119,9 @@ types-pillow = "^9.5.0.2"
 types-pyyaml = "^6.0.12.8"
 types-python-jose = "^3.3.4.8"
 types-passlib = "^1.7.7.13"
-locust = "^2.16.1"
-pytest-mock = "^3.11.1"
-pytest-xdist = "^3.3.1"
+locust = "^2.19.1"
+pytest-mock = "^3.12.0"
+pytest-xdist = "^3.5.0"
 types-pywin32 = "^306.0.0.4"
 types-google-cloud-ndb = "^2.2.0.0"
 pytest-sugar = "^0.9.7"
@@ -147,6 +147,9 @@ markers = ["async_test"]
 [tool.ruff]
 exclude = ["src/backend/langflow/alembic/*"]
 line-length = 120
+
+[tool.mypy]
+plugins = "pydantic.mypy"
 
 [build-system]
 requires = ["poetry-core"]
