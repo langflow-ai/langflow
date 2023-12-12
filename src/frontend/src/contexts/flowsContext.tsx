@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
@@ -8,12 +8,18 @@ import {
   useRef,
   useState,
 } from "react";
-import { Edge, Node, ReactFlowJsonObject, addEdge } from "reactflow";
+import {
+  Edge,
+  Node,
+  ReactFlowJsonObject,
+  XYPosition,
+  addEdge,
+} from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import { skipNodeUpdate } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
+  getVersion,
   readFlowsFromDatabase,
   saveFlowToDatabase,
   updateFlowInDatabase,
@@ -21,27 +27,47 @@ import {
 } from "../controllers/API";
 import { APIClassType, APITemplateType } from "../types/api";
 import { tweakType } from "../types/components";
-import { FlowType, NodeDataType, NodeType } from "../types/flow";
-import { TabsContextType, TabsState } from "../types/tabs";
+import {
+  FlowType,
+  NodeDataType,
+  NodeType,
+  sourceHandleType,
+  targetHandleType,
+} from "../types/flow";
+import { FlowsContextType, FlowsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
+  checkOldEdgesHandles,
+  createFlowComponent,
+  removeFileNameFromComponents,
+  scapeJSONParse,
+  scapedJSONStringfy,
+  updateEdgesHandleIds,
   updateIds,
   updateTemplate,
 } from "../utils/reactflowUtils";
-import { getRandomDescription, getRandomName } from "../utils/utils";
+import {
+  createRandomKey,
+  getRandomDescription,
+  getRandomName,
+} from "../utils/utils";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
 
 const uid = new ShortUniqueId({ length: 5 });
 
-const TabsContextInitialValue: TabsContextType = {
+const FlowsContextInitialValue: FlowsContextType = {
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
   flows: [],
   removeFlow: (id: string) => {},
-  addFlow: async (flowData?: any) => "",
+  addFlow: async (
+    newProject: boolean,
+    flowData?: FlowType,
+    override?: boolean
+  ) => "",
   updateFlow: (newFlow: FlowType) => {},
   incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
@@ -55,7 +81,8 @@ const TabsContextInitialValue: TabsContextType = {
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   tabsState: {},
-  setTabsState: (state: TabsState) => {},
+  setTabsState: (state: FlowsState) => {},
+  saveCurrentFlow: () => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -63,29 +90,35 @@ const TabsContextInitialValue: TabsContextType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => {},
+  saveComponent: async (component: NodeDataType, override: boolean) => "",
+  deleteComponent: (key: string) => {},
+  version: "",
+  nodesOnFlow: "",
+  setNodesOnFlow: (nodes: string) => "",
 };
 
-export const TabsContext = createContext<TabsContextType>(
-  TabsContextInitialValue
+export const FlowsContext = createContext<FlowsContextType>(
+  FlowsContextInitialValue
 );
 
-export function TabsProvider({ children }: { children: ReactNode }) {
+export function FlowsProvider({ children }: { children: ReactNode }) {
   const { setErrorData, setNoticeData, setSuccessData } =
     useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [nodesOnFlow, setNodesOnFlow] = useState("");
 
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
-  const { templates, reactFlowInstance } = useContext(typesContext);
+  const { reactFlowInstance, setData, data } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;
   } | null>(null);
-  const [tabsState, setTabsState] = useState<TabsState>({});
+  const [tabsState, setTabsState] = useState<FlowsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
 
   useEffect(() => {
@@ -103,9 +136,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   function refreshFlows() {
     setIsLoading(true);
     getTabsDataFromDB().then((DbData) => {
-      if (DbData && Object.keys(templates).length > 0) {
+      if (DbData) {
         try {
-          processDBData(DbData);
+          processFlows(DbData, false);
           updateStateWithDbData(DbData);
           setIsLoading(false);
         } catch (e) {}
@@ -117,31 +150,52 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (getAuthentication() === true) {
       // get data from db
-      //get tabs locally saved
-      // let tabsData = getLocalStorageTabsData();
       refreshFlows();
     }
-  }, [templates, getAuthentication()]);
+  }, [getAuthentication(), tabId]);
 
   function getTabsDataFromDB() {
     //get tabs from db
     return readFlowsFromDatabase();
   }
 
-  function processDBData(DbData: FlowType[]) {
+  function processFlows(DbData: FlowType[], skipUpdate = true) {
+    let savedComponents: { [key: string]: APIClassType } = {};
     DbData.forEach((flow: FlowType) => {
       try {
         if (!flow.data) {
           return;
         }
-        processFlowEdges(flow);
-        processFlowNodes(flow);
-      } catch (e) {}
+        if (flow.data && flow.is_component) {
+          (flow.data.nodes[0].data as NodeDataType).node!.display_name =
+            flow.name;
+          savedComponents[
+            createRandomKey(
+              (flow.data.nodes[0].data as NodeDataType).type,
+              uid()
+            )
+          ] = _.cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+          return;
+        }
+        if (!skipUpdate) processDataFromFlow(flow, false);
+      } catch (e) {
+        console.log(e);
+      }
+    });
+    setData((prev) => {
+      let newData = cloneDeep(prev);
+      newData["saved_components"] = cloneDeep(savedComponents);
+      return newData;
     });
   }
 
   function processFlowEdges(flow: FlowType) {
     if (!flow.data || !flow.data.edges) return;
+    if (checkOldEdgesHandles(flow.data.edges)) {
+      const newEdges = updateEdgesHandleIds(flow.data);
+      flow.data.edges = newEdges;
+    }
+    //update edges colors
     flow.data.edges.forEach((edge) => {
       edge.className = "";
       edge.style = { stroke: "#555" };
@@ -156,26 +210,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     node.data.node!.documentation = template["documentation"];
   }
 
-  function processFlowNodes(flow: FlowType) {
-    if (!flow.data || !flow.data.nodes) return;
-    flow.data.nodes.forEach((node: NodeType) => {
-      if (skipNodeUpdate.includes(node.data.type)) return;
-      const template = templates[node.data.type];
-      if (!template) {
-        setErrorData({ title: `Unknown node type: ${node.data.type}` });
-        return;
-      }
-      if (Object.keys(template["template"]).length > 0) {
-        updateDisplay_name(node, template);
-        updateNodeBaseClasses(node, template);
-        updateNodeEdges(flow, node, template);
-        updateNodeDescription(node, template);
-        updateNodeTemplate(node, template);
-        updateNodeDocumentation(node, template);
-      }
-    });
-  }
-
   function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
     node.data.node!.base_classes = template["base_classes"];
   }
@@ -187,11 +221,12 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   ) {
     flow.data!.edges.forEach((edge) => {
       if (edge.source === node.id) {
-        edge.sourceHandle = edge.sourceHandle
-          ?.split("|")
-          .slice(0, 2)
-          .concat(template["base_classes"])
-          .join("|");
+        let sourceHandleObject: sourceHandleType = scapeJSONParse(
+          edge.sourceHandle!
+        );
+        sourceHandleObject.baseClasses = template["base_classes"];
+        edge.data.sourceHandle = sourceHandleObject;
+        edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
       }
     });
   }
@@ -227,9 +262,15 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     flowName: string,
     flowDescription?: string
   ) {
+    let clonedFlow = cloneDeep(flow);
+    removeFileNameFromComponents(clonedFlow);
     // create a data URI with the current flow data
     const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-      JSON.stringify({ ...flow, name: flowName, description: flowDescription })
+      JSON.stringify({
+        ...clonedFlow,
+        name: flowName,
+        description: flowDescription,
+      })
     )}`;
 
     // create a link element and set its properties
@@ -243,9 +284,6 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
     // simulate a click on the link element to trigger the download
     link.click();
-    setNoticeData({
-      title: "Warning: Critical data, JSON file may include API keys.",
-    });
   }
 
   function downloadFlows() {
@@ -273,46 +311,70 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * If the file type is application/json, the file is read and parsed into a JSON object.
    * The resulting JSON object is passed to the addFlow function.
    */
-  async function uploadFlow(
-    newProject?: boolean,
-    file?: File
-  ): Promise<String | undefined> {
-    let id;
-    if (file) {
-      let text = await file.text();
-      let fileData = JSON.parse(text);
-      if (fileData.flows) {
-        fileData.flows.forEach((flow: FlowType) => {
-          id = addFlow(flow, newProject);
-        });
-      }
-      // parse the text into a JSON object
-      let flow: FlowType = JSON.parse(text);
-
-      id = await addFlow(flow, newProject);
-    } else {
-      // create a file input
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".json";
-      // add a change event listener to the file input
-      id = await new Promise((resolve) => {
+  async function uploadFlow({
+    newProject,
+    file,
+    isComponent = false,
+    position = { x: 10, y: 10 },
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+    position?: XYPosition;
+  }): Promise<String | never> {
+    return new Promise(async (resolve, reject) => {
+      let id;
+      if (file) {
+        let text = await file.text();
+        let fileData = JSON.parse(text);
+        if (
+          newProject &&
+          ((!fileData.is_component && isComponent === true) ||
+            (fileData.is_component !== undefined &&
+              fileData.is_component !== isComponent))
+        ) {
+          reject("You cannot upload a component as a flow or vice versa");
+        } else {
+          if (fileData.flows) {
+            fileData.flows.forEach((flow: FlowType) => {
+              id = addFlow(newProject, flow, undefined, position);
+            });
+            resolve("");
+          } else {
+            id = await addFlow(newProject, fileData, undefined, position);
+            resolve(id);
+          }
+        }
+      } else {
+        // create a file input
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        // add a change event listener to the file input
         input.onchange = async (e: Event) => {
           if (
             (e.target as HTMLInputElement).files![0].type === "application/json"
           ) {
             const currentfile = (e.target as HTMLInputElement).files![0];
             let text = await currentfile.text();
-            let flow: FlowType = JSON.parse(text);
-            const flowId = await addFlow(flow, newProject);
-            resolve(flowId);
+            let fileData: FlowType = await JSON.parse(text);
+
+            if (
+              (!fileData.is_component && isComponent === true) ||
+              (fileData.is_component !== undefined &&
+                fileData.is_component !== isComponent)
+            ) {
+              reject("You cannot upload a component as a flow or vice versa");
+            } else {
+              id = await addFlow(newProject, fileData);
+              resolve(id);
+            }
           }
         };
         // trigger the file input click event to open the file dialog
         input.click();
-      });
-    }
-    return id;
+      }
+    });
   }
 
   function uploadFlows() {
@@ -343,19 +405,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
    * Updates the state of flows and tabIndex using setFlows and setTabIndex hooks.
    * @param {string} id - The id of the flow to remove.
    */
-  function removeFlow(id: string) {
+  async function removeFlow(id: string) {
     const index = flows.findIndex((flow) => flow.id === id);
     if (index >= 0) {
-      deleteFlowFromDatabase(id).then(() => {
-        setFlows(flows.filter((flow) => flow.id !== id));
-      });
+      await deleteFlowFromDatabase(id);
+      //removes component from data if there is any
+      setFlows(flows.filter((flow) => flow.id !== id));
+      processFlows(flows.filter((flow) => flow.id !== id));
     }
   }
   /**
    * Add a new flow to the list of flows.
    * @param flow Optional flow to add.
    */
-
   function paste(
     selectionInstance: { nodes: Node[]; edges: Edge[] },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -376,7 +438,10 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
     const insidePosition = position.paneX
       ? { x: position.paneX + position.x, y: position.paneY! + position.y }
-      : reactFlowInstance!.project({ x: position.x, y: position.y });
+      : reactFlowInstance!.screenToFlowPosition({
+          x: position.x,
+          y: position.y,
+        });
 
     selectionInstance.nodes.forEach((node: NodeType) => {
       // Generate a unique node ID
@@ -404,19 +469,28 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     });
     reactFlowInstance!.setNodes(nodes);
 
-    selectionInstance.edges.forEach((edge) => {
+    selectionInstance.edges.forEach((edge: Edge) => {
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
-      let sourceHandleSplitted = edge.sourceHandle!.split("|");
-      let sourceHandle =
-        sourceHandleSplitted[0] +
-        "|" +
-        source +
-        "|" +
-        sourceHandleSplitted.slice(2).join("|");
-      let targetHandleSplitted = edge.targetHandle!.split("|");
-      let targetHandle =
-        targetHandleSplitted.slice(0, -1).join("|") + "|" + target;
+      const sourceHandleObject: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      let sourceHandle = scapedJSONStringfy({
+        ...sourceHandleObject,
+        id: source,
+      });
+      sourceHandleObject.id = source;
+
+      edge.data.sourceHandle = sourceHandleObject;
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      let targetHandle = scapedJSONStringfy({
+        ...targetHandleObject,
+        id: target,
+      });
+      targetHandleObject.id = target;
+      edge.data.targetHandle = targetHandleObject;
       let id =
         "reactflow__edge-" +
         source +
@@ -431,12 +505,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
           sourceHandle,
           targetHandle,
           id,
+          data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className:
-            targetHandle.split("|")[0] === "Text"
+            targetHandleObject.type === "Text"
               ? "stroke-gray-800 "
               : "stroke-gray-900 ",
-          animated: targetHandle.split("|")[0] === "Text",
+          animated: targetHandleObject.type === "Text",
           selected: false,
         },
         edges.map((edge) => ({ ...edge, selected: false }))
@@ -446,24 +521,36 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   }
 
   const addFlow = async (
+    newProject: Boolean,
     flow?: FlowType,
-    newProject?: Boolean
+    override?: boolean,
+    position?: XYPosition
   ): Promise<String | undefined> => {
     if (newProject) {
-      let flowData = extractDataFromFlow(flow!);
-      if (flowData.description == "") {
-        flowData.description = getRandomDescription();
-      }
+      let flowData = flow
+        ? processDataFromFlow(flow)
+        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
+
+      if (override) {
+        deleteComponent(flow!.name);
+        const newFlow = createNewFlow(flowData, flow!);
+        const { id } = await saveFlowToDatabase(newFlow);
+        newFlow.id = id;
+        //setTimeout  to prevent update state with wrong state
+        setTimeout(() => {
+          addFlowToLocalState(newFlow);
+        }, 200);
+        // addFlowToLocalState(newFlow);
+        return;
+      }
+
       const newFlow = createNewFlow(flowData, flow!);
-      processFlowEdges(newFlow);
-      processFlowNodes(newFlow);
 
-      const flowName = addVersionToDuplicates(newFlow, flows);
+      const newName = addVersionToDuplicates(newFlow, flows);
 
-      newFlow.name = flowName;
-
+      newFlow.name = newName;
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.
@@ -481,76 +568,59 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     } else {
       paste(
         { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-        { x: 10, y: 10 }
+        position ?? { x: 10, y: 10 }
       );
     }
   };
 
-  const extractDataFromFlow = (flow: FlowType) => {
+  const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     let data = flow?.data ? flow.data : null;
-    const description = flow?.description ? flow.description : "";
-
     if (data) {
+      processFlowEdges(flow);
+      //prevent node update for now
+      // processFlowNodes(flow);
+      //add animation to text type edges
       updateEdges(data.edges);
-      updateNodes(data.nodes, data.edges);
-      updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
+      // updateNodes(data.nodes, data.edges);
+      if (refreshIds) updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
     }
 
-    return { data, description };
+    return data;
   };
 
   const updateEdges = (edges: Edge[]) => {
-    edges.forEach((edge) => {
-      edge.className =
-        (edge.targetHandle!.split("|")[0] === "Text"
-          ? "stroke-gray-800 "
-          : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = edge.targetHandle!.split("|")[0] === "Text";
-    });
-  };
-
-  const updateNodes = (nodes: Node[], edges: Edge[]) => {
-    nodes.forEach((node) => {
-      if (skipNodeUpdate.includes(node.data.type)) return;
-      const template = templates[node.data.type];
-      if (!template) {
-        setErrorData({ title: `Unknown node type: ${node.data.type}` });
-        return;
-      }
-      if (Object.keys(template["template"]).length > 0) {
-        node.data.node.base_classes = template["base_classes"];
-        edges.forEach((edge) => {
-          if (edge.source === node.id) {
-            edge.sourceHandle = edge
-              .sourceHandle!.split("|")
-              .slice(0, 2)
-              .concat(template["base_classes"])
-              .join("|");
-          }
-        });
-        node.data.node.description = template["description"];
-        node.data.node.template = updateTemplate(
-          template["template"] as unknown as APITemplateType,
-          node.data.node.template as APITemplateType
+    if (edges)
+      edges.forEach((edge) => {
+        const targetHandleObject: targetHandleType = scapeJSONParse(
+          edge.targetHandle!
         );
-      }
-    });
+        edge.className =
+          (targetHandleObject.type === "Text"
+            ? "stroke-gray-800 "
+            : "stroke-gray-900 ") + " stroke-connection";
+        edge.animated = targetHandleObject.type === "Text";
+      });
   };
 
   const createNewFlow = (
-    flowData: { data: ReactFlowJsonObject | null; description: string },
+    flowData: ReactFlowJsonObject | null,
     flow: FlowType
   ) => ({
-    description: flowData.description,
+    description: flow?.description ?? getRandomDescription(),
     name: flow?.name ?? getRandomName(),
-    data: flowData.data,
+    data: flowData,
     id: "",
+    is_component: flow?.is_component ?? false,
   });
 
   const addFlowToLocalState = (newFlow: FlowType) => {
+    let newFlows: FlowType[] = [];
     setFlows((prevState) => {
+      newFlows = newFlows.concat(prevState);
+      newFlows.push(newFlow);
       return [...prevState, newFlow];
     });
+    processFlows(newFlows);
   };
 
   /**
@@ -566,8 +636,18 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         newFlows[index].data = newFlow.data;
         newFlows[index].name = newFlow.name;
       }
+      newFlow = {
+        ...newFlow,
+      };
       return newFlows;
     });
+  }
+
+  function saveCurrentFlow() {
+    const currentFlow = flows.find((flow) => flow.id === tabId);
+    if (currentFlow && reactFlowInstance && currentFlow.data) {
+      updateFlow({ ...currentFlow, data: reactFlowInstance?.toObject()! });
+    }
   }
 
   async function saveFlow(newFlow: FlowType, silent?: boolean) {
@@ -608,16 +688,41 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function saveComponent(component: NodeDataType, override: boolean) {
+    component.node!.official = false;
+    return addFlow(true, createFlowComponent(component, version), override);
+  }
+
+  function deleteComponent(key: string) {
+    let componentFlow = flows.find(
+      (componentFlow) =>
+        componentFlow.is_component && componentFlow.name === key
+    );
+
+    if (componentFlow) {
+      removeFlow(componentFlow.id);
+    }
+  }
+
   const [isBuilt, setIsBuilt] = useState(false);
+  // Initialize state variable for the version
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
+  }, []);
 
   return (
-    <TabsContext.Provider
+    <FlowsContext.Provider
       value={{
+        version,
         saveFlow,
         isBuilt,
         setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
+        saveCurrentFlow,
         hardReset,
         tabId,
         setTabId,
@@ -637,9 +742,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
         getTweak,
         setTweak,
         isLoading,
+        saveComponent,
+        deleteComponent,
+        nodesOnFlow,
+        setNodesOnFlow,
       }}
     >
       {children}
-    </TabsContext.Provider>
+    </FlowsContext.Provider>
   );
 }

@@ -1,7 +1,8 @@
+import { XYPosition } from "reactflow";
 import { tweakType } from "../components";
-import { FlowType } from "../flow";
+import { FlowType, NodeDataType } from "../flow";
 
-export type TabsContextType = {
+export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
   isLoading: boolean;
@@ -9,8 +10,10 @@ export type TabsContextType = {
   flows: Array<FlowType>;
   removeFlow: (id: string) => void;
   addFlow: (
+    newProject: boolean,
     flow?: FlowType,
-    newProject?: Boolean
+    override?: boolean,
+    position?: XYPosition
   ) => Promise<String | undefined>;
   updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
@@ -23,11 +26,22 @@ export type TabsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  uploadFlow: (newFlow?: boolean, file?: File) => Promise<String | undefined>;
+  saveCurrentFlow: () => void;
+  uploadFlow: ({
+    newProject,
+    file,
+    isComponent,
+    position,
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+    position?: XYPosition;
+  }) => Promise<String | never>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
-  tabsState: TabsState;
-  setTabsState: (state: TabsState) => void;
+  tabsState: FlowsState;
+  setTabsState: (state: FlowsState) => void;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
@@ -36,9 +50,17 @@ export type TabsContextType = {
   setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
   setTweak: (tweak: tweakType) => tweakType | void;
   getTweak: tweakType;
+  saveComponent: (
+    component: NodeDataType,
+    override: boolean
+  ) => Promise<String | undefined>;
+  deleteComponent: (key: string) => void;
+  version: string;
+  nodesOnFlow: string;
+  setNodesOnFlow: (nodes: string) => void;
 };
 
-export type TabsState = {
+export type FlowsState = {
   [key: string]: {
     isPending: boolean;
     formKeysData: {

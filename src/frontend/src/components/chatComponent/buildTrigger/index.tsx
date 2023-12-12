@@ -7,9 +7,9 @@ import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
-import { TabsContext } from "../../../contexts/tabsContext";
+import { FlowsContext } from "../../../contexts/flowsContext";
 import { parsedDataType } from "../../../types/components";
-import { TabsState } from "../../../types/tabs";
+import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -26,7 +26,7 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState } = useContext(TabsContext);
+  const { setTabsState, saveFlow } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -76,65 +76,59 @@ export default function BuildTrigger({
   }
   async function streamNodeData(flow: FlowType) {
     // Step 1: Make a POST request to send the flow data and receive a unique session ID
+    const id = saveFlow(flow, true);
     const response = await postBuildInit(flow);
     const { flowId } = response.data;
     // Step 2: Use the session ID to establish an SSE connection using EventSource
     let validationResults: boolean[] = [];
-    let finished = false;
     const apiUrl = `/api/v1/build/stream/${flowId}`;
-    const eventSource = new EventSource(apiUrl);
+    return new Promise<boolean>((resolve, reject) => {
+      const eventSource = new EventSource(apiUrl);
 
-    eventSource.onmessage = (event) => {
-      // If the event is parseable, return
-      if (!event.data) {
-        return;
-      }
-      const parsedData = JSON.parse(event.data);
-      // if the event is the end of the stream, close the connection
-      if (parsedData.end_of_stream) {
-        // Close the connection and finish
-        finished = true;
+      eventSource.onmessage = (event) => {
+        // If the event is parseable, return
+        if (!event.data) {
+          return;
+        }
+        const parsedData = JSON.parse(event.data);
+        // if the event is the end of the stream, close the connection
+        if (parsedData.end_of_stream) {
+          eventSource.close();
+          resolve(validationResults.every((result) => result));
+        } else if (parsedData.log) {
+          // If the event is a log, log it
+          setSuccessData({ title: parsedData.log });
+        } else if (parsedData.input_keys !== undefined) {
+          //@ts-ignore
+          setTabsState((old: FlowsState) => {
+            return {
+              ...old,
+              [flowId]: {
+                ...old[flowId],
+                formKeysData: parsedData,
+              },
+            };
+          });
+        } else {
+          // Otherwise, process the data
+          const isValid = processStreamResult(parsedData);
+          setProgress(parsedData.progress);
+          validationResults.push(isValid);
+        }
+      };
+
+      eventSource.onerror = (error: any) => {
+        console.error("EventSource failed:", error);
+
+        if (error.data) {
+          const parsedData = JSON.parse(error.data);
+          setErrorData({ title: parsedData.error });
+          setIsBuilding(false);
+        }
         eventSource.close();
-
-        return;
-      } else if (parsedData.log) {
-        // If the event is a log, log it
-        setSuccessData({ title: parsedData.log });
-      } else if (parsedData.input_keys !== undefined) {
-        //@ts-ignore
-        setTabsState((old: TabsState) => {
-          return {
-            ...old,
-            [flowId]: {
-              ...old[flowId],
-              formKeysData: parsedData,
-            },
-          };
-        });
-      } else {
-        // Otherwise, process the data
-        const isValid = processStreamResult(parsedData);
-        setProgress(parsedData.progress);
-        validationResults.push(isValid);
-      }
-    };
-
-    eventSource.onerror = (error: any) => {
-      console.error("EventSource failed:", error);
-      eventSource.close();
-      if (error.data) {
-        const parsedData = JSON.parse(error.data);
-        setErrorData({ title: parsedData.error });
-        setIsBuilding(false);
-      }
-    };
-    // Step 3: Wait for the stream to finish
-    while (!finished) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      finished = validationResults.length === flow.data!.nodes.length;
-    }
-    // Step 4: Return true if all nodes are valid, false otherwise
-    return validationResults.every((result) => result);
+        reject(new Error("Streaming failed"));
+      };
+    });
   }
 
   function processStreamResult(parsedData: parsedDataType) {

@@ -3,15 +3,16 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { FlowSettingsPropsType } from "../../types/components";
+import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
 
 export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { flows, tabId, updateFlow, saveFlow } = useContext(TabsContext);
+  const { flows, tabId, saveFlow } = useContext(FlowsContext);
   const flow = flows.find((f) => f.id === tabId);
   useEffect(() => {
     setName(flow!.name);
@@ -19,7 +20,6 @@ export default function FlowSettingsModal({
   }, [flow!.name, flow!.description]);
   const [name, setName] = useState(flow!.name);
   const [description, setDescription] = useState(flow!.description);
-  const [invalidName, setInvalidName] = useState(false);
 
   function handleClick(): void {
     let savedFlow = flows.find((flow) => flow.id === tabId);
@@ -28,6 +28,17 @@ export default function FlowSettingsModal({
     saveFlow(savedFlow!);
     setOpen(false);
   }
+
+  const [nameLists, setNameList] = useState<string[]>([]);
+
+  useEffect(() => {
+    const tempNameList: string[] = [];
+    flows.forEach((flow: FlowType) => {
+      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
+    });
+    setNameList(tempNameList.filter((name) => name !== flow!.name));
+  }, [flows]);
+
   return (
     <BaseModal open={open} setOpen={setOpen} size="smaller">
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
@@ -36,19 +47,20 @@ export default function FlowSettingsModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
-          invalidName={invalidName}
-          setInvalidName={setInvalidName}
+          invalidNameList={nameLists}
           name={name}
           description={description}
-          flows={flows}
-          tabId={tabId}
           setName={setName}
           setDescription={setDescription}
         />
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <Button disabled={invalidName} onClick={handleClick} type="submit">
+        <Button
+          disabled={nameLists.includes(name) && name !== flow!.name}
+          onClick={handleClick}
+          type="submit"
+        >
           Save
         </Button>
       </BaseModal.Footer>
