@@ -1,6 +1,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
+from sqlmodel.sql.expression import SelectOfScalar
+
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
@@ -11,10 +16,6 @@ from langflow.services.auth.utils import (
 from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.deps import get_session, get_settings_service
-from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -28,7 +29,7 @@ def add_user(
     """
     Add a new user to the database.
     """
-    new_user = User.from_orm(user)
+    new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE

@@ -29,7 +29,7 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
     session.add(api_key)
     session.commit()
     session.refresh(api_key)
-    unmasked = UnmaskedApiKeyRead.from_orm(api_key)
+    unmasked = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
     unmasked.api_key = generated_api_key
     return unmasked
 
