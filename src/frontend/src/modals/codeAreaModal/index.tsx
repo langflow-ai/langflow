@@ -8,6 +8,7 @@ import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { darkContext } from "../../contexts/darkContext";
@@ -23,6 +24,7 @@ export default function CodeAreaModal({
   setNodeClass,
   children,
   dynamic,
+  readonly = false,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
@@ -86,8 +88,7 @@ export default function CodeAreaModal({
       .then((apiReturn) => {
         const { data } = apiReturn;
         if (data) {
-          setNodeClass(data);
-          setValue(code);
+          setNodeClass(data, code);
           setError({ detail: { error: undefined, traceback: undefined } });
           setOpen(false);
         }
@@ -143,9 +144,15 @@ export default function CodeAreaModal({
         />
       </BaseModal.Header>
       <BaseModal.Content>
+        <Input
+          value={code}
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <AceEditor
+              readOnly={readonly}
               value={code}
               mode="python"
               height={height ?? "100%"}
@@ -180,7 +187,13 @@ export default function CodeAreaModal({
             </div>
           </div>
           <div className="flex h-fit w-full justify-end">
-            <Button className="mt-3" onClick={handleClick} type="submit">
+            <Button
+              className="mt-3"
+              onClick={handleClick}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
+            >
               Check & Save
             </Button>
           </div>

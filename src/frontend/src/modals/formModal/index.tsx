@@ -24,9 +24,9 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
-import { TabsState } from "../../types/tabs";
+import { FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
@@ -38,7 +38,7 @@ export default function FormModal({
   setOpen: (open: boolean) => void;
   flow: FlowType;
 }): JSX.Element {
-  const { tabsState, setTabsState } = useContext(TabsContext);
+  const { tabsState, setTabsState } = useContext(FlowsContext);
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];
@@ -393,7 +393,7 @@ export default function FormModal({
       const message = inputs;
       addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
-        ...reactFlowInstance?.toObject()!,
+        ...flow.data!,
         inputs: inputs!,
         chatHistory,
         name: flow.name,
@@ -401,7 +401,7 @@ export default function FormModal({
         chatKey: chatKey!,
       });
       //@ts-ignore
-      setTabsState((old: TabsState) => {
+      setTabsState((old: FlowsState) => {
         if (!chatKey) return old;
         let newTabsState = _.cloneDeep(old);
         newTabsState[id.current].formKeysData.input_keys![chatKey] = "";
@@ -522,7 +522,7 @@ export default function FormModal({
                             }
                             onChange={(e) => {
                               //@ts-ignore
-                              setTabsState((old: TabsState) => {
+                              setTabsState((old: FlowsState) => {
                                 let newTabsState = _.cloneDeep(old);
                                 newTabsState[
                                   id.current
@@ -634,7 +634,7 @@ export default function FormModal({
                       setChatValue={(value) => {
                         setChatValue(value);
                         //@ts-ignore
-                        setTabsState((old: TabsState) => {
+                        setTabsState((old: FlowsState) => {
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys![
                             chatKey!

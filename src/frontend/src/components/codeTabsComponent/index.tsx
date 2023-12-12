@@ -27,6 +27,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
 import { darkContext } from "../../contexts/darkContext";
 import { typesContext } from "../../contexts/typesContext";
 import { codeTabsPropsType } from "../../types/components";
@@ -63,7 +64,7 @@ export default function CodeTabsComponent({
   }, [flow]);
 
   useEffect(() => {
-    if (tweaks) {
+    if (tweaks && data) {
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {
@@ -242,24 +243,10 @@ export default function CodeTabsComponent({
                                       templateField.charAt(0) !== "_" &&
                                       node.data.node.template[templateField]
                                         .show &&
-                                      (node.data.node.template[templateField]
-                                        .type === "str" ||
+                                      LANGFLOW_SUPPORTED_TYPES.has(
                                         node.data.node.template[templateField]
-                                          .type === "bool" ||
-                                        node.data.node.template[templateField]
-                                          .type === "float" ||
-                                        node.data.node.template[templateField]
-                                          .type === "code" ||
-                                        node.data.node.template[templateField]
-                                          .type === "prompt" ||
-                                        node.data.node.template[templateField]
-                                          .type === "file" ||
-                                        node.data.node.template[templateField]
-                                          .type === "int" ||
-                                        node.data.node.template[templateField]
-                                          .type === "dict" ||
-                                        node.data.node.template[templateField]
-                                          .type === "NestedDict")
+                                          .type
+                                      )
                                   )
                                   .map((templateField, indx) => {
                                     return (
@@ -457,11 +444,6 @@ export default function CodeTabsComponent({
                                                       templateField
                                                     ].fileTypes
                                                   }
-                                                  suffixes={
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].suffixes
-                                                  }
                                                   onFileChange={(
                                                     value: any
                                                   ) => {
@@ -489,6 +471,11 @@ export default function CodeTabsComponent({
                                                       : node.data.node.template[
                                                           templateField
                                                         ].value
+                                                  }
+                                                  rangeSpec={
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].rangeSpec
                                                   }
                                                   onChange={(target) => {
                                                     setData((old) => {
@@ -604,6 +591,14 @@ export default function CodeTabsComponent({
                                               ].type === "prompt" ? (
                                               <div className="mx-auto">
                                                 <PromptAreaComponent
+                                                  readonly={
+                                                    node.data.node?.flow &&
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].dynamic
+                                                      ? true
+                                                      : false
+                                                  }
                                                   editNode={true}
                                                   disabled={false}
                                                   value={
@@ -646,6 +641,14 @@ export default function CodeTabsComponent({
                                                 <CodeAreaComponent
                                                   disabled={false}
                                                   editNode={true}
+                                                  readonly={
+                                                    node.data.node?.flow &&
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].dynamic
+                                                      ? true
+                                                      : false
+                                                  }
                                                   value={
                                                     !node.data.node.template[
                                                       templateField

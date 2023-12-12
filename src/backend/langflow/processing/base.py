@@ -1,12 +1,11 @@
-from typing import List, Union, TYPE_CHECKING
-from langflow.api.v1.callback import (
-    AsyncStreamingLLMCallbackHandler,
-    StreamingLLMCallbackHandler,
-)
-from langflow.processing.process import fix_memory_inputs, format_actions
-from loguru import logger
+from typing import TYPE_CHECKING, List, Union
+
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
+from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
+from langflow.processing.process import fix_memory_inputs, format_actions
+from langflow.services.deps import get_plugins_service
+from loguru import logger
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
@@ -20,21 +19,22 @@ def setup_callbacks(sync, trace_id, **kwargs):
     else:
         callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
 
-    if langfuse_callback := get_langfuse_callback(trace_id=trace_id):
-        logger.debug("Langfuse callback loaded")
-        callbacks.append(langfuse_callback)
+    plugin_service = get_plugins_service()
+    plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
+    if plugin_callbacks:
+        callbacks.extend(plugin_callbacks)
     return callbacks
 
 
 def get_langfuse_callback(trace_id):
-    from langflow.services.plugins.langfuse import LangfuseInstance
+    from langflow.services.deps import get_plugins_service
     from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
-    if langfuse := LangfuseInstance.get():
+    if langfuse := get_plugins_service().get("langfuse"):
         logger.debug("Langfuse credentials found")
         try:
-            trace = langfuse.trace(CreateTrace(id=trace_id))
+            trace = langfuse.trace(CreateTrace(name="langflow-" + trace_id, id=trace_id))
             return trace.getNewHandler()
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
@@ -42,14 +42,12 @@ def get_langfuse_callback(trace_id):
     return None
 
 
-def flush_langfuse_callback_if_present(
-    callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]
-):
+def flush_langfuse_callback_if_present(callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]):
     """
     If langfuse callback is present, run callback.langfuse.flush()
     """
     for callback in callbacks:
-        if hasattr(callback, "langfuse"):
+        if hasattr(callback, "langfuse") and hasattr(callback.langfuse, "flush"):
             callback.langfuse.flush()
             break
 
@@ -86,15 +84,9 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         # if langfuse callback is present, run callback.langfuse.flush()
         flush_langfuse_callback_if_present(callbacks)
 
-        intermediate_steps = (
-            output.get("intermediate_steps", []) if isinstance(output, dict) else []
-        )
+        intermediate_steps = output.get("intermediate_steps", []) if isinstance(output, dict) else []
 
-        result = (
-            output.get(langchain_object.output_keys[0])
-            if isinstance(output, dict)
-            else output
-        )
+        result = output.get(langchain_object.output_keys[0]) if isinstance(output, dict) else output
         try:
             thought = format_actions(intermediate_steps) if intermediate_steps else ""
         except Exception as exc:
@@ -103,4 +95,4 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
     except Exception as exc:
         logger.exception(exc)
         raise ValueError(f"Error: {str(exc)}") from exc
-    return result, thought
+    return result, thought, output

@@ -9,17 +9,19 @@ from typing import Optional
 import httpx
 import typer
 from dotenv import load_dotenv
-from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, initialize_settings_service
-from langflow.utils.logger import configure, logger
 from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from sqlmodel import select
+
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.utils import initialize_services, initialize_settings_service
+from langflow.utils.logger import configure, logger
 
 console = Console()
 
@@ -61,6 +63,8 @@ def set_var_for_macos_issue():
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
+        os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
@@ -70,6 +74,7 @@ def update_settings(
     dev: bool = False,
     remove_api_keys: bool = False,
     components_path: Optional[Path] = None,
+    store: bool = False,
 ):
     """Update the settings from a config file."""
 
@@ -88,16 +93,38 @@ def update_settings(
     if components_path:
         logger.debug(f"Adding component path {components_path}")
         settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
+    if not store:
+        logger.debug("Setting store to False")
+        settings_service.settings.update_settings(STORE=False)
+
+
+def version_callback(value: bool):
+    """
+    Show the version and exit.
+    """
+    from langflow import __version__
+
+    if value:
+        typer.echo(f"Langflow Version: {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main_entry_point(
+    version: bool = typer.Option(
+        None, "--version", callback=version_callback, is_eager=True, help="Show the version and exit."
+    ),
+):
+    """
+    Main entry point for the Langflow CLI.
+    """
+    pass
 
 
 @app.command()
 def run(
-    host: str = typer.Option(
-        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
-    ),
-    workers: int = typer.Option(
-        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
-    ),
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
+    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
@@ -105,32 +132,17 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(
-        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
-    ),
+    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
     # .env file param
-    env_file: Path = typer.Option(
-        None, help="Path to the .env file containing environment variables."
-    ),
-    log_level: str = typer.Option(
-        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
-    log_file: Path = typer.Option(
-        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
-    ),
+    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
     cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
         default=None,
     ),
     dev: bool = typer.Option(False, help="Run in development mode (may contain bugs)"),
-    # This variable does not work but is set by the .env file
-    # and works with Pydantic
-    # database_url: str = typer.Option(
-    #     None,
-    #     help="Database URL to connect to. If not provided, a local SQLite database will be used.",
-    #     envvar="LANGFLOW_DATABASE_URL",
-    # ),
     path: str = typer.Option(
         None,
         help="Path to the frontend directory containing build files. This is for development purposes only.",
@@ -151,6 +163,11 @@ def run(
         help="Run only the backend server without the frontend.",
         envvar="LANGFLOW_BACKEND_ONLY",
     ),
+    store: bool = typer.Option(
+        True,
+        help="Enables the store features.",
+        envvar="LANGFLOW_STORE",
+    ),
 ):
     """
     Run the Langflow.
@@ -169,6 +186,7 @@ def run(
         remove_api_keys=remove_api_keys,
         cache=cache,
         components_path=components_path,
+        store=store,
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
@@ -198,9 +216,7 @@ def run(
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    webapp_process = Process(
-        target=run_langflow, args=(host, port, log_level, options, app)
-    )
+    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
     webapp_process.start()
     status_code = 0
     while status_code != 200:
@@ -276,9 +292,7 @@ def print_banner(host, port):
     )
 
     # Create a panel with the title and the info text, and a border around it
-    panel = Panel(
-        f"{title}\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False
-    )
+    panel = Panel(f"{title}\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False)
 
     # Print the banner with a separator line before and after
     rprint(panel)
@@ -310,12 +324,8 @@ def run_langflow(host, port, log_level, options, app):
 @app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(
-        ..., prompt=True, hide_input=True, help="Password for the superuser."
-    ),
-    log_level: str = typer.Option(
-        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
+    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ):
     """
     Create a superuser.
@@ -328,9 +338,9 @@ def superuser(
 
         if create_super_user(db=session, username=username, password=password):
             # Verify that the superuser was created
-            from langflow.services.database.models.user.user import User
+            from langflow.services.database.models.user.model import User
 
-            user: User = session.query(User).filter(User.username == username).first()
+            user: User = session.exec(select(User).where(User.username == username)).first()
             if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
@@ -342,11 +352,23 @@ def superuser(
 
 
 @app.command()
-def migration(test: bool = typer.Option(True, help="Run migrations in test mode.")):
+def migration(
+    test: bool = typer.Option(True, help="Run migrations in test mode."),
+    fix: bool = typer.Option(
+        False,
+        help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
+    ),
+):
     """
     Run or test migrations.
     """
-    initialize_services()
+    if fix:
+        if not typer.confirm(
+            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+        ):
+            raise typer.Abort()
+
+    initialize_services(fix_migration=fix)
     db_service = get_db_service()
     if not test:
         db_service.run_migrations()

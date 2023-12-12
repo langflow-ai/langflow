@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
-from langflow.services.session.manager import SessionService
+from langflow.services.session.service import SessionService
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.cache.manager import BaseCacheService
+    from langflow.services.cache.service import BaseCacheService
 
 
 class SessionServiceFactory(ServiceFactory):

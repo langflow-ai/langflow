@@ -1,25 +1,18 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from langflow.api.utils import build_input_keys_response
-from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
-
-from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user
-from langflow.services.cache.utils import update_build_status
 from loguru import logger
-from langflow.services.getters import get_chat_service, get_session, get_cache_service
 from sqlmodel import Session
-from langflow.services.chat.manager import ChatService
-from langflow.services.cache.manager import BaseCacheService
 
+from langflow.api.utils import build_input_keys_response, format_elapsed_time
+from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
+from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
+from langflow.services.cache.service import BaseCacheService
+from langflow.services.cache.utils import update_build_status
+from langflow.services.chat.service import ChatService
+from langflow.services.deps import get_cache_service, get_chat_service, get_session
 
 router = APIRouter(tags=["Chat"])
 
@@ -34,16 +27,12 @@ async def chat(
 ):
     """Websocket endpoint for chat."""
     try:
+        user = await get_current_user_by_jwt(token, db)
         await websocket.accept()
-        user = await get_current_user(token, db)
         if not user:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
         if not user.is_active:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
 
         if client_id in chat_service.cache_service:
             await chat_service.handle_websocket(client_id, websocket)
@@ -59,9 +48,7 @@ async def chat(
         logger.error(f"Error in chat websocket: {exc}")
         messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
         if "Could not validate credentials" in str(exc):
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
         else:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
@@ -103,15 +90,10 @@ async def init_build(
 
 
 @router.get("/build/{flow_id}/status", response_model=BuiltResponse)
-async def build_status(
-    flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)
-):
+async def build_status(flow_id: str, cache_service: "BaseCacheService" = Depends(get_cache_service)):
     """Check the flow_id is in the cache_service."""
     try:
-        built = (
-            flow_id in cache_service
-            and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
-        )
+        built = flow_id in cache_service and cache_service[flow_id]["status"] == BuildStatus.SUCCESS
 
         return BuiltResponse(
             built=built,
@@ -133,19 +115,20 @@ async def stream_build(
     async def event_stream(flow_id):
         final_response = {"end_of_stream": True}
         artifacts = {}
+        flow_cache = cache_service[flow_id]
+        flow_cache = flow_cache if isinstance(flow_cache, dict) else {}
         try:
             if flow_id not in cache_service:
                 error_message = "Invalid session ID"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            if cache_service[flow_id].get("status") == BuildStatus.IN_PROGRESS:
+            if flow_cache.get("status") == BuildStatus.IN_PROGRESS:
                 error_message = "Already building"
                 yield str(StreamData(event="error", data={"error": error_message}))
                 return
 
-            graph_data = cache_service[flow_id].get("graph_data")
-            cache_service[flow_id]["user_id"]
+            graph_data = flow_cache.get("graph_data")
 
             if not graph_data:
                 error_message = "No data provided"
@@ -157,25 +140,32 @@ async def stream_build(
             # Some error could happen when building the graph
             graph = Graph.from_payload(graph_data)
 
-            number_of_nodes = len(graph.nodes)
+            number_of_nodes = len(graph.vertices)
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
 
+            try:
+                user_id = flow_cache["user_id"]
+            except KeyError:
+                logger.debug("No user_id found in cache_service")
+                user_id = None
             for i, vertex in enumerate(graph.generator_build(), 1):
                 try:
                     log_dict = {
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
+                    # time this
+                    start_time = time.perf_counter()
                     if vertex.is_task:
-                        vertex = try_running_celery_task(vertex)
+                        vertex = await try_running_celery_task(vertex, user_id)
                     else:
-                        vertex.build()
+                        await vertex.build(user_id=user_id)
+                    time_elapsed = format_elapsed_time(time.perf_counter() - start_time)
                     params = vertex._built_object_repr()
                     valid = True
+
                     logger.debug(f"Building node {str(vertex.vertex_type)}")
-                    logger.debug(
-                        f"Output: {params[:100]}{'...' if len(params) > 100 else ''}"
-                    )
+                    logger.debug(f"Output: {params[:100]}{'...' if len(params) > 100 else ''}")
                     if vertex.artifacts:
                         # The artifacts will be prompt variables
                         # passed to build_input_keys_response
@@ -187,21 +177,22 @@ async def stream_build(
                     valid = False
                     update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
-                response = {
-                    "valid": valid,
-                    "params": params,
-                    "id": vertex.id,
-                    "progress": round(i / number_of_nodes, 2),
-                }
+                vertex_id = vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
+                if vertex_id in graph.top_level_vertices:
+                    response = {
+                        "valid": valid,
+                        "params": params,
+                        "id": vertex_id,
+                        "progress": round(i / number_of_nodes, 2),
+                        "duration": time_elapsed,
+                    }
 
-                yield str(StreamData(event="message", data=response))
+                    yield str(StreamData(event="message", data=response))
 
-            langchain_object = graph.build()
+            langchain_object = await graph.build()
             # Now we  need to check the input_keys to send them to the client
             if hasattr(langchain_object, "input_keys"):
-                input_keys_response = build_input_keys_response(
-                    langchain_object, artifacts
-                )
+                input_keys_response = build_input_keys_response(langchain_object, artifacts)
             else:
                 input_keys_response = {
                     "input_keys": None,
@@ -229,7 +220,7 @@ async def stream_build(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-def try_running_celery_task(vertex):
+async def try_running_celery_task(vertex, user_id):
     # Try running the task in celery
     # and set the task_id to the local vertex
     # if it fails, run the task locally
@@ -241,5 +232,5 @@ def try_running_celery_task(vertex):
     except Exception as exc:
         logger.debug(f"Error running task in celery: {exc}")
         vertex.task_id = None
-        vertex.build()
+        await vertex.build(user_id=user_id)
     return vertex
