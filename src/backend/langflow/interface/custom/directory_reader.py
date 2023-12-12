@@ -76,9 +76,7 @@ class DirectoryReader:
             for menu in data["menu"]
         ]
         filtered = [menu for menu in items if menu["components"]]
-        logger.debug(
-            f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}'
-        )
+        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
         return {"menu": filtered}
 
     def validate_code(self, file_content):
@@ -111,9 +109,7 @@ class DirectoryReader:
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(
-                f"The path needs to start with '{self.base_path}'."
-            )
+            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
 
         file_list = []
         for root, _, files in os.walk(safe_path):
@@ -158,9 +154,7 @@ class DirectoryReader:
             for node in ast.walk(module):
                 if isinstance(node, ast.FunctionDef):
                     for arg in node.args.args:
-                        if self._is_type_hint_in_arg_annotation(
-                            arg.annotation, type_hint_name
-                        ):
+                        if self._is_type_hint_in_arg_annotation(arg.annotation, type_hint_name):
                             return True
         except SyntaxError:
             # Returns False if the code is not valid Python
@@ -178,16 +172,14 @@ class DirectoryReader:
             and annotation.value.id == type_hint_name
         )
 
-    def is_type_hint_used_but_not_imported(
-        self, type_hint_name: str, code: str
-    ) -> bool:
+    def is_type_hint_used_but_not_imported(self, type_hint_name: str, code: str) -> bool:
         """
         Check if a type hint is used but not imported in the given code.
         """
         try:
-            return self._is_type_hint_used_in_args(
+            return self._is_type_hint_used_in_args(type_hint_name, code) and not self._is_type_hint_imported(
                 type_hint_name, code
-            ) and not self._is_type_hint_imported(type_hint_name, code)
+            )
         except SyntaxError:
             # Returns True if there's something wrong with the code
             # TODO : Find a better way to handle this
@@ -208,9 +200,9 @@ class DirectoryReader:
             return False, "Syntax error"
         elif not self.validate_build(file_content):
             return False, "Missing build function"
-        elif self._is_type_hint_used_in_args(
+        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
-        ) and not self._is_type_hint_imported("Optional", file_content):
+        ):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
@@ -226,9 +218,7 @@ class DirectoryReader:
         from the .py files in the directory.
         """
         response = {"menu": []}
-        logger.debug(
-            "-------------------- Building component menu list --------------------"
-        )
+        logger.debug("-------------------- Building component menu list --------------------")
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
@@ -248,9 +238,7 @@ class DirectoryReader:
 
             # first check if it's already CamelCase
             if "_" in component_name:
-                component_name_camelcase = " ".join(
-                    word.title() for word in component_name.split("_")
-                )
+                component_name_camelcase = " ".join(word.title() for word in component_name.split("_"))
             else:
                 component_name_camelcase = component_name
 
@@ -266,7 +254,5 @@ class DirectoryReader:
             logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
-        logger.debug(
-            "-------------------- Component menu list built --------------------"
-        )
+        logger.debug("-------------------- Component menu list built --------------------")
         return response

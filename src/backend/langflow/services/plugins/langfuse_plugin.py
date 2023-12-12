@@ -1,8 +1,8 @@
-from langflow.services.getters import get_settings_service
-from langflow.utils.logger import logger
+from typing import Optional
 
-### Temporary implementation
-# This will be replaced by a plugin system once merged into 0.5.0
+from langflow.services.deps import get_settings_service
+from langflow.services.plugins.base import CallbackPlugin
+from loguru import logger
 
 
 class LangfuseInstance:
@@ -23,10 +23,7 @@ class LangfuseInstance:
 
             settings_manager = get_settings_service()
 
-            if (
-                settings_manager.settings.LANGFUSE_PUBLIC_KEY
-                and settings_manager.settings.LANGFUSE_SECRET_KEY
-            ):
+            if settings_manager.settings.LANGFUSE_PUBLIC_KEY and settings_manager.settings.LANGFUSE_SECRET_KEY:
                 logger.debug("Langfuse credentials found")
                 cls._instance = Langfuse(
                     public_key=settings_manager.settings.LANGFUSE_PUBLIC_KEY,
@@ -52,3 +49,33 @@ class LangfuseInstance:
         if cls._instance is not None:
             cls._instance.flush()
         cls._instance = None
+
+
+class LangfusePlugin(CallbackPlugin):
+    def initialize(self):
+        LangfuseInstance.create()
+
+    def teardown(self):
+        LangfuseInstance.teardown()
+
+    def get(self):
+        return LangfuseInstance.get()
+
+    def get_callback(self, _id: Optional[str] = None):
+        if _id is None:
+            _id = "default"
+        from langfuse.callback import CreateTrace  # type: ignore
+
+        logger.debug("Initializing langfuse callback")
+
+        try:
+            langfuse_instance = self.get()
+            if langfuse_instance is not None and hasattr(langfuse_instance, "trace"):
+                trace = langfuse_instance.trace(CreateTrace(name="langflow-" + _id, id=_id))
+                if trace:
+                    return trace.getNewHandler()
+
+        except Exception as exc:
+            logger.error(f"Error initializing langfuse callback: {exc}")
+
+        return None

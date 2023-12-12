@@ -1,34 +1,42 @@
-from typing import Any, Callable, List, Optional, Union
+import operator
+from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
+
+import yaml
+from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-from langflow.interface.custom.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.services.getters import get_db_service
-from langflow.interface.custom.utils import extract_inner_type
-
+from langflow.interface.custom.utils import (
+    extract_inner_type_from_generic_alias,
+    extract_union_types_from_generic_alias)
+from langflow.services.database.models.flow import Flow
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_credential_service, get_db_service
 from langflow.utils import validate
 
-from langflow.services.database.utils import session_getter
-from langflow.services.database.models.flow import Flow
-from pydantic import Extra
-import yaml
 
-
-class CustomComponent(Component, extra=Extra.allow):
-    code: Optional[str]
+class CustomComponent(Component):
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    code: Optional[str] = None
     field_config: dict = {}
-    code_class_base_inheritance = "CustomComponent"
-    function_entrypoint_name = "build"
+    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
-    return_type_valid_list = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
+    status: Optional[Any] = None
+    _tree: Optional[dict] = None
 
     def __init__(self, **data):
+        self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
 
     def custom_repr(self):
+        if self.repr_value == "":
+            self.repr_value = self.status
         if isinstance(self.repr_value, dict):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
@@ -53,47 +61,28 @@ class CustomComponent(Component, extra=Extra.allow):
         reader = DirectoryReader("", False)
 
         for type_hint in TYPE_HINT_LIST:
-            if reader._is_type_hint_used_in_args(
+            if reader._is_type_hint_used_in_args(type_hint, code) and not reader._is_type_hint_imported(
                 type_hint, code
-            ) and not reader._is_type_hint_imported(type_hint, code):
+            ):
                 error_detail = {
                     "error": "Type hint Error",
                     "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
                 }
                 raise HTTPException(status_code=400, detail=error_detail)
+        return True
 
-    def is_check_valid(self) -> bool:
+    def validate(self) -> bool:
         return self._class_template_validation(self.code) if self.code else False
 
-    def get_code_tree(self, code: str):
-        return super().get_code_tree(code)
+    @property
+    def tree(self):
+        return self.get_code_tree(self.code)
 
     @property
-    def get_function_entrypoint_args(self) -> str:
-        if not self.code:
-            return ""
-        tree = self.get_code_tree(self.code)
-
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
-        if not component_classes:
-            return ""
-
-        # Assume the first Component class is the one we're interested in
-        component_class = component_classes[0]
-        build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
-        ]
-
-        if not build_methods:
-            return ""
-
-        build_method = build_methods[0]
+    def get_function_entrypoint_args(self) -> list:
+        build_method = self.get_build_method()
+        if not build_method:
+            return []
 
         args = build_method["args"]
         for arg in args:
@@ -103,65 +92,69 @@ class CustomComponent(Component, extra=Extra.allow):
                     detail={
                         "error": "Type hint Error",
                         "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
+                            "Prompt type is not supported in the build method." " Try using PromptTemplate instead."
                         ),
                     },
                 )
+            elif not arg.get("type") and arg.get("name") != "self":
+                # Set the type to Data
+                arg["type"] = "Data"
         return args
 
-    @property
-    def get_function_entrypoint_return_type(self) -> List[str]:
+    @cachedmethod(operator.attrgetter("cache"))
+    def get_build_method(self):
         if not self.code:
             return []
-        tree = self.get_code_tree(self.code)
 
-        component_classes = [
-            cls
-            for cls in tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return []
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         if not build_methods:
             return []
 
-        build_method = build_methods[0]
-        return_type = build_method["return_type"]
-        if not return_type:
+        return build_methods[0]
+
+    @property
+    def get_function_entrypoint_return_type(self) -> List[Any]:
+        build_method = self.get_build_method()
+        if not build_method:
             return []
+        elif not build_method["has_return"]:
+            return []
+
+        return_type = build_method["return_type"]
+
         # If list or List is in the return type, then we remove it and return the inner type
-        if return_type.startswith("list") or return_type.startswith("List"):
-            return_type = extract_inner_type(return_type)
+        if hasattr(return_type, "__origin__") and return_type.__origin__ in [list, List]:
+            return_type = extract_inner_type_from_generic_alias(return_type)
 
         # If the return type is not a Union, then we just return it as a list
-        if "Union" not in return_type:
-            return [return_type] if return_type in self.return_type_valid_list else []
+        if not hasattr(return_type, "__origin__") or return_type.__origin__ != Union:
+            if isinstance(return_type, list):
+                return return_type
+            return [return_type]
 
-        # If the return type is a Union, then we need to parse it
-        return_type = return_type.replace("Union", "").replace("[", "").replace("]", "")
-        return_type = return_type.split(",")
-        return_type = [item.strip() for item in return_type]
-        return [item for item in return_type if item in self.return_type_valid_list]
+        # If the return type is a Union, then we need to parse itx
+        return_type = extract_union_types_from_generic_alias(return_type)
+        return return_type
 
     @property
     def get_main_class_name(self):
-        tree = self.get_code_tree(self.code)
+        if not self.code:
+            return ""
 
         base_name = self.code_class_base_inheritance
         method_name = self.function_entrypoint_name
 
         classes = []
-        for item in tree.get("classes"):
+        for item in self.tree.get("classes", []):
             if base_name in item["bases"]:
                 method_names = [method["name"] for method in item["methods"]]
                 if method_name in method_names:
@@ -171,12 +164,16 @@ class CustomComponent(Component, extra=Extra.allow):
         return next(iter(classes), "")
 
     @property
+    def template_config(self):
+        return self.build_template_config()
+
     def build_template_config(self):
-        tree = self.get_code_tree(self.code)
+        if not self.code:
+            return {}
 
         attributes = [
             main_class["attributes"]
-            for main_class in tree.get("classes")
+            for main_class in self.tree.get("classes", [])
             if main_class["name"] == self.get_main_class_name
         ]
         # Get just the first item
@@ -185,12 +182,43 @@ class CustomComponent(Component, extra=Extra.allow):
         return super().build_template_config(attributes)
 
     @property
+    def keys(self):
+        def get_credential(name: str):
+            if hasattr(self, "_user_id") and not self._user_id:
+                raise ValueError(f"User id is not set for {self.__class__.__name__}")
+            credential_service = get_credential_service()  # Get service instance
+            # Retrieve and decrypt the credential by name for the current user
+            db_service = get_db_service()
+            with session_getter(db_service) as session:
+                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
+
+        return get_credential
+
+    def list_key_names(self):
+        if hasattr(self, "_user_id") and not self._user_id:
+            raise ValueError(f"User id is not set for {self.__class__.__name__}")
+        credential_service = get_credential_service()
+        db_service = get_db_service()
+        with session_getter(db_service) as session:
+            return credential_service.list_credentials(user_id=self._user_id, session=session)
+
+    def index(self, value: int = 0):
+        """Returns a function that returns the value at the given index in the iterable."""
+
+        def get_index(iterable: List[Any]):
+            if iterable:
+                return iterable[value]
+            return iterable
+
+        return get_index
+
+    @property
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices
-        from langflow.processing.process import process_tweaks
+    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
+        from langflow.processing.process import (build_sorted_vertices,
+                                                 process_tweaks)
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
@@ -199,10 +227,10 @@ class CustomComponent(Component, extra=Extra.allow):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return build_sorted_vertices(graph_data)
+        return await build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
-        if not self.user_id:
+        if not self._user_id:
             raise ValueError("Session is invalid")
         try:
             get_session = get_session or session_getter
@@ -213,7 +241,7 @@ class CustomComponent(Component, extra=Extra.allow):
         except Exception as e:
             raise ValueError("Session is invalid") from e
 
-    def get_flow(
+    async def get_flow(
         self,
         *,
         flow_name: Optional[str] = None,
@@ -227,17 +255,13 @@ class CustomComponent(Component, extra=Extra.allow):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = (
-                    session.query(Flow)
-                    .filter(Flow.name == flow_name)
-                    .filter(Flow.user_id == self.user_id)
-                ).first()
+                flow = (session.query(Flow).filter(Flow.name == flow_name).filter(Flow.user_id == self.user_id)).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 
         if not flow:
             raise ValueError(f"Flow {flow_name or flow_id} not found")
-        return self.load_flow(flow.id, tweaks)
+        return await self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
