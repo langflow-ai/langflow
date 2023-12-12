@@ -40,7 +40,7 @@ class FieldFormatters(BaseModel):
 
 
 class FrontendNode(BaseModel):
-    format_template: bool = Field(default=True, exclude=True)
+    _format_template: bool = True
     template: Template
     description: Optional[str] = None
     base_classes: List[str]
@@ -81,7 +81,7 @@ class FrontendNode(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         if hasattr(self, "template") and hasattr(self.template, "to_dict"):
-            format_func = self.format_field if self.format_template else None
+            format_func = self.format_field if self._format_template else None
             result["template"] = self.template.to_dict(format_func)
         name = result.pop("name")
 
