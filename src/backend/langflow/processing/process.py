@@ -7,12 +7,11 @@ from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
-from loguru import logger
-from pydantic import BaseModel
-
 from langflow.graph import Graph
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
+from loguru import logger
+from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
