@@ -42,7 +42,7 @@ class FieldFormatters(BaseModel):
 class FrontendNode(BaseModel):
     _format_template: bool = True
     template: Template
-    description: str
+    description: Optional[str] = None
     base_classes: List[str]
     name: str = ""
     display_name: Optional[str] = ""

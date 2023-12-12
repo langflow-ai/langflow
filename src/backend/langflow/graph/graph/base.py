@@ -17,7 +17,7 @@ class Graph:
 
     def __init__(
         self,
-        nodes: List[Dict[str, Union[str, Dict[str, Union[str, List[str]]]]]],
+        nodes: List[Dict],
         edges: List[Dict[str, str]],
     ) -> None:
         self._vertices = nodes
@@ -27,8 +27,7 @@ class Graph:
         self.top_level_vertices = []
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
-                if isinstance(vertex_id, str):
-                    self.top_level_vertices.append(vertex_id)
+                self.top_level_vertices.append(vertex_id)
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
@@ -59,6 +58,7 @@ class Graph:
             edges = payload["edges"]
             return cls(vertices, edges)
         except KeyError as exc:
+            logger.exception(exc)
             raise ValueError(
                 f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
             ) from exc

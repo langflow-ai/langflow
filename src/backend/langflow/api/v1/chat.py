@@ -187,7 +187,7 @@ async def stream_build(
                         "duration": time_elapsed,
                     }
 
-                yield str(StreamData(event="message", data=response))
+                    yield str(StreamData(event="message", data=response))
 
             langchain_object = await graph.build()
             # Now we  need to check the input_keys to send them to the client

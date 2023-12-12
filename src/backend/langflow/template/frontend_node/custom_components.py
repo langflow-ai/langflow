@@ -65,5 +65,5 @@ class CustomComponentFrontendNode(FrontendNode):
             )
         ],
     )
-    description: str = "Create any custom component you want!"
+    description: Optional[str] = None
     base_classes: list[str] = []

@@ -3,7 +3,12 @@ from typing import Callable, Optional, Union
 from langchain.chains import LLMChain
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BasePromptTemplate, Chain
+from langflow.field_typing import (
+    BaseLanguageModel,
+    BaseMemory,
+    BasePromptTemplate,
+    Chain,
+)
 
 
 class LLMChainComponent(CustomComponent):

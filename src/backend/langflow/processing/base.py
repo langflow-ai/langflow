@@ -2,11 +2,10 @@ from typing import TYPE_CHECKING, List, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
-from loguru import logger
-
 from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
+from loguru import logger
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
@@ -28,9 +27,8 @@ def setup_callbacks(sync, trace_id, **kwargs):
 
 
 def get_langfuse_callback(trace_id):
-    from langfuse.callback import CreateTrace
-
     from langflow.services.deps import get_plugins_service
+    from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
     if langfuse := get_plugins_service().get("langfuse"):
