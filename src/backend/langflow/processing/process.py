@@ -11,8 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph import Graph
-from langflow.interface.run import (build_sorted_vertices, get_memory_key,
-                                    update_memory_keys)
+from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
 
 

@@ -48,9 +48,7 @@ class FAISSComponent(CustomComponent):
 
         # Load if persistence is LocalDirectory
         if documents is None and folder_path is not None:
-            return FAISS.load_local(
-                folder_path=folder_path, embeddings=embeddings, index_name=index_name
-            )
+            return FAISS.load_local(folder_path=folder_path, embeddings=embeddings, index_name=index_name)
 
         if documents is None:
             raise ValueError("Documents must be provided in the params")
