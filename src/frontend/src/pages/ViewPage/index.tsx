@@ -1,35 +1,16 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { darkContext } from "../../contexts/darkContext";
-import { TabsContext } from "../../contexts/tabsContext";
-import { getVersion } from "../../controllers/API";
+import { FlowsContext } from "../../contexts/flowsContext";
 import Page from "../FlowPage/components/PageComponent";
 
 export default function ViewPage() {
-  const { flows, tabId, setTabId } = useContext(TabsContext);
-  const { setDark } = useContext(darkContext);
-  const { id, theme } = useParams();
+  const { flows, tabId, setTabId } = useContext(FlowsContext);
+  const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {
     setTabId(id!);
   }, [id]);
-
-  useEffect(() => {
-    if (theme) {
-      setDark(theme === "dark");
-    } else {
-      setDark(false);
-    }
-  }, [theme]);
-
-  // Initialize state variable for the version
-  const [version, setVersion] = useState("");
-  useEffect(() => {
-    getVersion().then((data) => {
-      setVersion(data.version);
-    });
-  }, []);
 
   return (
     <div className="flow-page-positioning">

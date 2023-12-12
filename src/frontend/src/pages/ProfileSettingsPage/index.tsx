@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/button";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 import { resetPassword, updateUser } from "../../controllers/API";
 import {
   inputHandlerEventType,
@@ -17,7 +17,7 @@ import {
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 export default function ProfileSettingsPage(): JSX.Element {
-  const { setTabId } = useContext(TabsContext);
+  const { setTabId } = useContext(FlowsContext);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE

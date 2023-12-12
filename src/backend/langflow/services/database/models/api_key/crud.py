@@ -1,26 +1,22 @@
 import datetime
 import secrets
 import threading
-from uuid import UUID
 from typing import List, Optional
+from uuid import UUID
+
 from sqlmodel import Session, select
-from langflow.services.database.models.api_key import (
-    ApiKey,
-    ApiKeyCreate,
-    UnmaskedApiKeyRead,
-    ApiKeyRead,
-)
+from sqlmodel.sql.expression import SelectOfScalar
+
+from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 
 
 def get_api_keys(session: Session, user_id: UUID) -> List[ApiKeyRead]:
-    query = select(ApiKey).where(ApiKey.user_id == user_id)
+    query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
     api_keys = session.exec(query).all()
-    return [ApiKeyRead.from_orm(api_key) for api_key in api_keys]
+    return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
 
-def create_api_key(
-    session: Session, api_key_create: ApiKeyCreate, user_id: UUID
-) -> UnmaskedApiKeyRead:
+def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -33,7 +29,7 @@ def create_api_key(
     session.add(api_key)
     session.commit()
     session.refresh(api_key)
-    unmasked = UnmaskedApiKeyRead.from_orm(api_key)
+    unmasked = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
     unmasked.api_key = generated_api_key
     return unmasked
 
@@ -48,7 +44,7 @@ def delete_api_key(session: Session, api_key_id: UUID) -> None:
 
 def check_key(session: Session, api_key: str) -> Optional[ApiKey]:
     """Check if the API key is valid."""
-    query = select(ApiKey).where(ApiKey.api_key == api_key)
+    query: SelectOfScalar = select(ApiKey).where(ApiKey.api_key == api_key)
     api_key_object: Optional[ApiKey] = session.exec(query).first()
     if api_key_object is not None:
         threading.Thread(

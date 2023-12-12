@@ -15,12 +15,8 @@ def remove_ansi_escape_codes(text):
     return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 
 
-def build_template_from_function(
-    name: str, type_to_loader_dict: Dict, add_function: bool = False
-):
-    classes = [
-        item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()
-    ]
+def build_template_from_function(name: str, type_to_loader_dict: Dict, add_function: bool = False):
+    classes = [item.__annotations__["return"].__name__ for item in type_to_loader_dict.values()]
 
     # Raise error if name is not in chains
     if name not in classes:
@@ -34,16 +30,14 @@ def build_template_from_function(
             docs = parse(_class.__doc__)
 
             variables = {"_type": _type}
-            for class_field_items, value in _class.__fields__.items():
+            for class_field_items, value in _class.model_fields.items():
                 if class_field_items in ["callback_manager"]:
                     continue
                 variables[class_field_items] = {}
                 for name_, value_ in value.__repr_args__():
                     if name_ == "default_factory":
                         try:
-                            variables[class_field_items][
-                                "default"
-                            ] = get_default_factory(
+                            variables[class_field_items]["default"] = get_default_factory(
                                 module=_class.__base__.__module__, function=value_
                             )
                         except Exception:
@@ -52,15 +46,13 @@ def build_template_from_function(
                         variables[class_field_items][name_] = value_
 
                 variables[class_field_items]["placeholder"] = (
-                    docs.params[class_field_items]
-                    if class_field_items in docs.params
-                    else ""
+                    docs.params[class_field_items] if class_field_items in docs.params else ""
                 )
             # Adding function to base classes to allow
             # the output to be a function
             base_classes = get_base_classes(_class)
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, name),
@@ -69,9 +61,7 @@ def build_template_from_function(
             }
 
 
-def build_template_from_class(
-    name: str, type_to_cls_dict: Dict, add_function: bool = False
-):
+def build_template_from_class(name: str, type_to_cls_dict: Dict, add_function: bool = False):
     classes = [item.__name__ for item in type_to_cls_dict.values()]
 
     # Raise error if name is not in chains
@@ -95,9 +85,7 @@ def build_template_from_class(
                     for name_, value_ in value.__repr_args__():
                         if name_ == "default_factory":
                             try:
-                                variables[class_field_items][
-                                    "default"
-                                ] = get_default_factory(
+                                variables[class_field_items]["default"] = get_default_factory(
                                     module=_class.__base__.__module__, function=value_
                                 )
                             except Exception:
@@ -106,15 +94,13 @@ def build_template_from_class(
                             variables[class_field_items][name_] = value_
 
                     variables[class_field_items]["placeholder"] = (
-                        docs.params[class_field_items]
-                        if class_field_items in docs.params
-                        else ""
+                        docs.params[class_field_items] if class_field_items in docs.params else ""
                     )
             base_classes = get_base_classes(_class)
             # Adding function to base classes to allow
             # the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
             return {
                 "template": format_dict(variables, name),
                 "description": docs.short_description or "",
@@ -140,9 +126,7 @@ def build_template_from_method(
 
             # Check if the method exists in this class
             if not hasattr(_class, method_name):
-                raise ValueError(
-                    f"Method {method_name} not found in class {class_name}"
-                )
+                raise ValueError(f"Method {method_name} not found in class {class_name}")
 
             # Get the method
             method = getattr(_class, method_name)
@@ -161,12 +145,8 @@ def build_template_from_method(
                 "_type": _type,
                 **{
                     name: {
-                        "default": param.default
-                        if param.default != param.empty
-                        else None,
-                        "type": param.annotation
-                        if param.annotation != param.empty
-                        else None,
+                        "default": param.default if param.default != param.empty else None,
+                        "type": param.annotation if param.annotation != param.empty else None,
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
@@ -178,7 +158,7 @@ def build_template_from_method(
 
             # Adding function to base classes to allow the output to be a function
             if add_function:
-                base_classes.append("function")
+                base_classes.append("Callable")
 
             return {
                 "template": format_dict(variables, class_name),
@@ -191,7 +171,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
@@ -251,9 +233,7 @@ def sync_to_async(func):
     return async_wrapper
 
 
-def format_dict(
-    dictionary: Dict[str, Any], class_name: Optional[str] = None
-) -> Dict[str, Any]:
+def format_dict(dictionary: Dict[str, Any], class_name: Optional[str] = None) -> Dict[str, Any]:
     """
     Formats a dictionary by removing certain keys and modifying the
     values of other keys.
@@ -274,6 +254,7 @@ def format_dict(
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
+        _type = get_type_from_union_literal(_type)
 
         value["type"] = get_formatted_type(key, _type)
         value["show"] = should_show_field(value, key)
@@ -293,6 +274,15 @@ def format_dict(
     return dictionary
 
 
+# "Union[Literal['f-string'], Literal['jinja2']]" -> "str"
+def get_type_from_union_literal(union_literal: str) -> str:
+    # if types are literal strings
+    # the type is a string
+    if "Literal" in union_literal:
+        return "str"
+    return union_literal
+
+
 def get_type(value: Any) -> Union[str, type]:
     """
     Retrieves the type value from the dictionary.
@@ -300,7 +290,8 @@ def get_type(value: Any) -> Union[str, type]:
     Returns:
         The type value.
     """
-    _type = value["type"]
+    # get "type" or "annotation" from the value
+    _type = value.get("type") or value.get("annotation")
 
     return _type if isinstance(_type, str) else _type.__name__
 
@@ -328,9 +319,7 @@ def check_list_type(_type: str, value: Dict[str, Any]) -> str:
         The modified type string.
     """
     if any(list_type in _type for list_type in ["List", "Sequence", "Set"]):
-        _type = (
-            _type.replace("List[", "").replace("Sequence[", "").replace("Set[", "")[:-1]
-        )
+        _type = _type.replace("List[", "").replace("Sequence[", "").replace("Set[", "")[:-1]
         value["list"] = True
     else:
         value["list"] = False
@@ -414,8 +403,7 @@ def set_dict_file_attributes(value: Dict[str, Any]) -> None:
     Sets the file attributes for the 'dict_' key.
     """
     value["type"] = "file"
-    value["suffixes"] = [".json", ".yaml", ".yml"]
-    value["fileTypes"] = ["json", "yaml", "yml"]
+    value["fileTypes"] = [".json", ".yaml", ".yml"]
 
 
 def replace_default_value_with_actual(value: Dict[str, Any]) -> None:
@@ -434,9 +422,7 @@ def set_headers_value(value: Dict[str, Any]) -> None:
     value["value"] = """{"Authorization": "Bearer <token>"}"""
 
 
-def add_options_to_field(
-    value: Dict[str, Any], class_name: Optional[str], key: str
-) -> None:
+def add_options_to_field(value: Dict[str, Any], class_name: Optional[str], key: str) -> None:
     """
     Adds options to the field based on the class name and key.
     """

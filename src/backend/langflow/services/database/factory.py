@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
-from langflow.services.database.manager import DatabaseService
+from langflow.services.database.service import DatabaseService
 from langflow.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow.services.settings.service import SettingsService
 
 
 class DatabaseServiceFactory(ServiceFactory):

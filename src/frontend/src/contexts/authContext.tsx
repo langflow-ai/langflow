@@ -19,6 +19,9 @@ const initialValue: AuthContextType = {
   authenticationErrorCount: 0,
   autoLogin: false,
   setAutoLogin: () => {},
+  setApiKey: () => {},
+  apiKey: null,
+  storeApiKey: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -36,10 +39,21 @@ export function AuthProvider({ children }): React.ReactElement {
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
   const { setLoading } = useContext(alertContext);
+  const [apiKey, setApiKey] = useState<string | null>(
+    cookies.get("apikey_tkn_lflw")
+  );
+
   useEffect(() => {
     const storedAccessToken = cookies.get("access_tkn_lflw");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
+    }
+  }, []);
+
+  useEffect(() => {
+    const apiKey = cookies.get("apikey_tkn_lflw");
+    if (apiKey) {
+      setApiKey(apiKey);
     }
   }, []);
 
@@ -74,7 +88,7 @@ export function AuthProvider({ children }): React.ReactElement {
           setLoading(false);
         }
       });
-  }, []);
+  }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
   function getAuthentication() {
     const storedRefreshToken = cookies.get("refresh_tkn_lflw");
@@ -94,11 +108,17 @@ export function AuthProvider({ children }): React.ReactElement {
   function logout() {
     cookies.remove("access_tkn_lflw", { path: "/" });
     cookies.remove("refresh_tkn_lflw", { path: "/" });
+    cookies.remove("apikey_tkn_lflw", { path: "/" });
     setIsAdmin(false);
     setUserData(null);
     setAccessToken(null);
     setRefreshToken(null);
     setIsAuthenticated(false);
+  }
+
+  function storeApiKey(apikey: string) {
+    cookies.set("apikey_tkn_lflw", apikey, { path: "/" });
+    setApiKey(apikey);
   }
 
   return (
@@ -118,6 +138,9 @@ export function AuthProvider({ children }): React.ReactElement {
         authenticationErrorCount: 0,
         setAutoLogin,
         autoLogin,
+        setApiKey,
+        apiKey,
+        storeApiKey,
       }}
     >
       {children}

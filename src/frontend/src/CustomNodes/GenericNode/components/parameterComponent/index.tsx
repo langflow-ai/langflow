@@ -22,16 +22,25 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import { TabsContext } from "../../../../contexts/tabsContext";
-import { typesContext } from "../../../../contexts/typesContext";
-import { ParameterComponentType } from "../../../../types/components";
-import { TabsState } from "../../../../types/tabs";
 import {
+  LANGFLOW_SUPPORTED_TYPES,
+  TOOLTIP_EMPTY,
+} from "../../../../constants/constants";
+import { alertContext } from "../../../../contexts/alertContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
+import { typesContext } from "../../../../contexts/typesContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import { postCustomComponentUpdate } from "../../../../controllers/API";
+import { APIClassType } from "../../../../types/api";
+import { ParameterComponentType } from "../../../../types/components";
+import { NodeDataType } from "../../../../types/flow";
+import {
+  cleanEdges,
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
   isValidConnection,
+  scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import {
   nodeColors,
@@ -44,7 +53,6 @@ export default function ParameterComponent({
   left,
   id,
   data,
-  setData,
   tooltipTitle,
   title,
   color,
@@ -53,14 +61,20 @@ export default function ParameterComponent({
   required = false,
   optionalHandle = null,
   info = "",
+  proxy,
   showNode,
+  index = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows } = useContext(TabsContext);
+  const { setTabsState, tabId, flows, tabsState, updateFlow } =
+    useContext(FlowsContext);
+
+  const [dataRef, setDataRef] = useState(data);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -78,41 +92,114 @@ export default function ParameterComponent({
 
   const groupedEdge = useRef(null);
 
+  useEffect(() => {
+    setDataRef(data);
+  }, [modalContextOpen]);
+
   const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
   let disabled =
-    reactFlowInstance?.getEdges().some((edge) => edge.targetHandle === id) ??
-    false;
+    reactFlowInstance
+      ?.getEdges()
+      .some(
+        (edge) =>
+          edge.targetHandle ===
+          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+      ) ?? false;
 
   const { data: myData } = useContext(typesContext);
+
+  const { takeSnapshot } = useContext(undoRedoContext);
+
+  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+    const code = data.node?.template["code"]?.value;
+    if (!code) {
+      console.error("Code not found in the template");
+      return;
+    }
+
+    try {
+      const res = await postCustomComponentUpdate(code, name);
+      if (res.status === 200 && data.node?.template) {
+        data.node!.template[name] = res.data.template[name];
+      }
+    } catch (err) {
+      setErrorData(err as { title: string; list?: Array<string> });
+    }
+  };
 
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
-    let newData = cloneDeep(data);
-    newData.node!.template[name].value = newValue;
-    setData(newData);
+    if (data.node!.template[name].value !== newValue) {
+      takeSnapshot();
+    }
+    data.node!.template[name].value = newValue;
+    updateNodeInternals(data.id);
+
+    setDataRef((old) => {
+      let newData = cloneDeep(old);
+      newData.node!.template[name].value = newValue;
+      return newData;
+    });
+
     // Set state to pending
     //@ts-ignore
-    setTabsState((prev: TabsState) => {
-      if (!prev[tabId]) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [tabId]: {
-          ...prev[tabId],
-          isPending: true,
-          formKeysData: prev[tabId].formKeysData,
-        },
-      };
-    });
+    if (data.node!.template[name].value !== newValue) {
+      const tabs = cloneDeep(tabsState);
+      tabs[tabId].isPending = false;
+      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
     renderTooltips();
+  };
+
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+    if (!data.node) return;
+    if (data.node!.template[name].value !== newNodeClass.template[name].value) {
+      takeSnapshot();
+    }
+    data.node! = {
+      ...newNodeClass,
+      description: newNodeClass.description ?? data.node!.description,
+      display_name: newNodeClass.display_name ?? data.node!.display_name,
+    };
+    data.node!.template[name].value = code;
+    updateNodeInternals(data.id);
+    // Set state to pending
+    //@ts-ignore
+    if (data.node!.template[name].value !== code) {
+      const tabs = cloneDeep(tabsState);
+      tabs[tabId].isPending = false;
+      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
+    renderTooltips();
+    let flow = flows.find((flow) => flow.id === tabId);
+    setTimeout(() => {
+      //timeout necessary because ReactFlow updates are not async
+      if (reactFlowInstance && flow && flow.data) {
+        cleanEdges({
+          flow: {
+            edges: flow.data!.edges,
+            nodes: flow.data!.nodes,
+          },
+          updateEdge: (edge) => {
+            reactFlowInstance.setEdges(edge);
+            updateNodeInternals(data.id);
+          },
+        });
+        updateFlow(flow);
+      }
+    }, 50);
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
-    if (name === "openai_api_base") console.log(info);
     // @ts-ignore
     infoHtml.current = (
       <div className="h-full w-full break-words">
@@ -166,21 +253,40 @@ export default function ParameterComponent({
               </div>
               <span className="ps-2 text-xs text-foreground">
                 {nodeNames[item.family] ?? "Other"}{" "}
-                <span className="text-xs">
-                  {" "}
-                  {item.type === "" ? "" : " - "}
-                  {item.type.split(", ").length > 2
-                    ? item.type.split(", ").map((el, index) => (
-                        <React.Fragment key={el + index}>
-                          <span>
-                            {index === item.type.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
-                    : item.type}
-                </span>
+                {item?.display_name && item?.display_name?.length > 0 ? (
+                  <span className="text-xs">
+                    {" "}
+                    {item.display_name === "" ? "" : " - "}
+                    {item.display_name.split(", ").length > 2
+                      ? item.display_name.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index ===
+                              item.display_name.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.display_name}
+                  </span>
+                ) : (
+                  <span className="text-xs">
+                    {" "}
+                    {item.type === "" ? "" : " - "}
+                    {item.type.split(", ").length > 2
+                      ? item.type.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index === item.type.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.type}
+                  </span>
+                )}
               </span>
             </span>
           </div>
@@ -197,45 +303,43 @@ export default function ParameterComponent({
   }, [tooltipTitle, flow]);
 
   return !showNode ? (
-    left &&
-    (type === "str" ||
-      type === "bool" ||
-      type === "float" ||
-      type === "code" ||
-      type === "prompt" ||
-      type === "file" ||
-      type === "int" ||
-      type === "dict" ||
-      type === "NestedDict") &&
-    !optionalHandle ? (
+    left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
-      <ShadTooltip
-        styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-        delayDuration={0}
-        content={refHtml.current}
-        side={left ? "left" : "right"}
-      >
-        <Handle
-          type={left ? "target" : "source"}
-          position={left ? Position.Left : Position.Right}
-          id={id}
-          isValidConnection={(connection) =>
-            isValidConnection(connection, reactFlowInstance!)
-          }
-          className={classNames(
-            left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
-            "h-3 w-3 rounded-full border-2 bg-background"
-          )}
-          style={{
-            borderColor: color,
-            top: position,
-          }}
-          onClick={() => {
-            setFilterEdge(groupedEdge.current);
-          }}
-        ></Handle>
-      </ShadTooltip>
+      <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+        <div className="flex">
+          <ShadTooltip
+            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+            delayDuration={0}
+            content={refHtml.current}
+            side={left ? "left" : "right"}
+          >
+            <Handle
+              type={left ? "target" : "source"}
+              position={left ? Position.Left : Position.Right}
+              id={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
+              isValidConnection={(connection) =>
+                isValidConnection(connection, reactFlowInstance!)
+              }
+              className={classNames(
+                left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
+                "h-3 w-3 rounded-full border-2 bg-background"
+              )}
+              style={{
+                borderColor: color,
+                top: position,
+              }}
+              onClick={() => {
+                setFilterEdge(groupedEdge.current);
+              }}
+            ></Handle>
+          </ShadTooltip>
+        </div>
+      </Button>
     )
   ) : (
     <div
@@ -250,7 +354,13 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {title}
+          {proxy ? (
+            <ShadTooltip content={<span>{proxy.id}</span>}>
+              <span>{title}</span>
+            </ShadTooltip>
+          ) : (
+            title
+          )}
           <span className="text-status-red">{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
@@ -266,17 +376,7 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
-        {left &&
-        (type === "str" ||
-          type === "bool" ||
-          type === "float" ||
-          type === "code" ||
-          type === "prompt" ||
-          type === "file" ||
-          type === "int" ||
-          type === "dict" ||
-          type === "NestedDict") &&
-        !optionalHandle ? (
+        {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -290,7 +390,11 @@ export default function ParameterComponent({
                 <Handle
                   type={left ? "target" : "source"}
                   position={left ? Position.Left : Position.Right}
-                  id={id}
+                  id={
+                    proxy
+                      ? scapedJSONStringfy({ ...id, proxy })
+                      : scapedJSONStringfy(id)
+                  }
                   isValidConnection={(connection) =>
                     isValidConnection(connection, reactFlowInstance!)
                   }
@@ -331,9 +435,12 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
+                id={"textarea-" + index}
+                data-testid={"textarea-" + index}
               />
             ) : (
               <InputComponent
+                id={"input-" + index}
                 disabled={disabled}
                 password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
@@ -344,6 +451,7 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2 w-full">
             <ToggleShadComponent
+              id={"toggle-" + index}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
               setEnabled={(isEnabled) => {
@@ -357,30 +465,49 @@ export default function ParameterComponent({
             <FloatComponent
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
+              rangeSpec={data.node?.template[name].rangeSpec}
               onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
           type === "str" &&
           data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
-            <Dropdown
-              options={data.node.template[name].options}
-              onSelect={handleOnNewValue}
-              value={data.node.template[name].value ?? "Choose an option"}
-            ></Dropdown>
+          // TODO: Improve CSS
+          <div className="mt-2 flex w-full items-center">
+            <div className="w-5/6 flex-grow">
+              <Dropdown
+                options={data.node.template[name].options}
+                onSelect={handleOnNewValue}
+                value={data.node.template[name].value ?? "Choose an option"}
+                id={"dropdown-" + index}
+              />
+            </div>
+            {data.node?.template[name].refresh && (
+              <button
+                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
+                onClick={() => {
+                  handleUpdateValues(name, data);
+                }}
+              >
+                <IconComponent name="RefreshCcw" />
+              </button>
+            )}
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
             <CodeAreaComponent
+              readonly={
+                data.node?.flow && data.node.template[name].dynamic
+                  ? true
+                  : false
+              }
               dynamic={data.node?.template[name].dynamic ?? false}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"code-input-" + index}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -390,7 +517,6 @@ export default function ParameterComponent({
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
               fileTypes={data.node?.template[name].fileTypes}
-              suffixes={data.node?.template[name].suffixes}
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
               }}
@@ -402,24 +528,21 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              id={"int-input-" + index}
             />
           </div>
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
             <PromptAreaComponent
+              readonly={data.node?.flow ? true : false}
               field_name={name}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-                const clone = cloneDeep(data);
-                clone.node = nodeClass;
-                setData(clone);
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
-              onChange={(e) => {
-                handleOnNewValue(e);
-              }}
+              onChange={handleOnNewValue}
+              id={"prompt-input-" + index}
+              data-testid={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
@@ -439,6 +562,7 @@ export default function ParameterComponent({
                 data.node!.template[name].value = newValue;
                 handleOnNewValue(newValue);
               }}
+              id="div-dict-input"
             />
           </div>
         ) : left === true && type === "dict" ? (
@@ -447,10 +571,10 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name].value?.length === 0 ||
-                !data.node!.template[name].value
+                dataRef.node!.template[name].value?.length === 0 ||
+                !dataRef.node!.template[name].value
                   ? [{ "": "" }]
-                  : convertObjToArray(data.node!.template[name].value)
+                  : convertObjToArray(dataRef.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {

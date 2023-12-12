@@ -30,6 +30,8 @@ export default function GenericModal({
   nodeClass,
   setNodeClass,
   children,
+  id = "",
+  readonly = false,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
@@ -38,7 +40,7 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
-  const { setErrorData, setSuccessData, setNoticeData } =
+  const { setErrorData, setSuccessData, setNoticeData, setModalContextOpen } =
     useContext(alertContext);
   const ref = useRef();
   const divRef = useRef(null);
@@ -104,15 +106,14 @@ export default function GenericModal({
       : "code-nohighlight";
   }
 
+  // Function need some review, working for now
   function validatePrompt(closeModal: boolean): void {
     //nodeClass is always null on tweaks
-
     postValidatePrompt(field_name, inputValue, nodeClass!)
       .then((apiReturn) => {
         // if field_name is an empty string, then we need to set it
         // to the first key of the custom_fields object
         if (field_name === "") {
-          console.log(apiReturn.data?.frontend_node?.custom_fields);
           field_name = Array.isArray(
             apiReturn.data?.frontend_node?.custom_fields?.[""]
           )
@@ -121,38 +122,23 @@ export default function GenericModal({
         }
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
-          if (inputVariables && inputVariables.length === 0) {
+          if (!inputVariables || inputVariables.length === 0) {
             setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
             });
             setModalOpen(false);
-            if (
-              JSON.stringify(apiReturn.data?.frontend_node) !==
-              JSON.stringify({})
-            )
-              setNodeClass!(apiReturn.data?.frontend_node);
-            setModalOpen(closeModal);
-            setValue(inputValue);
-            if (field_name !== "") {
-              apiReturn.data.frontend_node["template"][field_name]["value"] =
-                inputValue;
-            }
           } else {
-            setIsEdit(false);
-            setSuccessData({
-              title: "Prompt is ready",
-            });
             if (
               JSON.stringify(apiReturn.data?.frontend_node) !==
               JSON.stringify({})
-            )
-              setNodeClass!(apiReturn.data?.frontend_node);
-            setModalOpen(closeModal);
-            setValue(inputValue);
-            if (field_name !== "") {
-              apiReturn.data.frontend_node["template"][field_name]["value"] =
-                inputValue;
+            ) {
+              setNodeClass!(apiReturn.data?.frontend_node, inputValue);
+              setModalOpen(closeModal);
+              setIsEdit(false);
+              setSuccessData({
+                title: "Prompt is ready",
+              });
             }
           }
         } else {
@@ -171,6 +157,10 @@ export default function GenericModal({
         });
       });
   }
+
+  useEffect(() => {
+    setModalContextOpen(modalOpen);
+  }, [modalOpen]);
 
   return (
     <BaseModal
@@ -193,7 +183,9 @@ export default function GenericModal({
           }
         })()}
       >
-        <span className="pr-2">{myModalTitle}</span>
+        <span className="pr-2" data-testid="modal-title">
+          {myModalTitle}
+        </span>
         <IconComponent
           name="FileText"
           className="h-6 w-6 pl-1 text-primary "
@@ -208,8 +200,10 @@ export default function GenericModal({
               "flex h-full w-full"
             )}
           >
-            {type === TypeModal.PROMPT && isEdit ? (
+            {type === TypeModal.PROMPT && isEdit && !readonly ? (
               <Textarea
+                id={"modal-" + id}
+                data-testid={"modal-" + id}
                 ref={divRefPrompt}
                 className="form-input h-full w-full rounded-lg custom-scroll focus-visible:ring-1"
                 value={inputValue}
@@ -226,7 +220,7 @@ export default function GenericModal({
                   handleKeyDown(e, inputValue, "");
                 }}
               />
-            ) : type === TypeModal.PROMPT && !isEdit ? (
+            ) : type === TypeModal.PROMPT && (!isEdit || readonly) ? (
               <SanitizedHTMLWrapper
                 className={getClassByNumberLength()}
                 content={coloredContent}
@@ -248,6 +242,9 @@ export default function GenericModal({
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}
+                readOnly={readonly}
+                id={"text-area-modal"}
+                data-testid={"text-area-modal"}
               />
             ) : (
               <></>
@@ -284,7 +281,7 @@ export default function GenericModal({
                             className="m-1 max-w-[40vw] cursor-default truncate p-2.5 text-sm"
                           >
                             <div className="relative bottom-[1px]">
-                              <span>
+                              <span id={"badge" + index.toString()}>
                                 {word.replace(/[{}]/g, "").length > 59
                                   ? word.replace(/[{}]/g, "").slice(0, 56) +
                                     "..."
@@ -304,6 +301,9 @@ export default function GenericModal({
               )}
             </div>
             <Button
+              data-testid="genericModalBtnSave"
+              id="genericModalBtnSave"
+              disabled={readonly}
               onClick={() => {
                 switch (myModalType) {
                   case TypeModal.TEXT:

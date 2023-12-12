@@ -1,9 +1,9 @@
-from . import factory, manager
-from langflow.services.cache.manager import InMemoryCache
+from . import factory, service
+from langflow.services.cache.service import InMemoryCache
 
 
 __all__ = [
     "factory",
-    "manager",
+    "service",
     "InMemoryCache",
 ]

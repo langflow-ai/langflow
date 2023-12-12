@@ -224,7 +224,6 @@ export default function ApiKeysPage() {
                                           title="Delete"
                                           titleHeader="Delete User"
                                           modalContentTitle="Attention!"
-                                          modalContent="Are you sure you want to delete this key? This action cannot be undone."
                                           cancelText="Cancel"
                                           confirmationText="Delete"
                                           icon={"UserMinus2"}
@@ -234,15 +233,19 @@ export default function ApiKeysPage() {
                                             handleDeleteKey(keys);
                                           }}
                                         >
-                                          <ShadTooltip
-                                            content="Delete"
-                                            side="top"
-                                          >
+                                          <ConfirmationModal.Content>
+                                            <span>
+                                              Are you sure you want to delete
+                                              this key? This action cannot be
+                                              undone.
+                                            </span>
+                                          </ConfirmationModal.Content>
+                                          <ConfirmationModal.Trigger>
                                             <IconComponent
                                               name="Trash2"
                                               className="ml-2 h-4 w-4 cursor-pointer"
                                             />
-                                          </ShadTooltip>
+                                          </ConfirmationModal.Trigger>
                                         </ConfirmationModal>
                                       </div>
                                     </TableCell>
