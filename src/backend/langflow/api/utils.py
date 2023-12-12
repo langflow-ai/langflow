@@ -169,3 +169,21 @@ async def check_langflow_version(component: StoreComponentCreate):
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
+
+
+def format_elapsed_time(elapsed_time) -> str:
+    # Format elapsed time to human readable format coming from
+    # perf_counter()
+    # If the elapsed time is less than 1 second, return ms
+    # If the elapsed time is less than 1 minute, return seconds rounded to 2 decimals
+    time_str = ""
+    if elapsed_time < 1:
+        elapsed_time = int(round(elapsed_time * 1000))
+        time_str = f"{elapsed_time} ms"
+    elif elapsed_time < 60:
+        elapsed_time = round(elapsed_time, 2)
+        time_str = f"{elapsed_time} seconds"
+    else:
+        elapsed_time = round(elapsed_time / 60, 2)
+        time_str = f"{elapsed_time} minutes"
+    return time_str
