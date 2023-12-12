@@ -1,4 +1,5 @@
 import json
+
 # we need to import tmpdir
 import tempfile
 from contextlib import contextmanager, suppress
@@ -147,6 +148,24 @@ def openapi_graph():
 @pytest.fixture
 def json_flow():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def grouped_chat_json_flow():
+    with open(pytest.GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def one_grouped_chat_json_flow():
+    with open(pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def vector_store_grouped_json_flow():
+    with open(pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH, "r") as f:
         return f.read()
 
 

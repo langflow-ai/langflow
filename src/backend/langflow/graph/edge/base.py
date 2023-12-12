@@ -60,8 +60,8 @@ class Edge:
         self.source_id = state["source_id"]
         self.target_id = state["target_id"]
         self.target_param = state["target_param"]
-        self.source_handle = state["source_handle"]
-        self.target_handle = state["target_handle"]
+        self.source_handle = state.get("source_handle")
+        self.target_handle = state.get("target_handle")
 
     def validate_edge(self, source, target) -> None:
         # Validate that the outputs of the source node are valid inputs

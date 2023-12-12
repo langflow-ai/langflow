@@ -1,14 +1,14 @@
-import re
-import inspect
 import importlib
+import inspect
+import re
 from functools import wraps
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
+from langchain.schema import Document
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langchain.schema import Document
 
 
 def remove_ansi_escape_codes(text):
@@ -171,7 +171,9 @@ def get_base_classes(cls):
     """Get the base classes of a class.
     These are used to determine the output of the nodes.
     """
-    if bases := cls.__bases__:
+
+    if hasattr(cls, "__bases__") and cls.__bases__:
+        bases = cls.__bases__
         result = []
         for base in bases:
             if any(type in base.__module__ for type in ["pydantic", "abc"]):
@@ -252,6 +254,7 @@ def format_dict(dictionary: Dict[str, Any], class_name: Optional[str] = None) ->
         _type = remove_optional_wrapper(_type)
         _type = check_list_type(_type, value)
         _type = replace_mapping_with_dict(_type)
+        _type = get_type_from_union_literal(_type)
 
         value["type"] = get_formatted_type(key, _type)
         value["show"] = should_show_field(value, key)

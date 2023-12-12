@@ -1,7 +1,10 @@
+import traceback
 from typing import Any, Callable, Optional, Tuple
+
 import anyio
-from langflow.services.task.backends.base import TaskBackend
 from loguru import logger
+
+from langflow.services.task.backends.base import TaskBackend
 
 
 class AnyIOTaskResult:
@@ -10,12 +13,17 @@ class AnyIOTaskResult:
         self._status = "PENDING"
         self._result = None
         self._exception = None
+        self._traceback = None
 
     @property
     def status(self) -> str:
         if self._status == "DONE":
             return "FAILURE" if self._exception is not None else "SUCCESS"
         return self._status
+
+    @property
+    def traceback(self) -> Optional[str]:
+        return self._traceback
 
     @property
     def result(self) -> Any:
@@ -29,6 +37,7 @@ class AnyIOTaskResult:
             self._result = await func(*args, **kwargs)
         except Exception as e:
             self._exception = e
+            self._traceback = traceback.format_exc()
         finally:
             self._status = "DONE"
 
