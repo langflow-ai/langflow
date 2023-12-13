@@ -1,7 +1,8 @@
-from langflow.services.cache.service import InMemoryCache, RedisCache, BaseCacheService
+from typing import TYPE_CHECKING
+
+from langflow.services.cache.service import BaseCacheService, InMemoryCache, RedisCache
 from langflow.services.factory import ServiceFactory
 from langflow.utils.logger import logger
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
