@@ -69,14 +69,10 @@ class TemplateField(BaseModel):
 
     @field_serializer("file_path")
     def serialize_file_path(self, value):
-        if self.field_type == "file":
-            return value
-        return ""
+        return value if self.field_type == "file" else ""
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
-        if value == "float":
-            # check if range_spec is set
-            if self.range_spec is None:
-                self.range_spec = RangeSpec()
+        if value == "float" and self.range_spec is None:
+            self.range_spec = RangeSpec()
         return value
