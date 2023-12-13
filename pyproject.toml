@@ -102,6 +102,7 @@ numexpr = "^2.8.6"
 qianfan = "0.0.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
+python-ffmpeg = "^2.0.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
