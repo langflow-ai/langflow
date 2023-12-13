@@ -178,7 +178,6 @@ async def stream_build(
                     time_elapsed = format_elapsed_time(time.perf_counter() - start_time)
                     update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
 
-
                 vertex_id = vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
                 if vertex_id in graph.top_level_vertices:
                     response = {
