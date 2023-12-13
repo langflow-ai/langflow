@@ -364,10 +364,9 @@ export default function GenericNode({
           <div
             className={
               showNode
-                ? "overflow-hidden " +
-                  (data.node?.description === "" && !nameEditable
-                    ? "pb-5"
-                    : "py-5")
+                ? data.node?.description === "" && !nameEditable
+                  ? "pb-5"
+                  : "py-5"
                 : ""
             }
           >
