@@ -142,7 +142,7 @@ async def stream_build(
 
             number_of_nodes = len(graph.vertices)
             update_build_status(cache_service, flow_id, BuildStatus.IN_PROGRESS)
-
+            time_elapsed = ""
             try:
                 user_id = flow_cache["user_id"]
             except KeyError:
@@ -175,7 +175,9 @@ async def stream_build(
                     logger.exception(exc)
                     params = str(exc)
                     valid = False
+                    time_elapsed = format_elapsed_time(time.perf_counter() - start_time)
                     update_build_status(cache_service, flow_id, BuildStatus.FAILURE)
+
 
                 vertex_id = vertex.parent_node_id if vertex.parent_is_top_level else vertex.id
                 if vertex_id in graph.top_level_vertices:
