@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import chromadb  # type: ignore
 from langchain.embeddings.base import Embeddings
@@ -56,7 +56,7 @@ class ChromaComponent(CustomComponent):
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
         persist_directory: Optional[str] = None,
-        documents: Optional[Document] = None,
+        documents: Optional[List[Document]] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,

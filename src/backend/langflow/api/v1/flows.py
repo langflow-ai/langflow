@@ -5,13 +5,14 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from sqlmodel import Session, select
+
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session, select
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -122,7 +123,7 @@ def create_flows(
     db_flows = []
     for flow in flow_list.flows:
         flow.user_id = current_user.id
-        db_flow = Flow.from_orm(flow)
+        db_flow = Flow.model_validate(flow, from_attributes=True)
         session.add(db_flow)
         db_flows.append(db_flow)
     session.commit()
