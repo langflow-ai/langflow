@@ -1616,6 +1616,23 @@ snappy = ["cramjam"]
 zstandard = ["zstandard"]
 
 [[package]]
+name = "ffmpeg-python"
+version = "0.2.0"
+description = "Python bindings for FFmpeg - with complex filtering support"
+optional = false
+python-versions = "*"
+files = [
+    {file = "ffmpeg-python-0.2.0.tar.gz", hash = "sha256:65225db34627c578ef0e11c8b1eb528bb35e024752f6f10b78c011f6f64c4127"},
+    {file = "ffmpeg_python-0.2.0-py3-none-any.whl", hash = "sha256:ac441a0404e053f8b6a1113a77c0f452f1cfc62f6344a769475ffdc0f56c23c5"},
+]
+
+[package.dependencies]
+future = "*"
+
+[package.extras]
+dev = ["Sphinx (==2.1.0)", "future (==0.17.1)", "numpy (==1.16.4)", "pytest (==4.6.1)", "pytest-mock (==1.10.4)", "tox (==3.12.1)"]
+
+[[package]]
 name = "filelock"
 version = "3.13.1"
 description = "A platform independent file lock."
@@ -2140,13 +2157,13 @@ httplib2 = ">=0.19.0"
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.38.0"
+version = "1.38.1"
 description = "Vertex AI API client library"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "google-cloud-aiplatform-1.38.0.tar.gz", hash = "sha256:dff91f79b64e279f0e61dfd63c4e067ba5fa75ef0f4614289bbdca70d086a9e2"},
-    {file = "google_cloud_aiplatform-1.38.0-py2.py3-none-any.whl", hash = "sha256:7eec50d9a36d43e163f019a1ade9284d4580602a5108738a0ebff8940ea47ce0"},
+    {file = "google-cloud-aiplatform-1.38.1.tar.gz", hash = "sha256:30439d914bb028443c0506cc0e6dd825cff5401aeb8233e13d8cfd77c3c87da1"},
+    {file = "google_cloud_aiplatform-1.38.1-py2.py3-none-any.whl", hash = "sha256:5e1fcd1068dd2c4f0fc89aa616e34a8b9434eaa72ea6216f5036ef26f08bd448"},
 ]
 
 [package.dependencies]
@@ -2179,13 +2196,13 @@ xai = ["tensorflow (>=2.3.0,<3.0.0dev)"]
 
 [[package]]
 name = "google-cloud-bigquery"
-version = "3.14.0"
+version = "3.14.1"
 description = "Google BigQuery API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-bigquery-3.14.0.tar.gz", hash = "sha256:76c919f771ac82ba372f5a8d326c032229c5fdab738d03a2b6e73b412c22c9eb"},
-    {file = "google_cloud_bigquery-3.14.0-py2.py3-none-any.whl", hash = "sha256:3304f4742546be70e531232f31bbf5b4b257aa63a508101ab7c4582c9503b636"},
+    {file = "google-cloud-bigquery-3.14.1.tar.gz", hash = "sha256:aa15bd86f79ea76824c7d710f5ae532323c4b3ba01ef4abff42d4ee7a2e9b142"},
+    {file = "google_cloud_bigquery-3.14.1-py2.py3-none-any.whl", hash = "sha256:a8ded18455da71508db222b7c06197bc12b6dbc6ed5b0b64e7007b76d7016957"},
 ]
 
 [package.dependencies]
@@ -6045,23 +6062,6 @@ pydantic = ">=2.3.0"
 python-dotenv = ">=0.21.0"
 
 [[package]]
-name = "pyee"
-version = "11.1.0"
-description = "A rough port of Node.js's EventEmitter to Python with a few tricks of its own"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "pyee-11.1.0-py3-none-any.whl", hash = "sha256:5d346a7d0f861a4b2e6c47960295bd895f816725b27d656181947346be98d7c1"},
-    {file = "pyee-11.1.0.tar.gz", hash = "sha256:b53af98f6990c810edd9b56b87791021a8f54fd13db4edd1142438d44ba2263f"},
-]
-
-[package.dependencies]
-typing-extensions = "*"
-
-[package.extras]
-dev = ["black", "build", "flake8", "flake8-black", "isort", "jupyter-console", "mkdocs", "mkdocs-include-markdown-plugin", "mkdocstrings[python]", "pytest", "pytest-asyncio", "pytest-trio", "sphinx", "toml", "tox", "trio", "trio", "trio-typing", "twine", "twisted", "validate-pyproject[all]"]
-
-[[package]]
 name = "pygments"
 version = "2.17.2"
 description = "Pygments is a syntax highlighting package written in Python."
@@ -6399,21 +6399,6 @@ files = [
 
 [package.extras]
 cli = ["click (>=5.0)"]
-
-[[package]]
-name = "python-ffmpeg"
-version = "2.0.9"
-description = "A python binding for FFmpeg which provides sync and async APIs"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "python-ffmpeg-2.0.9.tar.gz", hash = "sha256:b06f2e85c5485d170c0e741b55072a5230de27a8e6b984399a4217a55c8cf043"},
-    {file = "python_ffmpeg-2.0.9-py3-none-any.whl", hash = "sha256:0cd440da47caf378e512b5de97e578fb3f763f11576d97f8053ab0107b24d49e"},
-]
-
-[package.dependencies]
-pyee = "*"
-typing-extensions = "*"
 
 [[package]]
 name = "python-iso639"
@@ -9249,4 +9234,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "419f15ce0412c90f6235c4a9c2d80bdb80333b264dcb375c58fa303cf1c072ad"
+content-hash = "d6070874c0d4f695ee9863984c135de863f7978c33ed32998b0b7e11b2de2a9d"
