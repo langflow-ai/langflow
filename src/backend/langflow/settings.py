@@ -47,7 +47,6 @@ class Settings(BaseSettings):
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 value = "sqlite:///./langflow.db"
-
         return value
 
     @validator("COMPONENTS_PATH", pre=True)
