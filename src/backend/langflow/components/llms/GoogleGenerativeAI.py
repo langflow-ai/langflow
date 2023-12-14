@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
 
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, RangeSpec, TemplateField
