@@ -302,7 +302,7 @@ async def build_vertex(
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
         logger.exception(exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 async def try_running_celery_task(vertex, user_id):
