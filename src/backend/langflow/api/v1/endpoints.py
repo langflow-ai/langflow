@@ -169,7 +169,9 @@ async def get_task_status(task_id: str):
 
         if isinstance(result, dict) and "result" in result:
             result = result["result"]
-        elif hasattr(result, "result"):
+        elif isinstance(result, Exception):
+            result = str(result)
+        elif hasattr(result, "result") and not isinstance(result, dict):
             result = result.result
 
     if task is None:
