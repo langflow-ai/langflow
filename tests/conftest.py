@@ -1,5 +1,4 @@
 import json
-
 # we need to import tmpdir
 import tempfile
 from contextlib import contextmanager, suppress
@@ -360,3 +359,15 @@ def test_component_with_templatefield_code():
     # load the content as a string
     with open(path, "r") as f:
         return f.read()
+
+
+@pytest.fixture
+def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
+    flow = orjson.loads(json_flow_with_prompt_and_history)
+    data = flow["data"]
+    flow = FlowCreate(name="Basic Chat", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
