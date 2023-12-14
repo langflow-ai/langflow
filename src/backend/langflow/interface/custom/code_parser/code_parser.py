@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
-
-from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
+from langflow.interface.custom.schema import (CallableCodeDetails,
+                                              ClassCodeDetails)
 
 
 class CodeSyntaxError(HTTPException):
@@ -57,7 +57,7 @@ class CodeParser:
             ast.Assign: self.parse_global_vars,
         }
 
-    def __get_tree(self):
+    def get_tree(self):
         """
         Parses the provided code to validate its syntax.
         It tries to parse the code into an abstract syntax tree (AST).
@@ -313,7 +313,7 @@ class CodeParser:
         """
         Runs all parsing operations and returns the resulting data.
         """
-        tree = self.__get_tree()
+        tree = self.get_tree()
 
         for node in ast.walk(tree):
             self.parse_node(node)
