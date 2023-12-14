@@ -52,11 +52,7 @@ def test_llm_math_chain(client: TestClient, logged_in_headers):
 
     chain = chains["LLMMathChain"]
     # Test the base classes, template, memory, verbose, llm, input_key, output_key, and _type objects
-    assert set(chain["base_classes"]) == {
-        "Callable",
-        "LLMMathChain",
-        "Chain",
-    }
+    assert set(chain["base_classes"]) == {'LLMMathChain', 'Callable', 'Chain', 'Text'}
 
     template = chain["template"]
     assert template["memory"] == {
