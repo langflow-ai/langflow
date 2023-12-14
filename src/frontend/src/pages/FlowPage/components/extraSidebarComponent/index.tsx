@@ -285,7 +285,7 @@ export default function ExtraSidebar(): JSX.Element {
             )}
           </div>
         </ShadTooltip>
-        <div className="side-bar-button">
+        <div className="side-bar-button" data-testid="save-button">
           {flow && flow.data && (
             <ShadTooltip content="Save" side="top">
               <button
