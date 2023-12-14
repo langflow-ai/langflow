@@ -43,7 +43,7 @@ class InMemoryCache(BaseCacheService, Service):
             max_size (int, optional): Maximum number of items to store in the cache.
             expiration_time (int, optional): Time in seconds after which a cached item expires. Default is 1 hour.
         """
-        self._cache = OrderedDict()
+        self._cache: OrderedDict[str, dict] = OrderedDict()
         self._lock = threading.RLock()
         self.max_size = max_size
         self.expiration_time = expiration_time
@@ -69,17 +69,16 @@ class InMemoryCache(BaseCacheService, Service):
             if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                # Check if the value is pickled
-                if isinstance(item["value"], bytes):
-                    value = pickle.loads(item["value"])
-                else:
-                    value = item["value"]
-                return value
+                return (
+                    pickle.loads(item["value"])
+                    if isinstance(item["value"], bytes)
+                    else item["value"]
+                )
             else:
                 self.delete(key)
-        return None
+        return {}
 
-    def set(self, key, value, pickle=False):
+    def set(self, key, value, pickle_value=False):
         """
         Add an item to the cache.
 
@@ -97,7 +96,7 @@ class InMemoryCache(BaseCacheService, Service):
                 # Remove least recently used item
                 self._cache.popitem(last=False)
             # pickle locally to mimic Redis
-            if pickle:
+            if pickle_value:
                 value = pickle.dumps(value)
 
             self._cache[key] = {"value": value, "time": time.time()}
