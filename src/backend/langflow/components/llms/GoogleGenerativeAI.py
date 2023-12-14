@@ -46,6 +46,9 @@ class GoogleGenerativeAIComponent(CustomComponent):
                 info="The name of the model to use. Supported examples: gemini-pro",
                 options=["gemini-pro", "gemini-pro-vision"],
             ),
+            "code": TemplateField(
+                advanced=True,
+            ),
         }
 
     def build(
