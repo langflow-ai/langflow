@@ -16,7 +16,6 @@ from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
-
 chat_components = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
 
 

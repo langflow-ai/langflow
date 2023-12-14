@@ -1,9 +1,8 @@
 from typing import Callable, Union
 
-from pydantic import BaseModel, model_serializer
-
 from langflow.template.field.base import TemplateField
 from langflow.utils.constants import DIRECT_TYPES
+from pydantic import BaseModel, model_serializer
 
 
 class Template(BaseModel):

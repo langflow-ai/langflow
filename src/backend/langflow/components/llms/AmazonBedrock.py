@@ -1,7 +1,8 @@
 from typing import Optional
-from langflow import CustomComponent
-from langchain.llms.bedrock import Bedrock
+
 from langchain.llms.base import BaseLLM
+from langchain.llms.bedrock import Bedrock
+from langflow import CustomComponent
 
 
 class AmazonBedrockComponent(CustomComponent):

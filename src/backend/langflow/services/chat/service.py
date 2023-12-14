@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import orjson
 from fastapi import WebSocket, status
@@ -15,11 +15,6 @@ from loguru import logger
 from starlette.websockets import WebSocketState
 
 from .cache import cache_service
-import asyncio
-from typing import Any, Dict, List, TYPE_CHECKING
-
-from langflow.services import service_manager, ServiceType
-import orjson
 
 if TYPE_CHECKING:
     from langflow.services.cache.base import BaseCacheService
@@ -61,9 +56,7 @@ class ChatService(Service):
         self.chat_history = ChatHistory()
         self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
-        self.cache_service: "BaseCacheService" = service_manager.get(
-            ServiceType.CACHE_SERVICE
-        )
+        self.cache_service: "BaseCacheService" = service_manager.get(ServiceType.CACHE_SERVICE)
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""

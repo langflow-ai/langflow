@@ -1,14 +1,12 @@
-from langflow.services.base import Service
-import duckdb
-from langflow.services.monitor.schema import MessageModel, TransactionModel
-from langflow.services.monitor.utils import (
-    add_row_to_table,
-    drop_and_create_table_if_schema_mismatch,
-)
-from pathlib import Path
-from platformdirs import user_cache_dir
-from typing import TYPE_CHECKING
 from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import duckdb
+from langflow.services.base import Service
+from langflow.services.monitor.schema import MessageModel, TransactionModel
+from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
@@ -27,12 +25,8 @@ class MonitorService(Service):
         return self.load_table_as_dataframe(table_name)
 
     def ensure_tables_exist(self):
-        drop_and_create_table_if_schema_mismatch(
-            str(self.db_path), "transactions", TransactionModel
-        )
-        drop_and_create_table_if_schema_mismatch(
-            str(self.db_path), "messages", MessageModel
-        )
+        drop_and_create_table_if_schema_mismatch(str(self.db_path), "transactions", TransactionModel)
+        drop_and_create_table_if_schema_mismatch(str(self.db_path), "messages", MessageModel)
 
     def add_row(self, table_name: str, data: dict):
         # Make sure the model passed matches the table

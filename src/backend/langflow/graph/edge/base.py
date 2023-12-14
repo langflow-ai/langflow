@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
+from langflow.services.deps import get_monitor_service
 from loguru import logger
-from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
-
-from langflow.services.getters import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -97,11 +95,8 @@ class Edge:
         return hash(self.__repr__())
 
     def __eq__(self, __value: object) -> bool:
-        return (
-            self.__repr__() == __value.__repr__()
-            if isinstance(__value, Edge)
-            else False
-        )
+        return self.__repr__() == __value.__repr__() if isinstance(__value, Edge) else False
+
 
 class ContractEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
@@ -144,11 +139,7 @@ class ContractEdge(Edge):
         # if it is a list we need to check if the contents are python types
         for key, value in params.items():
             if isinstance(value, list):
-                params[key] = [
-                    item
-                    for item in value
-                    if isinstance(item, (str, int, bool, float, list, dict))
-                ]
+                params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
         return params
 
     def get_result(self):

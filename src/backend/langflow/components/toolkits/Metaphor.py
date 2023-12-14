@@ -3,9 +3,8 @@ from typing import List, Union
 from langchain.agents import tool
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.tools import Tool
-from metaphor_python import Metaphor  # type: ignore
-
 from langflow import CustomComponent
+from metaphor_python import Metaphor  # type: ignore
 
 
 class MetaphorToolkit(CustomComponent):

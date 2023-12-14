@@ -1,10 +1,9 @@
 from typing import Optional
 
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel, field_validator, model_serializer
-
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.template.frontend_node.base import FrontendNode
+from pydantic import BaseModel, field_validator, model_serializer
 
 
 class CacheResponse(BaseModel):

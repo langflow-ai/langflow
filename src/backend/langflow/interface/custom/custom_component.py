@@ -5,7 +5,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import (
@@ -34,6 +34,7 @@ class CustomComponent(Component):
     @property
     def return_type_valid_list(self):
         return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)

@@ -1,8 +1,7 @@
-from langflow import CustomComponent
-
 from langchain.llms.base import BaseLLM
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
+from langflow import CustomComponent
 
 
 class PromptRunner(CustomComponent):

@@ -15,9 +15,9 @@ def get_factories_and_deps():
     from langflow.services.chat import factory as chat_factory
     from langflow.services.credentials import factory as credentials_factory
     from langflow.services.database import factory as database_factory
+    from langflow.services.monitor import factory as monitor_factory
     from langflow.services.plugins import factory as plugins_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
-    from langflow.services.monitor import factory as monitor_factory
     from langflow.services.settings import factory as settings_factory
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory

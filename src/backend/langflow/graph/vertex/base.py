@@ -1,35 +1,26 @@
 import ast
-from enum import Enum
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 import inspect
 import types
-from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
-from loguru import logger
-
-from langflow.graph.utils import UnbuiltObject
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
-
-import inspect
-import types
-from typing import Any, Callable, Dict, List, Optional
-from typing import TYPE_CHECKING
-
+from loguru import logger
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
-    from langflow.graph.edge.base import Edge
+    from langflow.graph.edge.base import ContractEdge, Edge
     from langflow.graph.graph.base import Graph
+
 
 class PowerComponentTypes(Enum):
     # ChatInput and ChatOutput are the only ones that are
     # power components
     ChatInput = "ChatInput"
     ChatOutput = "ChatOutput"
-
 
 
 class Vertex:
@@ -84,11 +75,7 @@ class Vertex:
         # instead of the result dict
         if isinstance(self._built_result, UnbuiltResult):
             return {}
-        return (
-            self._built_result
-            if isinstance(self._built_result, dict)
-            else {"result": self._built_result}
-        )
+        return self._built_result if isinstance(self._built_result, dict) else {"result": self._built_result}
 
     def set_artifacts(self) -> None:
         pass
@@ -142,11 +129,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.pinned = self.data["node"].get("pinned", False)
-        template_dicts = {
-            key: value
-            for key, value in self.data["node"]["template"].items()
-            if isinstance(value, dict)
-        }
+        template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
         template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
 
         self.required_inputs = [
@@ -328,9 +311,7 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    async def get_result(
-        self, requester: Optional["Vertex"] = None, user_id=None, timeout=None
-    ) -> Any:
+    async def get_result(self, requester: Optional["Vertex"] = None, user_id=None, timeout=None) -> Any:
         if self.is_task and self.task_id is not None:
             task = self.get_task()
 
@@ -467,9 +448,7 @@ class Vertex:
             return self._built_object
 
         # Get the requester edge
-        requester_edge = next(
-            (edge for edge in self.edges if edge.target.id == requester.id), None
-        )
+        requester_edge = next((edge for edge in self.edges if edge.target.id == requester.id), None)
         # Return the result of the requester edge
         if requester_edge is None:
             return None
@@ -494,11 +473,7 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return (
-            "Built sucessfully ✨"
-            if self._built_object is not None
-            else "Failed to build 😵‍💫"
-        )
+        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
 
 
 class StatefulVertex(Vertex):

@@ -1,7 +1,8 @@
 from typing import Optional
-from langflow import CustomComponent
-from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
+
 from langchain.llms.base import BaseLLM
+from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
+from langflow import CustomComponent
 
 
 class HuggingFaceEndpointsComponent(CustomComponent):

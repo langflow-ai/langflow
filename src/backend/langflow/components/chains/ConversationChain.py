@@ -1,6 +1,7 @@
-from langflow import CustomComponent
+from typing import Callable, Optional, Union
+
 from langchain.chains import ConversationChain
-from typing import Optional, Union, Callable
+from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, BaseMemory, Chain
 
 

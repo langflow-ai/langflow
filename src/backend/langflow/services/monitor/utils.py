@@ -1,6 +1,7 @@
+from typing import Any, Dict, Type
+
 import duckdb
 from pydantic import BaseModel
-from typing import Any, Dict, Type
 
 
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
@@ -28,9 +29,7 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     return columns
 
 
-def drop_and_create_table_if_schema_mismatch(
-    db_path: str, table_name: str, model: Type[BaseModel]
-):
+def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, model: Type[BaseModel]):
     with duckdb.connect(db_path) as conn:
         # Get the current schema from the database
         try:
@@ -50,12 +49,8 @@ def drop_and_create_table_if_schema_mismatch(
                     conn.execute(f"CREATE SEQUENCE seq_{table_name} START 1;")
                 except duckdb.CatalogException:
                     pass
-                desired_schema[
-                    "id"
-                ] = f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
-            columns_sql = ", ".join(
-                f"{name} {data_type}" for name, data_type in desired_schema.items()
-            )
+                desired_schema["id"] = f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
+            columns_sql = ", ".join(f"{name} {data_type}" for name, data_type in desired_schema.items())
             create_table_sql = f"CREATE TABLE {table_name} ({columns_sql})"
             conn.execute(create_table_sql)
 

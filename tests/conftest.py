@@ -10,16 +10,15 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -37,9 +36,7 @@ def pytest_configure():
         Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
     )
     pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
-    pytest.TWO_OUTPUTS = (
-        Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
-    )
+    pytest.TWO_OUTPUTS = Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
     pytest.VECTOR_STORE_PATH = Path(__file__).parent.absolute() / "data" / "Vector_store.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
@@ -51,9 +48,7 @@ def get_text():
 def check_openai_api_key_in_environment_variables():
     import os
 
-    assert (
-        os.environ.get("OPENAI_API_KEY") is not None
-    ), "OPENAI_API_KEY is not set in environment variables"
+    assert os.environ.get("OPENAI_API_KEY") is not None, "OPENAI_API_KEY is not set in environment variables"
 
 
 @pytest.fixture()
@@ -183,12 +178,6 @@ def vector_store_grouped_json_flow():
 
 
 @pytest.fixture
-def json_flow_with_prompt_and_history():
-    with open(pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY, "r") as f:
-        return f.read()
-
-
-@pytest.fixture
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
@@ -311,9 +300,7 @@ def json_two_outputs():
 
 
 @pytest.fixture
-def added_flow_with_prompt_and_history(
-    client, json_flow_with_prompt_and_history, logged_in_headers
-):
+def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history, logged_in_headers):
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)

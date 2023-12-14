@@ -1,11 +1,7 @@
 from typing import Optional
 
-from langchain.memory.chat_message_histories.mongodb import (
-    DEFAULT_COLLECTION_NAME,
-    DEFAULT_DBNAME,
-)
+from langchain.memory.chat_message_histories.mongodb import DEFAULT_COLLECTION_NAME, DEFAULT_DBNAME
 from langchain.memory.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
-
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import INPUT_KEY_INFO, OUTPUT_KEY_INFO

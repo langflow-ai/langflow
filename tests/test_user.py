@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import pytest
-
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User

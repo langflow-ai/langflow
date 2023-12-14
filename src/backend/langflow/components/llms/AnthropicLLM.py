@@ -2,9 +2,8 @@ from typing import Optional
 
 from langchain.chat_models.anthropic import ChatAnthropic
 from langchain.llms.base import BaseLanguageModel
-from pydantic.v1 import SecretStr
-
 from langflow import CustomComponent
+from pydantic.v1 import SecretStr
 
 
 class AnthropicLLM(CustomComponent):

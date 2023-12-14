@@ -1,17 +1,17 @@
-from typing import Any, Callable, Dict, Type
-from langchain.vectorstores import (
-    Pinecone,
-    Qdrant,
-    Chroma,
-    FAISS,
-    Weaviate,
-    SupabaseVectorStore,
-    MongoDBAtlasVectorSearch,
-)
-from langchain.schema import Document
 import os
+from typing import Any, Callable, Dict, Type
 
 import orjson
+from langchain.schema import Document
+from langchain.vectorstores import (
+    FAISS,
+    Chroma,
+    MongoDBAtlasVectorSearch,
+    Pinecone,
+    Qdrant,
+    SupabaseVectorStore,
+    Weaviate,
+)
 
 
 def docs_in_params(params: dict) -> bool:
@@ -26,8 +26,8 @@ def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dic
     MONGODB_ATLAS_CLUSTER_URI = params.pop("mongodb_atlas_cluster_uri")
     if not MONGODB_ATLAS_CLUSTER_URI:
         raise ValueError("Mongodb atlas cluster uri must be provided in the params")
-    from pymongo import MongoClient
     import certifi
+    from pymongo import MongoClient
 
     client: MongoClient = MongoClient(MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where())
     db_name = params.pop("db_name", None)

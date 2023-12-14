@@ -4,18 +4,18 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     AgentVertex,
     ChainVertex,
+    CustomComponentVertex,
     DocumentLoaderVertex,
     EmbeddingVertex,
     LLMVertex,
     MemoryVertex,
     PromptVertex,
+    RetrieverVertex,
     TextSplitterVertex,
-    ToolVertex,
     ToolkitVertex,
+    ToolVertex,
     VectorStoreVertex,
     WrapperVertex,
-    RetrieverVertex,
-    CustomComponentVertex,
 )
 
 __all__ = [

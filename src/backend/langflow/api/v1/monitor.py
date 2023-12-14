@@ -1,10 +1,10 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
-from langflow.services.monitor.schema import MessageModel, TransactionModel
 
-from loguru import logger
-from langflow.services.getters import get_monitor_service
+from fastapi import APIRouter, Depends, HTTPException
+from langflow.services.deps import get_monitor_service
+from langflow.services.monitor.schema import MessageModel, TransactionModel
 from langflow.services.monitor.service import MonitorService
+from loguru import logger
 
 # build router
 router = APIRouter(prefix="/monitor", tags=["Monitor"])

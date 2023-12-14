@@ -1,10 +1,8 @@
 import ast
-from typing import Callable, Dict, List, Union, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from langflow.graph.vertex.base import StatelessVertex
-from langflow.graph.utils import flatten_list
 from langflow.graph.utils import UnbuiltObject, flatten_list
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import StatelessVertex, Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.utils.schemas import ChatOutputResponse
 
@@ -81,11 +79,11 @@ class LLMVertex(StatelessVertex):
     built_node_type = None
     class_built_object = None
 
-
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="llms", params=params)
 
         self.steps: List[Callable] = [self._custom_build]
+
     # def _custom_build(self, *args, **kwargs):
     async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
@@ -124,6 +122,7 @@ class WrapperVertex(Vertex):
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
             self._build(user_id=user_id)
+
     async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         if not self._built or force:
             if "headers" in self.params:
@@ -230,6 +229,7 @@ class ChainVertex(Vertex):
                 self.params[key] = value.build(tools=tools, pinned=force)
 
         self._build(user_id=user_id)
+
     async def build(
         self,
         force: bool = False,
@@ -272,6 +272,7 @@ class PromptVertex(Vertex):
         kwargs.get("force", False)
         kwargs.get("user_id", None)
         kwargs.get("tools", [])
+
     async def build(
         self,
         force: bool = False,

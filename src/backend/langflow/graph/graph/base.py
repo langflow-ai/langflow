@@ -1,11 +1,8 @@
 from collections import defaultdict, deque
 from typing import Dict, Generator, List, Type, Union
 
-from langflow.graph.edge.base import ContractEdge
 from langchain.chains.base import Chain
-from loguru import logger
-
-from langflow.graph.edge.base import Edge
+from langflow.graph.edge.base import ContractEdge, Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex

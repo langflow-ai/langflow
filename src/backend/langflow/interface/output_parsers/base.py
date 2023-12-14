@@ -1,14 +1,12 @@
 from typing import ClassVar, Dict, List, Optional, Type
 
 from langchain import output_parsers
-
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.services.deps import get_settings_service
-
 from langflow.template.frontend_node.output_parsers import OutputParserFrontendNode
-from loguru import logger
 from langflow.utils.util import build_template_from_class, build_template_from_method
+from loguru import logger
 
 
 class OutputParserCreator(LangChainTypeCreator):

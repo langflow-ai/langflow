@@ -1,5 +1,5 @@
-from langflow.services.factory import ServiceFactory
 from langflow.services.auth.service import AuthService
+from langflow.services.factory import ServiceFactory
 
 
 class AuthServiceFactory(ServiceFactory):

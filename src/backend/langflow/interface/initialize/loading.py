@@ -11,9 +11,6 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
-from loguru import logger
-from pydantic import ValidationError
-
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
@@ -25,6 +22,8 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
+from loguru import logger
+from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -223,9 +222,7 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
         params["llm"] = params["llm"][0]
     chain = class_object(**params)
 
-    input_keys_dict = {
-        "input_keys": chain.input_keys if hasattr(chain, "input_keys") else []
-    }
+    input_keys_dict = {"input_keys": chain.input_keys if hasattr(chain, "input_keys") else []}
     return chain, input_keys_dict
 
 

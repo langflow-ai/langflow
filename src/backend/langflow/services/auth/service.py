@@ -1,5 +1,6 @@
-from langflow.services.base import Service
 from typing import TYPE_CHECKING
+
+from langflow.services.base import Service
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService

@@ -5,7 +5,6 @@ from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever, Document
 from langchain.vectorstores import Chroma
 from langchain.vectorstores.base import VectorStore
-
 from langflow import CustomComponent
 
 

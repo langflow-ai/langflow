@@ -1,15 +1,15 @@
 from langflow.template.frontend_node import (
     agents,
     chains,
+    custom_components,
+    documentloaders,
     embeddings,
     llms,
     memories,
     prompts,
+    textsplitters,
     tools,
     vectorstores,
-    documentloaders,
-    textsplitters,
-    custom_components,
 )
 
 __all__ = [

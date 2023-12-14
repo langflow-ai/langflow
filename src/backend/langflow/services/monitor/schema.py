@@ -1,14 +1,13 @@
 import json
-from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, Field, validator
 
 
 class TransactionModel(BaseModel):
     id: Optional[int] = Field(default=None, alias="id")
-    timestamp: Optional[datetime] = Field(
-        default_factory=datetime.now, alias="timestamp"
-    )
+    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     source: str
     target: str
     target_args: dict

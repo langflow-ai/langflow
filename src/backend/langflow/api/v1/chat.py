@@ -1,52 +1,28 @@
-from fastapi import (
-    APIRouter,
-    Body,
-    Depends,
-    HTTPException,
-    Query,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+import time
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from langflow.api.utils import build_input_keys_response
+from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import (
     BuildStatus,
     BuiltResponse,
     InitResponse,
     ResultDict,
+    StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
-    StreamData,
 )
-
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
-
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow.flow import Flow
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.auth.utils import (
-    get_current_active_user,
-    get_current_user_by_jwt,
-)
-from langflow.services.cache.utils import update_build_status
-import time
-
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
-from fastapi.responses import StreamingResponse
-from loguru import logger
-from sqlmodel import Session
-
-from langflow.api.utils import build_input_keys_response, format_elapsed_time
-from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
-from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
+from langflow.services.database.models.flow.flow import Flow
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
+from loguru import logger
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 

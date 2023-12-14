@@ -1,6 +1,7 @@
 from typing import List, Optional
+
 from langflow import CustomComponent
-from langflow.services.getters import get_monitor_service
+from langflow.services.deps import get_monitor_service
 
 
 class SessionIDComponent(CustomComponent):

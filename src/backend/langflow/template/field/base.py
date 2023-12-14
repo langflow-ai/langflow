@@ -1,8 +1,7 @@
 from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
-
 from langflow.field_typing.range_spec import RangeSpec
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class TemplateField(BaseModel):

@@ -3,7 +3,6 @@ from typing import Optional, Union
 from langchain.schema import BaseRetriever, Document
 from langchain.vectorstores import Vectara
 from langchain.vectorstores.base import VectorStore
-
 from langflow import CustomComponent
 
 

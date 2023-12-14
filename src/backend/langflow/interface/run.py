@@ -1,9 +1,8 @@
 from typing import Dict, Optional, Tuple, Union
 from uuid import UUID
 
-from loguru import logger
-
 from langflow.graph import Graph
+from loguru import logger
 
 
 async def build_sorted_vertices(data_graph, user_id: Optional[Union[str, UUID]] = None) -> Tuple[Graph, Dict]:

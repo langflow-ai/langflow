@@ -1,10 +1,11 @@
-from locust import FastHttpUser, task, between
 import random
 import time
-import orjson
-from rich import print
-import httpx
 from pathlib import Path
+
+import httpx
+import orjson
+from locust import FastHttpUser, between, task
+from rich import print
 
 
 class NameTest(FastHttpUser):

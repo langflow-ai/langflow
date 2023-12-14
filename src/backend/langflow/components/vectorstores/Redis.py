@@ -1,10 +1,10 @@
 from typing import Optional
-from langflow import CustomComponent
 
-from langchain.vectorstores.redis import Redis
+from langchain.embeddings.base import Embeddings
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
-from langchain.embeddings.base import Embeddings
+from langchain.vectorstores.redis import Redis
+from langflow import CustomComponent
 
 
 class RedisComponent(CustomComponent):
