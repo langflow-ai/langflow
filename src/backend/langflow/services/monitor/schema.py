@@ -15,8 +15,8 @@ class TransactionModel(BaseModel):
     error: Optional[str] = None
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        populate_by_name = True
 
     # validate target_args in case it is a JSON
     @validator("target_args", pre=True)
@@ -36,8 +36,8 @@ class MessageModel(BaseModel):
     artifacts: dict
 
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        populate_by_name = True
 
     @validator("artifacts", pre=True)
     def validate_target_args(cls, v):
