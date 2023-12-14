@@ -254,6 +254,8 @@ class ChainVertex(Vertex):
             await self._build(user_id=user_id)
 
     def set_artifacts(self) -> None:
+        if isinstance(self._built_object, UnbuiltObject):
+            return
         if self._built_object and hasattr(self._built_object, "input_keys"):
             self.artifacts = dict(input_keys=self._built_object.input_keys)
 
@@ -320,6 +322,7 @@ class PromptVertex(Vertex):
         # Remove the handle_keys from the artifacts
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
+        template = ""
         try:
             if (
                 not hasattr(self._built_object, "template")
