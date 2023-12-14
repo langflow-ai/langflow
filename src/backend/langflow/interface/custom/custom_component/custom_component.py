@@ -5,17 +5,16 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
-from langflow.interface.custom.component import Component
-from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.interface.custom.utils import (
+from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias,
-)
+    extract_union_types_from_generic_alias)
+from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
 from langflow.utils import validate
+
+from .component import Component
 
 
 class CustomComponent(Component):
@@ -31,9 +30,7 @@ class CustomComponent(Component):
     status: Optional[str] = None
     _tree: Optional[dict] = None
 
-    @property
-    def return_type_valid_list(self):
-        return list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
+
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
@@ -81,7 +78,7 @@ class CustomComponent(Component):
 
     @property
     def tree(self):
-        return self.get_code_tree(self.code)
+        return self.get_code_tree(self.code or "")
 
     @property
     def get_function_entrypoint_args(self) -> list:
@@ -109,11 +106,11 @@ class CustomComponent(Component):
     @cachedmethod(operator.attrgetter("cache"))
     def get_build_method(self):
         if not self.code:
-            return []
+            return {}
 
         component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
-            return []
+            return {}
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
@@ -121,19 +118,13 @@ class CustomComponent(Component):
             method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
-        if not build_methods:
-            return []
-
-        return build_methods[0]
+        return build_methods[0] if build_methods else {}
 
     @property
     def get_function_entrypoint_return_type(self) -> List[Any]:
         build_method = self.get_build_method()
-        if not build_method:
+        if not build_method or not build_method.get("has_return"):
             return []
-        elif not build_method["has_return"]:
-            return []
-
         return_type = build_method["return_type"]
 
         # If list or List is in the return type, then we remove it and return the inner type
@@ -142,10 +133,7 @@ class CustomComponent(Component):
 
         # If the return type is not a Union, then we just return it as a list
         if not hasattr(return_type, "__origin__") or return_type.__origin__ != Union:
-            if isinstance(return_type, list):
-                return return_type
-            return [return_type]
-
+            return return_type if isinstance(return_type, list) else [return_type]
         # If the return type is a Union, then we need to parse itx
         return_type = extract_union_types_from_generic_alias(return_type)
         return return_type
@@ -211,9 +199,7 @@ class CustomComponent(Component):
         """Returns a function that returns the value at the given index in the iterable."""
 
         def get_index(iterable: List[Any]):
-            if iterable:
-                return iterable[value]
-            return iterable
+            return iterable[value] if iterable else iterable
 
         return get_index
 
@@ -222,7 +208,8 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices, process_tweaks
+        from langflow.processing.process import (build_sorted_vertices,
+                                                 process_tweaks)
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
