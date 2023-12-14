@@ -17,9 +17,7 @@
       ],
       "jinja": true,
       "justMyCode": true,
-      "env": {
-        "LANGFLOW_AUTO_LOGIN": "true"
-      }
+      "envFile": "${workspaceFolder}/.env"
     },
     {
       "name": "Python: Remote Attach",

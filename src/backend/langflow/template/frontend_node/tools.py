@@ -34,7 +34,7 @@ class ToolNode(FrontendNode):
             ),
             TemplateField(
                 name="func",
-                field_type="function",
+                field_type="Callable",
                 required=True,
                 is_list=False,
                 show=True,
@@ -55,9 +55,6 @@ class ToolNode(FrontendNode):
     )
     description: str = "Converts a chain, agent or function into a tool."
     base_classes: list[str] = ["Tool", "BaseTool"]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class PythonFunctionToolNode(FrontendNode):
@@ -113,9 +110,6 @@ class PythonFunctionToolNode(FrontendNode):
     description: str = "Python function to be executed."
     base_classes: list[str] = ["BaseTool", "Tool"]
 
-    def to_dict(self):
-        return super().to_dict()
-
 
 class PythonFunctionNode(FrontendNode):
     output_type: str = "Tool"
@@ -136,7 +130,4 @@ class PythonFunctionNode(FrontendNode):
         ],
     )
     description: str = "Python function to be executed."
-    base_classes: list[str] = ["function"]
-
-    def to_dict(self):
-        return super().to_dict()
+    base_classes: list[str] = ["Callable"]

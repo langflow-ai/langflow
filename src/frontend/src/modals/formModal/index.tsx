@@ -198,6 +198,7 @@ export default function FormModal({
       window.location.protocol === "https:" || window.location.port === "443";
     const webSocketProtocol = isSecureProtocol ? "wss" : "ws";
     const host = isDevelopment ? "localhost:7860" : window.location.host;
+
     const chatEndpoint = `/api/v1/chat/${chatId}`;
 
     return `${
@@ -393,7 +394,7 @@ export default function FormModal({
       const message = inputs;
       addChatHistory(message!, true, chatKey!, template.current);
       sendAll({
-        ...reactFlowInstance?.toObject()!,
+        ...flow.data!,
         inputs: inputs!,
         chatHistory,
         name: flow.name,

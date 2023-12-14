@@ -10,7 +10,7 @@ from langchain.base_language import BaseLanguageModel
 from PIL.Image import Image
 from loguru import logger
 from langflow.services.chat.config import ChatConfig
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -43,9 +43,7 @@ def try_setting_streaming_options(langchain_object):
     llm = None
     if hasattr(langchain_object, "llm"):
         llm = langchain_object.llm
-    elif hasattr(langchain_object, "llm_chain") and hasattr(
-        langchain_object.llm_chain, "llm"
-    ):
+    elif hasattr(langchain_object, "llm_chain") and hasattr(langchain_object.llm_chain, "llm"):
         llm = langchain_object.llm_chain.llm
 
     if isinstance(llm, BaseLanguageModel):
@@ -79,12 +77,8 @@ def set_langchain_cache(settings):
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:
-            try:
-                cache_class = import_class(
-                    f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}"
-                )
-            except ImportError:
-                cache_class = import_class("langchain.cache.InMemoryCache")
+            cache_class = import_class(f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}")
+
             logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
             set_llm_cache(cache_class())
             logger.info(f"LLM caching setup with {cache_class.__name__}")

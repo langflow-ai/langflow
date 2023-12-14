@@ -1,3 +1,4 @@
+import _ from "lodash";
 import {
   createContext,
   ReactNode,
@@ -5,6 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
@@ -49,11 +51,13 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       // Make sure to only update the state if the component is still mounted.
       if (isMounted && result?.status === 200) {
         setLoading(false);
-        setData(result.data);
+        let { data } = _.cloneDeep(result);
+        setData((old) => ({ ...old, ...data }));
         setTemplates(
-          Object.keys(result.data).reduce((acc, curr) => {
-            Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
-              acc[c] = result.data[curr][c];
+          Object.keys(data).reduce((acc, curr) => {
+            Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+              //prevent wrong overwriting of the component template by a group of the same type
+              if (!data[curr][c].flow) acc[c] = data[curr][c];
             });
             return acc;
           }, {})
@@ -61,13 +65,13 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         // Set the types by reducing over the keys of the result data and updating the accumulator.
         setTypes(
           // Reverse the keys so the tool world does not overlap
-          Object.keys(result.data)
+          Object.keys(data)
             .reverse()
             .reduce((acc, curr) => {
-              Object.keys(result.data[curr]).forEach((c: keyof APIKindType) => {
+              Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
                 acc[c] = curr;
                 // Add the base classes to the accumulator as well.
-                result.data[curr][c].base_classes?.forEach((b) => {
+                data[curr][c].base_classes?.forEach((b) => {
                   acc[b] = curr;
                 });
               });
@@ -77,6 +81,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("An error has occurred while fetching types.");
+      console.log(error);
       await getHealth().catch((e) => {
         setFetchError(true);
       });

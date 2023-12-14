@@ -38,6 +38,8 @@ export type alertContextType = {
   removeFromNotificationList: (index: string) => void;
   loading: boolean;
   setLoading: (newState: boolean) => void;
+  modalContextOpen: boolean | null;
+  setModalContextOpen: (newState: boolean) => void;
 };
 
 export type darkContextType = {

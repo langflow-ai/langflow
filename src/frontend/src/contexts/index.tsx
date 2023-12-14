@@ -9,6 +9,8 @@ import { DarkProvider } from "./darkContext";
 import FlowManagerProvider from "./flowManagerContext";
 import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
+import { StoreProvider } from "./storeContext";
+
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
 
@@ -28,8 +30,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                         <FlowsProvider>
                           <UndoRedoProvider>
                             <FlowManagerProvider>
-                              {children}
-                            </FlowManagerProvider>
+                            <StoreProvider>{children}</StoreProvider>                            </FlowManagerProvider>
                           </UndoRedoProvider>
                         </FlowsProvider>
                     </LocationProvider>

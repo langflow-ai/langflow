@@ -24,6 +24,7 @@ export type APIClassType = {
   pinned?: boolean;
   documentation: string;
   error?: string;
+  official?: boolean;
   flow?: FlowType;
   [key: string]:
     | Array<string>
@@ -131,4 +132,11 @@ export type Users = {
   profile_image: string;
   create_at: Date;
   updated_at: Date;
+};
+
+export type Component = {
+  name: string;
+  description: string;
+  data: Object;
+  tags: [string];
 };

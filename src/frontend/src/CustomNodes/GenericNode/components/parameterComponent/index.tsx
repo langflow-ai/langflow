@@ -24,10 +24,20 @@ import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { TOOLTIP_EMPTY } from "../../../../constants/constants";
 import { flowManagerContext } from "../../../../contexts/flowManagerContext";
+import {
+  LANGFLOW_SUPPORTED_TYPES,
+  TOOLTIP_EMPTY,
+} from "../../../../constants/constants";
+import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import { postCustomComponentUpdate } from "../../../../controllers/API";
+import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
+import { NodeDataType } from "../../../../types/flow";
 import {
+  cleanEdges,
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
@@ -45,7 +55,6 @@ export default function ParameterComponent({
   left,
   id,
   data,
-  setData,
   tooltipTitle,
   title,
   color,
@@ -61,9 +70,13 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, selectedFlowId, flows } = useContext(FlowsContext);
+  const { setTabsState, selectedFlowId, flows, tabsState, updateFlow } =
+    useContext(FlowsContext);
+
+  const [dataRef, setDataRef] = useState(data);
 
   const flow =
     flows.find((flow) => flow.id === selectedFlowId)?.data?.nodes ?? null;
@@ -81,36 +94,110 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
+
+  useEffect(() => {
+    setDataRef(data);
+  }, [modalContextOpen]);
+
   const { reactFlowInstance, setFilterEdge } = useContext(flowManagerContext);
   let disabled =
     reactFlowInstance
       ?.getEdges()
-      .some((edge) => edge.targetHandle === scapedJSONStringfy(id)) ?? false;
+      .some(
+        (edge) =>
+          edge.targetHandle ===
+          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+      ) ?? false;
 
   const { data: myData } = useContext(typesContext);
+
+  const { takeSnapshot } = useContext(undoRedoContext);
+
+  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+    const code = data.node?.template["code"]?.value;
+    if (!code) {
+      console.error("Code not found in the template");
+      return;
+    }
+
+    try {
+      const res = await postCustomComponentUpdate(code, name);
+      if (res.status === 200 && data.node?.template) {
+        data.node!.template[name] = res.data.template[name];
+      }
+    } catch (err) {
+      setErrorData(err as { title: string; list?: Array<string> });
+    }
+  };
 
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
-    let newData = cloneDeep(data);
-    newData.node!.template[name].value = newValue;
-    setData(newData);
+    if (data.node!.template[name].value !== newValue) {
+      takeSnapshot();
+    }
+    data.node!.template[name].value = newValue;
+    updateNodeInternals(data.id);
+
+    setDataRef((old) => {
+      let newData = cloneDeep(old);
+      newData.node!.template[name].value = newValue;
+      return newData;
+    });
+
     // Set state to pending
     //@ts-ignore
-    setTabsState((prev: TabsState) => {
-      if (!prev[selectedFlowId]) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [selectedFlowId]: {
-          ...prev[selectedFlowId],
-          isPending: true,
-          formKeysData: prev[selectedFlowId].formKeysData,
-        },
-      };
-    });
+    if (data.node!.template[name].value !== newValue) {
+      const tabs = cloneDeep(tabsState);
+      tabs[selectedFlowId].isPending = false;
+      tabs[selectedFlowId].formKeysData = tabsState[selectedFlowId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
     renderTooltips();
+  };
+
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+    if (!data.node) return;
+    if (data.node!.template[name].value !== newNodeClass.template[name].value) {
+      takeSnapshot();
+    }
+    data.node! = {
+      ...newNodeClass,
+      description: newNodeClass.description ?? data.node!.description,
+      display_name: newNodeClass.display_name ?? data.node!.display_name,
+    };
+    data.node!.template[name].value = code;
+    updateNodeInternals(data.id);
+    // Set state to pending
+    //@ts-ignore
+    if (data.node!.template[name].value !== code) {
+      const tabs = cloneDeep(tabsState);
+      tabs[selectedFlowId].isPending = false;
+      tabs[selectedFlowId].formKeysData = tabsState[selectedFlowId].formKeysData;
+      setTabsState({
+        ...tabs,
+      });
+    }
+    renderTooltips();
+    let flow = flows.find((flow) => flow.id === selectedFlowId);
+    setTimeout(() => {
+      //timeout necessary because ReactFlow updates are not async
+      if (reactFlowInstance && flow && flow.data) {
+        cleanEdges({
+          flow: {
+            edges: flow.data!.edges,
+            nodes: flow.data!.nodes,
+          },
+          updateEdge: (edge) => {
+            reactFlowInstance.setEdges(edge);
+            updateNodeInternals(data.id);
+          },
+        });
+        updateFlow(flow);
+      }
+    }, 50);
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
@@ -169,21 +256,40 @@ export default function ParameterComponent({
               </div>
               <span className="ps-2 text-xs text-foreground">
                 {nodeNames[item.family] ?? "Other"}{" "}
-                <span className="text-xs">
-                  {" "}
-                  {item.type === "" ? "" : " - "}
-                  {item.type.split(", ").length > 2
-                    ? item.type.split(", ").map((el, index) => (
-                        <React.Fragment key={el + index}>
-                          <span>
-                            {index === item.type.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
-                    : item.type}
-                </span>
+                {item?.display_name && item?.display_name?.length > 0 ? (
+                  <span className="text-xs">
+                    {" "}
+                    {item.display_name === "" ? "" : " - "}
+                    {item.display_name.split(", ").length > 2
+                      ? item.display_name.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index ===
+                              item.display_name.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.display_name}
+                  </span>
+                ) : (
+                  <span className="text-xs">
+                    {" "}
+                    {item.type === "" ? "" : " - "}
+                    {item.type.split(", ").length > 2
+                      ? item.type.split(", ").map((el, index) => (
+                          <React.Fragment key={el + index}>
+                            <span>
+                              {index === item.type.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
+                      : item.type}
+                  </span>
+                )}
               </span>
             </span>
           </div>
@@ -200,17 +306,7 @@ export default function ParameterComponent({
   }, [tooltipTitle, flow]);
 
   return !showNode ? (
-    left &&
-    (type === "str" ||
-      type === "bool" ||
-      type === "float" ||
-      type === "code" ||
-      type === "prompt" ||
-      type === "file" ||
-      type === "int" ||
-      type === "dict" ||
-      type === "NestedDict") &&
-    !optionalHandle ? (
+    left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
       <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -283,17 +379,7 @@ export default function ParameterComponent({
             )}
           </div>
         </div>
-        {left &&
-        (type === "str" ||
-          type === "bool" ||
-          type === "float" ||
-          type === "code" ||
-          type === "prompt" ||
-          type === "file" ||
-          type === "int" ||
-          type === "dict" ||
-          type === "NestedDict") &&
-        !optionalHandle ? (
+        {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
@@ -355,6 +441,7 @@ export default function ParameterComponent({
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
                 id={"textarea-" + index}
+                data-testid={"textarea-" + index}
               />
             ) : (
               <InputComponent
@@ -383,19 +470,33 @@ export default function ParameterComponent({
             <FloatComponent
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
+              rangeSpec={data.node?.template[name].rangeSpec}
               onChange={handleOnNewValue}
             />
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name].options !== undefined &&
-          data.node?.template[name].options !== null ? (
-          <div className="mt-2 w-full">
-            <Dropdown
-              options={data.node.template[name]?.options}
-              onSelect={handleOnNewValue}
-              value={data.node.template[name].value ?? "Choose an option"}
-            ></Dropdown>
+          data.node?.template[name].options ? (
+          // TODO: Improve CSS
+          <div className="mt-2 flex w-full items-center">
+            <div className="w-5/6 flex-grow">
+              <Dropdown
+                options={data.node.template[name].options}
+                onSelect={handleOnNewValue}
+                value={data.node.template[name].value ?? "Choose an option"}
+                id={"dropdown-" + index}
+              />
+            </div>
+            {data.node?.template[name].refresh && (
+              <button
+                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
+                onClick={() => {
+                  handleUpdateValues(name, data);
+                }}
+              >
+                <IconComponent name="RefreshCcw" />
+              </button>
+            )}
           </div>
         ) : left === true && type === "code" ? (
           <div className="mt-2 w-full">
@@ -406,9 +507,7 @@ export default function ParameterComponent({
                   : false
               }
               dynamic={data.node?.template[name].dynamic ?? false}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
@@ -423,7 +522,6 @@ export default function ParameterComponent({
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
               fileTypes={data.node?.template[name].fileTypes}
-              suffixes={data.node?.template[name].suffixes}
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
               }}
@@ -443,19 +541,13 @@ export default function ParameterComponent({
             <PromptAreaComponent
               readonly={data.node?.flow ? true : false}
               field_name={name}
-              setNodeClass={(nodeClass) => {
-                data.node = nodeClass;
-                const clone = cloneDeep(data);
-                clone.node = nodeClass;
-                setData(clone);
-              }}
+              setNodeClass={handleNodeClass}
               nodeClass={data.node}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
-              onChange={(e) => {
-                handleOnNewValue(e);
-              }}
+              onChange={handleOnNewValue}
               id={"prompt-input-" + index}
+              data-testid={"prompt-input-" + index}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
@@ -475,6 +567,7 @@ export default function ParameterComponent({
                 data.node!.template[name].value = newValue;
                 handleOnNewValue(newValue);
               }}
+              id="div-dict-input"
             />
           </div>
         ) : left === true && type === "dict" ? (
@@ -483,10 +576,10 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                data.node!.template[name].value?.length === 0 ||
-                !data.node!.template[name].value
+                dataRef.node!.template[name].value?.length === 0 ||
+                !dataRef.node!.template[name].value
                   ? [{ "": "" }]
-                  : convertObjToArray(data.node!.template[name].value)
+                  : convertObjToArray(dataRef.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {

@@ -8,7 +8,7 @@ export default function DisclosureComponent({
   openDisc,
 }: DisclosureComponentType): JSX.Element {
   return (
-    <Disclosure as="div" key={title}>
+    <Disclosure as="div" defaultOpen={openDisc} key={title}>
       {({ open }) => (
         <>
           <div>
@@ -35,9 +35,7 @@ export default function DisclosureComponent({
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div" static={openDisc}>
-            {children}
-          </Disclosure.Panel>
+          <Disclosure.Panel as="div">{children}</Disclosure.Panel>
         </>
       )}
     </Disclosure>

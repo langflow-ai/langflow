@@ -7,6 +7,8 @@ import { FlowType } from "../../../types/flow";
 import { flowManagerContext } from "../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
 import { buildVertices } from "../../../utils/buildUtils";
+import { parsedDataType } from "../../../types/components";
+import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import { classNames } from "../../../utils/utils";
 import RadialProgressComponent from "../../RadialProgress";
@@ -23,6 +25,9 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }): JSX.Element {
   const { setTabsState } = useContext(FlowsContext);
+  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
+  const { reactFlowInstance } = useContext(typesContext);
+  const { setTabsState, saveFlow } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const { addDataToFlowPool, reactFlowInstance, showPanel,isBuilding,setIsBuilding } =
     useContext(flowManagerContext);

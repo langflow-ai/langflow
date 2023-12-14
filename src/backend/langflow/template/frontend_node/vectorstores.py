@@ -314,7 +314,7 @@ class VectorStoreFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.is_list = True
-        elif "embedding" in field.name:
+        elif field.name and "embedding" in field.name:
             # for backwards compatibility
             field.name = "embedding"
             field.required = True

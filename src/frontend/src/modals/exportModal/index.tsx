@@ -12,7 +12,7 @@ import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, selectedFlowId } = useContext(FlowsContext);
+    const { flows, selectedFlowId, version } = useContext(FlowsContext);
     const { reactFlowInstance, downloadFlow } = useContext(flowManagerContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
@@ -26,7 +26,7 @@ const ExportModal = forwardRef(
     const [open, setOpen] = useState(false);
 
     return (
-      <BaseModal size="smaller" open={open} setOpen={setOpen}>
+      <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
         <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
@@ -55,7 +55,7 @@ const ExportModal = forwardRef(
               Save with my API keys
             </label>
           </div>
-          <span className="text-xs text-destructive">
+          <span className=" text-xs text-destructive ">
             Caution: Uncheck this box only removes API keys from fields
             specifically designated for API keys.
           </span>
@@ -68,9 +68,11 @@ const ExportModal = forwardRef(
                 downloadFlow(
                   {
                     id: selectedFlowId,
-                    data: reactFlowInstance?.toObject()!,
+                    data: flow!.data!,
                     description,
                     name,
+                    last_tested_version: version,
+                    is_component: false,
                   },
                   name!,
                   description
@@ -83,9 +85,11 @@ const ExportModal = forwardRef(
                 downloadFlow(
                   removeApiKeys({
                     id: selectedFlowId,
-                    data: reactFlowInstance?.toObject()!,
+                    data: flow!.data!,
                     description,
                     name,
+                    last_tested_version: version,
+                    is_component: false,
                   }),
                   name!,
                   description

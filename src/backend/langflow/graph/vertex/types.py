@@ -1,15 +1,17 @@
 import ast
 from typing import Callable, Dict, List, Union, Optional
 
-from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
+from langflow.graph.vertex.base import StatelessVertex
 from langflow.graph.utils import flatten_list
+from langflow.graph.utils import UnbuiltObject, flatten_list
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.utils.schemas import ChatOutputResponse
 
 
-class AgentVertex(StatelessVertex):
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="agents", params=params)
+class AgentVertex(Vertex):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
+        super().__init__(data, graph=graph, base_type="agents", params=params)
 
         self.tools: List[Union[ToolkitVertex, ToolVertex]] = []
         self.chains: List[ChainVertex] = []
@@ -28,9 +30,9 @@ class AgentVertex(StatelessVertex):
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
-            if not hasattr(edge, "source"):
+            if not hasattr(edge, "source_id"):
                 continue
-            source_node = edge.source
+            source_node = self.graph.get_vertex(edge.source_id)
             if isinstance(source_node, (ToolVertex, ToolkitVertex)):
                 self.tools.append(source_node)
             elif isinstance(source_node, ChainVertex):
@@ -49,21 +51,43 @@ class AgentVertex(StatelessVertex):
 
         self._build(user_id=user_id)
 
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+        if not self._built or force:
+            self._set_tools_and_chains()
+            # First, build the tools
+            for tool_node in self.tools:
+                await tool_node.build(user_id=user_id)
 
-class ToolVertex(StatelessVertex):
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="tools", params=params)
+            # Next, build the chains and the rest
+            for chain_node in self.chains:
+                await chain_node.build(tools=self.tools, user_id=user_id)
+
+            await self._build(user_id=user_id)
+
+        return self._built_object
+
+
+class ToolVertex(Vertex):
+    def __init__(
+        self,
+        data: Dict,
+        graph,
+        params: Optional[Dict] = None,
+    ):
+        super().__init__(data, graph=graph, base_type="tools", params=params)
 
 
 class LLMVertex(StatelessVertex):
     built_node_type = None
     class_built_object = None
 
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="llms", params=params)
-        self.steps: List[Callable] = [self._custom_build]
 
-    def _custom_build(self, *args, **kwargs):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
+        super().__init__(data, graph=graph, base_type="llms", params=params)
+
+        self.steps: List[Callable] = [self._custom_build]
+    # def _custom_build(self, *args, **kwargs):
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
         # LLM is different because some models might take up too much memory
         # or time to load. So we only load them when we need them.
         # Avoid deepcopying the LLM
@@ -73,24 +97,24 @@ class LLMVertex(StatelessVertex):
         if self.vertex_type == self.built_node_type:
             self._built_object = self.class_built_object
         if not self._built or force:
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
             self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
 
 
-class ToolkitVertex(StatelessVertex):
-    def __init__(self, data: Dict, params=None):
-        super().__init__(data, base_type="toolkits", params=params)
+class ToolkitVertex(Vertex):
+    def __init__(self, data: Dict, graph, params=None):
+        super().__init__(data, graph=graph, base_type="toolkits", params=params)
 
 
 class FileToolVertex(ToolVertex):
-    def __init__(self, data: Dict, params=None):
-        super().__init__(data, params=params)
+    def __init__(self, data: Dict, graph, params=None):
+        super().__init__(data, graph=graph, params=params)
 
 
-class WrapperVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="wrappers")
+class WrapperVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="wrappers")
         self.steps: List[Callable] = [self._custom_build]
 
     def _custom_build(self, *args, **kwargs):
@@ -100,51 +124,46 @@ class WrapperVertex(StatelessVertex):
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
             self._build(user_id=user_id)
+    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+        if not self._built or force:
+            if "headers" in self.params:
+                self.params["headers"] = ast.literal_eval(self.params["headers"])
+            await self._build(user_id=user_id)
+        return self._built_object
 
 
-class DocumentLoaderVertex(StatefulVertex):
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="documentloaders", params=params)
+class DocumentLoaderVertex(Vertex):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
+        super().__init__(data, graph=graph, base_type="documentloaders", params=params)
 
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
 
-        if self._built_object:
-            avg_length = sum(
-                len(doc.page_content)
-                for doc in self._built_object
-                if hasattr(doc, "page_content")
-            ) / len(self._built_object)
+        if self._built_object and not isinstance(self._built_object, UnbuiltObject):
+            avg_length = sum(len(doc.page_content) for doc in self._built_object if hasattr(doc, "page_content")) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
 
-class EmbeddingVertex(StatefulVertex):
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="embeddings", params=params)
+class EmbeddingVertex(Vertex):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
+        super().__init__(data, graph=graph, base_type="embeddings", params=params)
 
 
-class VectorStoreVertex(StatefulVertex):
-    def __init__(self, data: Dict, params=None):
-        super().__init__(data, base_type="vectorstores")
+class VectorStoreVertex(Vertex):
+    def __init__(self, data: Dict, graph, params=None):
+        super().__init__(data, graph=graph, base_type="vectorstores")
 
         self.params = params or {}
 
     # VectorStores may contain databse connections
     # so we need to define the __reduce__ method and the __setstate__ method
     # to avoid pickling errors
-    def clean_edges_for_pickling(self):
-        # for each edge that has self as source
-        # we need to clear the _built_object of the target
-        # so that we don't try to pickle a database connection
-        for edge in self.edges:
-            if edge.source == self:
-                edge.target._built_object = None
-                edge.target._built = False
-                edge.target.params[edge.target_param] = self
 
     def remove_docs_and_texts_from_params(self):
         # remove documents and texts from params
@@ -152,54 +171,51 @@ class VectorStoreVertex(StatefulVertex):
         self.params.pop("documents", None)
         self.params.pop("texts", None)
 
-    def __getstate__(self):
-        # We want to save the params attribute
-        # and if "documents" or "texts" are in the params
-        # we want to remove them because they have already
-        # been processed.
-        params = self.params.copy()
-        params.pop("documents", None)
-        params.pop("texts", None)
-        self.clean_edges_for_pickling()
+    # def __getstate__(self):
+    #     # We want to save the params attribute
+    #     # and if "documents" or "texts" are in the params
+    #     # we want to remove them because they have already
+    #     # been processed.
+    #     params = self.params.copy()
+    #     params.pop("documents", None)
+    #     params.pop("texts", None)
 
-        return super().__getstate__()
+    #     return super().__getstate__()
 
     def __setstate__(self, state):
         super().__setstate__(state)
         self.remove_docs_and_texts_from_params()
 
 
-class MemoryVertex(StatefulVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="memory")
+class MemoryVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="memory")
 
 
-class RetrieverVertex(StatefulVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="retrievers")
+class RetrieverVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="retrievers")
 
 
-class TextSplitterVertex(StatefulVertex):
-    def __init__(self, data: Dict, params: Optional[Dict] = None):
-        super().__init__(data, base_type="textsplitters", params=params)
+class TextSplitterVertex(Vertex):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
+        super().__init__(data, graph=graph, base_type="textsplitters", params=params)
 
     def _built_object_repr(self):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
 
-        if self._built_object:
-            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
-                self._built_object
-            )
+        if self._built_object and not isinstance(self._built_object, UnbuiltObject):
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             \nDocuments: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
 
-class ChainVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="chains")
+class ChainVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="chains")
         self.steps = [self._custom_build, self._run]
 
     def _custom_build(self, *args, **kwargs):
@@ -214,6 +230,28 @@ class ChainVertex(StatelessVertex):
                 self.params[key] = value.build(tools=tools, pinned=force)
 
         self._build(user_id=user_id)
+    async def build(
+        self,
+        force: bool = False,
+        user_id=None,
+        *args,
+        **kwargs,
+    ) -> Any:
+        if not self._built or force:
+            # Temporarily remove the code from the params
+            self.params.pop("code", None)
+            # Check if the chain requires a PromptVertex
+
+            # Temporarily remove "code" from the params
+            self.params.pop("code", None)
+
+            for key, value in self.params.items():
+                if isinstance(value, PromptVertex):
+                    # Build the PromptVertex, passing the tools if available
+                    tools = kwargs.get("tools", None)
+                    self.params[key] = await value.build(tools=tools, force=force)
+
+            await self._build(user_id=user_id)
 
     def set_artifacts(self) -> None:
         if self._built_object and hasattr(self._built_object, "input_keys"):
@@ -225,37 +263,36 @@ class ChainVertex(StatelessVertex):
         return super()._built_object_repr()
 
 
-class PromptVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="prompts")
+class PromptVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="prompts")
         self.steps: List[Callable] = [self._custom_build]
 
     def _custom_build(self, *args, **kwargs):
-        force = kwargs.get("force", False)
-        user_id = kwargs.get("user_id", None)
-        tools = kwargs.get("tools", [])
+        kwargs.get("force", False)
+        kwargs.get("user_id", None)
+        kwargs.get("tools", [])
+    async def build(
+        self,
+        force: bool = False,
+        user_id=None,
+        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
+        *args,
+        **kwargs,
+    ) -> Any:
         if not self._built or force:
-            if (
-                "input_variables" not in self.params
-                or self.params["input_variables"] is None
-            ):
+            if "input_variables" not in self.params or self.params["input_variables"] is None:
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = (
-                    [tool_node.build(user_id=user_id) for tool_node in tools]
-                    if tools is not None
-                    else []
-                )
+                tools = [await tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
                     tools = flatten_list(tools)
                 self.params["tools"] = tools
                 prompt_params = [
-                    key
-                    for key, value in self.params.items()
-                    if isinstance(value, str) and key != "format_instructions"
+                    key for key, value in self.params.items() if isinstance(value, str) and key != "format_instructions"
                 ]
             else:
                 prompt_params = ["template"]
@@ -265,20 +302,15 @@ class PromptVertex(StatelessVertex):
                     prompt_text = self.params[param]
                     variables = extract_input_variables_from_prompt(prompt_text)
                     self.params["input_variables"].extend(variables)
-                self.params["input_variables"] = list(
-                    set(self.params["input_variables"])
-                )
+                self.params["input_variables"] = list(set(self.params["input_variables"]))
             elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
-            self._build(user_id=user_id)
+            await self._build(user_id=user_id)
+        return self._built_object
 
     def _built_object_repr(self):
-        if (
-            not self.artifacts
-            or self._built_object is None
-            or not hasattr(self._built_object, "format")
-        ):
+        if not self.artifacts or self._built_object is None or not hasattr(self._built_object, "format"):
             return super()._built_object_repr()
         # We'll build the prompt with the artifacts
         # to show the user what the prompt looks like
@@ -288,43 +320,31 @@ class PromptVertex(StatelessVertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            if not hasattr(self._built_object, "template") and hasattr(
-                self._built_object, "prompt"
+            if (
+                not hasattr(self._built_object, "template")
+                and hasattr(self._built_object, "prompt")
+                and not isinstance(self._built_object, UnbuiltObject)
             ):
                 template = self._built_object.prompt.template
-            else:
+            elif not isinstance(self._built_object, UnbuiltObject) and hasattr(self._built_object, "template"):
                 template = self._built_object.template
             for key, value in artifacts.items():
                 if value:
                     replace_key = "{" + key + "}"
                     template = template.replace(replace_key, value)
-            return (
-                template
-                if isinstance(template, str)
-                else f"{self.vertex_type}({template})"
-            )
+            return template if isinstance(template, str) else f"{self.vertex_type}({template})"
         except KeyError:
             return str(self._built_object)
 
 
-class OutputParserVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="output_parsers")
+class OutputParserVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="output_parsers")
 
 
-class CustomComponentVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="custom_components")
-
-    def _built_object_repr(self):
-        if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
-
-
-class ChatVertex(StatelessVertex):
-    def __init__(self, data: Dict):
-        super().__init__(data, base_type="custom_components", is_task=True)
-        self.steps = [self._build, self._run]
+class CustomComponentVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="custom_components", is_task=False)
 
     def _built_object_repr(self):
         if self.task_id and self.is_task:

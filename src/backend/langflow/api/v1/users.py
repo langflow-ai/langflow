@@ -1,29 +1,21 @@
 from uuid import UUID
-from langflow.api.v1.schemas import UsersResponse
-from langflow.services.database.models.user import (
-    User,
-    UserCreate,
-    UserRead,
-    UserUpdate,
-)
 
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-
 from sqlmodel import Session, select
-from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.services.getters import get_session, get_settings_service
+from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    update_user,
-)
+from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
+from langflow.services.database.models.user.crud import get_user_by_id, update_user
+from langflow.services.deps import get_session, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 
@@ -37,7 +29,7 @@ def add_user(
     """
     Add a new user to the database.
     """
-    new_user = User.from_orm(user)
+    new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
@@ -46,9 +38,7 @@ def add_user(
         session.refresh(new_user)
     except IntegrityError as e:
         session.rollback()
-        raise HTTPException(
-            status_code=400, detail="This username is unavailable."
-        ) from e
+        raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
 
@@ -73,15 +63,15 @@ def read_all_users(
     """
     Retrieve a list of users from the database with pagination.
     """
-    query = select(User).offset(skip).limit(limit)
-    users = session.execute(query).fetchall()
+    query: SelectOfScalar = select(User).offset(skip).limit(limit)
+    users = session.exec(query).fetchall()
 
     count_query = select(func.count()).select_from(User)  # type: ignore
-    total_count = session.execute(count_query).scalar()
+    total_count = session.exec(count_query).first()
 
     return UsersResponse(
         total_count=total_count,  # type: ignore
-        users=[UserRead(**dict(user.User)) for user in users],
+        users=[UserRead(**user.model_dump()) for user in users],
     )
 
 
@@ -96,14 +86,10 @@ def patch_user(
     Update an existing user's data.
     """
     if not user.is_superuser and user.id != user_id:
-        raise HTTPException(
-            status_code=403, detail="You don't have the permission to update this user"
-        )
+        raise HTTPException(status_code=403, detail="You don't have the permission to update this user")
     if user_update.password:
         if not user.is_superuser:
-            raise HTTPException(
-                status_code=400, detail="You can't change your password here"
-            )
+            raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_password_hash(user_update.password)
 
     if user_db := get_user_by_id(session, user_id):
@@ -123,16 +109,12 @@ def reset_password(
     Reset a user's password.
     """
     if user_id != user.id:
-        raise HTTPException(
-            status_code=400, detail="You can't change another user's password"
-        )
+        raise HTTPException(status_code=400, detail="You can't change another user's password")
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if verify_password(user_update.password, user.password):
-        raise HTTPException(
-            status_code=400, detail="You can't use your current password"
-        )
+        raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
     session.commit()
@@ -151,15 +133,11 @@ def delete_user(
     Delete a user from the database.
     """
     if current_user.id == user_id:
-        raise HTTPException(
-            status_code=400, detail="You can't delete your own user account"
-        )
+        raise HTTPException(status_code=400, detail="You can't delete your own user account")
     elif not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="You don't have the permission to delete this user"
-        )
+        raise HTTPException(status_code=403, detail="You don't have the permission to delete this user")
 
-    user_db = session.query(User).filter(User.id == user_id).first()
+    user_db = session.exec(select(User).where(User.id == user_id)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 

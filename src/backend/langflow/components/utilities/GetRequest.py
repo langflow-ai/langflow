@@ -10,7 +10,7 @@ class GetRequest(CustomComponent):
     description: str = "Make a GET request to the given URL."
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.langflow.org/components/utilities#get-request"
-    beta = True
+    beta: bool = True
     field_config = {
         "url": {
             "display_name": "URL",
@@ -30,9 +30,7 @@ class GetRequest(CustomComponent):
         },
     }
 
-    def get_document(
-        self, session: requests.Session, url: str, headers: Optional[dict], timeout: int
-    ) -> Document:
+    def get_document(self, session: requests.Session, url: str, headers: Optional[dict], timeout: int) -> Document:
         try:
             response = session.get(url, headers=headers, timeout=int(timeout))
             try:

@@ -10,7 +10,7 @@ class PostRequest(CustomComponent):
     description: str = "Make a POST request to the given URL."
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.langflow.org/components/utilities#post-request"
-    beta = True
+    beta: bool = True
     field_config = {
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "headers": {
@@ -65,16 +65,12 @@ class PostRequest(CustomComponent):
 
         if not isinstance(document, list) and isinstance(document, Document):
             documents: list[Document] = [document]
-        elif isinstance(document, list) and all(
-            isinstance(doc, Document) for doc in document
-        ):
+        elif isinstance(document, list) and all(isinstance(doc, Document) for doc in document):
             documents = document
         else:
             raise ValueError("document must be a Document or a list of Documents")
 
         with requests.Session() as session:
-            documents = [
-                self.post_document(session, doc, url, headers) for doc in documents
-            ]
+            documents = [self.post_document(session, doc, url, headers) for doc in documents]
             self.repr_value = documents
         return documents

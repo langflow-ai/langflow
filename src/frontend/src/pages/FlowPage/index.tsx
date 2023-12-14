@@ -1,9 +1,8 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../components/headerComponent";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { getVersion } from "../../controllers/API";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {

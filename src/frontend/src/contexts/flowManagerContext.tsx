@@ -260,22 +260,19 @@ export default function FlowManagerProvider({ children }) {
   }
 
   function deleteNode(idx: string | Array<string>) {
-    reactFlowInstance!.setNodes(
-      reactFlowInstance!
-        .getNodes()
-        .filter((node: Node) =>
-          typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
-        )
-    );
-    reactFlowInstance!.setEdges(
-      reactFlowInstance!
-        .getEdges()
-        .filter((edge) =>
-          typeof idx === "string"
-            ? edge.source !== idx && edge.target !== idx
-            : !idx.includes(edge.source) && !idx.includes(edge.target)
-        )
-    );
+    if (reactFlowInstance === null) return;
+    const edges = reactFlowInstance!
+      .getEdges()
+      .filter((edge) =>
+        typeof idx === "string"
+          ? edge.source == idx || edge.target == idx
+          : idx.includes(edge.source) || idx.includes(edge.target)
+      );
+    reactFlowInstance!.deleteElements({
+      nodes:
+        typeof idx === "string" ? [{ id: idx }] : idx.map((id) => ({ id })),
+      edges,
+    });
   }
 
   /**
@@ -384,14 +381,12 @@ export default function FlowManagerProvider({ children }) {
     reactFlowInstance!.setEdges(edges);
   }
 
+
   function deleteEdge(idx: string | Array<string>) {
-    reactFlowInstance!.setEdges(
-      reactFlowInstance!
-        .getEdges()
-        .filter((edge: Edge) =>
-          typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
-        )
-    );
+    reactFlowInstance!.deleteElements({
+      edges:
+        typeof idx === "string" ? [{ id: idx }] : idx.map((id) => ({ id })),
+    });
   }
 
   /**
