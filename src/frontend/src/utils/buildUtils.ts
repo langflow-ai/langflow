@@ -56,11 +56,13 @@ export async function buildVertices({
           onBuildUpdate({ data, id: buildData.id });
         }
         buildResults.push(buildData.valid);
-      } catch (error : any) {
-        
+      } catch (error: any) {
         if (onBuildError) {
-          console.log(error)
-          onBuildError("Error Building Component", [(error as AxiosError<any>).response?.data?.detail??"Unknown Error"]);
+          console.log(error);
+          onBuildError("Error Building Component", [
+            (error as AxiosError<any>).response?.data?.detail ??
+              "Unknown Error",
+          ]);
         }
       }
     }
@@ -70,11 +72,13 @@ export async function buildVertices({
       const allNodesValid = buildResults.every((result) => result);
       onBuildComplete(allNodesValid);
     }
-  } catch (error:any) {
+  } catch (error: any) {
     // Callback for handling errors
     if (onBuildError) {
       if (onBuildError) {
-        onBuildError("Error Building Component", [(error as AxiosError<any>).response?.data?.detail??"Unknown Error"]);
+        onBuildError("Error Building Component", [
+          (error as AxiosError<any>).response?.data?.detail ?? "Unknown Error",
+        ]);
       }
     }
   }

@@ -22,13 +22,12 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import { TOOLTIP_EMPTY } from "../../../../constants/constants";
-import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
 import { alertContext } from "../../../../contexts/alertContext";
+import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
@@ -150,7 +149,8 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== newValue) {
       const tabs = cloneDeep(tabsState);
       tabs[selectedFlowId].isPending = false;
-      tabs[selectedFlowId].formKeysData = tabsState[selectedFlowId].formKeysData;
+      tabs[selectedFlowId].formKeysData =
+        tabsState[selectedFlowId].formKeysData;
       setTabsState({
         ...tabs,
       });
@@ -175,7 +175,8 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== code) {
       const tabs = cloneDeep(tabsState);
       tabs[selectedFlowId].isPending = false;
-      tabs[selectedFlowId].formKeysData = tabsState[selectedFlowId].formKeysData;
+      tabs[selectedFlowId].formKeysData =
+        tabsState[selectedFlowId].formKeysData;
       setTabsState({
         ...tabs,
       });

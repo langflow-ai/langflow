@@ -487,7 +487,7 @@ export function extractIdFromLongId(id: string): string {
 }
 
 export function extractTypeFromLongId(id: string): string {
-  let [newId,_] = id.split("-");
+  let [newId, _] = id.split("-");
   return newId;
 }
 

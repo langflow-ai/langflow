@@ -27,12 +27,13 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                   <TypesProvider>
                     <LocationProvider>
                       <ApiInterceptor />
-                        <FlowsProvider>
-                          <UndoRedoProvider>
-                            <FlowManagerProvider>
-                            <StoreProvider>{children}</StoreProvider>                            </FlowManagerProvider>
-                          </UndoRedoProvider>
-                        </FlowsProvider>
+                      <FlowsProvider>
+                        <UndoRedoProvider>
+                          <FlowManagerProvider>
+                            <StoreProvider>{children}</StoreProvider>{" "}
+                          </FlowManagerProvider>
+                        </UndoRedoProvider>
+                      </FlowsProvider>
                     </LocationProvider>
                   </TypesProvider>
                 </DarkProvider>

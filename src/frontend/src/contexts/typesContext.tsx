@@ -6,7 +6,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";

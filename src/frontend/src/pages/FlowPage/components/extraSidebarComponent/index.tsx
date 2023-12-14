@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useCallback, useContext, useEffect, useState,useMemo } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -28,7 +28,7 @@ import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates } = useContext(typesContext);
-  const { getFilterEdge, setFilterEdge, isBuilt,pasteFileOnFLow } =
+  const { getFilterEdge, setFilterEdge, isBuilt, pasteFileOnFLow } =
     useContext(flowManagerContext);
   const { flows, selectedFlowId, tabsState, saveFlow } =
     useContext(FlowsContext);

@@ -11,8 +11,8 @@ import {
 import ShortUniqueId from "short-unique-id";
 import {
   INPUT_TYPES,
-  OUTPUT_TYPES,
   LANGFLOW_SUPPORTED_TYPES,
+  OUTPUT_TYPES,
   specialCharsRegex,
 } from "../constants/constants";
 import { APITemplateType, TemplateVariableType } from "../types/api";
@@ -146,7 +146,11 @@ export function updateTemplate(
   // Loop through each key in the reference object
   for (const key in clonedObject) {
     // If the key is not in the object to update, add it
-    if (objectToUpdate[key] && objectToUpdate[key].value && clonedObject[key].show) {
+    if (
+      objectToUpdate[key] &&
+      objectToUpdate[key].value &&
+      clonedObject[key].show
+    ) {
       clonedObject[key].value = objectToUpdate[key].value;
     }
     if (

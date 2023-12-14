@@ -5,25 +5,15 @@ import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
+import { priorityFields } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { flowManagerContext } from "../../contexts/flowManagerContext";
-import { priorityFields } from "../../constants/constants";
-import { useSSE } from "../../contexts/SSEContext";
-import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
-import { buildVertices } from "../../utils/buildUtils";
-import {
-  cleanEdges,
-  handleKeyDown,
-  scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
-import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, getFieldTitle } from "../../utils/utils";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
@@ -44,7 +34,8 @@ export default function GenericNode({
     useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const { types } = useContext(typesContext);
-  const { deleteNode, reactFlowInstance,buildFlow,flowPool } = useContext(flowManagerContext);
+  const { deleteNode, reactFlowInstance, buildFlow, flowPool } =
+    useContext(flowManagerContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -137,8 +128,10 @@ export default function GenericNode({
 
   // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData =flowPool[data.id] && flowPool[data.id]?.length > 0
-    ? flowPool[data.id][flowPool[data.id].length - 1]:null;
+    const relevantData =
+      flowPool[data.id] && flowPool[data.id]?.length > 0
+        ? flowPool[data.id][flowPool[data.id].length - 1]
+        : null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
@@ -341,72 +334,75 @@ export default function GenericNode({
 
             {showNode && (
               <>
-              <div
-                className="round-button-div"
-                onClick={() => setIsPinned(!isPinned)}
-              >
-                <IconComponent
-                  name={isPinned ? "Pin" : "PinOff"}
-                  className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                />
-              </div>
-              <div className="round-button-div" onClick={()=>buildFlow(data.id)}>
-                <div>
-                  <Tooltip
-                    title={
-                      isBuilding ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Zap"
-                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                          />{" "}
-                          flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `Duration: ${validationStatus.duration}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : ""}
-                        </div>
-                      )
-                    }
-                  >
-                    <div className="generic-node-status-position">
-                      <div
-                        className={classNames(
-                          validationStatus && validationStatus.valid
-                            ? "green-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          validationStatus && !validationStatus.valid
-                            ? "red-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                    </div>
-                  </Tooltip>
+                <div
+                  className="round-button-div"
+                  onClick={() => setIsPinned(!isPinned)}
+                >
+                  <IconComponent
+                    name={isPinned ? "Pin" : "PinOff"}
+                    className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                  />
                 </div>
-              </div>
+                <div
+                  className="round-button-div"
+                  onClick={() => buildFlow(data.id)}
+                >
+                  <div>
+                    <Tooltip
+                      title={
+                        isBuilding ? (
+                          <span>Building...</span>
+                        ) : !validationStatus ? (
+                          <span className="flex">
+                            Build{" "}
+                            <IconComponent
+                              name="Zap"
+                              className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                            />{" "}
+                            flow to validate status.
+                          </span>
+                        ) : (
+                          <div className="max-h-96 overflow-auto">
+                            {typeof validationStatus.params === "string"
+                              ? `Duration: ${validationStatus.duration}\n${validationStatus.params}`
+                                  .split("\n")
+                                  .map((line, index) => (
+                                    <div key={index}>{line}</div>
+                                  ))
+                              : ""}
+                          </div>
+                        )
+                      }
+                    >
+                      <div className="generic-node-status-position">
+                        <div
+                          className={classNames(
+                            validationStatus && validationStatus.valid
+                              ? "green-status"
+                              : "status-build-animation",
+                            "status-div"
+                          )}
+                        ></div>
+                        <div
+                          className={classNames(
+                            validationStatus && !validationStatus.valid
+                              ? "red-status"
+                              : "status-build-animation",
+                            "status-div"
+                          )}
+                        ></div>
+                        <div
+                          className={classNames(
+                            !validationStatus || isBuilding
+                              ? "yellow-status"
+                              : "status-build-animation",
+                            "status-div"
+                          )}
+                        ></div>
+                      </div>
+                    </Tooltip>
+                  </div>
+                </div>
               </>
             )}
           </div>

@@ -9,7 +9,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { flowManagerContext } from "../../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { StoreContext } from "../../../../contexts/storeContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";

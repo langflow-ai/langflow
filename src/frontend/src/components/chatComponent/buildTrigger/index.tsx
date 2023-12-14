@@ -7,8 +7,6 @@ import { FlowType } from "../../../types/flow";
 import { flowManagerContext } from "../../../contexts/flowManagerContext";
 import { FlowsContext } from "../../../contexts/flowsContext";
 import { buildVertices } from "../../../utils/buildUtils";
-import { parsedDataType } from "../../../types/components";
-import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import { classNames } from "../../../utils/utils";
 import RadialProgressComponent from "../../RadialProgress";
@@ -29,8 +27,13 @@ export default function BuildTrigger({
   const { reactFlowInstance } = useContext(typesContext);
   const { setTabsState, saveFlow } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { addDataToFlowPool, reactFlowInstance, showPanel,isBuilding,setIsBuilding } =
-    useContext(flowManagerContext);
+  const {
+    addDataToFlowPool,
+    reactFlowInstance,
+    showPanel,
+    isBuilding,
+    setIsBuilding,
+  } = useContext(flowManagerContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);

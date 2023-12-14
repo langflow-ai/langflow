@@ -1,7 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
-import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
@@ -12,7 +11,6 @@ import BaseModal from "../../modals/baseModal";
 import { NodeType } from "../../types/flow";
 import IOView from "../IOview";
 import IconComponent from "../genericIconComponent";
-
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -103,7 +101,8 @@ export default function Chat({ flow }: ChatType): JSX.Element {
                   name="prompts"
                   className="h-6 w-6 pl-1 text-foreground"
                   aria-hidden="true"
-                /></div>
+                />
+              </div>
             </BaseModal.Header>
             <BaseModal.Content>
               <IOView />

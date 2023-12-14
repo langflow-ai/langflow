@@ -381,7 +381,6 @@ export default function FlowManagerProvider({ children }) {
     reactFlowInstance!.setEdges(edges);
   }
 
-
   function deleteEdge(idx: string | Array<string>) {
     reactFlowInstance!.deleteElements({
       edges:

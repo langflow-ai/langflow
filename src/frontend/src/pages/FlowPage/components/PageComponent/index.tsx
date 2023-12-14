@@ -242,7 +242,13 @@ export default function Page({
       });
       saveCurrentFlowTimeout();
     },
-    [onEdgesChange, setNodes, setTabsState, saveCurrentFlowTimeout, selectedFlowId]
+    [
+      onEdgesChange,
+      setNodes,
+      setTabsState,
+      saveCurrentFlowTimeout,
+      selectedFlowId,
+    ]
   );
 
   const onNodesChangeMod = useCallback(
@@ -264,7 +270,13 @@ export default function Page({
         saveCurrentFlowTimeout();
       }
     },
-    [onNodesChange, setTabsState, selectedFlowId, updateNodeFlow, saveCurrentFlowTimeout]
+    [
+      onNodesChange,
+      setTabsState,
+      selectedFlowId,
+      updateNodeFlow,
+      saveCurrentFlowTimeout,
+    ]
   );
 
   function updateNodeFlow(changeString: string) {

@@ -25,12 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { flowManagerContext } from "../../contexts/flowManagerContext";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
+import { flowManagerContext } from "../../contexts/flowManagerContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { NodeDataType } from "../../types/flow";
 import { FlowsState } from "../../types/tabs";

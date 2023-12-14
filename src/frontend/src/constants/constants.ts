@@ -664,7 +664,7 @@ export const LAST_USED_SPAN_1 = "The last time this key was used.";
 export const LAST_USED_SPAN_2 =
   "Accurate to within the hour from the most recent usage.";
 
-export const INPUT_TYPES = new Set(["ChatInput","TextInput"]);
+export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
 export const OUTPUT_TYPES = new Set(["ChatOutput"]);
 export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "str",

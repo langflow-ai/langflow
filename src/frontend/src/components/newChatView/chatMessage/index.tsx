@@ -36,7 +36,7 @@ export default function ChatMessage({
                 alt="robot_image"
               />
             </div>
-            <span className="text-xs truncate">{chat.sender_name}</span>
+            <span className="truncate text-xs">{chat.sender_name}</span>
           </div>
         ) : (
           <div className="form-modal-chat-image">
@@ -47,7 +47,7 @@ export default function ChatMessage({
                 alt="male_technology"
               />
             </div>
-            <span className="text-xs truncate">{chat.sender_name}</span>
+            <span className="truncate text-xs">{chat.sender_name}</span>
           </div>
         )}
       </div>

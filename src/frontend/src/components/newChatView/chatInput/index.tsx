@@ -19,12 +19,11 @@ export default function ChatInput({
     }
   }, [lockChat, inputRef]);
 
-  function handleChange(value:number){
-    console.log(value)
-    if(value>0){
+  function handleChange(value: number) {
+    console.log(value);
+    if (value > 0) {
       setRepeate(value);
-    }
-    else{
+    } else {
       setRepeate(1);
     }
   }
@@ -40,10 +39,14 @@ export default function ChatInput({
     <div className="relative">
       <div className="flex flex-col">
         <span className="text-xs">repeate</span>
-      <input onChange={(e)=>{
-        handleChange(parseInt(e.target.value));
-      }} className="bg-background" type="number" min={0}/>
-
+        <input
+          onChange={(e) => {
+            handleChange(parseInt(e.target.value));
+          }}
+          className="bg-background"
+          type="number"
+          min={0}
+        />
       </div>
       <Textarea
         onKeyDown={(event) => {

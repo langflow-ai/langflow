@@ -58,7 +58,7 @@ export type FlowManagerContextType = {
   outputIds: string[];
   showPanel: boolean;
   updateNodeFlowData: (nodeId: string, newData: NodeDataType) => void;
-  buildFlow: (nodeId?:string) => Promise<void>;
+  buildFlow: (nodeId?: string) => Promise<void>;
   setFlow: (flow: FlowType) => void;
   pasteFileOnFLow: (file?: File) => Promise<void>;
   CleanFlowPool: () => void;

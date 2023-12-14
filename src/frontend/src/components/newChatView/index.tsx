@@ -24,10 +24,11 @@ export default function newChatView(): JSX.Element {
     reactFlowInstance,
     flowPool,
     outputIds,
-    inputIds, inputTypes,
+    inputIds,
+    inputTypes,
     updateNodeFlowData,
     buildFlow,
-    CleanFlowPool
+    CleanFlowPool,
   } = useContext(flowManagerContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
@@ -45,9 +46,11 @@ export default function newChatView(): JSX.Element {
       }
     });
     const chatMessages: ChatMessageType[] = chatOutputResponses
-      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp)).filter((output) => !!output.data.artifacts.message)
+      .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+      .filter((output) => !!output.data.artifacts.message)
       .map((output) => {
-        const { sender, message, sender_name } = output.data.artifacts as ChatOutputType;
+        const { sender, message, sender_name } = output.data
+          .artifacts as ChatOutputType;
         console.log(output.data.artifacts);
         const is_ai = sender === "Machine";
         return { isSend: !is_ai, message, sender_name };
@@ -60,7 +63,7 @@ export default function newChatView(): JSX.Element {
     }
   }, [chatHistory]);
 
-  async function sendAll(data: sendAllProps): Promise<void> { }
+  async function sendAll(data: sendAllProps): Promise<void> {}
   useEffect(() => {
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
@@ -95,9 +98,9 @@ export default function newChatView(): JSX.Element {
       }
       for (let i = 0; i < count; i++) {
         await buildFlow().catch((err) => {
-            console.error(err);
-            setLockChat(false);
-          });
+          console.error(err);
+          setLockChat(false);
+        });
       }
       setLockChat(false);
 
