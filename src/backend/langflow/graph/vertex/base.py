@@ -437,7 +437,10 @@ class Vertex:
         # Run steps
         for step in self.steps:
             if step not in self.steps_ran:
-                step(user_id=user_id, **kwargs)
+                if inspect.iscoroutinefunction(step):
+                    await step(user_id=user_id, **kwargs)
+                else:
+                    step(user_id=user_id, **kwargs)
                 self.steps_ran.append(step)
 
         return await self.get_requester_result(requester)
