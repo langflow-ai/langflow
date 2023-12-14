@@ -33,11 +33,6 @@ class Component:
                 setattr(self, "_user_id", value)
             else:
                 setattr(self, key, value)
-        if self.code is None or self.code == "":
-            raise ComponentCodeNullError(
-                status_code=400,
-                detail={"error": self.ERROR_CODE_NULL, "traceback": ""},
-            )
 
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):

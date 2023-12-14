@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING
 import duckdb
 from langflow.services.base import Service
 from langflow.services.monitor.schema import MessageModel, TransactionModel
-from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+from langflow.services.monitor.utils import (
+    add_row_to_table, drop_and_create_table_if_schema_mismatch)
+from loguru import logger
 from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
@@ -19,7 +21,10 @@ class MonitorService(Service):
         self.settings_service = settings_service
         self.base_cache_dir = Path(user_cache_dir("langflow"))
         self.db_path = self.base_cache_dir / "monitor.duckdb"
-        self.ensure_tables_exist()
+        try:
+            self.ensure_tables_exist()
+        except Exception as e:
+            logger.error(f"Error initializing monitor service: {e}")
 
     def to_df(self, table_name):
         return self.load_table_as_dataframe(table_name)
