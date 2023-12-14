@@ -4,11 +4,12 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
-from langflow.interface.custom.component import Component, ComponentCodeNullError
-from langflow.interface.types import build_custom_component_template, create_and_validate_component
+from langflow.interface.custom.component import (Component,
+                                                 ComponentCodeNullError)
+from langflow.interface.custom.utils import (build_custom_component_template,
+                                             create_and_validate_component)
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """

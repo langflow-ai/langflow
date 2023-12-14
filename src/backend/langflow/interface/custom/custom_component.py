@@ -1,6 +1,7 @@
 import operator
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
+from langflow.interface.custom.code_parser.utils import extract_inner_type_from_generic_alias
 
 import yaml
 from cachetools import TTLCache, cachedmethod
@@ -8,8 +9,7 @@ from fastapi import HTTPException
 
 from langflow.interface.custom.component import Component
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.interface.custom.utils import (
-    extract_inner_type_from_generic_alias,
+from langflow.interface.custom.code_parser.utils import (
     extract_union_types_from_generic_alias,
 )
 from langflow.services.database.models.flow import Flow
