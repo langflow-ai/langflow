@@ -3711,13 +3711,13 @@ langchain = ["langchain (>=0.0.309)"]
 
 [[package]]
 name = "langsmith"
-version = "0.0.69"
+version = "0.0.70"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langsmith-0.0.69-py3-none-any.whl", hash = "sha256:49a2546bb83eedb0552673cf81a068bb08078d6d48471f4f1018e1d5c6aa46b1"},
-    {file = "langsmith-0.0.69.tar.gz", hash = "sha256:8fb5297f274db0576ec650d9bab0319acfbb6622d62bc5bb9fe31c6235dc0358"},
+    {file = "langsmith-0.0.70-py3-none-any.whl", hash = "sha256:a0d4cac3af94fe44c2ef3814c32b6740f92aebe267e395d62e62040bc5bad343"},
+    {file = "langsmith-0.0.70.tar.gz", hash = "sha256:3a546c45e67f6600d6669ef63f1f58b772e505703126338ad4f22fe0e2bbf677"},
 ]
 
 [package.dependencies]
@@ -3743,12 +3743,12 @@ regex = ["regex"]
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.2.22"
+version = "0.2.23"
 description = "Python bindings for the llama.cpp library"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "llama_cpp_python-0.2.22.tar.gz", hash = "sha256:29d3c5af374fa7b1c34abd4a76b9f477b50abb1d618872bb6cb1cb32841667bc"},
+    {file = "llama_cpp_python-0.2.23.tar.gz", hash = "sha256:364b61a13970932ea189b45a1c5dea89797b90e5da00f1fe6e72c47fbc512898"},
 ]
 
 [package.dependencies]
@@ -8198,13 +8198,13 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "transformers"
-version = "4.36.0"
+version = "4.36.1"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 optional = true
 python-versions = ">=3.8.0"
 files = [
-    {file = "transformers-4.36.0-py3-none-any.whl", hash = "sha256:e5a9d9424bcbc5008782ddd79ecbc3a50991e168cc730a14c4c89e80c61f419d"},
-    {file = "transformers-4.36.0.tar.gz", hash = "sha256:64e120d252db4bdcd355288d19e857dac9d89886f9d0ac20244cb9af3142bb50"},
+    {file = "transformers-4.36.1-py3-none-any.whl", hash = "sha256:0e309d03634885f02d46801ec4f2c3fc1d614a5b9ebde608181f3e842bac53b8"},
+    {file = "transformers-4.36.1.tar.gz", hash = "sha256:28e55952d9bed68f06cf45a3d29cc480679b528afe944e68f8cf6c799e428759"},
 ]
 
 [package.dependencies]
@@ -9268,4 +9268,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "6bed78abe6228dfd01ba4cf4052a95d24bcb0746294a8da442bbaa846187071f"
+content-hash = "2309dbc81b811f81dadcd68200b7266265ddc7e60429ed2e5f1612ebd2dad9d9"
