@@ -2,7 +2,8 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
@@ -35,7 +36,6 @@ class Vertex:
         self.graph = graph
         self.id: str = data["id"]
         self._data = data
-        self.edges: List["ContractEdge"] = []
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = UnbuiltObject()
@@ -57,16 +57,17 @@ class Vertex:
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
-    def get_result_dict(self, force: bool = False) -> Dict[str, Dict[str, Any]]:
+    async def get_result_dict(self, force: bool = False) -> Dict[str, Dict[str, Any]]:
         """
         Returns a dictionary with the result of the build process.
         """
         edge_results = {}
         for edge in self.edges:
-            if edge.is_fulfilled and isinstance(edge.get_result(force=force), str):
-                if edge.target.id not in edge_results:
-                    edge_results[edge.target.id] = {}
-                edge_results[edge.target.id][edge.target_param] = edge.get_result()
+            target = self.graph.get_vertex(edge.target_id)
+            if edge.is_fulfilled and isinstance(await edge.get_result(source=self, target=target, ), str):
+                if edge.target_id not in edge_results:
+                    edge_results[edge.target_id] = {}
+                edge_results[edge.target_id][edge.target_param] = await edge.get_result(source=self, target=target)
         return edge_results
 
     def get_built_result(self):
@@ -81,7 +82,7 @@ class Vertex:
         pass
 
     @property
-    def edges(self) -> List["Edge"]:
+    def edges(self) -> List["ContractEdge"]:
         return self.graph.get_vertex_edges(self.id)
 
     def __getstate__(self):
@@ -279,7 +280,7 @@ class Vertex:
         #         inputs = self._built_object.prompt.partial_variables
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
-        elif hasattr(self._built_object, "run"):
+        elif hasattr(self._built_object, "run") and not isinstance(self._built_object, UnbuiltObject):
             try:
                 result = self._built_object.run(inputs)
                 self._built_result = result
@@ -428,7 +429,7 @@ class Vertex:
         user_id=None,
         requester: Optional["Vertex"] = None,
         **kwargs,
-    ) -> Dict:
+    ) -> Any:
         if self.pinned:
             return self.get_requester_result(requester)
         self._reset()
@@ -439,21 +440,18 @@ class Vertex:
                 step(user_id=user_id, **kwargs)
                 self.steps_ran.append(step)
 
-        return self.get_requester_result(requester)
+        return await self.get_requester_result(requester)
 
-    def get_requester_result(self, requester: Optional["Vertex"]):
+    async def get_requester_result(self, requester: Optional["Vertex"]):
         # If the requester is None, this means that
         # the Vertex is the root of the graph
         if requester is None:
             return self._built_object
 
         # Get the requester edge
-        requester_edge = next((edge for edge in self.edges if edge.target.id == requester.id), None)
+        requester_edge = next((edge for edge in self.edges if edge.target_id == requester.id), None)
         # Return the result of the requester edge
-        if requester_edge is None:
-            return None
-
-        return requester_edge.get_result()
+        return None if requester_edge is None else await requester_edge.get_result(source=self, target=requester)
 
     def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:

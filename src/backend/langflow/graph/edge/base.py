@@ -104,7 +104,7 @@ class ContractEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
 
-    def honor(self) -> None:
+    def honor(self, source, target) -> None:
         """
         Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
@@ -115,25 +115,25 @@ class ContractEdge(Edge):
         if self.is_fulfilled:
             return
 
-        if not self.source._built:
-            self.source.build()
+        if not source._built:
+            source.build()
 
         if self.matched_type == "Text":
-            self.result = self.source._built_result
+            self.result = source._built_result
         else:
-            self.result = self.source._built_object
+            self.result = source._built_object
 
-        self.target.params[self.target_param] = self.result
+        target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    def build_clean_params(self) -> None:
+    def build_clean_params(self, target: "Vertex") -> dict:
         """
         Cleans the parameters of the target vertex.
         """
         # Removes all keys that the values aren't python types like str, int, bool, etc.
         params = {
             key: value
-            for key, value in self.target.params.items()
+            for key, value in target.params.items()
             if isinstance(value, (str, int, bool, float, list, dict))
         }
         # if it is a list we need to check if the contents are python types
@@ -142,38 +142,38 @@ class ContractEdge(Edge):
                 params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
         return params
 
-    def get_result(self):
+    async def get_result(self, source, target):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
-            self.honor()
+            self.honor(source, target)
 
-        log_transaction(self, "success")
+        log_transaction(self, source, target, "success")
         # If the target vertex is a power component we log messages
         if (
-            self.target.vertex_type == "ChatOutput"
-            and isinstance(self.target.params.get("message"), str)
-            or isinstance(self.target.params.get("message"), dict)
+            target.vertex_type == "ChatOutput"
+            and isinstance(target.params.get("message"), str)
+            or isinstance(target.params.get("message"), dict)
         ):
-            log_message(
-                sender_type=self.target.params.get("sender", ""),
-                sender_name=self.target.params.get("sender_name", ""),
-                message=self.target.params.get("message", {}),
-                session_id=self.target.params.get("session_id", ""),
-                artifacts=self.target.artifacts,
+            await log_message(
+                sender_type=target.params.get("sender", ""),
+                sender_name=target.params.get("sender_name", ""),
+                message=target.params.get("message", {}),
+                session_id=target.params.get("session_id", ""),
+                artifacts=target.artifacts,
             )
         return self.result
 
     def __repr__(self) -> str:
-        return f"{self.source.vertex_type} -[{self.target_param}]-> {self.target.vertex_type}"
+        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
 
 
-def log_transaction(edge: ContractEdge, status, error=None):
+def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", status, error=None):
     try:
         monitor_service = get_monitor_service()
-        clean_params = edge.build_clean_params()
+        clean_params = edge.build_clean_params(target)
         data = {
-            "source": edge.source.vertex_type,
-            "target": edge.target.vertex_type,
+            "source": source.vertex_type,
+            "target": target.vertex_type,
             "target_args": clean_params,
             "timestamp": monitor_service.get_timestamp(),
             "status": status,
@@ -184,7 +184,7 @@ def log_transaction(edge: ContractEdge, status, error=None):
         logger.error(f"Error logging transaction: {e}")
 
 
-def log_message(
+async def log_message(
     sender_type: str,
     sender_name: str,
     message: str,
@@ -195,7 +195,7 @@ def log_message(
         from langflow.graph.vertex.base import Vertex
 
         if isinstance(session_id, Vertex):
-            session_id = session_id.build()
+            session_id = await session_id.build() # type: ignore
 
         monitor_service = get_monitor_service()
         row = {
