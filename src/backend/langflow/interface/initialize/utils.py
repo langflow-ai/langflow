@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 import orjson
 from langchain.agents import ZeroShotAgent
 from langchain.schema import BaseOutputParser, Document
+
 from langflow.services.database.models.base import orjson_dumps
 
 
@@ -16,6 +17,8 @@ def handle_node_type(node_type, class_object, params: Dict):
         prompt = instantiate_from_template(class_object, params)
     elif node_type == "ChatPromptTemplate":
         prompt = class_object.from_messages(**params)
+    elif hasattr(class_object, "from_template") and params.get("template"):
+        prompt = class_object.from_template(template=params.pop("template"))
     else:
         prompt = class_object(**params)
     return params, prompt
