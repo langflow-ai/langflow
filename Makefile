@@ -18,9 +18,12 @@ coverage:
 		--cov-report xml \
 		--cov-report term-missing:skip-covered
 
+# allow passing arguments to pytest
 tests:
 	@make install_backend
-	poetry run pytest tests --instafail
+
+	poetry run pytest tests --instafail $(args)
+# Use like:
 
 format:
 	poetry run ruff . --fix
