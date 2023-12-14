@@ -11,7 +11,7 @@ class BaseCacheService(Service):
     name = "cache_service"
 
     @abc.abstractmethod
-    def get(self, key):
+    def get(self, key) -> dict:
         """
         Retrieve an item from the cache.
 
