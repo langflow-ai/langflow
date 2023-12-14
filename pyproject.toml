@@ -96,7 +96,8 @@ pillow = "^10.0.0"
 metal-sdk = "^2.4.0"
 markupsafe = "^2.1.3"
 extract-msg = "^0.45.0"
-jq = "^1.6.0"
+# jq is not available for windows
+jq = { version = "^1.6.0", markers = "sys_platform != 'win32'" }
 boto3 = "^1.28.63"
 numexpr = "^2.8.6"
 qianfan = "0.0.5"
