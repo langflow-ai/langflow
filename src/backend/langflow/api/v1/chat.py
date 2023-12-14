@@ -1,26 +1,24 @@
 import time
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketException, status
+from fastapi import (APIRouter, Body, Depends, HTTPException, Query, WebSocket,
+                     WebSocketException, status)
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
-from langflow.api.v1.schemas import (
-    BuildStatus,
-    BuiltResponse,
-    InitResponse,
-    ResultDict,
-    StreamData,
-    VertexBuildResponse,
-    VerticesOrderResponse,
-)
+from langflow.api.v1.schemas import (BuildStatus, BuiltResponse, InitResponse,
+                                     ResultDict, StreamData,
+                                     VertexBuildResponse,
+                                     VerticesOrderResponse)
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
+from langflow.services.auth.utils import (get_current_active_user,
+                                          get_current_user_by_jwt)
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.flow import Flow
-from langflow.services.deps import get_cache_service, get_chat_service, get_session
+from langflow.services.database.models.flow import Flow
+from langflow.services.deps import (get_cache_service, get_chat_service,
+                                    get_session)
 from loguru import logger
 from sqlmodel import Session
 
@@ -159,13 +157,13 @@ async def stream_build(
                 logger.debug("No user_id found in cache_service")
                 user_id = None
             for i, vertex in enumerate(graph.generator_build(), 1):
+                start_time = time.perf_counter()
                 try:
                     log_dict = {
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
                     # time this
-                    start_time = time.perf_counter()
                     if vertex.is_task:
                         vertex = await try_running_celery_task(vertex, user_id)
                     else:
@@ -242,6 +240,8 @@ async def get_vertices(
         flow: Flow = session.get(Flow, flow_id)
         if not flow:
             raise ValueError("Invalid flow ID")
+        if not flow.data:
+            raise ValueError("Invalid flow data")
         graph = Graph.from_payload(flow.data)
         chat_service.set_cache(flow_id, graph)
         vertices = graph.layered_topological_sort()
@@ -256,7 +256,7 @@ async def get_vertices(
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
-def build_vertex(
+async def build_vertex(
     flow_id: str,
     vertex_id: str,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -277,7 +277,7 @@ def build_vertex(
             raise ValueError("Invalid vertex")
         try:
             if isinstance(vertex, StatelessVertex) or not vertex._built:
-                vertex.build(user_id=None)
+                await vertex.build(user_id=None)
             params = vertex._built_object_repr()
             valid = True
             result_dict = vertex.get_built_result()
