@@ -1,0 +1,48 @@
+import Admonition from "@theme/Admonition";
+
+# SearchApi Tool
+
+The [SearchApi](https://www.searchapi.io/) allows developers to scrape results from search engines such as Google, Google Scholar, YouTube, YouTube transcripts, and more, and can be used as in Langflow through the `SearchAPIRun` component.
+
+<Admonition type="info">
+  To use the SearchApi, you first need to sign up [SearchApi](https://www.searchapi.io/) for an API key on the provider's website.
+</Admonition>
+
+Here, the `ZeroShotPrompt` component specifies a prompt template for the `ZeroShotAgent`. Set a _Prefix_ and _Suffix_ with rules for the agent to obey. In the example, we used default templates.
+
+The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
+
+<Admonition type="tip">
+  In this example, we used [`ChatOpenAI`](https://platform.openai.com/) as the
+  LLM, but feel free to experiment with other Language Models!
+</Admonition>
+
+The `ZeroShotAgent` takes the `LLMChain` and the `SearchAPIRun` tool as inputs, using the tool to find information when necessary.
+
+<Admonition type="info">
+  Learn more about the SearchApi
+  [here](https://python.langchain.com/docs/integrations/tools/searchapi).
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/searchapi-tool.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/SearchApi_Tool.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
+- [`SearchAPIRun`](https://python.langchain.com/docs/integrations/tools/searchapi)
+- [`ZeroShotAgent`](https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent)
+
+</Admonition>
