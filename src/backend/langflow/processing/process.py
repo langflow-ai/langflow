@@ -12,6 +12,7 @@ from langflow.interface.run import build_sorted_vertices, get_memory_key, update
 from langflow.services.deps import get_session_service
 from loguru import logger
 from pydantic import BaseModel
+from langchain_core.runnables.base import Runnable
 
 
 def fix_memory_inputs(langchain_object):
@@ -131,6 +132,10 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
         result = langchain_object.search(**inputs)
     elif isinstance(langchain_object, Document):
         result = langchain_object.dict()
+    elif isinstance(langchain_object, Runnable):
+        result = langchain_object.invoke(inputs)
+        result = result.content if hasattr(result, "content") else result
+
     else:
         logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
         if isinstance(langchain_object, Coroutine):
