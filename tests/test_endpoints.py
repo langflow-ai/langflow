@@ -11,6 +11,7 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
+import os
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -49,7 +50,7 @@ PROMPT_REQUEST = {
         "custom_fields": {},
         "output_types": [],
         "field_formatters": {
-            "formatters": {"openai_api_key": {}},
+            "formatters": {"openai_api_key": os.environ.get("OPENAI_API_KEY")},
             "base_formatters": {
                 "kwargs": {},
                 "optional": {},
