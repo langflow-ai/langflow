@@ -7,6 +7,7 @@ from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
+from langflow.components.custom_components import CustomComponent
 from langflow.graph import Graph
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
@@ -135,6 +136,8 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     elif isinstance(langchain_object, Runnable):
         result = langchain_object.invoke(inputs)
         result = result.content if hasattr(result, "content") else result
+    elif hasattr(langchain_object, "run") and isinstance(langchain_object, CustomComponent):
+        result = langchain_object.run(inputs)
 
     else:
         logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
