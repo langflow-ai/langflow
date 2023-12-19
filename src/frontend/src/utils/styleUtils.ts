@@ -129,6 +129,7 @@ import { NotionIcon } from "../icons/Notion";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
 import { QDrantIcon } from "../icons/QDrant";
+import { WeaviateIcon } from "../icons/Weaviate";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -254,6 +255,7 @@ export const nodeIconsLucide: iconsType = {
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
+  Weaviate: WeaviateIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SupabaseVectorStore: SupabaseIcon,
