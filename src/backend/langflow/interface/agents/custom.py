@@ -264,45 +264,9 @@ class VectorStoreRouterAgent(CustomAgentExecutor):
         return super().run(*args, **kwargs)
 
 
-class InitializeAgent(CustomAgentExecutor):
-    """Implementation of AgentInitializer function"""
-
-    @staticmethod
-    def function_name():
-        return "AgentInitializer"
-
-    @classmethod
-    def initialize(
-        cls,
-        llm: BaseLanguageModel,
-        tools: List[Tool],
-        agent: str,
-        memory: Optional[BaseChatMemory] = None,
-    ):
-        # Find which value in the AgentType enum corresponds to the string
-        # passed in as agent
-        agent = AgentType(agent)
-        return initialize_agent(
-            tools=tools,
-            llm=llm,
-            # LangChain now uses Enum for agent, but we still support string
-            agent=agent,  # type: ignore
-            memory=memory,
-            return_intermediate_steps=True,
-            handle_parsing_errors=True,
-        )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def run(self, *args, **kwargs):
-        return super().run(*args, **kwargs)
-
-
 CUSTOM_AGENTS = {
     "JsonAgent": JsonAgent,
     "CSVAgent": CSVAgent,
-    "AgentInitializer": InitializeAgent,
     "VectorStoreAgent": VectorStoreAgent,
     "VectorStoreRouterAgent": VectorStoreRouterAgent,
     "SQLAgent": SQLAgent,
