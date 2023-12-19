@@ -3,9 +3,6 @@ from typing import Annotated, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
-from loguru import logger
-from sqlmodel import select
-
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     CustomComponentCode,
@@ -23,6 +20,8 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from loguru import logger
+from sqlmodel import select
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -32,9 +31,8 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from sqlmodel import Session
-
 from langflow.services.task.service import TaskService
+from sqlmodel import Session
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -51,6 +49,7 @@ async def process_graph_data(
 ):
     task_result = None
     task_status = None
+    task_id = None
     if tweaks:
         try:
             graph_data = process_tweaks(graph_data, tweaks)
@@ -79,19 +78,9 @@ async def process_graph_data(
         if session_id is None:
             # Generate a session ID
             session_id = get_session_service().generate_key(session_id=session_id, data_graph=graph_data)
-        task_id, task = await task_service.launch_task(
-            process_graph_cached_task if task_service.use_celery else process_graph_cached,
-            graph_data,
-            inputs,
-            clear_cache,
-            session_id,
+        result = process_graph_cached(
+            data_graph=graph_data, inputs=inputs, clear_cache=clear_cache, session_id=session_id
         )
-        task_status = task.status
-        if task.status == "FAILURE":
-            logger.error(f"Task {task_id} failed: {task.traceback}")
-            task_result = str(task._exception)
-        else:
-            task_result = task.result
 
     if task_id:
         task_response = TaskResponse(id=task_id, href=f"api/v1/task/{task_id}")
