@@ -35,13 +35,13 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "required": True,
             },
             "api_version": {
-                "display_name": "OpenAI API Version",
+                "display_name": "API Version",
                 "value": "2023-05-15",
                 "required": True,
                 "advanced": True,
             },
             "api_key": {
-                "display_name": "OpenAI API Key",
+                "display_name": "API Key",
                 "required": True,
                 "password": True
             },
