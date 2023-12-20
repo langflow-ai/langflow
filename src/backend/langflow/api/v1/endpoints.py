@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, Optional, Union
+from typing import Annotated, List, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
@@ -42,7 +42,7 @@ router = APIRouter(tags=["Base"])
 
 async def process_graph_data(
     graph_data: dict,
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
     clear_cache: bool = False,
     session_id: Optional[str] = None,
@@ -160,7 +160,7 @@ async def process_json(
 async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
