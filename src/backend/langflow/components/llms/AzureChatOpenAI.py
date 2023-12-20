@@ -6,6 +6,7 @@ from langchain.chat_models.azure_openai import AzureChatOpenAI
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureChatOpenAI"
     description: str = "LLM model from Azure OpenAI."
+    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
