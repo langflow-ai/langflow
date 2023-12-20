@@ -1,7 +1,3 @@
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
 import {
   ReactNode,
   forwardRef,
@@ -10,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-// import "ace-builds/webpack-resolver";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import {

@@ -1,11 +1,4 @@
-import "ace-builds/src-noconflict/ace";
-import "ace-builds/src-noconflict/ext-language_tools";
-import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
-import "ace-builds/src-noconflict/theme-twilight";
-// import "ace-builds/webpack-resolver";
 import { useContext, useEffect, useState } from "react";
-import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";

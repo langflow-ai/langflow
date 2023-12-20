@@ -997,16 +997,6 @@
     @apply max-h-[25vh] max-w-[30vw] overflow-auto;
   }
 
-  .ace-editor-arrangement {
-    @apply flex-max-width h-full flex-col transition-all;
-  }
-  .ace-editor {
-    @apply h-full w-full rounded-lg border-[1px] border-border custom-scroll;
-  }
-  .ace-editor-save-btn {
-    @apply flex-max-width h-fit justify-end;
-  }
-
   .export-modal-save-api {
     @apply font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
   }
