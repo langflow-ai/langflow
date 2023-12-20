@@ -67,7 +67,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         azure_endpoint: str,
         azure_deployment: str,
         api_key: str,
-        api_version: Optional[str] = "2023-05-15",
+        api_version: str = "2023-05-15",
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
