@@ -3,6 +3,9 @@ from typing import Annotated, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from loguru import logger
+from sqlmodel import select
+
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     CustomComponentCode,
@@ -20,8 +23,6 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
-from loguru import logger
-from sqlmodel import select
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -31,8 +32,9 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from langflow.services.task.service import TaskService
 from sqlmodel import Session
+
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -69,6 +71,8 @@ async def process_graph_data(
             task_result = result.result
 
             session_id = result.session_id
+        else:
+            task_result = result
     else:
         logger.warning(
             "This is an experimental feature and may not work as expected."
