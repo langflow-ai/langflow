@@ -2,12 +2,13 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
+from loguru import logger
+from rich import print
+
 from langflow.core.celery_app import celery_app
 from langflow.processing.process import Result, generate_result, process_inputs
 from langflow.services.deps import get_session_service
 from langflow.services.manager import initialize_session_service
-from loguru import logger
-from rich import print
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -62,7 +63,7 @@ def process_graph_cached_task(
         logger.debug(f"Built object: {built_object}")
 
         processed_inputs = process_inputs(inputs, artifacts or {})
-        result = generate_result(built_object, processed_inputs)
+        result = async_to_sync(generate_result, force_new_loop=True)(built_object, processed_inputs)
 
         # Update the session with the new data
         session_service.update_session(session_id, (graph, artifacts))
