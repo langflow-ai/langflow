@@ -16,6 +16,7 @@ import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import { Editor } from "@monaco-editor/react";
 
 export default function CodeAreaModal({
   value,
@@ -25,10 +26,6 @@ export default function CodeAreaModal({
   children,
   dynamic,
   readonly = false,
-  options = {
-    readOnly: readonly,
-
-  }
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const { dark } = useContext(darkContext);
@@ -156,15 +153,12 @@ export default function CodeAreaModal({
         <div className="flex h-full w-full flex-col transition-all">
           <div className="h-full w-full">
             <Editor
-              options={readOnly: readonly, renderLineHighlight: "line",
-                          codeLensFontSize: 14 }
               defaultValue={code}
               defaultLanguage="python"
               height={height ?? "100%"}
-              theme={dark ? "twilight" : "github"}
-              name="CodeEditor"
+              theme={dark ? "vs-dark" : "light"}
               onChange={(value) => {
-                setCode(value);
+                setCode(value!);
               }}
               className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
             />
