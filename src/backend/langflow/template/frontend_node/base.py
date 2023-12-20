@@ -1,15 +1,12 @@
-from collections import defaultdict
 import re
-from typing import ClassVar, DefaultDict, Dict, List, Optional
+from collections import defaultdict
+from typing import ClassVar, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
-from langflow.template.frontend_node.formatter import field_formatters
-from langflow.template.frontend_node.constants import (
-    CLASSES_TO_REMOVE,
-    FORCE_SHOW_FIELDS,
-)
 from langflow.template.field.base import TemplateField
+from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_SHOW_FIELDS
+from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
 
@@ -43,15 +40,18 @@ class FieldFormatters(BaseModel):
 
 
 class FrontendNode(BaseModel):
+    _format_template: bool = True
     template: Template
     description: Optional[str] = None
     base_classes: List[str]
     name: str = ""
-    display_name: str = ""
+    display_name: Optional[str] = ""
     documentation: str = ""
-    custom_fields: Optional[DefaultDict[str, List[str]]] = defaultdict(list)
+    custom_fields: Optional[Dict] = defaultdict(list)
     output_types: List[str] = []
+    full_path: Optional[str] = None
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
+
     beta: bool = False
     error: Optional[str] = None
 
@@ -65,36 +65,55 @@ class FrontendNode(BaseModel):
         """Sets the documentation of the frontend node."""
         self.documentation = documentation
 
-    def process_base_classes(self) -> None:
+    @field_serializer("base_classes")
+    def process_base_classes(self, base_classes: List[str]) -> List[str]:
         """Removes unwanted base classes from the list of base classes."""
-        self.base_classes = [
-            base_class
-            for base_class in self.base_classes
-            if base_class not in CLASSES_TO_REMOVE
-        ]
 
-    def to_dict(self) -> dict:
+        return [base_class for base_class in base_classes if base_class not in CLASSES_TO_REMOVE]
+
+    @field_serializer("display_name")
+    def process_display_name(self, display_name: str) -> str:
+        """Sets the display name of the frontend node."""
+
+        return display_name or self.name
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        result = handler(self)
+        if hasattr(self, "template") and hasattr(self.template, "to_dict"):
+            format_func = self.format_field if self._format_template else None
+            result["template"] = self.template.to_dict(format_func)
+        name = result.pop("name")
+
+        return {name: result}
+
+    # For backwards compatibility
+    def to_dict(self, add_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
-        self.process_base_classes()
-        return {
-            self.name: {
-                "template": self.template.to_dict(self.format_field),
-                "description": self.description,
-                "base_classes": self.base_classes,
-                "display_name": self.display_name or self.name,
-                "custom_fields": self.custom_fields,
-                "output_types": self.output_types,
-                "documentation": self.documentation,
-                "beta": self.beta,
-                "error": self.error,
-            },
-        }
+        dump = self.model_dump(by_alias=True, exclude_none=True)
+        if not add_name:
+            return dump.pop(self.name)
+        return dump
 
     def add_extra_fields(self) -> None:
         pass
 
     def add_extra_base_classes(self) -> None:
         pass
+
+    def add_base_class(self, base_class: Union[str, List[str]]) -> None:
+        """Adds a base class to the frontend node."""
+        if isinstance(base_class, str):
+            self.base_classes.append(base_class)
+        elif isinstance(base_class, list):
+            self.base_classes.extend(base_class)
+
+    def add_output_type(self, output_type: Union[str, List[str]]) -> None:
+        """Adds an output type to the frontend node."""
+        if isinstance(output_type, str):
+            self.output_types.append(output_type)
+        elif isinstance(output_type, list):
+            self.output_types.extend(output_type)
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
@@ -130,9 +149,7 @@ class FrontendNode(BaseModel):
         return _type
 
     @staticmethod
-    def handle_special_field(
-        field, key: str, _type: str, SPECIAL_FIELD_HANDLERS
-    ) -> str:
+    def handle_special_field(field, key: str, _type: str, SPECIAL_FIELD_HANDLERS) -> str:
         """Handles special field by using the respective handler if present."""
         handler = SPECIAL_FIELD_HANDLERS.get(key)
         return handler(field) if handler else _type
@@ -142,13 +159,8 @@ class FrontendNode(BaseModel):
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
-            field.suffixes = [".json", ".yaml", ".yml"]
-            field.file_types = ["json", "yaml", "yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+            field.file_types = [".json", ".yaml", ".yml"]
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"
         return _type
 
@@ -159,9 +171,7 @@ class FrontendNode(BaseModel):
             field.value = value["default"]
 
     @staticmethod
-    def handle_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def handle_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
             field.value = """{"Authorization": "Bearer <token>"}"""
@@ -169,9 +179,7 @@ class FrontendNode(BaseModel):
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
     @staticmethod
-    def _handle_model_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def _handle_model_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to models."""
         model_dict = {
             "OpenAI": constants.OPENAI_MODELS,
@@ -184,9 +192,7 @@ class FrontendNode(BaseModel):
             field.is_list = True
 
     @staticmethod
-    def _handle_api_key_specific_field_values(
-        field: TemplateField, key: str, name: Optional[str] = None
-    ) -> None:
+    def _handle_api_key_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to API keys."""
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
@@ -197,7 +203,8 @@ class FrontendNode(BaseModel):
     @staticmethod
     def handle_kwargs_field(field: TemplateField) -> None:
         """Handles kwargs field by setting certain attributes."""
-        if "kwargs" in field.name.lower():
+
+        if "kwargs" in (field.name or "").lower():
             field.advanced = True
             field.required = False
             field.show = False
@@ -225,10 +232,7 @@ class FrontendNode(BaseModel):
     @staticmethod
     def should_be_password(key: str, show: bool) -> bool:
         """Determines whether the field should be a password field."""
-        return (
-            any(text in key.lower() for text in {"password", "token", "api", "key"})
-            and show
-        )
+        return any(text in key.lower() for text in {"password", "token", "api", "key"}) and show
 
     @staticmethod
     def should_be_multiline(key: str) -> bool:

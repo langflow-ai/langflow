@@ -15,21 +15,21 @@ class EmbeddingFrontendNode(FrontendNode):
                     show=True,
                     name="credentials",
                     value="",
-                    suffixes=[".json"],
-                    file_types=["json"],
+                    file_types=[".json"],
                 )
             )
 
     @staticmethod
     def format_vertex_field(field: TemplateField, name: str):
         if "VertexAI" in name:
+            key = field.name or ""
             advanced_fields = [
                 "verbose",
                 "top_p",
                 "top_k",
                 "max_output_tokens",
             ]
-            if field.name in advanced_fields:
+            if key in advanced_fields:
                 field.advanced = True
             show_fields = [
                 "verbose",
@@ -43,21 +43,22 @@ class EmbeddingFrontendNode(FrontendNode):
                 "top_k",
             ]
 
-            if field.name in show_fields:
+            if key in show_fields:
                 field.show = True
 
     @staticmethod
     def format_jina_fields(field: TemplateField):
-        if "jina" in field.name:
+        name = field.name or ""
+        if "jina" in name:
             field.show = True
             field.advanced = False
 
-        if "auth" in field.name or "token" in field.name:
+        if "auth" in name or "token" in name:
             field.password = True
             field.show = True
             field.advanced = False
 
-        if field.name == "jina_api_url":
+        if name == "jina_api_url":
             field.show = True
             field.advanced = True
             field.display_name = "Jina API URL"
@@ -65,16 +66,15 @@ class EmbeddingFrontendNode(FrontendNode):
 
     @staticmethod
     def format_openai_fields(field: TemplateField):
-        if "openai" in field.name:
+        name = field.name or ""
+        if "openai" in name:
             field.show = True
             field.advanced = True
-            split_name = field.name.split("_")
+            split_name = name.split("_")
             title_name = " ".join([s.capitalize() for s in split_name])
-            field.display_name = title_name.replace("Openai", "OpenAI").replace(
-                "Api", "API"
-            )
+            field.display_name = title_name.replace("Openai", "OpenAI").replace("Api", "API")
 
-        if "api_key" in field.name:
+        if "api_key" in name:
             field.password = True
             field.show = True
             field.advanced = False
@@ -86,13 +86,14 @@ class EmbeddingFrontendNode(FrontendNode):
             EmbeddingFrontendNode.format_vertex_field(field, name)
         field.advanced = not field.required
         field.show = True
-        if field.name == "headers":
+        key = field.name or ""
+        if key == "headers":
             field.show = False
-        if field.name == "model_kwargs":
+        if key == "model_kwargs":
             field.field_type = "dict"
             field.advanced = True
             field.show = True
-        elif field.name in [
+        elif key in [
             "model_name",
             "temperature",
             "model_file",
@@ -102,9 +103,9 @@ class EmbeddingFrontendNode(FrontendNode):
         ]:
             field.advanced = False
             field.show = True
-        if field.name == "credentials":
+        if key == "credentials":
             field.field_type = "file"
-        if name == "VertexAI" and field.name not in [
+        if name == "VertexAI" and key not in [
             "callbacks",
             "client",
             "stop",

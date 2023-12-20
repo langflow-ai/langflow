@@ -1,9 +1,10 @@
 from typing import Optional
-from langflow.template.frontend_node.base import FrontendNode
-from pydantic import field_validator, BaseModel
+
+from langchain.prompts import PromptTemplate
+from pydantic import BaseModel, field_validator, model_serializer
 
 from langflow.interface.utils import extract_input_variables_from_prompt
-from langchain.prompts import PromptTemplate
+from langflow.template.frontend_node.base import FrontendNode
 
 
 class CacheResponse(BaseModel):
@@ -16,6 +17,12 @@ class Code(BaseModel):
 
 class FrontendNodeRequest(FrontendNode):
     template: dict  # type: ignore
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        # Override the default serialization method in FrontendNode
+        # because we don't need the name in the response (i.e. {name: {}})
+        return handler(self)
 
 
 class ValidatePromptRequest(BaseModel):
@@ -81,9 +88,7 @@ def validate_prompt(template: str):
     # Check if there are invalid characters in the input_variables
     input_variables = check_input_variables(input_variables)
     if any(var in INVALID_NAMES for var in input_variables):
-        raise ValueError(
-            f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
-        )
+        raise ValueError(f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. ")
 
     try:
         PromptTemplate(template=template, input_variables=input_variables)
@@ -134,9 +139,7 @@ def check_input_variables(input_variables: list):
     return input_variables
 
 
-def build_error_message(
-    input_variables, invalid_chars, wrong_variables, fixed_variables, empty_variables
-):
+def build_error_message(input_variables, invalid_chars, wrong_variables, fixed_variables, empty_variables):
     input_variables_str = ", ".join([f"'{var}'" for var in input_variables])
     error_string = f"Invalid input variables: {input_variables_str}. "
 

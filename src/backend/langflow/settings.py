@@ -1,12 +1,13 @@
 import contextlib
 import json
 import os
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
 import yaml
-from pydantic import validator, model_validator
+from pydantic import model_validator, validator
 from pydantic_settings import BaseSettings
+
 from langflow.utils.logger import logger
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
@@ -39,16 +40,13 @@ class Settings(BaseSettings):
     @validator("DATABASE_URL", pre=True)
     def set_database_url(cls, value):
         if not value:
-            logger.debug(
-                "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
-            )
+            logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
                 logger.debug("No DATABASE_URL env variable, using sqlite database")
                 value = "sqlite:///./langflow.db"
-
         return value
 
     @validator("COMPONENTS_PATH", pre=True)
@@ -56,22 +54,15 @@ class Settings(BaseSettings):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if (
-                Path(langflow_component_path).exists()
-                and langflow_component_path not in value
-            ):
+            if Path(langflow_component_path).exists() and langflow_component_path not in value:
                 if isinstance(langflow_component_path, list):
                     for path in langflow_component_path:
                         if path not in value:
                             value.append(path)
-                    logger.debug(
-                        f"Extending {langflow_component_path} to components_path"
-                    )
+                    logger.debug(f"Extending {langflow_component_path} to components_path")
                 elif langflow_component_path not in value:
                     value.append(langflow_component_path)
-                    logger.debug(
-                        f"Appending {langflow_component_path} to components_path"
-                    )
+                    logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
@@ -150,7 +141,7 @@ class Settings(BaseSettings):
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
     with open(file_path, "w") as f:
-        settings_dict = settings.dict()
+        settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
 

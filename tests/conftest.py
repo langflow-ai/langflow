@@ -1,56 +1,42 @@
-from contextlib import contextmanager
 import json
-from contextlib import suppress
-from pathlib import Path
-from typing import AsyncGenerator, TYPE_CHECKING
-
-from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.flow.flow import Flow, FlowCreate
-from langflow.services.database.models.user.user import User, UserCreate
-import orjson
-from langflow.services.database.utils import session_getter
-from langflow.services.getters import get_db_service
-import pytest
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from sqlmodel import SQLModel, Session, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
 
 # we need to import tmpdir
 import tempfile
+from contextlib import contextmanager, suppress
+from pathlib import Path
+from typing import TYPE_CHECKING, AsyncGenerator
+
+import orjson
+import pytest
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
+from langflow.graph.graph.base import Graph
+from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.user.model import User, UserCreate
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
 
 if TYPE_CHECKING:
-    from langflow.services.database.manager import DatabaseService
+    from langflow.services.database.service import DatabaseService
 
 
 def pytest_configure():
-    pytest.BASIC_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "basic_example.json"
-    )
-    pytest.COMPLEX_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "complex_example.json"
-    )
-    pytest.OPENAPI_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "Openapi.json"
-    )
-    pytest.GROUPED_CHAT_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
-    )
-    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
-    )
-    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
-    )
+    pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
+    pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
+    pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
+    pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
+    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
+    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
 
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
         Path(__file__).parent.absolute() / "data" / "BasicChatwithPromptandHistory.json"
     )
-    pytest.VECTOR_STORE_PATH = (
-        Path(__file__).parent.absolute() / "data" / "Vector_store.json"
-    )
+    pytest.VECTOR_STORE_PATH = Path(__file__).parent.absolute() / "data" / "Vector_store.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -68,9 +54,7 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
@@ -106,9 +90,7 @@ def distributed_client_fixture(session: Session, monkeypatch, distributed_env):
     monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
     # monkeypatch langflow.services.task.manager.USE_CELERY to True
     # monkeypatch.setattr(manager, "USE_CELERY", True)
-    monkeypatch.setattr(
-        celery_app, "celery_app", celery_app.make_celery("langflow", Config)
-    )
+    monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
 
     # def get_session_override():
     #     return session
@@ -243,7 +225,7 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/users", json=user_data.dict())
+    response = client.post("/api/v1/users", json=user_data.model_dump())
     assert response.status_code == 201
     return response.json()
 
@@ -259,11 +241,7 @@ def active_user(client):
             is_superuser=False,
         )
         # check if user exists
-        if (
-            active_user := session.query(User)
-            .filter(User.username == user.username)
-            .first()
-        ):
+        if active_user := session.query(User).filter(User.username == user.username).first():
             return active_user
         session.add(user)
         session.commit()
@@ -283,7 +261,7 @@ def logged_in_headers(client, active_user):
 
 @pytest.fixture
 def flow(client, json_flow: str, active_user):
-    from langflow.services.database.models.flow.flow import FlowCreate
+    from langflow.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(
@@ -292,7 +270,7 @@ def flow(client, json_flow: str, active_user):
         user_id=active_user.id,
         description="description",
     )
-    flow = Flow(**flow_data.dict())
+    flow = Flow.model_validate(flow_data.model_dump())
     with session_getter(get_db_service()) as session:
         session.add(flow)
         session.commit()
@@ -306,7 +284,7 @@ def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -318,10 +296,24 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     vector_store = orjson.loads(json_vector_store)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Vector Store", description="description", data=data)
-    response = client.post(
-        "api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers
-    )
+    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
     return response.json()
+
+
+@pytest.fixture
+def test_component_code():
+    path = Path(__file__).parent.absolute() / "data" / "component.py"
+    # load the content as a string
+    with open(path, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def test_component_with_templatefield_code():
+    path = Path(__file__).parent.absolute() / "data" / "component_with_templatefield.py"
+    # load the content as a string
+    with open(path, "r") as f:
+        return f.read()

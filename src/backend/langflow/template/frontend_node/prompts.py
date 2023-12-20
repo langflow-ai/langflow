@@ -2,13 +2,9 @@ from typing import Optional
 
 from langchain.agents.mrkl import prompt
 
-from langflow.template.frontend_node.constants import (
-    DEFAULT_PROMPT,
-    HUMAN_PROMPT,
-    SYSTEM_PROMPT,
-)
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.frontend_node.constants import DEFAULT_PROMPT, HUMAN_PROMPT, SYSTEM_PROMPT
 from langflow.template.template.base import Template
 
 
@@ -25,21 +21,19 @@ class PromptFrontendNode(FrontendNode):
             "examples",
             "format_instructions",
         ]
+        key = field.name or ""
         if field.field_type == "StringPromptTemplate" and "Message" in str(name):
             field.field_type = "prompt"
             field.multiline = True
-            field.value = HUMAN_PROMPT if "Human" in field.name else SYSTEM_PROMPT
-        if field.name == "template" and field.value == "":
+            field.value = HUMAN_PROMPT if "Human" in key else SYSTEM_PROMPT
+        if key == "template" and field.value == "":
             field.value = DEFAULT_PROMPT
 
-        if field.name in PROMPT_FIELDS:
+        if key and key in PROMPT_FIELDS:
             field.field_type = "prompt"
             field.advanced = False
 
-        if (
-            "Union" in field.field_type
-            and "BaseMessagePromptTemplate" in field.field_type
-        ):
+        if "Union" in field.field_type and "BaseMessagePromptTemplate" in field.field_type:
             field.field_type = "BaseMessagePromptTemplate"
 
         # All prompt fields should be password=False
@@ -53,13 +47,11 @@ class PromptTemplateNode(FrontendNode):
     description: str
     base_classes: list[str] = ["BasePromptTemplate"]
 
-    def to_dict(self):
-        return super().to_dict()
-
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
-        if field.name == "examples":
+
+        if (field.name or "") == "examples":
             field.advanced = False
 
 
@@ -68,9 +60,6 @@ class BasePromptFrontendNode(FrontendNode):
     template: Template
     description: str
     base_classes: list[str]
-
-    def to_dict(self):
-        return super().to_dict()
 
 
 class ZeroShotPromptNode(BasePromptFrontendNode):
@@ -112,9 +101,6 @@ class ZeroShotPromptNode(BasePromptFrontendNode):
     )
     description: str = "Prompt template for Zero Shot Agent."
     base_classes: list[str] = ["BasePromptTemplate"]
-
-    def to_dict(self):
-        return super().to_dict()
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

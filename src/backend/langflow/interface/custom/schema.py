@@ -1,7 +1,6 @@
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field
-
-
-from typing import Optional
 
 
 class ClassCodeDetails(BaseModel):
@@ -26,4 +25,5 @@ class CallableCodeDetails(BaseModel):
     doc: Optional[str] = None
     args: list
     body: list
-    return_type: Optional[str] = None
+    return_type: Optional[Any] = None
+    has_return: bool = False

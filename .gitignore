@@ -166,6 +166,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.testmondata*
 
 # Translations
 *.mo
@@ -255,5 +256,4 @@ langflow.db
 /tmp/*
 src/backend/langflow/frontend/
 .docker
-
-.idea
+scratchpad*

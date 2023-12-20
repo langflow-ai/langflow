@@ -1,19 +1,17 @@
 from typing import Optional, Union
-from langflow import CustomComponent
 
+from langchain.schema import BaseRetriever, Document
 from langchain.vectorstores import Vectara
-from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
-from langchain.schema import BaseRetriever
+
+from langflow import CustomComponent
 
 
 class VectaraComponent(CustomComponent):
     display_name: str = "Vectara"
     description: str = "Implementation of Vector Store using Vectara"
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
-    )
-    beta: bool = True
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    beta = True
     # api key should be password = True
     field_config = {
         "vectara_customer_id": {"display_name": "Vectara Customer ID"},

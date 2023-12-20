@@ -1,19 +1,15 @@
+import re
 from typing import ClassVar, Dict, Optional
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter.base import FieldFormatter
-import re
-
-from langflow.utils.constants import (
-    ANTHROPIC_MODELS,
-    CHAT_OPENAI_MODELS,
-    OPENAI_MODELS,
-)
+from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
 
 
 class OpenAIAPIKeyFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "api_key" in field.name and "OpenAI" in str(name):
+        if field.name and "api_key" in field.name and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
             field.required = False
             if field.value is None:
@@ -29,14 +25,14 @@ class ModelSpecificFieldFormatter(FieldFormatter):
     }
 
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if name in self.MODEL_DICT and field.name == "model_name":
+        if field.name and name in self.MODEL_DICT and field.name == "model_name":
             field.options = self.MODEL_DICT[name]
             field.is_list = True
 
 
 class KwargsFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "kwargs" in field.name.lower():
+        if field.name and "kwargs" in field.name.lower():
             field.advanced = True
             field.required = False
             field.show = False
@@ -44,11 +40,11 @@ class KwargsFormatter(FieldFormatter):
 
 class APIKeyFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        if "api" in field.name.lower() and "key" in field.name.lower():
+        if field.name and "api" in field.name.lower() and "key" in field.name.lower():
             field.required = False
             field.advanced = False
 
-            field.display_name = field.name.replace("_", " ").title()
+            field.display_name = (field.name or "").replace("_", " ").title()
             field.display_name = field.display_name.replace("Api", "API")
 
 
@@ -98,7 +94,7 @@ class SpecialFieldFormatter(FieldFormatter):
 
 class ShowFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         required = field.required
         field.show = (
             (required and key not in ["input_variables"])
@@ -110,18 +106,15 @@ class ShowFieldFormatter(FieldFormatter):
 
 class PasswordFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         show = field.show
-        if (
-            any(text in key.lower() for text in {"password", "token", "api", "key"})
-            and show
-        ):
+        if any(text in key.lower() for text in {"password", "token", "api", "key"}) and show:
             field.password = True
 
 
 class MultilineFieldFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        key = field.name
+        key = field.name or ""
         if key in {
             "suffix",
             "prefix",
@@ -136,7 +129,7 @@ class MultilineFieldFormatter(FieldFormatter):
 
 class DefaultValueFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
-        value = field.to_dict()
+        value = field.model_dump(by_alias=True, exclude_none=True)
         if "default" in value:
             field.value = value["default"]
 
@@ -151,15 +144,10 @@ class HeadersDefaultValueFormatter(FieldFormatter):
 class DictCodeFileFormatter(FieldFormatter):
     def format(self, field: TemplateField, name: Optional[str] = None) -> None:
         key = field.name
-        value = field.to_dict()
+        value = field.model_dump(by_alias=True, exclude_none=True)
         _type = value["type"]
         if "dict" in _type.lower() and key == "dict_":
             field.field_type = "file"
-            field.suffixes = [".json", ".yaml", ".yml"]
-            field.file_types = ["json", "yaml", "yml"]
-        elif (
-            _type.startswith("Dict")
-            or _type.startswith("Mapping")
-            or _type.startswith("dict")
-        ):
+            field.file_types = [".json", ".yaml", ".yml"]
+        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
             field.field_type = "dict"

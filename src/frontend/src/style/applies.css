@@ -66,7 +66,7 @@
     @apply fixed right-4;
   }
   .side-bar-arrangement {
-    @apply flex h-full w-52 flex-col overflow-hidden border-r scrollbar-hide;
+    @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
     @apply relative mx-auto mb-2 mt-2 flex items-center;
@@ -114,7 +114,7 @@
     @apply pointer-events-none;
   }
   .extra-side-bar-buttons {
-    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background   px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;
@@ -123,7 +123,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .skeleton-card {
@@ -205,19 +205,19 @@
   }
 
   .loading-page-panel {
-    @apply flex h-full w-full items-center justify-center bg-muted;
+    @apply flex h-full w-full items-center justify-center bg-background;
   }
 
   .main-page-panel {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
   }
 
   .admin-page-panel {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col overflow-auto bg-background px-16;
   }
 
   .main-page-nav-arrangement {
-    @apply flex-max-width justify-between px-6 py-12 pb-2;
+    @apply flex-max-width justify-between py-8 pb-2;
   }
 
   .main-page-nav-title {
@@ -229,23 +229,23 @@
   }
 
   .main-page-description-text {
-    @apply flex w-[60%] px-6 pb-14 text-muted-foreground;
+    @apply flex w-[60%] pb-4 text-muted-foreground;
   }
 
   .admin-page-description-text {
-    @apply flex w-[80%] px-6 pb-8 text-muted-foreground;
+    @apply flex w-[80%] pb-8 text-muted-foreground;
   }
 
   .main-page-flows-display {
-    @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
+    @apply grid w-full gap-4 pb-7 md:grid-cols-2 lg:grid-cols-3;
   }
 
   .community-page-arrangement {
-    @apply flex-max-width h-full flex-col overflow-auto bg-muted px-16;
+    @apply flex-max-width h-full flex-col justify-between overflow-auto bg-background px-16;
   }
 
   .community-page-nav-arrangement {
-    @apply flex-max-width justify-between px-6 py-12 pb-2;
+    @apply flex-max-width justify-between py-8 pb-2;
   }
 
   .community-page-nav-title {
@@ -257,7 +257,7 @@
   }
 
   .community-page-description-text {
-    @apply flex w-[70%] px-6 pb-8 text-muted-foreground;
+    @apply flex w-[70%] pb-8 text-muted-foreground;
   }
 
   .community-pages-flows-panel {
@@ -311,10 +311,10 @@
     @apply hover:text-accent-foreground hover:transition-all;
   }
   .generic-node-desc {
-    @apply h-full w-full  text-foreground;
+    @apply mb-4 h-full w-full px-5 text-foreground;
   }
   .generic-node-desc-text {
-    @apply w-full px-5 pb-3 text-sm text-muted-foreground;
+    @apply w-full text-sm text-muted-foreground;
   }
 
   .alert-icon {
@@ -351,34 +351,6 @@
   }
   .success-alert-message {
     @apply alert-font-size text-success-foreground word-break-break-word;
-  }
-
-  .card-component-title-display {
-    @apply round-button-div flex-max-width;
-  }
-  .card-component-image {
-    @apply flex h-7 w-7 items-center justify-center rounded-full text-2xl;
-  }
-  .card-component-title-size {
-    @apply w-full flex-1 truncate-doubleline word-break-break-word;
-  }
-  .card-component-delete-button {
-    @apply flex self-start;
-  }
-  .card-component-delete-icon {
-    @apply h-4 w-4 text-primary opacity-0 transition-all group-hover:opacity-100;
-  }
-  .card-component-desc {
-    @apply pb-2 pt-2;
-  }
-  .card-component-desc-text {
-    @apply truncate-doubleline;
-  }
-  .card-component-footer-arrangement {
-    @apply flex-max-width items-end justify-between gap-2;
-  }
-  .card-component-footer {
-    @apply flex flex-wrap gap-2;
   }
 
   .unused-side-bar-aside {
@@ -495,7 +467,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[200px] cursor-pointer items-center gap-2;
+    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[200px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -505,13 +477,13 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-border bg-background;
+    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
   }
   .header-start-display {
-    @apply flex w-[30%] items-center justify-start gap-2;
+    @apply flex items-center justify-start gap-2;
   }
   .header-end-division {
-    @apply flex w-[30%] justify-end px-2;
+    @apply flex justify-end px-2;
   }
   .header-end-display {
     @apply ml-auto mr-2 flex items-center gap-5;
@@ -535,7 +507,7 @@
     @apply hover:bg-accent hover:text-accent-foreground;
   }
   .header-github-display {
-    @apply -mr-px ml-2 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
+    @apply -mr-px ml-1 flex h-9 items-center justify-center rounded-md rounded-l-none border bg-background px-2 text-sm;
   }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
@@ -1060,5 +1032,60 @@
 
   .input-invalid {
     @apply border-destructive focus:border-destructive  focus:ring-destructive;
+  }
+
+  .fade-container {
+    @apply relative overflow-hidden;
+  }
+
+  .fade-container::before,
+  .fade-container::after {
+    @apply pointer-events-none absolute bottom-0 top-0 bg-gradient-to-r from-background to-transparent;
+    content: "";
+    width: 50px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .fade-container::after {
+    @apply right-0;
+    transform: rotate(180deg);
+  }
+
+  .fade-container.fade-left::before,
+  .fade-container.fade-right::after {
+    opacity: 1;
+  }
+
+  .fade-container-dark {
+    @apply relative overflow-hidden;
+  }
+
+  .fade-container-dark::before,
+  .fade-container-dark::after {
+    @apply pointer-events-none absolute bottom-0 top-0;
+    content: "";
+    width: 50px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: linear-gradient(to right, black, transparent);
+  }
+
+  .fade-container-dark:after {
+    @apply right-0;
+    transform: rotate(180deg);
+  }
+
+  .fade-container-dark.fade-left::before,
+  .fade-container-dark.fade-right::after {
+    opacity: 1;
+  }
+
+  .scroll-container {
+    @apply flex overflow-x-scroll scrollbar-hide;
+  }
+
+  .store-beta-icon {
+    @apply relative bottom-3 left-1 ml-2 rounded-full bg-beta-background px-2 py-1 text-center text-xs font-semibold text-beta-foreground;
   }
 }

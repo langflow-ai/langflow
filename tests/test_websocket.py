@@ -31,9 +31,7 @@ def test_websocket_endpoint(client: TestClient, active_user, logged_in_headers):
     # Assuming your websocket_endpoint uses chat_service which caches data from stream_build
     access_token = logged_in_headers["Authorization"].split(" ")[1]
     with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(
-            f"api/v1/chat/non_existing_client_id?token={access_token}"
-        ) as websocket:
+        with client.websocket_connect(f"api/v1/chat/non_existing_client_id?token={access_token}") as websocket:
             websocket.send_json({"type": "test"})
             data = websocket.receive_json()
             assert "Please, build the flow before sending messages" in data["message"]

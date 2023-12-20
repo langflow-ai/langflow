@@ -48,16 +48,16 @@ class ChainFrontendNode(FrontendNode):
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:
         FrontendNode.format_field(field, name)
-
-        if "name" == "RetrievalQA" and field.name == "memory":
+        key = field.name or ""
+        if "name" == "RetrievalQA" and key == "memory":
             field.show = False
             field.required = False
 
         field.advanced = False
-        if "key" in field.name:
+        if "key" in key:
             field.password = False
             field.show = False
-        if field.name in ["input_key", "output_key"]:
+        if key in ["input_key", "output_key"]:
             field.required = True
             field.show = True
             field.advanced = True
@@ -71,26 +71,26 @@ class ChainFrontendNode(FrontendNode):
         #     field.value = field.value.template
 
         # Separated for possible future changes
-        if field.name == "prompt" and field.value is None:
+        if key == "prompt" and field.value is None:
             field.required = True
             field.show = True
             field.advanced = False
-        if field.name == "memory":
+        if key == "memory":
             # field.required = False
             field.show = True
             field.advanced = False
-        if field.name == "verbose":
+        if key == "verbose":
             field.required = False
             field.show = False
             field.advanced = True
-        if field.name == "llm":
+        if key == "llm":
             field.required = True
             field.show = True
             field.advanced = False
             field.field_type = "BaseLanguageModel"  # temporary fix
             field.is_list = False
 
-        if field.name == "return_source_documents":
+        if key == "return_source_documents":
             field.required = False
             field.show = True
             field.advanced = True
@@ -135,7 +135,9 @@ class SeriesCharacterChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    description: str = (
+        "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    )
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",
@@ -244,9 +246,6 @@ class CombineDocsChainNode(FrontendNode):
     )
     description: str = """Load question answering chain."""
     base_classes: list[str] = ["BaseCombineDocumentsChain", "Callable"]
-
-    def to_dict(self):
-        return super().to_dict()
 
     @staticmethod
     def format_field(field: TemplateField, name: Optional[str] = None) -> None:

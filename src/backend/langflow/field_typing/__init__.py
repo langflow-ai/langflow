@@ -1,41 +1,50 @@
-# LANGCHAIN_BASE_TYPES = {
-#     "Chain": Chain,
-#     "AgentExecutor": AgentExecutor,
-#     "Tool": Tool,
-#     "BaseLLM": BaseLLM,
-#     "PromptTemplate": PromptTemplate,
-#     "BaseLoader": BaseLoader,
-#     "Document": Document,
-#     "TextSplitter": TextSplitter,
-#     "VectorStore": VectorStore,
-#     "Embeddings": Embeddings,
-#     "BaseRetriever": BaseRetriever,
-#     "BaseOutputParser": BaseOutputParser,
-#     "BaseMemory": BaseMemory,
-#     "BaseChatMemory": BaseChatMemory,
-# }
+from typing import Any
+
 from .constants import (
-    Tool,
-    PromptTemplate,
-    ChatPromptTemplate,
-    BasePromptTemplate,
-    Chain,
+    AgentExecutor,
     BaseChatMemory,
+    BaseLanguageModel,
     BaseLLM,
     BaseLoader,
     BaseMemory,
     BaseOutputParser,
+    BasePromptTemplate,
     BaseRetriever,
-    VectorStore,
-    Embeddings,
-    TextSplitter,
-    Document,
-    AgentExecutor,
-    NestedDict,
-    Data,
-    BaseLanguageModel,
     Callable,
+    Chain,
+    ChatPromptTemplate,
+    Data,
+    Document,
+    Embeddings,
+    NestedDict,
+    Object,
+    Prompt,
+    PromptTemplate,
+    TextSplitter,
+    Tool,
+    VectorStore,
 )
+from .range_spec import RangeSpec
+
+
+def _import_template_field():
+    from langflow.template.field.base import TemplateField
+
+    return TemplateField
+
+
+def __getattr__(name: str) -> Any:
+    # This is to avoid circular imports
+    if name == "TemplateField":
+        return _import_template_field()
+    elif name == "RangeSpec":
+        return RangeSpec
+    # The other names should work as if they were imported from constants
+    # Import the constants module langflow.field_typing.constants
+    from . import constants
+
+    return getattr(constants, name)
+
 
 __all__ = [
     "NestedDict",
@@ -55,7 +64,11 @@ __all__ = [
     "TextSplitter",
     "Document",
     "AgentExecutor",
+    "Object",
     "Callable",
     "BasePromptTemplate",
     "ChatPromptTemplate",
+    "Prompt",
+    "RangeSpec",
+    "TemplateField",
 ]

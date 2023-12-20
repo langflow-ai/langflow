@@ -2,7 +2,7 @@ from typing import ClassVar, Dict, List, Optional, Type
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode
@@ -53,8 +53,7 @@ class MemoryCreator(LangChainTypeCreator):
         return [
             memory.__name__
             for memory in self.type_to_loader_dict.values()
-            if memory.__name__ in settings_service.settings.MEMORIES
-            or settings_service.settings.DEV
+            if memory.__name__ in settings_service.settings.MEMORIES or settings_service.settings.DEV
         ]
 
 

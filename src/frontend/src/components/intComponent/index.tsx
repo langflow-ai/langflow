@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FloatComponentType } from "../../types/components";
+import { IntComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
 
@@ -9,7 +9,7 @@ export default function IntComponent({
   disabled,
   editNode = false,
   id = "",
-}: FloatComponentType): JSX.Element {
+}: IntComponentType): JSX.Element {
   const min = 0;
 
   // Clear component state
@@ -36,6 +36,8 @@ export default function IntComponent({
             event.key !== "c" &&
             event.key !== "v" &&
             event.key !== "a" &&
+            event.key !== "ArrowUp" &&
+            event.key !== "ArrowDown" &&
             !/^[-]?\d*$/.test(event.key)
           ) {
             event.preventDefault();
