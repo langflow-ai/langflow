@@ -136,7 +136,12 @@ async def generate_result(langchain_object: Union[Chain, VectorStore], inputs: d
         elif isinstance(inputs, dict):
             call_func = langchain_object.ainvoke
         result = await call_func(inputs)
-        result = result.content if hasattr(result, "content") else result
+        if isinstance(result, list):
+            result = [r.content if hasattr(r, "content") else r for r in result]
+        elif hasattr(result, "content"):
+            result = result.content
+        else:
+            result = result
     elif hasattr(langchain_object, "run") and isinstance(langchain_object, CustomComponent):
         result = langchain_object.run(inputs)
 
