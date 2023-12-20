@@ -251,6 +251,7 @@ export const nodeIconsLucide: iconsType = {
   MongoDBAtlasVectorSearch: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
+  AzureChatOpenAIComponent: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
