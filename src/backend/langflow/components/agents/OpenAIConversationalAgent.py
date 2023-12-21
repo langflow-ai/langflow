@@ -9,7 +9,9 @@ from langchain.prompts import SystemMessagePromptTemplate
 from langchain.prompts.chat import MessagesPlaceholder
 from langchain.schema.memory import BaseMemory
 from langchain.tools import Tool
+
 from langflow import CustomComponent
+from langflow.field_typing.range_spec import RangeSpec
 
 
 class ConversationalAgent(CustomComponent):
@@ -35,6 +37,11 @@ class ConversationalAgent(CustomComponent):
                 "value": openai_function_models[0],
             },
             "code": {"show": False},
+            "temperature": {
+                "display_name": "Temperature",
+                "value": 0.2,
+                "range_spec": RangeSpec(min=0, max=2, step=0.1),
+            },
         }
 
     def build(
@@ -46,11 +53,14 @@ class ConversationalAgent(CustomComponent):
         memory: Optional[BaseMemory] = None,
         system_message: Optional[SystemMessagePromptTemplate] = None,
         max_token_limit: int = 2000,
+        temperature: float = 0.9,
     ) -> AgentExecutor:
         llm = ChatOpenAI(
             model=model_name,
             api_key=openai_api_key,
             base_url=openai_api_base,
+            max_tokens=max_token_limit,
+            temperature=temperature,
         )
         if not memory:
             memory_key = "chat_history"
