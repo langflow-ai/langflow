@@ -5,12 +5,14 @@ from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
+from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
+from loguru import logger
+from pydantic import BaseModel
+
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
-from loguru import logger
-from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -125,6 +127,11 @@ async def process_runnable(runnable: Runnable, inputs: Union[dict, List[dict]]):
         result = await runnable.ainvoke(inputs)
     else:
         raise ValueError(f"Runnable {runnable} does not support inputs of type {type(inputs)}")
+    # Check if the result is a list of AIMessages
+    if isinstance(result, list) and all(isinstance(r, AIMessage) for r in result):
+        result = [r.content for r in result]
+    elif isinstance(result, AIMessage):
+        result = result.content
     return result
 
 
@@ -181,7 +188,7 @@ async def generate_result(built_object: Union[Chain, VectorStore, Runnable], inp
 
 
 class Result(BaseModel):
-    result: Any
+    result: Union[dict, List[dict], str, List[str], AIMessage]
     session_id: str
 
 
