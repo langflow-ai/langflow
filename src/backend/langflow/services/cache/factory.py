@@ -22,6 +22,7 @@ class CacheServiceFactory(ServiceFactory):
                 host=settings_service.settings.REDIS_HOST,
                 port=settings_service.settings.REDIS_PORT,
                 db=settings_service.settings.REDIS_DB,
+                url=settings_service.settings.REDIS_URL,
                 expiration_time=settings_service.settings.REDIS_CACHE_EXPIRE,
             )
             if redis_cache.is_connected():

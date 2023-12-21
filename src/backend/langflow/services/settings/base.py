@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
+    REDIS_URL: Optional[str] = None
     REDIS_CACHE_EXPIRE: int = 3600
 
     # PLUGIN_DIR: Optional[str] = None
