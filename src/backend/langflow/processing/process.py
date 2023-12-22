@@ -5,6 +5,7 @@ from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
+from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
@@ -105,10 +106,23 @@ def get_build_result(data_graph, session_id):
     return build_sorted_vertices(data_graph)
 
 
-def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
+def process_inputs(
+    inputs: Optional[Union[dict, List[dict]]] = None, artifacts: Optional[Dict[str, Any]] = None
+) -> Union[dict, List[dict]]:
     if inputs is None:
         inputs = {}
+    if artifacts is None:
+        artifacts = {}
 
+    if isinstance(inputs, dict):
+        inputs = update_inputs_dict(inputs, artifacts)
+    elif isinstance(inputs, List):
+        inputs = [update_inputs_dict(inp, artifacts) for inp in inputs]
+
+    return inputs
+
+
+def update_inputs_dict(inputs: dict, artifacts: Dict[str, Any]) -> dict:
     for key, value in artifacts.items():
         if key == "repr":
             continue
@@ -125,6 +139,11 @@ async def process_runnable(runnable: Runnable, inputs: Union[dict, List[dict]]):
         result = await runnable.ainvoke(inputs)
     else:
         raise ValueError(f"Runnable {runnable} does not support inputs of type {type(inputs)}")
+    # Check if the result is a list of AIMessages
+    if isinstance(result, list) and all(isinstance(r, AIMessage) for r in result):
+        result = [r.content for r in result]
+    elif isinstance(result, AIMessage):
+        result = result.content
     return result
 
 

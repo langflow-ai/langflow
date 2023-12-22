@@ -231,7 +231,7 @@ export default function ExtraSidebar(): JSX.Element {
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-buttons-arrangement">
-        {hasStore && (
+        {hasStore && validApiKey && (
           <ShadTooltip
             content={
               !hasApiKey || !validApiKey
@@ -263,7 +263,7 @@ export default function ExtraSidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        {!hasStore && ExportMemo}
+        {(!hasApiKey || !validApiKey) && ExportMemo}
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {flow && flow.data && (

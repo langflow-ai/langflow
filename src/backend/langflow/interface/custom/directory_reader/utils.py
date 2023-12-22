@@ -1,6 +1,5 @@
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.template.frontend_node.custom_components import \
-    CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from loguru import logger
 
 
@@ -75,10 +74,9 @@ def create_invalid_component_template(component, component_name):
     """Create a template for an invalid component."""
     component_code = component["code"]
     component_frontend_node = CustomComponentFrontendNode(
-            description="ERROR - Check your Python Code",
-            display_name=f"ERROR - {component_name}",
-        )
-
+        description="ERROR - Check your Python Code",
+        display_name=f"ERROR - {component_name}",
+    )
 
     component_frontend_node.error = component.get("error", None)
     field = component_frontend_node.template.get_field("code")

@@ -8,6 +8,7 @@ on:
       - dev
     paths:
       - "pyproject.toml"
+  workflow_dispatch:
 
 env:
   POETRY_VERSION: "1.5.1"
@@ -40,7 +41,7 @@ jobs:
           generateReleaseNotes: true
           prerelease: true
           tag: v${{ steps.check-version.outputs.version }}
-          commit: main
+          commit: dev
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
