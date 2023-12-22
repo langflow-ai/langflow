@@ -7,12 +7,11 @@ from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
-from loguru import logger
-from pydantic import BaseModel
-
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
+from loguru import logger
+from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -201,7 +200,7 @@ async def generate_result(built_object: Union[Chain, VectorStore, Runnable], inp
 
 
 class Result(BaseModel):
-    result: Union[dict, List[dict], str, List[str], AIMessage]
+    result: Any
     session_id: str
 
 
