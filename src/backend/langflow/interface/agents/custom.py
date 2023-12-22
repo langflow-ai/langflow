@@ -1,6 +1,6 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
-from langchain.agents import AgentExecutor, AgentType, Tool, ZeroShotAgent, initialize_agent
+from langchain.agents import AgentExecutor, ZeroShotAgent
 from langchain.agents.agent_toolkits import (
     SQLDatabaseToolkit,
     VectorStoreInfo,
@@ -15,7 +15,6 @@ from langchain.agents.agent_toolkits.vectorstore.prompt import ROUTER_PREFIX as 
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.base_language import BaseLanguageModel
 from langchain.chains.llm import LLMChain
-from langchain.memory.chat_memory import BaseChatMemory
 from langchain.sql_database import SQLDatabase
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
 from langchain_experimental.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX

@@ -3,6 +3,7 @@ from langflow import CustomComponent
 from langchain.llms.base import BaseLanguageModel
 from langchain.chat_models.azure_openai import AzureChatOpenAI
 
+
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureChatOpenAI"
     description: str = "LLM model from Azure OpenAI."
@@ -16,7 +17,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         "gpt-4-32k",
         "gpt-4-vision",
     ]
-    
+
     def build_config(self):
         return {
             "model": {
@@ -28,7 +29,7 @@ class AzureChatOpenAIComponent(CustomComponent):
             "azure_endpoint": {
                 "display_name": "Azure Endpoint",
                 "required": True,
-                "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`"
+                "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
             },
             "azure_deployment": {
                 "display_name": "Deployment Name",
@@ -40,18 +41,14 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "required": True,
                 "advanced": True,
             },
-            "api_key": {
-                "display_name": "API Key",
-                "required": True,
-                "password": True
-            },
+            "api_key": {"display_name": "API Key", "required": True, "password": True},
             "temperature": {
                 "display_name": "Temperature",
                 "value": 0.7,
                 "field_type": "float",
                 "required": False,
             },
-             "max_tokens": {
+            "max_tokens": {
                 "display_name": "Max Tokens",
                 "value": 1000,
                 "required": False,
@@ -71,8 +68,6 @@ class AzureChatOpenAIComponent(CustomComponent):
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
-
-
         return AzureChatOpenAI(
             model=model,
             azure_endpoint=azure_endpoint,
@@ -80,5 +75,5 @@ class AzureChatOpenAIComponent(CustomComponent):
             api_version=api_version,
             api_key=api_key,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         )
