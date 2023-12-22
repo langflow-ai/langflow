@@ -8,6 +8,7 @@ on:
       - dev
     paths:
       - "pyproject.toml"
+  workflow_dispatch:
 
 env:
   POETRY_VERSION: "1.5.1"
