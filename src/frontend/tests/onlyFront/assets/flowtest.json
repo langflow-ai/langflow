@@ -1,1 +1,196 @@
-{"name":"Lonely Stonebraker","description":"Design Dialogues with Langflow.","data":{"nodes":[{"width":384,"height":461,"id":"CustomComponent-MtJjl","type":"genericNode","position":{"x":534.3712097224906,"y":-135.01908566635723},"data":{"type":"CustomComponent","node":{"template":{"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow import CustomComponent\nfrom langflow.field_typing import Data\nfrom pathlib import Path\nfrom platformdirs import user_cache_dir\nimport os\n\nclass Component(CustomComponent):\n    documentation: str = \"http://docs.langflow.org/components/custom\"\n\n    def build_config(self):\n        return {\"text_input\":{\"display_name\":\"Text Input\", \"input_types\":[\"str\"]},\"save_path\":{\"display_name\":\"Save Path\",\n        \"info\":\"Put the full path with the file name and extension\",\"value\":Path(user_cache_dir(\"langflow\"))/\"text.t1.txt\"}}\n\n    def build(self, text_input:str,save_path:str) -> str:\n        try:\n            # Create the directory if it doesn't exist\n            os.makedirs(os.path.dirname(save_path), exist_ok=True)\n\n            # Open the file in write mode and save the text\n            with open(save_path, 'w') as file:\n                file.write(text_input)\n        except Exception as e:\n            raise e\n        self.status = text_input\n        return text_input","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":false,"dynamic":true,"info":""},"save_path":{"type":"str","required":true,"placeholder":"","list":false,"show":true,"multiline":false,"value":"/home/vazz/.cache/langflow/text.t1.txt","fileTypes":[],"file_path":"","password":false,"name":"save_path","display_name":"Save Path","advanced":false,"dynamic":false,"info":"Put the full path with the file name and extension"},"text_input":{"type":"str","required":true,"placeholder":"","list":false,"show":true,"multiline":false,"fileTypes":[],"file_path":"","password":false,"name":"text_input","display_name":"Text Input","advanced":false,"input_types":["str"],"dynamic":false,"info":"","value":""},"_type":"CustomComponent"},"base_classes":["str"],"display_name":"text checkpoint","documentation":"http://docs.langflow.org/components/custom","custom_fields":{"save_path":null,"text_input":null},"output_types":["str"],"field_formatters":{},"beta":true},"id":"CustomComponent-MtJjl"},"selected":false,"dragging":false,"positionAbsolute":{"x":534.3712097224906,"y":-135.01908566635723}},{"width":384,"height":453,"id":"CustomComponent-7NQoq","type":"genericNode","position":{"x":27.487979888011637,"y":-414.43998171034826},"data":{"type":"CustomComponent","node":{"template":{"audio":{"type":"file","required":true,"placeholder":"","list":false,"show":true,"multiline":false,"fileTypes":[],"file_path":"/home/vazz/.cache/langflow/1b0814b7-2964-4e09-9b4b-f7413c4fb50b/b56b043d8940daecbdec03b97ad4346488c58d7cc62016560dd333aa7a6a12ce.m4a","password":false,"name":"audio","display_name":"audio","advanced":false,"dynamic":false,"info":"","value":"Audio Recording 2023-12-13 at 16.35.22.m4a"},"OpenAIKey":{"type":"str","required":true,"placeholder":"","list":false,"show":true,"multiline":false,"fileTypes":[],"file_path":"","password":true,"name":"OpenAIKey","display_name":"OpenAIKey","advanced":false,"dynamic":false,"info":"","value":""},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow import CustomComponent\nfrom typing import Optional, List, Dict, Union\nfrom langflow.field_typing import (\n    AgentExecutor,\n    BaseChatMemory,\n    BaseLanguageModel,\n    BaseLLM,\n    BaseLoader,\n    BaseMemory,\n    BaseOutputParser,\n    BasePromptTemplate,\n    BaseRetriever,\n    Callable,\n    Chain,\n    ChatPromptTemplate,\n    Data,\n    Document,\n    Embeddings,\n    NestedDict,\n    Object,\n    PromptTemplate,\n    TextSplitter,\n    Tool,\n    VectorStore,\n)\n\nfrom openai import OpenAI\nimport os\nimport ffmpeg\n\nclass Component(CustomComponent):\n    display_name: str = \"Whisper Transcriber\"\n    description: str = \"Converts audio to text using OpenAI's Whisper.\"\n\n    def build_config(self):\n        return {\"audio\": {\"field_type\": \"file\", \"suffixes\": [\".mp3\", \".mp4\", \".m4a\"]}, \"OpenAIKey\": {\"field_type\": \"str\", \"password\": True}}\n\n    def calculate_segment_duration(self, audio_path, target_chunk_size_mb=24):\n        # Calculate the target chunk size in bytes\n        target_chunk_size_bytes = target_chunk_size_mb * 1024 * 1024\n\n        # Use ffprobe to get the audio file information\n        ffprobe_output = ffmpeg.probe(audio_path)\n        print(ffprobe_output)\n        # Convert duration to float\n        duration = float(ffprobe_output[\"format\"][\"duration\"])\n\n        # Calculate the approximate bitrate\n        bitrate = os.path.getsize(audio_path) / duration\n\n        # Calculate the segment duration to achieve the target chunk size\n        segment_duration = target_chunk_size_bytes / bitrate\n\n        return segment_duration\n\n    def split_audio_into_chunks(self, audio_path, target_chunk_size_mb=24):\n        # Calculate the segment duration\n        segment_duration = self.calculate_segment_duration(audio_path, target_chunk_size_mb)\n\n        # Create a directory to store the chunks\n        output_directory = f\"{os.path.splitext(audio_path)[0]}_chunks\"\n        os.makedirs(output_directory, exist_ok=True)\n\n        # Use ffmpeg-python to split the audio file into chunks\n        (\n            ffmpeg.input(audio_path)\n            .output(f\"{output_directory}/%03d{os.path.splitext(audio_path)[1]}\", codec=\"copy\", f=\"segment\", segment_time=segment_duration)\n            .run()\n        )\n\n        # Get the list of generated chunk files\n        chunks = [os.path.join(output_directory, file) for file in os.listdir(output_directory)]\n\n        return chunks\n\n    def build(self, audio: str, OpenAIKey: str) -> str:\n        # Split audio into chunks\n        audio_chunks = self.split_audio_into_chunks(audio)\n\n        client = OpenAI(api_key=OpenAIKey)\n        transcripts = []\n\n        try:\n            for chunk in audio_chunks:\n                with open(chunk, \"rb\") as chunk_file:\n                    transcript = client.audio.transcriptions.create(\n                        model=\"whisper-1\",\n                        file=chunk_file,\n                        response_format=\"text\"\n                    )\n                    transcripts.append(transcript)\n        finally:\n            # Clean up temporary chunk files\n            for chunk in audio_chunks:\n                os.remove(chunk)\n\n        # Concatenate transcripts into the final response\n        final_response = \"\\n\".join(transcripts)\n        self.status = final_response\n        return final_response\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":false,"dynamic":true,"info":""},"_type":"CustomComponent"},"description":"Converts audio to text using OpenAI's Whisper.","base_classes":["str"],"display_name":"Whisper Transcriber","documentation":"","custom_fields":{"OpenAIKey":null,"audio":null},"output_types":["str"],"field_formatters":{},"beta":true},"id":"CustomComponent-7NQoq"},"selected":true,"positionAbsolute":{"x":27.487979888011637,"y":-414.43998171034826},"dragging":false}],"edges":[{"source":"CustomComponent-7NQoq","sourceHandle":"{œbaseClassesœ:[œstrœ],œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-7NQoqœ}","target":"CustomComponent-MtJjl","targetHandle":"{œfieldNameœ:œtext_inputœ,œidœ:œCustomComponent-MtJjlœ,œinputTypesœ:[œstrœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"text_input","id":"CustomComponent-MtJjl","inputTypes":["str"],"type":"str"},"sourceHandle":{"baseClasses":["str"],"dataType":"CustomComponent","id":"CustomComponent-7NQoq"}},"style":{"stroke":"#555"},"className":"stroke-gray-900  stroke-connection","animated":false,"id":"reactflow__edge-CustomComponent-7NQoq{œbaseClassesœ:[œstrœ],œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-7NQoqœ}-CustomComponent-MtJjl{œfieldNameœ:œtext_inputœ,œidœ:œCustomComponent-MtJjlœ,œinputTypesœ:[œstrœ],œtypeœ:œstrœ}"}],"viewport":{"x":119.37759169012509,"y":351.3082742479685,"zoom":1}},"is_component":false,"updated_at":"2023-12-13T23:51:56.874099","folder":null,"id":"1b0814b7-2964-4e09-9b4b-f7413c4fb50b","user_id":"8b5cf798-f1b8-4108-88fd-d7274d08d471"}
+{
+  "name": "Lonely Stonebraker",
+  "description": "Design Dialogues with Langflow.",
+  "data": {
+    "nodes": [
+      {
+        "width": 384,
+        "height": 461,
+        "id": "CustomComponent-MtJjl",
+        "type": "genericNode",
+        "position": { "x": 534.3712097224906, "y": -135.01908566635723 },
+        "data": {
+          "type": "CustomComponent",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow import CustomComponent\nfrom langflow.field_typing import Data\nfrom pathlib import Path\nfrom platformdirs import user_cache_dir\nimport os\n\nclass Component(CustomComponent):\n    documentation: str = \"http://docs.langflow.org/components/custom\"\n\n    def build_config(self):\n        return {\"text_input\":{\"display_name\":\"Text Input\", \"input_types\":[\"str\"]},\"save_path\":{\"display_name\":\"Save Path\",\n        \"info\":\"Put the full path with the file name and extension\",\"value\":Path(user_cache_dir(\"langflow\"))/\"text.t1.txt\"}}\n\n    def build(self, text_input:str,save_path:str) -> str:\n        try:\n            # Create the directory if it doesn't exist\n            os.makedirs(os.path.dirname(save_path), exist_ok=True)\n\n            # Open the file in write mode and save the text\n            with open(save_path, 'w') as file:\n                file.write(text_input)\n        except Exception as e:\n            raise e\n        self.status = text_input\n        return text_input",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": false,
+                "dynamic": true,
+                "info": ""
+              },
+              "save_path": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "/home/vazz/.cache/langflow/text.t1.txt",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "save_path",
+                "display_name": "Save Path",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Put the full path with the file name and extension"
+              },
+              "text_input": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "text_input",
+                "display_name": "Text Input",
+                "advanced": false,
+                "input_types": ["str"],
+                "dynamic": false,
+                "info": "",
+                "value": ""
+              },
+              "_type": "CustomComponent"
+            },
+            "base_classes": ["str"],
+            "display_name": "text checkpoint",
+            "documentation": "http://docs.langflow.org/components/custom",
+            "custom_fields": { "save_path": null, "text_input": null },
+            "output_types": ["str"],
+            "field_formatters": {},
+            "beta": true
+          },
+          "id": "CustomComponent-MtJjl"
+        },
+        "selected": false,
+        "dragging": false,
+        "positionAbsolute": { "x": 534.3712097224906, "y": -135.01908566635723 }
+      },
+      {
+        "width": 384,
+        "height": 453,
+        "id": "CustomComponent-7NQoq",
+        "type": "genericNode",
+        "position": { "x": 27.487979888011637, "y": -414.43998171034826 },
+        "data": {
+          "type": "CustomComponent",
+          "node": {
+            "template": {
+              "audio": {
+                "type": "file",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "/home/vazz/.cache/langflow/1b0814b7-2964-4e09-9b4b-f7413c4fb50b/b56b043d8940daecbdec03b97ad4346488c58d7cc62016560dd333aa7a6a12ce.m4a",
+                "password": false,
+                "name": "audio",
+                "display_name": "audio",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "value": "Audio Recording 2023-12-13 at 16.35.22.m4a"
+              },
+              "OpenAIKey": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": true,
+                "name": "OpenAIKey",
+                "display_name": "OpenAIKey",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "value": ""
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow import CustomComponent\nfrom typing import Optional, List, Dict, Union\nfrom langflow.field_typing import (\n    AgentExecutor,\n    BaseChatMemory,\n    BaseLanguageModel,\n    BaseLLM,\n    BaseLoader,\n    BaseMemory,\n    BaseOutputParser,\n    BasePromptTemplate,\n    BaseRetriever,\n    Callable,\n    Chain,\n    ChatPromptTemplate,\n    Data,\n    Document,\n    Embeddings,\n    NestedDict,\n    Object,\n    PromptTemplate,\n    TextSplitter,\n    Tool,\n    VectorStore,\n)\n\nfrom openai import OpenAI\nimport os\nimport ffmpeg\n\nclass Component(CustomComponent):\n    display_name: str = \"Whisper Transcriber\"\n    description: str = \"Converts audio to text using OpenAI's Whisper.\"\n\n    def build_config(self):\n        return {\"audio\": {\"field_type\": \"file\", \"suffixes\": [\".mp3\", \".mp4\", \".m4a\"]}, \"OpenAIKey\": {\"field_type\": \"str\", \"password\": True}}\n\n    def calculate_segment_duration(self, audio_path, target_chunk_size_mb=24):\n        # Calculate the target chunk size in bytes\n        target_chunk_size_bytes = target_chunk_size_mb * 1024 * 1024\n\n        # Use ffprobe to get the audio file information\n        ffprobe_output = ffmpeg.probe(audio_path)\n        print(ffprobe_output)\n        # Convert duration to float\n        duration = float(ffprobe_output[\"format\"][\"duration\"])\n\n        # Calculate the approximate bitrate\n        bitrate = os.path.getsize(audio_path) / duration\n\n        # Calculate the segment duration to achieve the target chunk size\n        segment_duration = target_chunk_size_bytes / bitrate\n\n        return segment_duration\n\n    def split_audio_into_chunks(self, audio_path, target_chunk_size_mb=24):\n        # Calculate the segment duration\n        segment_duration = self.calculate_segment_duration(audio_path, target_chunk_size_mb)\n\n        # Create a directory to store the chunks\n        output_directory = f\"{os.path.splitext(audio_path)[0]}_chunks\"\n        os.makedirs(output_directory, exist_ok=True)\n\n        # Use ffmpeg-python to split the audio file into chunks\n        (\n            ffmpeg.input(audio_path)\n            .output(f\"{output_directory}/%03d{os.path.splitext(audio_path)[1]}\", codec=\"copy\", f=\"segment\", segment_time=segment_duration)\n            .run()\n        )\n\n        # Get the list of generated chunk files\n        chunks = [os.path.join(output_directory, file) for file in os.listdir(output_directory)]\n\n        return chunks\n\n    def build(self, audio: str, OpenAIKey: str) -> str:\n        # Split audio into chunks\n        audio_chunks = self.split_audio_into_chunks(audio)\n\n        client = OpenAI(api_key=OpenAIKey)\n        transcripts = []\n\n        try:\n            for chunk in audio_chunks:\n                with open(chunk, \"rb\") as chunk_file:\n                    transcript = client.audio.transcriptions.create(\n                        model=\"whisper-1\",\n                        file=chunk_file,\n                        response_format=\"text\"\n                    )\n                    transcripts.append(transcript)\n        finally:\n            # Clean up temporary chunk files\n            for chunk in audio_chunks:\n                os.remove(chunk)\n\n        # Concatenate transcripts into the final response\n        final_response = \"\\n\".join(transcripts)\n        self.status = final_response\n        return final_response\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": false,
+                "dynamic": true,
+                "info": ""
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Converts audio to text using OpenAI's Whisper.",
+            "base_classes": ["str"],
+            "display_name": "Whisper Transcriber",
+            "documentation": "",
+            "custom_fields": { "OpenAIKey": null, "audio": null },
+            "output_types": ["str"],
+            "field_formatters": {},
+            "beta": true
+          },
+          "id": "CustomComponent-7NQoq"
+        },
+        "selected": true,
+        "positionAbsolute": {
+          "x": 27.487979888011637,
+          "y": -414.43998171034826
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "CustomComponent-7NQoq",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ],œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-7NQoqœ}",
+        "target": "CustomComponent-MtJjl",
+        "targetHandle": "{œfieldNameœ:œtext_inputœ,œidœ:œCustomComponent-MtJjlœ,œinputTypesœ:[œstrœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "text_input",
+            "id": "CustomComponent-MtJjl",
+            "inputTypes": ["str"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["str"],
+            "dataType": "CustomComponent",
+            "id": "CustomComponent-7NQoq"
+          }
+        },
+        "style": { "stroke": "#555" },
+        "className": "stroke-gray-900  stroke-connection",
+        "animated": false,
+        "id": "reactflow__edge-CustomComponent-7NQoq{œbaseClassesœ:[œstrœ],œdataTypeœ:œCustomComponentœ,œidœ:œCustomComponent-7NQoqœ}-CustomComponent-MtJjl{œfieldNameœ:œtext_inputœ,œidœ:œCustomComponent-MtJjlœ,œinputTypesœ:[œstrœ],œtypeœ:œstrœ}"
+      }
+    ],
+    "viewport": { "x": 119.37759169012509, "y": 351.3082742479685, "zoom": 1 }
+  },
+  "is_component": false,
+  "updated_at": "2023-12-13T23:51:56.874099",
+  "folder": null,
+  "id": "1b0814b7-2964-4e09-9b4b-f7413c4fb50b",
+  "user_id": "8b5cf798-f1b8-4108-88fd-d7274d08d471"
+}

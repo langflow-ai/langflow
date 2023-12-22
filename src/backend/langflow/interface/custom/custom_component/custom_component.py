@@ -5,10 +5,11 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias)
-from langflow.interface.custom.directory_reader import DirectoryReader
+    extract_union_types_from_generic_alias,
+)
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
@@ -45,34 +46,6 @@ class CustomComponent(Component):
 
     def build_config(self):
         return self.field_config
-
-    def _class_template_validation(self, code: str):
-        TYPE_HINT_LIST = ["Optional", "Prompt", "PromptTemplate", "LLMChain"]
-
-        if not code:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": self.ERROR_CODE_NULL,
-                    "traceback": "",
-                },
-            )
-
-        reader = DirectoryReader("", False)
-
-        for type_hint in TYPE_HINT_LIST:
-            if reader._is_type_hint_used_in_args(type_hint, code) and not reader._is_type_hint_imported(
-                type_hint, code
-            ):
-                error_detail = {
-                    "error": "Type hint Error",
-                    "traceback": f"Type hint '{type_hint}' is used but not imported in the code.",
-                }
-                raise HTTPException(status_code=400, detail=error_detail)
-        return True
-
-    def validate(self) -> bool:
-        return self._class_template_validation(self.code) if self.code else False
 
     @property
     def tree(self):
@@ -206,8 +179,7 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import (build_sorted_vertices,
-                                                 process_tweaks)
+        from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
