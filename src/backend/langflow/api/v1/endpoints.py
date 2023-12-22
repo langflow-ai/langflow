@@ -16,7 +16,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.interface.custom.utils import build_custom_component_template, create_and_validate_component
+from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_graph_cached, process_tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
@@ -270,7 +270,7 @@ async def custom_component(
     raw_code: CustomComponentCode,
     user: User = Depends(get_current_active_user),
 ):
-    component = create_and_validate_component(raw_code.code)
+    component = CustomComponent(code=raw_code.code)
 
     built_frontend_node = build_custom_component_template(component, user_id=user.id)
 
@@ -300,7 +300,7 @@ async def custom_component_update(
     raw_code: CustomComponentCode,
     user: User = Depends(get_current_active_user),
 ):
-    component = create_and_validate_component(raw_code.code)
+    component = CustomComponent(code=raw_code.code)
 
     component_node = build_custom_component_template(component, user_id=user.id, update_field=raw_code.field)
     # Update the field

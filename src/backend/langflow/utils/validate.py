@@ -2,7 +2,7 @@ import ast
 import contextlib
 import importlib
 from types import FunctionType
-from typing import Dict
+from typing import Dict, List, Optional, Union
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
@@ -260,14 +260,13 @@ def get_default_imports(code_string):
     """
     Returns a dictionary of default imports for the dynamic class constructor.
     """
-    typing_module = importlib.import_module("typing")
-    default_imports = {
-        "Optional": typing_module.Optional,
-        "List": typing_module.List,
-        "Dict": typing_module.Dict,
-        "Union": typing_module.Union,
-    }
 
+    default_imports = {
+        "Optional": Optional,
+        "List": List,
+        "Dict": Dict,
+        "Union": Union,
+    }
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     necessary_imports = find_names_in_code(code_string, langflow_imports)
     langflow_module = importlib.import_module("langflow.field_typing")
