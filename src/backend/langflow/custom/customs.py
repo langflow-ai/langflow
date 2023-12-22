@@ -13,7 +13,6 @@ CUSTOM_NODES = {
     "agents": {
         "JsonAgent": frontend_node.agents.JsonAgentNode(),
         "CSVAgent": frontend_node.agents.CSVAgentNode(),
-        "AgentInitializer": frontend_node.agents.InitializeAgentNode(),
         "VectorStoreAgent": frontend_node.agents.VectorStoreAgentNode(),
         "VectorStoreRouterAgent": frontend_node.agents.VectorStoreRouterAgentNode(),
         "SQLAgent": frontend_node.agents.SQLAgentNode(),

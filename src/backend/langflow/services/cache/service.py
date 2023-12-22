@@ -1,13 +1,12 @@
+import pickle
 import threading
 import time
 from collections import OrderedDict
-from langflow.services.base import Service
-
-from langflow.services.cache.base import BaseCacheService
-
-import pickle
 
 from loguru import logger
+
+from langflow.services.base import Service
+from langflow.services.cache.base import BaseCacheService
 
 
 class InMemoryCache(BaseCacheService, Service):
@@ -204,7 +203,7 @@ class RedisCache(BaseCacheService, Service):
         b = cache["b"]
     """
 
-    def __init__(self, host="localhost", port=6379, db=0, expiration_time=60 * 60):
+    def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60):
         """
         Initialize a new RedisCache instance.
 
@@ -226,7 +225,10 @@ class RedisCache(BaseCacheService, Service):
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."
         )
-        self._client = redis.StrictRedis(host=host, port=port, db=db)
+        if url:
+            self._client = redis.StrictRedis.from_url(url)
+        else:
+            self._client = redis.StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
 
     # check connection

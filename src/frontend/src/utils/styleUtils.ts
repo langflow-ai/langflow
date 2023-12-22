@@ -134,6 +134,7 @@ import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
+import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
@@ -250,10 +251,12 @@ export const nodeIconsLucide: iconsType = {
   MongoDBAtlasVectorSearch: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
+  AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
+  Weaviate: WeaviateIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SupabaseVectorStore: SupabaseIcon,

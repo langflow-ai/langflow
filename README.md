@@ -115,7 +115,7 @@ Each option is detailed below:
 - `--install-completion [bash|zsh|fish|powershell|pwsh]`: Installs completion for the specified shell.
 - `--show-completion [bash|zsh|fish|powershell|pwsh]`: Shows completion for the specified shell, allowing you to copy it or customize the installation.
 - `--backend-only`: This parameter, with a default value of `False`, allows running only the backend server without the frontend. It can also be set using the `LANGFLOW_BACKEND_ONLY` environment variable.
-- `store`: This parameter, with a default value of `True`, enables the store features, use `--no-store` to deactivate it. It can be configured using the `LANGFLOW_STORE` environment variable.
+- `--store`: This parameter, with a default value of `True`, enables the store features, use `--no-store` to deactivate it. It can be configured using the `LANGFLOW_STORE` environment variable.
 
 These parameters are important for users who need to customize the behavior of Langflow, especially in development or specialized deployment scenarios. You may want to update the documentation to include these parameters for completeness and clarity.
 

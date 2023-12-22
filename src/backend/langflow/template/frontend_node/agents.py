@@ -146,57 +146,6 @@ class CSVAgentNode(FrontendNode):
     base_classes: list[str] = ["AgentExecutor"]
 
 
-class InitializeAgentNode(FrontendNode):
-    name: str = "AgentInitializer"
-    display_name: str = "AgentInitializer"
-    template: Template = Template(
-        type_name="initialize_agent",
-        fields=[
-            TemplateField(
-                field_type="str",  # pyright: ignore
-                required=True,
-                is_list=True,  # pyright: ignore
-                show=True,
-                multiline=False,
-                options=list(NON_CHAT_AGENTS.keys()),
-                value=list(NON_CHAT_AGENTS.keys())[0],
-                name="agent",
-                advanced=False,
-            ),
-            TemplateField(
-                field_type="BaseChatMemory",  # pyright: ignore
-                required=False,
-                show=True,
-                name="memory",
-                advanced=False,
-            ),
-            TemplateField(
-                field_type="Tool",  # pyright: ignore
-                required=True,
-                show=True,
-                name="tools",
-                is_list=True,  # pyright: ignore
-                advanced=False,
-            ),
-            TemplateField(
-                field_type="BaseLanguageModel",  # pyright: ignore
-                required=True,
-                show=True,
-                name="llm",
-                display_name="LLM",
-                advanced=False,
-            ),
-        ],
-    )
-    description: str = """Construct a zero shot agent from an LLM and tools."""
-    base_classes: list[str] = ["AgentExecutor", "Callable"]
-
-    @staticmethod
-    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
-        # do nothing and don't return anything
-        pass
-
-
 class JsonAgentNode(FrontendNode):
     name: str = "JsonAgent"
     template: Template = Template(
