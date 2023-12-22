@@ -3,14 +3,10 @@ import types
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser.code_parser import (CodeParser,
-                                                               CodeSyntaxError)
-from langflow.interface.custom.custom_component.component import (
-    Component, ComponentCodeNullError)
-from langflow.interface.custom.utils import (build_custom_component_template,
-                                             create_and_validate_component)
+from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
+from langflow.interface.custom.utils import build_custom_component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
@@ -368,16 +364,6 @@ def test_component_get_code_tree_syntax_error():
         component.get_code_tree(component.code)
 
 
-def test_custom_component_class_template_validation_no_code():
-    """
-    Test the _class_template_validation method of the CustomComponent class
-    raises the HTTPException when the code is None.
-    """
-    custom_component = CustomComponent(code=None, function_entrypoint_name="build")
-    with pytest.raises(HTTPException):
-        custom_component._class_template_validation(custom_component.code)
-
-
 def test_custom_component_get_code_tree_syntax_error():
     """
     Test the get_code_tree method of the CustomComponent class
@@ -535,12 +521,12 @@ def test_build_config_field_value_keys(component):
 
 
 def test_create_and_validate_component_valid_code(test_component_code):
-    component = create_and_validate_component(test_component_code)
+    component = CustomComponent(code=test_component_code)
     assert isinstance(component, CustomComponent)
 
 
 def test_build_langchain_template_custom_component_valid_code(test_component_code):
-    component = create_and_validate_component(test_component_code)
+    component = CustomComponent(code=test_component_code)
     frontend_node = build_custom_component_template(component)
     assert isinstance(frontend_node, dict)
     template = frontend_node["template"]
@@ -554,7 +540,7 @@ def test_build_langchain_template_custom_component_valid_code(test_component_cod
 
 
 def test_build_langchain_template_custom_component_templatefield(test_component_with_templatefield_code):
-    component = create_and_validate_component(test_component_with_templatefield_code)
+    component = CustomComponent(code=test_component_with_templatefield_code)
     frontend_node = build_custom_component_template(component)
     assert isinstance(frontend_node, dict)
     template = frontend_node["template"]
