@@ -7,18 +7,20 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader.utils import (
-    build_custom_component_list_from_path, determine_component_name,
-    merge_nested_dicts_with_renaming)
+    build_custom_component_list_from_path,
+    determine_component_name,
+    merge_nested_dicts_with_renaming,
+)
 from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.custom_components import \
-    CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -174,9 +176,7 @@ def get_field_dict(field: Union[TemplateField, dict]):
     return field
 
 
-def run_build_config(
-    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None, update_field=None
-):
+def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None, update_field=None):
     """Build the field configuration for a custom component"""
 
     try:
@@ -311,7 +311,6 @@ def create_component_template(component):
     component_output_types = component["output_types"]
 
     component_extractor = CustomComponent(code=component_code)
-    component_extractor.validate()
 
     component_template = build_custom_component_template(component_extractor)
     component_template["output_types"] = component_output_types
@@ -343,12 +342,6 @@ def build_custom_components(settings_service):
     return custom_components_from_file
 
 
-def create_and_validate_component(code: str) -> CustomComponent:
-    component = CustomComponent(code=code)
-    component.validate()
-    return component
-
-
 def update_field_dict(field_dict):
     """Update the field dictionary by calling options() or value() if they are callable"""
     if "options" in field_dict and callable(field_dict["options"]):
@@ -378,6 +371,3 @@ def build_component(component):
     component_name = determine_component_name(component)
     component_template = create_component_template(component)
     return component_name, component_template
-
-
-
