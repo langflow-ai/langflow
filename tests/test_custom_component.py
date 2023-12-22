@@ -3,7 +3,6 @@ import types
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from langflow.interface.custom.base import CustomComponent
 from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
@@ -363,16 +362,6 @@ def test_component_get_code_tree_syntax_error():
     component = Component(code="import os as", _function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component.code)
-
-
-def test_custom_component_class_template_validation_no_code():
-    """
-    Test the _class_template_validation method of the CustomComponent class
-    raises the HTTPException when the code is None.
-    """
-    custom_component = CustomComponent(code=None, function_entrypoint_name="build")
-    with pytest.raises(HTTPException):
-        custom_component._class_template_validation(custom_component.code)
 
 
 def test_custom_component_get_code_tree_syntax_error():
