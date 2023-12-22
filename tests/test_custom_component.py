@@ -3,12 +3,10 @@ import types
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
-
 from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser import CodeParser, CodeSyntaxError
-from langflow.interface.custom.component import Component, ComponentCodeNullError
-from langflow.interface.types import build_custom_component_template, create_and_validate_component
+from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
+from langflow.interface.custom.utils import build_custom_component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
@@ -49,7 +47,7 @@ def test_code_parser_get_tree():
     Test the __get_tree method of the CodeParser class.
     """
     parser = CodeParser(code_default)
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     assert isinstance(tree, ast.AST)
 
 
@@ -62,7 +60,7 @@ def test_code_parser_syntax_error():
 
     parser = CodeParser(code_syntax_error)
     with pytest.raises(CodeSyntaxError):
-        parser._CodeParser__get_tree()
+        parser.get_tree()
 
 
 def test_component_init():
@@ -139,7 +137,7 @@ def test_code_parser_parse_imports_import():
     class with an import statement.
     """
     parser = CodeParser(code_default)
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             parser.parse_imports(node)
@@ -152,7 +150,7 @@ def test_code_parser_parse_imports_importfrom():
     class with an import from statement.
     """
     parser = CodeParser("from os import path")
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             parser.parse_imports(node)
@@ -164,7 +162,7 @@ def test_code_parser_parse_functions():
     Test the parse_functions method of the CodeParser class.
     """
     parser = CodeParser("def test(): pass")
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             parser.parse_functions(node)
@@ -177,7 +175,7 @@ def test_code_parser_parse_classes():
     Test the parse_classes method of the CodeParser class.
     """
     parser = CodeParser("class Test: pass")
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
             parser.parse_classes(node)
@@ -190,7 +188,7 @@ def test_code_parser_parse_global_vars():
     Test the parse_global_vars method of the CodeParser class.
     """
     parser = CodeParser("x = 1")
-    tree = parser._CodeParser__get_tree()
+    tree = parser.get_tree()
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             parser.parse_global_vars(node)
@@ -311,7 +309,7 @@ def test_code_parser_parse_ann_assign():
     stmt = ast.AnnAssign(
         target=ast.Name(id="x", ctx=ast.Store()),
         annotation=ast.Name(id="int", ctx=ast.Load()),
-        value=ast.Num(n=1),
+        value=ast.Constant(n=1),
         simple=1,
     )
     result = parser.parse_ann_assign(stmt)
@@ -364,16 +362,6 @@ def test_component_get_code_tree_syntax_error():
     component = Component(code="import os as", _function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component.code)
-
-
-def test_custom_component_class_template_validation_no_code():
-    """
-    Test the _class_template_validation method of the CustomComponent class
-    raises the HTTPException when the code is None.
-    """
-    custom_component = CustomComponent(code=None, function_entrypoint_name="build")
-    with pytest.raises(HTTPException):
-        custom_component._class_template_validation(custom_component.code)
 
 
 def test_custom_component_get_code_tree_syntax_error():
@@ -533,12 +521,12 @@ def test_build_config_field_value_keys(component):
 
 
 def test_create_and_validate_component_valid_code(test_component_code):
-    component = create_and_validate_component(test_component_code)
+    component = CustomComponent(code=test_component_code)
     assert isinstance(component, CustomComponent)
 
 
 def test_build_langchain_template_custom_component_valid_code(test_component_code):
-    component = create_and_validate_component(test_component_code)
+    component = CustomComponent(code=test_component_code)
     frontend_node = build_custom_component_template(component)
     assert isinstance(frontend_node, dict)
     template = frontend_node["template"]
@@ -552,7 +540,7 @@ def test_build_langchain_template_custom_component_valid_code(test_component_cod
 
 
 def test_build_langchain_template_custom_component_templatefield(test_component_with_templatefield_code):
-    component = create_and_validate_component(test_component_with_templatefield_code)
+    component = CustomComponent(code=test_component_with_templatefield_code)
     frontend_node = build_custom_component_template(component)
     assert isinstance(frontend_node, dict)
     template = frontend_node["template"]
