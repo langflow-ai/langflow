@@ -1,24 +1,13 @@
-<<<<<<< HEAD
-from typing import Optional, Union
-
-from langchain.schema import BaseRetriever, Document
-=======
 from typing import Optional, Union, List
 from langflow import CustomComponent
 import tempfile
 import urllib.request
 import urllib
->>>>>>> 68d6fae606967a7e7ac46ac239dd803d8fde891e
 from langchain.vectorstores import Vectara
 from langchain.vectorstores.base import VectorStore
-<<<<<<< HEAD
-
-from langflow import CustomComponent
-=======
 from langchain.schema import BaseRetriever
 from langchain.schema.vectorstore import VectorStore
 from langchain.embeddings import FakeEmbeddings
->>>>>>> 68d6fae606967a7e7ac46ac239dd803d8fde891e
 
 
 class VectaraComponent(CustomComponent):
