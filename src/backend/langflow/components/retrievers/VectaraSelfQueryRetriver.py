@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List
 from langflow import CustomComponent
 import json
 from langchain.schema import BaseRetriever
@@ -42,10 +42,10 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
 
     def build(
         self,
-        vectorstore: VectorStore = None,
-        document_content_description: str = None,
-        llm: BaseLanguageModel = None,
-        metadata_field_info: List[str] = None,
+        vectorstore: VectorStore,
+        document_content_description: str,
+        llm: BaseLanguageModel,
+        metadata_field_info: List[str],
     ) -> BaseRetriever:
         
         metadata_field_obj = []
