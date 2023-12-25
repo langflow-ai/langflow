@@ -8,17 +8,22 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain.chains.query_constructor.base import AttributeInfo
 
 
-class VectaraComponent(CustomComponent):
+class VectaraSelfQueryRetriverComponent(CustomComponent):
+    """
+    A custom component for implementing Vectara Self Query Retriever using a vector store.
+    """
+
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"
     description: str = "Implementation of Vectara Self Query Retriever"
     documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+        "https://python.langchain.com/docs/integrations/retrievers/self_query/vectara_self_query"
     )
     beta = True
+
     field_config = {
-        "code": {"show": False},
+        "code": {"show": True},
         "vectorstore": {
-            "display_name": "Vectara Vector Store", 
+            "display_name": "Vector Store", 
             "info": "Input Vectara Vectore Store"
             },
         "llm": {
@@ -31,8 +36,8 @@ class VectaraComponent(CustomComponent):
             },
         "metadata_field_info": {
             "display_name": "Metadata Field Info", 
-            "info": "Check dictionary format in documentation for self query retriever",
-            "info": "Each metadata field is a string in the form of json containing additional search metadata.\nExample input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}.\nThe keys should remain constant",
+            # "info": "Check dictionary format in documentation for self query retriever",
+            "info": "Each metadata field info is a string in the form of key value pair dictionary containing additional search metadata.\nExample input: {\"name\":\"speech\",\"description\":\"what name of the speech\",\"type\":\"string or list[string]\"}.\nThe keys should remain constant(name, description, type)",
             },
     }
 
