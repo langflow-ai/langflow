@@ -69,5 +69,3 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             metadata_field_obj, 
             verbose=True
         )
-    
- 
