@@ -163,6 +163,7 @@ class ChatOllamaComponent(CustomComponent):
                 "display_name": "Template",
                 "field_type": "str",
                 "info": "Template to use for generating text.",
+                "advanced": True,
             },
         }
 
@@ -210,6 +211,7 @@ class ChatOllamaComponent(CustomComponent):
             mirostat_eta = None
             mirostat_tau = None
 
+        # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": base_url,
             "cache": cache,
