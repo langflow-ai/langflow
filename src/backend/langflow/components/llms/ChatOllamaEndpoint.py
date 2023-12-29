@@ -1,12 +1,11 @@
-from typing import Optional, List, Dict, Any
-from langchain.chat_models.base import BaseChatModel
+from typing import Any, Dict, List, Optional
 
 # from langchain_community.chat_models import ChatOllama
 from langchain.chat_models import ChatOllama
+from langchain.chat_models.base import BaseChatModel
 
 # from langchain.chat_models import ChatOllama
 from langflow import CustomComponent
-
 
 # whe When a callback component is added to Langflow, the comment must be uncommented.
 # from langchain.callbacks.manager import CallbackManager
@@ -246,7 +245,7 @@ class ChatOllamaComponent(CustomComponent):
         llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
         try:
-            output = ChatOllama(**llm_params)
+            output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
 
