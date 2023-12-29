@@ -61,4 +61,5 @@ jobs:
         with:
           context: .
           push: true
+          file: ./build_and_push.Dockerfile
           tags: logspace/langflow:${{ steps.check-version.outputs.version }}
