@@ -3,13 +3,12 @@ import inspect
 import types
 from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional
 
-from loguru import logger
-
 from langflow.graph.utils import UnbuiltObject
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import Edge
@@ -140,7 +139,11 @@ class Vertex:
             if not hasattr(edge, "target_param"):
                 continue
             param_key = edge.target_param
-            if param_key in template_dict:
+
+            # If the param_key is in the template_dict and the edge.target_id is the current node
+            # We check this to make sure params with the same name but different target_id
+            # don't get overwritten
+            if param_key in template_dict and edge.target_id == self.id:
                 if template_dict[param_key]["list"]:
                     if param_key not in params:
                         params[param_key] = []
