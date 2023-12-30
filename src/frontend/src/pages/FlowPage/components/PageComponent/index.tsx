@@ -12,15 +12,11 @@ import ReactFlow, {
   Connection,
   Controls,
   Edge,
-  EdgeChange,
-  NodeChange,
   NodeDragHandler,
   OnSelectionChangeParams,
   SelectionDragHandler,
   addEdge,
   updateEdge,
-  useEdgesState,
-  useNodesState,
   useReactFlow,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -58,17 +54,13 @@ export default function Page({
   view?: boolean;
 }): JSX.Element {
   let {
-    updateFlow,
     uploadFlow,
     getNodeId,
     paste,
     lastCopiedSelection,
     setLastCopiedSelection,
-    tabsState,
-    saveFlow,
-    setTabsState,
-    tabId,
-    saveCurrentFlow,
+    deleteNode,
+    deleteEdge,
   } = useContext(FlowsContext);
   const {
     types,
@@ -76,23 +68,15 @@ export default function Page({
     setReactFlowInstance,
     templates,
     setFilterEdge,
-    deleteNode,
-    deleteEdge,
   } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange } = useContext(FlowsContext);
+  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, setPending, saveFlow } = useContext(FlowsContext);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
-  const saveCurrentFlowTimeout = () => {
-    setTimeout(() => {
-      saveCurrentFlow();
-    }, 500); // need to do this because ReactFlow is not asynchronous.
-  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -137,7 +121,6 @@ export default function Page({
           takeSnapshot();
           deleteNode(lastSelection.nodes.map((node) => node.id));
           deleteEdge(lastSelection.edges.map((edge) => edge.id));
-          saveCurrentFlowTimeout();
         }
       }
     };
@@ -157,7 +140,6 @@ export default function Page({
     lastCopiedSelection,
     lastSelection,
     takeSnapshot,
-    saveCurrentFlowTimeout,
   ]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
@@ -165,7 +147,6 @@ export default function Page({
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
 
-  const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
 
   const [loading, setLoading] = useState(true);
@@ -174,9 +155,11 @@ export default function Page({
 
   useEffect(() => {
     setLoading(true);
-    setNodes(flow?.data?.nodes ?? []);
-    setEdges(flow?.data?.edges ?? []);
-    setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
+    if(reactFlowInstance){
+      reactFlowInstance.setNodes(flow?.data?.nodes ?? []);
+      reactFlowInstance.setEdges(flow?.data?.edges ?? []);
+      reactFlowInstance.setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
+    }
 
     // Clear the previous timeout
     if (timeoutRef.current) {
@@ -193,16 +176,6 @@ export default function Page({
       clearTimeout(timeoutRef.current);
     };
   }, [flow, reactFlowInstance]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      saveFlow(flow, true);
-    }, 30000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [flow, flow.data]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -228,17 +201,6 @@ export default function Page({
           eds
         )
       );
-      //@ts-ignore
-      setTabsState((prev: FlowsState) => {
-        return {
-          ...prev,
-          [tabId]: {
-            ...prev[tabId],
-            isPending: true,
-          },
-        };
-      });
-      saveCurrentFlowTimeout();
     },
     [setEdges, takeSnapshot, addEdge]
   );
@@ -246,6 +208,12 @@ export default function Page({
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
     takeSnapshot();
+    // 👉 you can place your event handlers here
+  }, [takeSnapshot]);
+
+  const onNodeDragStop: NodeDragHandler = useCallback(() => {
+    // 👇 make dragging a node undoable
+    saveFlow();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
@@ -342,18 +310,12 @@ export default function Page({
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, reactFlowInstance, setNodes, takeSnapshot]
+    [getNodeId, setNodes, takeSnapshot]
   );
 
   useEffect(() => {
     setExtraComponent(<ExtraSidebar />);
     setExtraNavigation({ title: "Components" });
-
-    return () => {
-      if (tabsState && tabsState[flow.id]?.isPending) {
-        saveFlow(flow);
-      }
-    };
   }, []);
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -367,7 +329,7 @@ export default function Page({
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    [reactFlowInstance, setEdges]
+    [setEdges]
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
@@ -408,18 +370,9 @@ export default function Page({
   }, []);
 
   const onMove = useCallback(() => {
-    saveCurrentFlowTimeout();
     //@ts-ignore
-    setTabsState((prev: FlowsState) => {
-      return {
-        ...prev,
-        [tabId]: {
-          ...prev[tabId],
-          isPending: true,
-        },
-      };
-    });
-  }, [setTabsState, saveCurrentFlowTimeout]);
+    setPending(true);
+  }, [setPending]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -454,6 +407,7 @@ export default function Page({
                   onEdgeUpdateStart={onEdgeUpdateStart}
                   onEdgeUpdateEnd={onEdgeUpdateEnd}
                   onNodeDragStart={onNodeDragStart}
+                  onNodeDragStop={onNodeDragStop}
                   onSelectionDragStart={onSelectionDragStart}
                   onSelectionEnd={onSelectionEnd}
                   onSelectionStart={onSelectionStart}
@@ -488,7 +442,8 @@ export default function Page({
                       ) {
                         const { newFlow } = generateFlow(
                           lastSelection!,
-                          reactFlowInstance!,
+                          nodes,
+                          edges,
                           getRandomName()
                         );
                         const newGroupNode = generateNodeFromFlow(

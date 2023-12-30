@@ -28,13 +28,12 @@ import SidebarDraggableComponent from "./sideBarDraggableComponent";
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, isPending } =
     useContext(FlowsContext);
   const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-  const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
@@ -297,7 +296,7 @@ export default function ExtraSidebar(): JSX.Element {
                     : "button-disable")
                 }
                 onClick={(event) => {
-                  saveFlow(flow!);
+                  saveFlow();
                 }}
               >
                 <IconComponent

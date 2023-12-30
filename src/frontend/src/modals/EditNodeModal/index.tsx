@@ -536,15 +536,7 @@ const EditNodeModal = forwardRef(
             onClick={() => {
               data.node = myData.node;
               //@ts-ignore
-              setTabsState((prev: FlowsState) => {
-                return {
-                  ...prev,
-                  [tabId]: {
-                    ...prev[tabId],
-                    isPending: true,
-                  },
-                };
-              });
+              setPending(true);
               setOpen(false);
             }}
             type="submit"

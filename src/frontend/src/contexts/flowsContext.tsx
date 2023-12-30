@@ -15,6 +15,7 @@ import {
   Node,
   NodeChange,
   ReactFlowJsonObject,
+  Viewport,
   XYPosition,
   addEdge,
   useEdgesState,
@@ -74,7 +75,8 @@ const FlowsContextInitialValue: FlowsContextType = {
     flowData?: FlowType,
     override?: boolean
   ) => "",
-  updateFlow: (newFlow: FlowType) => {},
+  deleteNode: () => {},
+  deleteEdge: () => {},
   incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
@@ -83,14 +85,13 @@ const FlowsContextInitialValue: FlowsContextType = {
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
   hardReset: () => {},
-  saveFlow: async (flow: FlowType, silent?: boolean) => {},
+  saveFlow: async (flow?: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
   isPending: false,
   setPending: (pending: boolean) => {},
   tabsState: {},
   setTabsState: (state: FlowsState) => {},
-  saveCurrentFlow: () => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -135,7 +136,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const [edges, setEdgesInternal, onEdgesChangeInternal] = useEdgesState([]);
 
-  const setPending = useCallback(
+  const setPending = 
     (pending: boolean) => {
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
@@ -147,17 +148,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           },
         };
       });
-    },
-    [setTabsState]
-  );
+    }
 
   const isPending = tabsState[tabId]?.isPending ?? false;
 
   const onNodesChange = useCallback(
-    (nodes: NodeChange[]) => {
-      onNodesChangeInternal(nodes);
-      console.log("nodesChangou")
-
+    (change: NodeChange[]) => {
+      onNodesChangeInternal(change);
       setPending(true);
     },
     [onNodesChangeInternal, setTabsState, tabId]
@@ -166,7 +163,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const onEdgesChange = useCallback(
     (edges: EdgeChange[]) => {
       onEdgesChangeInternal(edges);
-      console.log("edgesChangou")
       setPending(true);
     },
     [onEdgesChangeInternal, setTabsState, tabId]
@@ -174,14 +170,18 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const setNodes = (change: Node[] | ((oldState: Node[]) => Node[])) => {
     let newChange = typeof change === "function" ? change(nodes) : change;
+    let newEdges = cleanEdges(newChange, edges);
 
-
-    setEdgesInternal(cleanEdges(newChange, edges));
+    saveCurrentFlow(newChange, newEdges, reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 });
+    setEdgesInternal(newEdges);
     setNodesInternal(newChange);
   };
 
   const setNode = (id: string, change: Node | ((oldState: Node) => Node)) => {
-    let newChange = typeof change === "function" ? change(nodes.find((node) => node.id === id)!) : change;
+    let newChange =
+      typeof change === "function"
+        ? change(nodes.find((node) => node.id === id)!)
+        : change;
 
     setNodes((oldNodes) =>
       oldNodes.map((node) => {
@@ -197,8 +197,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     return nodes.find((node) => node.id === id);
   };
 
-  const setEdges = (edges: Edge[] | ((oldState: Edge[]) => Edge[])) => {
-    setEdgesInternal(edges);
+  const setEdges = (change: Edge[] | ((oldState: Edge[]) => Edge[])) => {
+    let newChange = typeof change === "function" ? change(edges) : change;
+
+    saveCurrentFlow(nodes, newChange, reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 });
+    setEdgesInternal(newChange);
   };
 
   useEffect(() => {
@@ -724,14 +727,22 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function saveCurrentFlow() {
+  function saveCurrentFlow(nodes: Node[], edges: Edge[], viewport: Viewport) {
     const currentFlow = flows.find((flow) => flow.id === tabId);
-    if (currentFlow && reactFlowInstance && currentFlow.data) {
-      updateFlow({ ...currentFlow, data: reactFlowInstance?.toObject()! });
+    if (currentFlow) {
+      saveFlow({ ...currentFlow, data: { nodes, edges, viewport } }, true);
     }
   }
 
-  async function saveFlow(newFlow: FlowType, silent?: boolean) {
+  async function saveFlow(flow?: FlowType, silent?: boolean) {
+    let newFlow;
+    if (!flow) {
+      const currentFlow = flows.find((flow) => flow.id === tabId)!;
+      newFlow = { ...currentFlow, data: { nodes, edges, viewport: reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 } } }
+    } else {
+      newFlow = flow;
+    }
+
     try {
       // updates flow in db
       const updatedFlow = await updateFlowInDatabase(newFlow);
@@ -740,26 +751,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         if (!silent) {
           setSuccessData({ title: "Changes saved successfully" });
         }
-        setFlows((prevState) => {
-          const newFlows = [...prevState];
-          const index = newFlows.findIndex((flow) => flow.id === newFlow.id);
-          if (index !== -1) {
-            newFlows[index].description = newFlow.description ?? "";
-            newFlows[index].data = newFlow.data;
-            newFlows[index].name = newFlow.name;
-          }
-          return newFlows;
-        });
+        updateFlow(newFlow);
         //update tabs state
-        setTabsState((prev) => {
-          return {
-            ...prev,
-            [tabId]: {
-              ...prev[tabId],
-              isPending: false,
-            },
-          };
-        });
+        setPending(false);
       }
     } catch (err) {
       setErrorData({
@@ -794,6 +788,31 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  function deleteNode(idx: string | Array<string>) {
+
+    setEdges((oldEdges) =>
+      oldEdges.filter((edge) =>
+        typeof idx === "string"
+          ? edge.source !== idx && edge.target !== idx
+          : !idx.includes(edge.source) && !idx.includes(edge.target)
+      )
+    );
+
+    setNodes((oldNodes) =>
+      oldNodes.filter((node) =>
+        typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
+      )
+    );
+
+  }
+  function deleteEdge(idx: string | Array<string>) {
+    setEdges((oldEdges) =>
+      oldEdges.filter((edge) =>
+        typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
+      )
+    );
+  }
+
   return (
     <FlowsContext.Provider
       value={{
@@ -803,7 +822,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
-        saveCurrentFlow,
         hardReset,
         tabId,
         setTabId,
@@ -811,12 +829,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         incrementNodeId,
         removeFlow,
         addFlow,
-        updateFlow,
         downloadFlow,
         downloadFlows,
         uploadFlows,
         uploadFlow,
         getNodeId,
+        deleteNode,
+        deleteEdge,
         isPending,
         setPending,
         tabsState,

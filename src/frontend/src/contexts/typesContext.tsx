@@ -18,7 +18,6 @@ import { AuthContext } from "./authContext";
 const initialValue: typesContextType = {
   reactFlowInstance: null,
   setReactFlowInstance: (newState: ReactFlowInstance) => {},
-  deleteNode: () => {},
   types: {},
   setTypes: () => {},
   templates: {},
@@ -29,7 +28,6 @@ const initialValue: typesContextType = {
   fetchError: false,
   setFilterEdge: (filter) => {},
   getFilterEdge: [],
-  deleteEdge: () => {},
 };
 
 export const typesContext = createContext<typesContextType>(initialValue);
@@ -97,37 +95,14 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function deleteNode(idx: string | Array<string>) {
-    if (reactFlowInstance === null) return;
-    const edges = reactFlowInstance!
-      .getEdges()
-      .filter((edge) =>
-        typeof idx === "string"
-          ? edge.source == idx || edge.target == idx
-          : idx.includes(edge.source) || idx.includes(edge.target)
-      );
-    reactFlowInstance!.deleteElements({
-      nodes:
-        typeof idx === "string" ? [{ id: idx }] : idx.map((id) => ({ id })),
-      edges,
-    });
-  }
-  function deleteEdge(idx: string | Array<string>) {
-    reactFlowInstance!.deleteElements({
-      edges:
-        typeof idx === "string" ? [{ id: idx }] : idx.map((id) => ({ id })),
-    });
-  }
 
   return (
     <typesContext.Provider
       value={{
-        deleteEdge,
         types,
         setTypes,
         reactFlowInstance,
         setReactFlowInstance,
-        deleteNode,
         setTemplates,
         templates,
         data,

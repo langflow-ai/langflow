@@ -9,7 +9,6 @@ const data: { [char: string]: string } = {};
 export type typesContextType = {
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (newState: ReactFlowInstance) => void;
-  deleteNode: (idx: string | Array<string>) => void;
   types: typeof types;
   setTypes: (newState: {}) => void;
   templates: typeof template;
@@ -20,7 +19,6 @@ export type typesContextType = {
   setFetchError: (newState: boolean) => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
-  deleteEdge: (idx: string | Array<string>) => void;
 };
 
 export type alertContextType = {

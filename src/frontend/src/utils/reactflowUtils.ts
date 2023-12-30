@@ -4,7 +4,6 @@ import {
   Edge,
   Node,
   OnSelectionChangeParams,
-  ReactFlowInstance,
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
@@ -502,10 +501,11 @@ export function getMiddlePoint(nodes: Node[]) {
 
 export function generateFlow(
   selection: OnSelectionChangeParams,
-  reactFlowInstance: ReactFlowInstance,
+  nodes: Node[],
+  edges: Edge[],
   name: string
 ): generateFlowType {
-  const newFlowData = reactFlowInstance.toObject();
+  const newFlowData = {nodes, edges, viewport: { zoom: 1, x: 0, y: 0 }};
   const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
 		in future we can save this edges to when ungrouping reconect to the old nodes
