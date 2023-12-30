@@ -22,7 +22,6 @@ import {
   targetHandleType,
 } from "../types/flow";
 import {
-  cleanEdgesType,
   findLastNodeType,
   generateFlowType,
   unselectAllNodesType,
@@ -30,10 +29,7 @@ import {
 } from "../types/utils/reactflowUtils";
 import { getFieldTitle, toTitleCase } from "./utils";
 
-export function cleanEdges({
-  flow: { edges, nodes },
-  updateEdge,
-}: cleanEdgesType) {
+export function cleanEdges(nodes: Node[], edges: Edge[]) {
   let newEdges = _.cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -73,7 +69,7 @@ export function cleanEdges({
       }
     }
   });
-  updateEdge(newEdges);
+  return newEdges;
 }
 
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {

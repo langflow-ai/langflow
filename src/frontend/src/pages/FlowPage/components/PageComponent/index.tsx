@@ -228,10 +228,6 @@ export default function Page({
           eds
         )
       );
-      setNodes((node) => {
-        let newX = _.cloneDeep(node);
-        return newX;
-      });
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
         return {
@@ -244,7 +240,7 @@ export default function Page({
       });
       saveCurrentFlowTimeout();
     },
-    [setEdges, setNodes, takeSnapshot, addEdge]
+    [setEdges, takeSnapshot, addEdge]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {

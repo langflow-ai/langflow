@@ -43,6 +43,8 @@ export type FlowsContextType = {
   }) => Promise<String | never>;
   hardReset: () => void;
   getNodeId: (nodeType: string) => string;
+  isPending: boolean;
+  setPending: (pending: boolean) => void;
   tabsState: FlowsState;
   setTabsState: (state: FlowsState) => void;
   paste: (
@@ -61,6 +63,8 @@ export type FlowsContextType = {
   version: string;
   nodes: Array<Node>;
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
+  getNode: (id: string) => Node | undefined;
   onNodesChange: OnChange<NodeChange>;
   edges: Array<Edge>;
   setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;

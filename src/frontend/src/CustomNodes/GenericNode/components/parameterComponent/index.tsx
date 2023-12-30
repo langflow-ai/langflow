@@ -35,7 +35,6 @@ import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
 import {
-  cleanEdges,
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
@@ -71,8 +70,15 @@ export default function ParameterComponent({
   const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows, tabsState, updateFlow, nodes, edges, setEdges } =
-    useContext(FlowsContext);
+  const {
+    tabId,
+    flows,
+    updateFlow,
+    nodes,
+    edges,
+    setEdges,
+    setNode,
+  } = useContext(FlowsContext);
 
   const [dataRef, setDataRef] = useState(data);
 
@@ -98,12 +104,10 @@ export default function ParameterComponent({
 
   const { setFilterEdge } = useContext(typesContext);
   let disabled =
-    edges
-      .some(
-        (edge) =>
-          edge.targetHandle ===
-          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
-      ) ?? false;
+    edges.some(
+      (edge) =>
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+    ) ?? false;
 
   const { data: myData } = useContext(typesContext);
 
@@ -132,68 +136,50 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
-    data.node!.template[name].value = newValue;
-    updateNodeInternals(data.id);
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data
+      }
+
+      newNode.data.node.template[name].value = newValue;
+
+      return newNode;
+    });
 
     setDataRef((old) => {
       let newData = cloneDeep(old);
       newData.node!.template[name].value = newValue;
       return newData;
     });
-
-    // Set state to pending
-    //@ts-ignore
-    if (data.node!.template[name].value !== newValue) {
-      const tabs = cloneDeep(tabsState);
-      tabs[tabId].isPending = false;
-      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
-      setTabsState({
-        ...tabs,
-      });
-    }
+    
     renderTooltips();
   };
 
   const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
     if (!data.node) return;
-    if (data.node!.template[name].value !== newNodeClass.template[name].value) {
+    if (data.node!.template[name].value !== code) {
       takeSnapshot();
     }
-    data.node! = {
-      ...newNodeClass,
-      description: newNodeClass.description ?? data.node!.description,
-      display_name: newNodeClass.display_name ?? data.node!.display_name,
-    };
-    data.node!.template[name].value = code;
-    updateNodeInternals(data.id);
-    // Set state to pending
-    //@ts-ignore
-    if (data.node!.template[name].value !== code) {
-      const tabs = cloneDeep(tabsState);
-      tabs[tabId].isPending = false;
-      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
-      setTabsState({
-        ...tabs,
-      });
-    }
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+        node: newNodeClass,
+        description: newNodeClass.description ?? data.node!.description,
+        display_name: newNodeClass.display_name ?? data.node!.display_name,
+      };
+
+      newNode.data.node.template[name].value = code;
+
+      return newNode;
+    });
+
     renderTooltips();
-    let flow = flows.find((flow) => flow.id === tabId);
-    setTimeout(() => {
-      //timeout necessary because ReactFlow updates are not async
-      if (flow && flow.data) {
-        cleanEdges({
-          flow: {
-            edges: flow.data!.edges,
-            nodes: flow.data!.nodes,
-          },
-          updateEdge: (edge) => {
-            setEdges(edge);
-            updateNodeInternals(data.id);
-          },
-        });
-        updateFlow(flow);
-      }
-    }, 50);
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
