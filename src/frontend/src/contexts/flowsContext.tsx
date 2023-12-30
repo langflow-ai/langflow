@@ -43,6 +43,7 @@ import { FlowsContextType, FlowsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
   checkOldEdgesHandles,
+  cleanEdges,
   createFlowComponent,
   removeFileNameFromComponents,
   scapeJSONParse,
@@ -85,6 +86,8 @@ const FlowsContextInitialValue: FlowsContextType = {
   saveFlow: async (flow: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
+  isPending: false,
+  setPending: (pending: boolean) => {},
   tabsState: {},
   setTabsState: (state: FlowsState) => {},
   saveCurrentFlow: () => {},
@@ -100,6 +103,8 @@ const FlowsContextInitialValue: FlowsContextType = {
   version: "",
   nodes: [],
   setNodes: () => {},
+  setNode: () => {},
+  getNode: () => undefined,
   onNodesChange: () => {},
   edges: [],
   setEdges: () => {},
@@ -111,8 +116,7 @@ export const FlowsContext = createContext<FlowsContextType>(
 );
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setSuccessData } =
-    useContext(alertContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
@@ -131,41 +135,67 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const [edges, setEdgesInternal, onEdgesChangeInternal] = useEdgesState([]);
 
-  const onNodesChange = useCallback((nodes: NodeChange[]) => {
-    onNodesChangeInternal(nodes);
-    //@ts-ignore
-    setTabsState((prev: FlowsState) => {
-      return {
-        ...prev,
-        [tabId]: {
-          ...prev[tabId],
-          isPending: true,
-        },
-      };
-    });
-    //SAVE FLOW IN FLOWS
-  }, [onNodesChangeInternal, setTabsState, tabId]);
-
-  const onEdgesChange = useCallback(
-    (edges: EdgeChange[]) => {
-      onEdgesChangeInternal(edges);
+  const setPending = useCallback(
+    (pending: boolean) => {
       //@ts-ignore
       setTabsState((prev: FlowsState) => {
         return {
           ...prev,
           [tabId]: {
             ...prev[tabId],
-            isPending: true,
+            isPending: pending,
           },
         };
       });
     },
+    [setTabsState]
+  );
+
+  const isPending = tabsState[tabId]?.isPending ?? false;
+
+  const onNodesChange = useCallback(
+    (nodes: NodeChange[]) => {
+      onNodesChangeInternal(nodes);
+      console.log("nodesChangou")
+
+      setPending(true);
+    },
+    [onNodesChangeInternal, setTabsState, tabId]
+  );
+
+  const onEdgesChange = useCallback(
+    (edges: EdgeChange[]) => {
+      onEdgesChangeInternal(edges);
+      console.log("edgesChangou")
+      setPending(true);
+    },
     [onEdgesChangeInternal, setTabsState, tabId]
   );
 
-  const setNodes = (nodes: Node[] | ((oldState: Node[]) => Node[])) => {
-    setNodesInternal(nodes)
-  }
+  const setNodes = (change: Node[] | ((oldState: Node[]) => Node[])) => {
+    let newChange = typeof change === "function" ? change(nodes) : change;
+
+
+    setEdgesInternal(cleanEdges(newChange, edges));
+    setNodesInternal(newChange);
+  };
+
+  const setNode = (id: string, change: Node | ((oldState: Node) => Node)) => {
+    let newChange = typeof change === "function" ? change(nodes.find((node) => node.id === id)!) : change;
+
+    setNodes((oldNodes) =>
+      oldNodes.map((node) => {
+        if (node.id === id) {
+          return newChange;
+        }
+        return node;
+      })
+    );
+  };
+
+  const getNode = (id: string) => {
+    return nodes.find((node) => node.id === id);
+  };
 
   const setEdges = (edges: Edge[] | ((oldState: Edge[]) => Edge[])) => {
     setEdgesInternal(edges);
@@ -787,6 +817,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         uploadFlows,
         uploadFlow,
         getNodeId,
+        isPending,
+        setPending,
         tabsState,
         setTabsState,
         paste,
@@ -797,6 +829,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         deleteComponent,
         nodes,
         setNodes,
+        setNode,
+        getNode,
         onNodesChange,
         edges,
         setEdges,
