@@ -1,6 +1,6 @@
 """Retriever Query Engine."""
 
-from typing import Optional, List
+from typing import Optional, List, cast
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
 from llama_index.schema import Document, TextNode
@@ -14,7 +14,7 @@ from llama_index.llms import LangChainLLM
 
 class RetrieverQueryEngineComponent(CustomComponent):
     display_name: str = "Retriever Query Engine" 
-    description: str = "Synthesizes an answer from a retriever using an LLM"
+    description: str = "Builds a query engine"
     
     def build_config(self):
         return {
@@ -35,15 +35,18 @@ class RetrieverQueryEngineComponent(CustomComponent):
     
     def build(
         self,
-        retriever: VectorIndexRetriever,
+        retriever: Object,
         llm: BaseLanguageModel,
         response_mode: str = "compact",
     ) -> Object:
         """Build."""
+        retriever = cast(VectorIndexRetriever, retriever)
         llm_wrapper = LangChainLLM(llm)
-        service_context = ServiceContext(llm_wrapper)
-        return RetrieverQueryEngine.from_args(
+        service_context = ServiceContext.from_defaults(llm_wrapper)
+        # return Callable
+        query_engine = RetrieverQueryEngine.from_args(
             retriever,
             response_mode=response_mode,
             service_context=service_context,
         )
+        return query_engine

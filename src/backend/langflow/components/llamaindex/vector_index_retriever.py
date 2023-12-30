@@ -1,6 +1,6 @@
 """Vector Index Retriever."""
 
-from typing import Optional, List
+from typing import Optional, List, cast
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
 from llama_index.schema import Document, TextNode
@@ -28,10 +28,12 @@ class VectorIndexRetrieverComponent(CustomComponent):
     
     def build(
         self,
-        vector_index: VectorStoreIndex,
+        vector_index: Object,
         similarity_top_k: int = 10,
     ) -> Object:
         """Build."""
+        
+        vector_index = cast(VectorStoreIndex, vector_index)
         return VectorIndexRetriever(
-            vector_index=vector_index, similarity_top_k=similarity_top_k
+            vector_index, similarity_top_k=similarity_top_k
         )

@@ -1,6 +1,6 @@
 """Sentence splitter."""
 
-from typing import Optional, List
+from typing import Optional, List, cast
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
 from langflow.field_typing import Object
@@ -48,7 +48,7 @@ class SentenceSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: List[TextNode],
+        documents: Object,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         separator: str = " ",
@@ -67,8 +67,10 @@ class SentenceSplitterComponent(CustomComponent):
             secondary_chunking_regex (str): The regex for splitting into sentences.
 
         Returns:
-            list[str]: The chunks of text.
+            List[TextNode]: The chunks of text.
         """
+
+        documents = cast(List[TextNode], documents)
 
         node_parser = SentenceSplitter(
             chunk_size=chunk_size,

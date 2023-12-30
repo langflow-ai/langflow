@@ -1,6 +1,6 @@
 """Vector Index."""
 
-from typing import Optional, List
+from typing import Optional, List, cast
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
 from llama_index.schema import Document, TextNode
@@ -23,7 +23,8 @@ class VectorIndexComponent(CustomComponent):
     
     def build(
         self,
-        documents: List[TextNode],
+        documents: Object,
     ) -> Object:
         """Build."""
-        return VectorStoreIndex(documents=documents)
+        documents = cast(List[TextNode], documents)
+        return VectorStoreIndex(documents)
