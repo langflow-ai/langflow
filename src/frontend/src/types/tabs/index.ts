@@ -6,11 +6,13 @@ import { Dispatch, SetStateAction } from "react";
 type OnChange<ChangesType> = (changes: ChangesType[]) => void;
 
 export type FlowsContextType = {
-  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
+  saveFlow: (flow?: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
   isLoading: boolean;
   setTabId: (index: string) => void;
   flows: Array<FlowType>;
+  deleteNode: (idx: string | Array<string>) => void;
+  deleteEdge: (idx: string | Array<string>) => void;
   removeFlow: (id: string) => void;
   addFlow: (
     newProject: boolean,
@@ -18,7 +20,6 @@ export type FlowsContextType = {
     override?: boolean,
     position?: XYPosition
   ) => Promise<String | undefined>;
-  updateFlow: (newFlow: FlowType) => void;
   incrementNodeId: () => string;
   downloadFlow: (
     flow: FlowType,
@@ -29,7 +30,6 @@ export type FlowsContextType = {
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
-  saveCurrentFlow: () => void;
   uploadFlow: ({
     newProject,
     file,

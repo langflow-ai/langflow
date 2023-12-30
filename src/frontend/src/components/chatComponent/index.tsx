@@ -13,7 +13,7 @@ import { NodeType } from "../../types/flow";
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const { tabsState, isBuilt, setIsBuilt } = useContext(FlowsContext);
+  const { tabsState, isBuilt, setIsBuilt, isPending } = useContext(FlowsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -51,9 +51,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       _.cloneDeep(node.data.node?.template)
     );
     if (
-      tabsState &&
-      tabsState[flow.id] &&
-      tabsState[flow.id].isPending &&
+      isPending &&
       JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
     ) {
       setIsBuilt(false);

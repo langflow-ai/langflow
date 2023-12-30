@@ -73,10 +73,8 @@ export default function ParameterComponent({
   const {
     tabId,
     flows,
-    updateFlow,
     nodes,
     edges,
-    setEdges,
     setNode,
   } = useContext(FlowsContext);
 
@@ -154,7 +152,7 @@ export default function ParameterComponent({
       newData.node!.template[name].value = newValue;
       return newData;
     });
-    
+
     renderTooltips();
   };
 

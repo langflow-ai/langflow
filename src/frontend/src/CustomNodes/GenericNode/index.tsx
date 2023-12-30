@@ -30,11 +30,9 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const { updateFlow, flows, tabId, saveCurrentFlow } =
-    useContext(FlowsContext);
   const updateNodeInternals = useUpdateNodeInternals();
-  const { types, deleteNode } =
-    useContext(typesContext);
+  const { types } = useContext(typesContext);
+  const { deleteNode } = useContext(FlowsContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -46,7 +44,6 @@ export default function GenericNode({
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
-  const { modalContextOpen } = useContext(alertContext);
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
@@ -118,7 +115,6 @@ export default function GenericNode({
           deleteNode={(id) => {
             takeSnapshot();
             deleteNode(id);
-            saveCurrentFlow();
           }}
           setShowNode={(show: boolean) => {
             data.showNode = show;
