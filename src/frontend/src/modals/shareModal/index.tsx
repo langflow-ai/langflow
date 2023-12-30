@@ -40,10 +40,9 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
-  const { version, addFlow, downloadFlow } = useContext(FlowsContext);
+  const { version } = useContext(FlowsContext);
   const { hasApiKey, hasStore } = useContext(StoreContext);
   const { setSuccessData, setErrorData } = useContext(alertContext);
-  const { reactFlowInstance } = useContext(typesContext);
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";

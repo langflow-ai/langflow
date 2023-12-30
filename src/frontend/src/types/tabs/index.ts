@@ -1,6 +1,9 @@
-import { XYPosition } from "reactflow";
+import { XYPosition, Node, NodeChange, Edge, EdgeChange } from "reactflow";
 import { tweakType } from "../components";
 import { FlowType, NodeDataType } from "../flow";
+import { Dispatch, SetStateAction } from "react";
+
+type OnChange<ChangesType> = (changes: ChangesType[]) => void;
 
 export type FlowsContextType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
@@ -56,8 +59,12 @@ export type FlowsContextType = {
   ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
-  nodesOnFlow: string;
-  setNodesOnFlow: (nodes: string) => void;
+  nodes: Array<Node>;
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
+  onNodesChange: OnChange<NodeChange>;
+  edges: Array<Edge>;
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
+  onEdgesChange: OnChange<EdgeChange>;
 };
 
 export type FlowsState = {

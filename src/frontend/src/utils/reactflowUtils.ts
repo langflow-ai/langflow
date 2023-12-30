@@ -86,8 +86,10 @@ export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  reactFlowInstance: ReactFlowInstance
+  nodes: Node[],
+  edges: Edge[],
 ) {
+  debugger
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
   if (
@@ -100,19 +102,17 @@ export function isValidConnection(
         t === targetHandleObject.type
     )
   ) {
-    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
+    let targetNode = nodes.find((node) => node.id === target!)?.data?.node;
     if (!targetNode) {
       if (
-        !reactFlowInstance
-          .getEdges()
+        edges
           .find((e) => e.targetHandle === targetHandle)
       ) {
         return true;
       }
     } else if (
       (!targetNode.template[targetHandleObject.fieldName].list &&
-        !reactFlowInstance
-          .getEdges()
+        edges
           .find((e) => e.targetHandle === targetHandle)) ||
       targetNode.template[targetHandleObject.fieldName].list
     ) {
@@ -543,12 +543,13 @@ export function generateFlow(
 
 export function filterFlow(
   selection: OnSelectionChangeParams,
-  reactFlowInstance: ReactFlowInstance
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
 ) {
-  reactFlowInstance.setNodes((nodes) =>
+  setNodes((nodes) =>
     nodes.filter((node) => !selection.nodes.includes(node))
   );
-  reactFlowInstance.setEdges((edges) =>
+  setEdges((edges) =>
     edges.filter((edge) => !selection.edges.includes(edge))
   );
 }
@@ -575,11 +576,12 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
 
 export function concatFlows(
   flow: FlowType,
-  ReactFlowInstance: ReactFlowInstance
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
 ) {
   const { nodes, edges } = flow.data!;
-  ReactFlowInstance.addNodes(nodes);
-  ReactFlowInstance.addEdges(edges);
+  setNodes((old) => [...old, ...nodes]);
+  setEdges((old) => [...old, ...edges]);
 }
 
 export function validateSelection(
@@ -921,13 +923,16 @@ function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
 
 export function expandGroupNode(
   groupNode: NodeDataType,
-  ReactFlowInstance: ReactFlowInstance,
-  getNodeId: (type: string) => string
+  getNodeId: (type: string) => string,
+  nodes: Node[],
+  edges: Edge[],
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
   const { template, flow } = _.cloneDeep(groupNode.node!);
   const idsMap = updateIds(flow!.data!, getNodeId);
   updateProxyIdsOnTemplate(template, idsMap);
-  let flowEdges = ReactFlowInstance.getEdges();
+  let flowEdges = edges;
   updateEdgesIds(flowEdges, idsMap);
   const gNodes: NodeType[] = flow?.data?.nodes!;
   const gEdges = flow!.data!.edges;
@@ -1008,19 +1013,19 @@ export function expandGroupNode(
     }
   });
 
-  const nodes = [
-    ...ReactFlowInstance.getNodes().filter((n) => n.id !== groupNode.id),
+  const filteredNodes = [
+    ...nodes.filter((n) => n.id !== groupNode.id),
     ...gNodes,
   ];
-  const edges = [
-    ...ReactFlowInstance.getEdges().filter(
+  const filteredEdges = [
+    ...edges.filter(
       (e) => e.target !== groupNode.id && e.source !== groupNode.id
     ),
     ...gEdges,
     ...updatedEdges,
   ];
-  ReactFlowInstance.setNodes(nodes);
-  ReactFlowInstance.setEdges(edges);
+  setNodes(filteredNodes);
+  setEdges(filteredEdges);
 }
 
 export function processFlow(FlowObject: ReactFlowJsonObject) {

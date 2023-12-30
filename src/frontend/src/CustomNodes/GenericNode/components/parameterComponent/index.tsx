@@ -71,7 +71,7 @@ export default function ParameterComponent({
   const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows, tabsState, updateFlow } =
+  const { setTabsState, tabId, flows, tabsState, updateFlow, nodes, edges, setEdges } =
     useContext(FlowsContext);
 
   const [dataRef, setDataRef] = useState(data);
@@ -96,10 +96,9 @@ export default function ParameterComponent({
     setDataRef(data);
   }, [modalContextOpen]);
 
-  const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
+  const { setFilterEdge } = useContext(typesContext);
   let disabled =
-    reactFlowInstance
-      ?.getEdges()
+    edges
       .some(
         (edge) =>
           edge.targetHandle ===
@@ -181,14 +180,14 @@ export default function ParameterComponent({
     let flow = flows.find((flow) => flow.id === tabId);
     setTimeout(() => {
       //timeout necessary because ReactFlow updates are not async
-      if (reactFlowInstance && flow && flow.data) {
+      if (flow && flow.data) {
         cleanEdges({
           flow: {
             edges: flow.data!.edges,
             nodes: flow.data!.nodes,
           },
           updateEdge: (edge) => {
-            reactFlowInstance.setEdges(edge);
+            setEdges(edge);
             updateNodeInternals(data.id);
           },
         });
@@ -323,7 +322,7 @@ export default function ParameterComponent({
                   : scapedJSONStringfy(id)
               }
               isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance!)
+                isValidConnection(connection, nodes, edges)
               }
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
@@ -396,7 +395,7 @@ export default function ParameterComponent({
                       : scapedJSONStringfy(id)
                   }
                   isValidConnection={(connection) =>
-                    isValidConnection(connection, reactFlowInstance!)
+                    isValidConnection(connection, nodes, edges)
                   }
                   className={classNames(
                     left ? "-ml-0.5 " : "-mr-0.5 ",

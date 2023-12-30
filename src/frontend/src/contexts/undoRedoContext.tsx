@@ -29,7 +29,7 @@ const defaultOptions: UseUndoRedoOptions = {
 export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
 
 export function UndoRedoProvider({ children }) {
-  const { tabId, flows } = useContext(FlowsContext);
+  const { tabId, flows, setNodes, setEdges, nodes, edges } = useContext(FlowsContext);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
@@ -48,14 +48,12 @@ export function UndoRedoProvider({ children }) {
     setTabIndex(flows.findIndex((flow) => flow.id === tabId));
   }, [flows, tabId]);
 
-  const { setNodes, setEdges, getNodes, getEdges } = useReactFlow();
-
   const takeSnapshot = useCallback(() => {
     // push the current graph to the past state
     let newPast = cloneDeep(past);
     let newState = {
-      nodes: cloneDeep(getNodes()),
-      edges: cloneDeep(getEdges()),
+      nodes: cloneDeep(nodes),
+      edges: cloneDeep(edges),
     };
     if (
       past[tabIndex] &&
@@ -76,7 +74,7 @@ export function UndoRedoProvider({ children }) {
       newFuture[tabIndex] = [];
       return newFuture;
     });
-  }, [getNodes, getEdges, past, future, flows, tabId, setPast, setFuture]);
+  }, [nodes, edges, past, future, flows, tabId, setPast, setFuture]);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to
@@ -93,7 +91,7 @@ export function UndoRedoProvider({ children }) {
       setFuture((old) => {
         let newFuture = cloneDeep(old);
         newFuture[tabIndex] = old[tabIndex];
-        newFuture[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+        newFuture[tabIndex].push({ nodes: nodes, edges: edges });
         return newFuture;
       });
       // now we can set the graph to the past state
@@ -103,8 +101,8 @@ export function UndoRedoProvider({ children }) {
   }, [
     setNodes,
     setEdges,
-    getNodes,
-    getEdges,
+    nodes,
+    edges,
     future,
     past,
     setFuture,
@@ -124,7 +122,7 @@ export function UndoRedoProvider({ children }) {
       setPast((old) => {
         let newPast = cloneDeep(old);
         newPast[tabIndex] = old[tabIndex];
-        newPast[tabIndex].push({ nodes: getNodes(), edges: getEdges() });
+        newPast[tabIndex].push({ nodes: nodes, edges: edges });
         return newPast;
       });
       setNodes(futureState.nodes);
@@ -137,8 +135,8 @@ export function UndoRedoProvider({ children }) {
     setPast,
     setNodes,
     setEdges,
-    getNodes,
-    getEdges,
+    nodes,
+    edges,
     future,
     tabIndex,
   ]);
