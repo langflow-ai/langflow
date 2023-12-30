@@ -25,8 +25,7 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState, saveFlow } = useContext(FlowsContext);
+  const { setTabsState, saveFlow, nodes, edges } = useContext(FlowsContext);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -38,8 +37,8 @@ export default function BuildTrigger({
         return;
       }
       const errors = validateNodes(
-        reactFlowInstance!.getNodes(),
-        reactFlowInstance!.getEdges()
+        nodes,
+        edges
       );
       if (errors.length > 0) {
         setErrorData({

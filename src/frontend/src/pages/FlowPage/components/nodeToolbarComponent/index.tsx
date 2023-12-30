@@ -65,9 +65,8 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent, version, flows } = useContext(FlowsContext);
+  const { paste, saveComponent, version, flows, nodes, edges, setNodes, setEdges } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
-  const reactFlowInstance = useReactFlow();
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
@@ -115,7 +114,7 @@ export default function NodeToolbarComponent({
       case "ungroup":
         takeSnapshot();
         updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, reactFlowInstance, getNodeId);
+        expandGroupNode(data, getNodeId, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);
@@ -152,14 +151,14 @@ export default function NodeToolbarComponent({
                 event.preventDefault();
                 paste(
                   {
-                    nodes: [reactFlowInstance.getNode(data.id)],
+                    nodes: [nodes.find((node) => node.id === data.id)!],
                     edges: [],
                   },
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(data.id)?.position.x,
-                    paneY: reactFlowInstance.getNode(data.id)?.position.y,
+                    paneX: nodes.find((node) => node.id === data.id)?.position.x,
+                    paneY: nodes.find((node) => node.id === data.id)?.position.y,
                   }
                 );
               }}

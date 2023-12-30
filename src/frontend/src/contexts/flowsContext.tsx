@@ -3,6 +3,7 @@ import _, { cloneDeep } from "lodash";
 import {
   ReactNode,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -10,10 +11,14 @@ import {
 } from "react";
 import {
   Edge,
+  EdgeChange,
   Node,
+  NodeChange,
   ReactFlowJsonObject,
   XYPosition,
   addEdge,
+  useEdgesState,
+  useNodesState,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -93,8 +98,12 @@ const FlowsContextInitialValue: FlowsContextType = {
   saveComponent: async (component: NodeDataType, override: boolean) => "",
   deleteComponent: (key: string) => {},
   version: "",
-  nodesOnFlow: "",
-  setNodesOnFlow: (nodes: string) => "",
+  nodes: [],
+  setNodes: () => {},
+  onNodesChange: () => {},
+  edges: [],
+  setEdges: () => {},
+  onEdgesChange: () => {},
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -102,24 +111,65 @@ export const FlowsContext = createContext<FlowsContextType>(
 );
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setNoticeData, setSuccessData } =
+  const { setErrorData, setSuccessData } =
     useContext(alertContext);
   const { getAuthentication, isAuthenticated } = useContext(AuthContext);
 
   const [tabId, setTabId] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
-  const [nodesOnFlow, setNodesOnFlow] = useState("");
-
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [id, setId] = useState(uid());
-  const { reactFlowInstance, setData, data } = useContext(typesContext);
+  const { reactFlowInstance, setData } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;
     edges: any;
   } | null>(null);
   const [tabsState, setTabsState] = useState<FlowsState>({});
   const [getTweak, setTweak] = useState<tweakType>([]);
+
+  const [nodes, setNodesInternal, onNodesChangeInternal] = useNodesState([]);
+
+  const [edges, setEdgesInternal, onEdgesChangeInternal] = useEdgesState([]);
+
+  const onNodesChange = useCallback((nodes: NodeChange[]) => {
+    onNodesChangeInternal(nodes);
+    //@ts-ignore
+    setTabsState((prev: FlowsState) => {
+      return {
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          isPending: true,
+        },
+      };
+    });
+    //SAVE FLOW IN FLOWS
+  }, [onNodesChangeInternal, setTabsState, tabId]);
+
+  const onEdgesChange = useCallback(
+    (edges: EdgeChange[]) => {
+      onEdgesChangeInternal(edges);
+      //@ts-ignore
+      setTabsState((prev: FlowsState) => {
+        return {
+          ...prev,
+          [tabId]: {
+            ...prev[tabId],
+            isPending: true,
+          },
+        };
+      });
+    },
+    [onEdgesChangeInternal, setTabsState, tabId]
+  );
+
+  const setNodes = (nodes: Node[] | ((oldState: Node[]) => Node[])) => {
+    setNodesInternal(nodes)
+  }
+
+  const setEdges = (edges: Edge[] | ((oldState: Edge[]) => Edge[])) => {
+    setEdgesInternal(edges);
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -128,6 +178,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   const newNodeId = useRef(uid());
+
   function incrementNodeId() {
     newNodeId.current = uid();
     return newNodeId.current;
@@ -425,8 +476,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let nodes: Node<NodeDataType>[] = reactFlowInstance!.getNodes();
-    let edges = reactFlowInstance!.getEdges();
+    let newNodes: Node<NodeDataType>[] = nodes;
+    let newEdges = edges;
     selectionInstance.nodes.forEach((node: Node) => {
       if (node.position.y < minimumY) {
         minimumY = node.position.y;
@@ -463,11 +514,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       };
 
       // Add the new node to the list of nodes in state
-      nodes = nodes
+      newNodes = nodes
         .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    reactFlowInstance!.setNodes(nodes);
+    setNodes(newNodes);
 
     selectionInstance.edges.forEach((edge: Edge) => {
       let source = idsMap[edge.source];
@@ -498,7 +549,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         "-" +
         target +
         targetHandle;
-      edges = addEdge(
+      newEdges = addEdge(
         {
           source,
           target,
@@ -514,10 +565,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           animated: targetHandleObject.type === "Text",
           selected: false,
         },
-        edges.map((edge) => ({ ...edge, selected: false }))
+        newEdges.map((edge) => ({ ...edge, selected: false }))
       );
     });
-    reactFlowInstance!.setEdges(edges);
+    setEdges(newEdges);
   }
 
   const addFlow = async (
@@ -744,8 +795,12 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         isLoading,
         saveComponent,
         deleteComponent,
-        nodesOnFlow,
-        setNodesOnFlow,
+        nodes,
+        setNodes,
+        onNodesChange,
+        edges,
+        setEdges,
+        onEdgesChange,
       }}
     >
       {children}

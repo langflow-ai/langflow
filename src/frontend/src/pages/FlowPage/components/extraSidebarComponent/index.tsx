@@ -26,7 +26,7 @@ import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates, getFilterEdge, setFilterEdge, reactFlowInstance } =
+  const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
     useContext(FlowsContext);

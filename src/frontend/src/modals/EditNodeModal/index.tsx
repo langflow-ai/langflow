@@ -62,8 +62,7 @@ const EditNodeModal = forwardRef(
 
     const [myData, setMyData] = useState(data);
 
-    const { setTabsState, tabId } = useContext(FlowsContext);
-    const { reactFlowInstance } = useContext(typesContext);
+    const { setTabsState, tabId, edges } = useContext(FlowsContext);
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {
@@ -159,7 +158,7 @@ const EditNodeModal = forwardRef(
                             fieldName: templateParam,
                           };
                           let disabled =
-                            reactFlowInstance?.getEdges().some(
+                            edges.some(
                               (edge) =>
                                 edge.targetHandle ===
                                 scapedJSONStringfy(

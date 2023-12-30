@@ -82,7 +82,7 @@ export default function Page({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
-  const { nodesOnFlow, setNodesOnFlow } = useContext(FlowsContext);
+  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange } = useContext(FlowsContext);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -164,13 +164,7 @@ export default function Page({
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
   const { setErrorData } = useContext(alertContext);
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    flow.data?.nodes ?? []
-  );
 
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    flow.data?.edges ?? []
-  );
   const { setViewport } = useReactFlow();
   const edgeUpdateSuccessful = useRef(true);
 
@@ -209,50 +203,6 @@ export default function Page({
       clearInterval(interval);
     };
   }, [flow, flow.data]);
-
-  const onEdgesChangeMod = useCallback(
-    (change: EdgeChange[]) => {
-      onEdgesChange(change);
-      //@ts-ignore
-      setTabsState((prev: FlowsState) => {
-        return {
-          ...prev,
-          [tabId]: {
-            ...prev[tabId],
-            isPending: true,
-          },
-        };
-      });
-      saveCurrentFlowTimeout();
-    },
-    [onEdgesChange, setNodes, setTabsState, saveCurrentFlowTimeout, tabId]
-  );
-
-  const onNodesChangeMod = useCallback(
-    (change: NodeChange[]) => {
-      const changeString = JSON.stringify(change);
-      if (changeString !== nodesOnFlow) {
-        onNodesChange(change);
-        updateNodeFlow(changeString);
-        //@ts-ignore
-        setTabsState((prev: FlowsState) => {
-          return {
-            ...prev,
-            [tabId]: {
-              ...prev[tabId],
-              isPending: true,
-            },
-          };
-        });
-        saveCurrentFlowTimeout();
-      }
-    },
-    [onNodesChange, setTabsState, tabId, updateNodeFlow, saveCurrentFlowTimeout]
-  );
-
-  function updateNodeFlow(changeString: string) {
-    setNodesOnFlow(changeString);
-  }
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -416,7 +366,7 @@ export default function Page({
 
   const onEdgeUpdate = useCallback(
     (oldEdge: Edge, newConnection: Connection) => {
-      if (isValidConnection(newConnection, reactFlowInstance!)) {
+      if (isValidConnection(newConnection, nodes, edges)) {
         edgeUpdateSuccessful.current = true;
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
@@ -498,8 +448,8 @@ export default function Page({
                   nodes={nodes}
                   onMove={onMove}
                   edges={edges}
-                  onNodesChange={onNodesChangeMod}
-                  onEdgesChange={onEdgesChangeMod}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
                   disableKeyboardA11y={true}
                   onInit={setReactFlowInstance}
@@ -579,7 +529,7 @@ export default function Page({
                   />
                 </ReactFlow>
                 {!view && (
-                  <Chat flow={flow} reactFlowInstance={reactFlowInstance!} />
+                  <Chat flow={flow} />
                 )}
               </div>
             ) : (

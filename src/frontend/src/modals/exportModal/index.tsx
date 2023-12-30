@@ -13,7 +13,6 @@ import BaseModal from "../baseModal";
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
     const { flows, tabId, downloadFlow, version } = useContext(FlowsContext);
-    const { reactFlowInstance } = useContext(typesContext);
     const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
     const flow = flows.find((f) => f.id === tabId);

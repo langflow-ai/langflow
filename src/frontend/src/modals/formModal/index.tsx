@@ -38,7 +38,7 @@ export default function FormModal({
   setOpen: (open: boolean) => void;
   flow: FlowType;
 }): JSX.Element {
-  const { tabsState, setTabsState } = useContext(FlowsContext);
+  const { tabsState, setTabsState, nodes, edges } = useContext(FlowsContext);
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];
@@ -62,7 +62,6 @@ export default function FormModal({
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const template = useRef(tabsState[flow.id].formKeysData.template);
-  const { reactFlowInstance } = useContext(typesContext);
   const { accessToken } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const ws = useRef<WebSocket | null>(null);
@@ -385,8 +384,8 @@ export default function FormModal({
 
   function sendMessage(): void {
     let nodeValidationErrors = validateNodes(
-      reactFlowInstance!.getNodes(),
-      reactFlowInstance!.getEdges()
+      nodes,
+      edges
     );
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
