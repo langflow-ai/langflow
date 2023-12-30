@@ -89,7 +89,6 @@ export function isValidConnection(
   nodes: Node[],
   edges: Edge[],
 ) {
-  debugger
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
   if (
@@ -105,14 +104,14 @@ export function isValidConnection(
     let targetNode = nodes.find((node) => node.id === target!)?.data?.node;
     if (!targetNode) {
       if (
-        edges
+        !edges
           .find((e) => e.targetHandle === targetHandle)
       ) {
         return true;
       }
     } else if (
       (!targetNode.template[targetHandleObject.fieldName].list &&
-        edges
+        !edges
           .find((e) => e.targetHandle === targetHandle)) ||
       targetNode.template[targetHandleObject.fieldName].list
     ) {
