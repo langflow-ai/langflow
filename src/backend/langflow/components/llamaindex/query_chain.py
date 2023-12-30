@@ -1,12 +1,12 @@
 """Query Chain."""
 
-from typing import Optional, List, cast, Callable
+from typing import Optional, List, cast, Callable, Union
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
 from llama_index.schema import Document, TextNode
 from llama_index.node_parser import SentenceSplitter
 from llama_index import VectorStoreIndex, ServiceContext
-from langflow.field_typing import Object, BaseLanguageModel
+from langflow.field_typing import Object, BaseLanguageModel, Chain
 from llama_index.retrievers import VectorIndexRetriever
 from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.llms import LangChainLLM
@@ -33,7 +33,7 @@ class QueryChainComponent(CustomComponent):
         self,
         query_engine: Object,
         prompt: BasePromptTemplate,
-    ) -> Callable:
+    ) -> Union[Chain, Callable]:
         """Build."""
         def query_chain_fn(*args, **kwargs) -> str:
             fmt_prompt = prompt.format(**kwargs)
