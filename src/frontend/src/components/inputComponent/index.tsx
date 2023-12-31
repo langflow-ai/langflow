@@ -24,10 +24,10 @@ export default function InputComponent({
   const refInput = useRef<HTMLInputElement>(null);
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className="relative w-full">
