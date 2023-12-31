@@ -13,7 +13,7 @@ export default function InputListComponent({
   editNode = false,
 }: InputListComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
     }
   }, [disabled]);

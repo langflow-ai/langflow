@@ -14,7 +14,7 @@ export default function KeypairListComponent({
   duplicateKey,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
     }
   }, [disabled]);
