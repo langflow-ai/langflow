@@ -72,7 +72,7 @@ export default function Page({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, setPending, saveFlow } = useContext(FlowsContext);
+  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, setPending, saveFlow, isPending } = useContext(FlowsContext);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -370,7 +370,8 @@ export default function Page({
   }, []);
 
   const onMove = useCallback(() => {
-    setPending(true);
+    if(!isPending)
+      setPending(true);
   }, [setPending]);
 
   return (
