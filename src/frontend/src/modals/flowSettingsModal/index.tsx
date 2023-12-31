@@ -17,7 +17,8 @@ export default function FlowSettingsModal({
   useEffect(() => {
     setName(flow!.name);
     setDescription(flow!.description);
-  }, [flow!.name, flow!.description]);
+  }, [flow!.name, flow!.description, open]);
+
   const [name, setName] = useState(flow!.name);
   const [description, setDescription] = useState(flow!.description);
 
