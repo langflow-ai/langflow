@@ -91,7 +91,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   isPending: false,
   setPending: (pending: boolean) => {},
   tabsState: {},
-  setTabsState: (state: FlowsState) => {},
+  setTabsState: () => {},
   getNodeId: (nodeType: string) => "",
   setTweak: (tweak: any) => {},
   getTweak: [],
@@ -136,19 +136,17 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const [edges, setEdgesInternal, onEdgesChangeInternal] = useEdgesState([]);
 
-  const setPending = 
-    (pending: boolean) => {
-      //@ts-ignore
-      setTabsState((prev: FlowsState) => {
-        return {
-          ...prev,
-          [tabId]: {
-            ...prev[tabId],
-            isPending: pending,
-          },
-        };
-      });
-    }
+  const setPending = (pending: boolean) => {
+    setTabsState((prev: FlowsState) => {
+      return {
+        ...prev,
+        [tabId]: {
+          ...prev[tabId],
+          isPending: pending,
+        },
+      };
+    });
+  };
 
   const isPending = tabsState[tabId]?.isPending ?? false;
 
@@ -172,7 +170,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     let newChange = typeof change === "function" ? change(nodes) : change;
     let newEdges = cleanEdges(newChange, edges);
 
-    saveCurrentFlow(newChange, newEdges, reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 });
+    saveCurrentFlow(
+      newChange,
+      newEdges,
+      reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 }
+    );
     setEdgesInternal(newEdges);
     setNodesInternal(newChange);
   };
@@ -200,7 +202,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const setEdges = (change: Edge[] | ((oldState: Edge[]) => Edge[])) => {
     let newChange = typeof change === "function" ? change(edges) : change;
 
-    saveCurrentFlow(nodes, newChange, reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 });
+    saveCurrentFlow(
+      nodes,
+      newChange,
+      reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 }
+    );
     setEdgesInternal(newChange);
   };
 
@@ -738,7 +744,14 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     let newFlow;
     if (!flow) {
       const currentFlow = flows.find((flow) => flow.id === tabId)!;
-      newFlow = { ...currentFlow, data: { nodes, edges, viewport: reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 } } }
+      newFlow = {
+        ...currentFlow,
+        data: {
+          nodes,
+          edges,
+          viewport: reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 },
+        },
+      };
     } else {
       newFlow = flow;
     }
@@ -789,22 +802,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function deleteNode(idx: string | Array<string>) {
-
-    setEdges((oldEdges) =>
-      oldEdges.filter((edge) =>
-        typeof idx === "string"
-          ? edge.source !== idx && edge.target !== idx
-          : !idx.includes(edge.source) && !idx.includes(edge.target)
-      )
-    );
-
     setNodes((oldNodes) =>
       oldNodes.filter((node) =>
         typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
       )
     );
-
   }
+
   function deleteEdge(idx: string | Array<string>) {
     setEdges((oldEdges) =>
       oldEdges.filter((edge) =>

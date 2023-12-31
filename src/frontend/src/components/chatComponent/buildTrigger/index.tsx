@@ -98,7 +98,6 @@ export default function BuildTrigger({
           // If the event is a log, log it
           setSuccessData({ title: parsedData.log });
         } else if (parsedData.input_keys !== undefined) {
-          //@ts-ignore
           setTabsState((old: FlowsState) => {
             return {
               ...old,

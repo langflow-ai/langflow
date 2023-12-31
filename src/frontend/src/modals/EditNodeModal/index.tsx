@@ -62,7 +62,7 @@ const EditNodeModal = forwardRef(
 
     const [myData, setMyData] = useState(data);
 
-    const { setTabsState, tabId, edges } = useContext(FlowsContext);
+    const { setPending, tabId, edges } = useContext(FlowsContext);
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {
@@ -535,7 +535,6 @@ const EditNodeModal = forwardRef(
             className="mt-3"
             onClick={() => {
               data.node = myData.node;
-              //@ts-ignore
               setPending(true);
               setOpen(false);
             }}
