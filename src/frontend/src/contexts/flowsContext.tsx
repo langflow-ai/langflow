@@ -695,12 +695,23 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function saveCurrentFlow(nodes: Node[], edges: Edge[], viewport: Viewport) {
-    const currentFlow = flows.find((flow) => flow.id === tabId);
-    if (currentFlow) {
-      saveFlow({ ...currentFlow, data: { nodes, edges, viewport } }, true);
+  const saveTimeoutId = useRef<NodeJS.Timeout | null>(null);
+
+  const saveCurrentFlow = (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+    // Clear the previous timeout if it exists.
+    if (saveTimeoutId.current) {
+      clearTimeout(saveTimeoutId.current);
     }
+
+    // Set up a new timeout.
+    saveTimeoutId.current = setTimeout(() => {
+      const currentFlow = flows.find((flow: FlowType) => flow.id === tabId);
+      if (currentFlow) {
+        saveFlow({ ...currentFlow, data: { nodes, edges, viewport } }, true);
+      }
+    }, 300); // Delay of 300ms.
   }
+
 
   async function saveFlow(flow?: FlowType, silent?: boolean) {
     let newFlow;
