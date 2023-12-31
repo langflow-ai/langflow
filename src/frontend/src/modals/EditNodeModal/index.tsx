@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import { forwardRef, useContext, useEffect, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
@@ -58,11 +57,9 @@ const EditNodeModal = forwardRef(
     },
     ref
   ) => {
-    const updateNodeInternals = useUpdateNodeInternals();
-
     const [myData, setMyData] = useState(data);
 
-    const { setPending, tabId, edges } = useContext(FlowsContext);
+    const { setPending, edges, setNode } = useContext(FlowsContext);
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {
@@ -80,7 +77,6 @@ const EditNodeModal = forwardRef(
         newData.node!.template[name].value = newValue;
         return newData;
       });
-      updateNodeInternals(data.id);
     };
 
     useEffect(() => {
@@ -534,7 +530,13 @@ const EditNodeModal = forwardRef(
             id={"saveChangesBtn"}
             className="mt-3"
             onClick={() => {
-              data.node = myData.node;
+              setNode(data.id, (old) => ({
+                ...old,
+                data: {
+                  ...old.data,
+                  node: myData.node,
+                },
+              }));
               setPending(true);
               setOpen(false);
             }}
