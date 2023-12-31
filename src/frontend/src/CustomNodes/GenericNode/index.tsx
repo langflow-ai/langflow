@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -29,7 +29,6 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const updateNodeInternals = useUpdateNodeInternals();
   const { types } = useContext(typesContext);
   const { deleteNode, setNode } = useContext(FlowsContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -419,7 +418,6 @@ export default function GenericNode({
                           },
                         },
                       }));
-                      updateNodeInternals(data.id);
                     }
                   }}
                 />

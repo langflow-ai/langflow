@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useReactFlow, useUpdateNodeInternals } from "reactflow";
+import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
@@ -50,7 +50,6 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "NestedDict")
     ).length
   );
-  const updateNodeInternals = useUpdateNodeInternals();
   const { getNodeId } = useContext(FlowsContext);
   const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
 
@@ -98,7 +97,6 @@ export default function NodeToolbarComponent({
       case "show":
         takeSnapshot();
         setShowNode(data.showNode ?? true ? false : true);
-        updateNodeInternals(data.id);
         break;
       case "Download":
         downloadNode(createFlowComponent(cloneDeep(data), version));
