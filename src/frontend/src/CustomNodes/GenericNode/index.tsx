@@ -7,7 +7,6 @@ import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
-import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { undoRedoContext } from "../../contexts/undoRedoContext";
@@ -32,7 +31,7 @@ export default function GenericNode({
 }): JSX.Element {
   const updateNodeInternals = useUpdateNodeInternals();
   const { types } = useContext(typesContext);
-  const { deleteNode } = useContext(FlowsContext);
+  const { deleteNode, setNode } = useContext(FlowsContext);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -117,7 +116,10 @@ export default function GenericNode({
             deleteNode(id);
           }}
           setShowNode={(show: boolean) => {
-            data.showNode = show;
+            setNode(data.id, (old) => ({
+              ...old,
+              data: { ...old.data, showNode: show },
+            }));
           }}
           numberOfHandles={handles}
           showNode={showNode}
@@ -169,8 +171,16 @@ export default function GenericNode({
                           setInputName(false);
                           if (nodeName.trim() !== "") {
                             setNodeName(nodeName);
-                            data.node!.display_name = nodeName;
-                            updateNodeInternals(data.id);
+                            setNode(data.id, (old) => ({
+                              ...old,
+                              data: {
+                                ...old.data,
+                                node: {
+                                  ...old.data.node,
+                                  display_name: nodeName,
+                                },
+                              },
+                            }));
                           } else {
                             setNodeName(data.node!.display_name);
                           }
@@ -376,8 +386,16 @@ export default function GenericNode({
                   onBlur={() => {
                     setInputDescription(false);
                     setNodeDescription(nodeDescription);
-                    data.node!.description = nodeDescription;
-                    updateNodeInternals(data.id);
+                    setNode(data.id, (old) => ({
+                      ...old,
+                      data: {
+                        ...old.data,
+                        node: {
+                          ...old.data.node,
+                          description: nodeDescription,
+                        },
+                      },
+                    }));
                   }}
                   value={nodeDescription}
                   onChange={(e) => setNodeDescription(e.target.value)}
@@ -391,7 +409,16 @@ export default function GenericNode({
                     ) {
                       setInputDescription(false);
                       setNodeDescription(nodeDescription);
-                      data.node!.description = nodeDescription;
+                      setNode(data.id, (old) => ({
+                        ...old,
+                        data: {
+                          ...old.data,
+                          node: {
+                            ...old.data.node,
+                            description: nodeDescription,
+                          },
+                        },
+                      }));
                       updateNodeInternals(data.id);
                     }
                   }}
