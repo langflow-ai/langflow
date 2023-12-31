@@ -78,8 +78,6 @@ export default function ParameterComponent({
     setNode,
   } = useContext(FlowsContext);
 
-  const [dataRef, setDataRef] = useState(data);
-
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
   // Update component position
@@ -95,10 +93,6 @@ export default function ParameterComponent({
   }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
-
-  useEffect(() => {
-    setDataRef(data);
-  }, [modalContextOpen]);
 
   const { setFilterEdge } = useContext(typesContext);
   let disabled =
@@ -145,12 +139,6 @@ export default function ParameterComponent({
       newNode.data.node.template[name].value = newValue;
 
       return newNode;
-    });
-
-    setDataRef((old) => {
-      let newData = cloneDeep(old);
-      newData.node!.template[name].value = newValue;
-      return newData;
     });
 
     renderTooltips();
@@ -437,9 +425,7 @@ export default function ParameterComponent({
               id={"toggle-" + index}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
-              setEnabled={(isEnabled) => {
-                handleOnNewValue(isEnabled);
-              }}
+              setEnabled={handleOnNewValue}
               size="large"
             />
           </div>
@@ -541,10 +527,7 @@ export default function ParameterComponent({
                     }
                   : data.node!.template[name].value
               }
-              onChange={(newValue) => {
-                data.node!.template[name].value = newValue;
-                handleOnNewValue(newValue);
-              }}
+              onChange={handleOnNewValue}
               id="div-dict-input"
             />
           </div>
@@ -554,10 +537,10 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                dataRef.node!.template[name].value?.length === 0 ||
-                !dataRef.node!.template[name].value
+                data.node!.template[name].value?.length === 0 ||
+                !data.node!.template[name].value
                   ? [{ "": "" }]
-                  : convertObjToArray(dataRef.node!.template[name].value)
+                  : convertObjToArray(data.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
