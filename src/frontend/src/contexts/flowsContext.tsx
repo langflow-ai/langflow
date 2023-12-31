@@ -292,46 +292,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function updateDisplay_name(node: NodeType, template: APIClassType) {
-    node.data.node!.display_name = template["display_name"] || node.data.type;
-  }
-
-  function updateNodeDocumentation(node: NodeType, template: APIClassType) {
-    node.data.node!.documentation = template["documentation"];
-  }
-
-  function updateNodeBaseClasses(node: NodeType, template: APIClassType) {
-    node.data.node!.base_classes = template["base_classes"];
-  }
-
-  function updateNodeEdges(
-    flow: FlowType,
-    node: NodeType,
-    template: APIClassType
-  ) {
-    flow.data!.edges.forEach((edge) => {
-      if (edge.source === node.id) {
-        let sourceHandleObject: sourceHandleType = scapeJSONParse(
-          edge.sourceHandle!
-        );
-        sourceHandleObject.baseClasses = template["base_classes"];
-        edge.data.sourceHandle = sourceHandleObject;
-        edge.sourceHandle = scapedJSONStringfy(sourceHandleObject);
-      }
-    });
-  }
-
-  function updateNodeDescription(node: NodeType, template: APIClassType) {
-    node.data.node!.description = template["description"];
-  }
-
-  function updateNodeTemplate(node: NodeType, template: APIClassType) {
-    node.data.node!.template = updateTemplate(
-      template["template"] as unknown as APITemplateType,
-      node.data.node!.template as APITemplateType
-    );
-  }
-
   function updateStateWithDbData(tabsData: FlowType[]) {
     setFlows(tabsData);
   }
@@ -553,7 +513,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       };
 
       // Add the new node to the list of nodes in state
-      newNodes = nodes
+      newNodes = newNodes
         .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
