@@ -401,7 +401,6 @@ export default function FormModal({
         description: flow.description,
         chatKey: chatKey!,
       });
-      //@ts-ignore
       setTabsState((old: FlowsState) => {
         if (!chatKey) return old;
         let newTabsState = _.cloneDeep(old);
@@ -522,7 +521,6 @@ export default function FormModal({
                               ]
                             }
                             onChange={(e) => {
-                              //@ts-ignore
                               setTabsState((old: FlowsState) => {
                                 let newTabsState = _.cloneDeep(old);
                                 newTabsState[
@@ -634,7 +632,6 @@ export default function FormModal({
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
-                        //@ts-ignore
                         setTabsState((old: FlowsState) => {
                           let newTabsState = _.cloneDeep(old);
                           newTabsState[id.current].formKeysData.input_keys![

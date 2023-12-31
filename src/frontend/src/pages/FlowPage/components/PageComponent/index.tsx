@@ -370,7 +370,6 @@ export default function Page({
   }, []);
 
   const onMove = useCallback(() => {
-    //@ts-ignore
     setPending(true);
   }, [setPending]);
 

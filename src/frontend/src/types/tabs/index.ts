@@ -46,7 +46,7 @@ export type FlowsContextType = {
   isPending: boolean;
   setPending: (pending: boolean) => void;
   tabsState: FlowsState;
-  setTabsState: (state: FlowsState) => void;
+  setTabsState: (update: FlowsState | ((oldState: FlowsState) => FlowsState)) => void;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
