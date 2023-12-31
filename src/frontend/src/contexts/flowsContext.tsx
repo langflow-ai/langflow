@@ -153,17 +153,19 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const onNodesChange = useCallback(
     (change: NodeChange[]) => {
       onNodesChangeInternal(change);
-      setPending(true);
+      if(!isPending)
+        setPending(true);
     },
-    [onNodesChangeInternal, setTabsState, tabId]
+    [onNodesChangeInternal, setPending, isPending]
   );
 
   const onEdgesChange = useCallback(
     (edges: EdgeChange[]) => {
       onEdgesChangeInternal(edges);
-      setPending(true);
+      if(!isPending)
+        setPending(true);
     },
-    [onEdgesChangeInternal, setTabsState, tabId]
+    [onEdgesChangeInternal, setPending, isPending]
   );
 
   const setNodes = (change: Node[] | ((oldState: Node[]) => Node[])) => {

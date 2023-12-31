@@ -213,7 +213,7 @@ export default function Page({
 
   const onNodeDragStop: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
-    saveFlow();
+    saveFlow(undefined, true);
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
