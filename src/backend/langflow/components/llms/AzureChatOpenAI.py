@@ -26,10 +26,10 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "options": self.AZURE_OPENAI_MODELS,
                 "required": True,
             },
-            "azure_endpoint": {
-                "display_name": "Azure Endpoint",
+            "openai_api_base": {
+                "display_name": "BASE URL",
                 "required": True,
-                "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
+                "info": "Your Azure BASE URL, including the resource.. Example: `https://example-resource.azure.openai.com/`",
             },
             "azure_deployment": {
                 "display_name": "Deployment Name",
@@ -61,16 +61,16 @@ class AzureChatOpenAIComponent(CustomComponent):
     def build(
         self,
         model: str,
-        azure_endpoint: str,
+        openai_api_base: str,
         azure_deployment: str,
         api_key: str,
-        api_version: str = "2023-05-15",
+        api_version: str = str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
         return AzureChatOpenAI(
             model=model,
-            azure_endpoint=azure_endpoint,
+            openai_api_base=openai_api_base,
             azure_deployment=azure_deployment,
             api_version=api_version,
             api_key=api_key,
