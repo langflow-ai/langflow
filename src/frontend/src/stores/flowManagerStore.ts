@@ -22,6 +22,11 @@ type RFState = {
   deleteNode: (nodeId: string) => void;
   deleteEdge: (edgeId: string) => void;
   isBuilt: boolean;
+  paste: (
+    selection: { nodes: any; edges: any },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
+  ) => void;
+  lastCopiedSelection: { nodes: any; edges: any };
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -56,6 +61,8 @@ const useStore = create<RFState>((set, get) => ({
       edges: get().edges.filter((edge) => edge.id !== edgeId),
     });
   },
+  paste: (selection, position) => {},
+  lastCopiedSelection: { nodes: [], edges: [] },
 }));
 
 export default useStore;
