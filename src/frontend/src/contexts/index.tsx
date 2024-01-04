@@ -8,7 +8,6 @@ import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
 import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
-import { StoreProvider } from "./storeContext";
 
 import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
@@ -27,9 +26,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
                     <ApiInterceptor />
                     <SSEProvider>
                       <FlowsProvider>
-                        <UndoRedoProvider>
-                          <StoreProvider>{children}</StoreProvider>
-                        </UndoRedoProvider>
+                        <UndoRedoProvider>{children}</UndoRedoProvider>
                       </FlowsProvider>
                     </SSEProvider>
                   </LocationProvider>

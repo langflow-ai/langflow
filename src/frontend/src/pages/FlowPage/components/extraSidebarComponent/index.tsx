@@ -6,11 +6,11 @@ import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
-import { StoreContext } from "../../../../contexts/storeContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
+import { useStoreStore } from "../../../../stores/storeStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   nodeColors,
@@ -30,7 +30,11 @@ export default function ExtraSidebar(): JSX.Element {
     useContext(typesContext);
   const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, isPending } =
     useContext(FlowsContext);
-  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
+
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
