@@ -31,6 +31,7 @@ type RFState = {
   lastCopiedSelection: { nodes: any; edges: any };
   nodeId: string;
   incrementNodeId: () => void;
+  isPending: boolean;
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -71,6 +72,7 @@ const useStore = create<RFState>((set, get) => ({
   incrementNodeId: () => {
     set((state) => ({ nodeId: uid() }));
   },
+  isPending: false,
 }));
 
 export default useStore;
