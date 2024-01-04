@@ -22,6 +22,9 @@ export default function StoreApiKeyModal({
 
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
 
   const handleSaveKey = () => {
     if (apiKeyValue) {
@@ -32,12 +35,18 @@ export default function StoreApiKeyModal({
           });
           storeApiKey(apiKeyValue);
           setOpen(false);
+          setHasApiKey(true);
+          setValidApiKey(true);
+          setLoadingApiKey(false);
         },
         (error) => {
           setErrorData({
             title: "There was an error saving the API Key, please try again.",
             list: [error["response"]["data"]["detail"]],
           });
+          setHasApiKey(false);
+          setValidApiKey(false);
+          setLoadingApiKey(false);
         }
       );
     }
