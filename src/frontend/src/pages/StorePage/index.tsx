@@ -36,10 +36,14 @@ import { cn } from "../../utils/utils";
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
 
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
+  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
+
   const { apiKey } = useContext(AuthContext);
+
   const { setErrorData } = useContext(alertContext);
   const { setTabId } = useContext(FlowsContext);
   const [loading, setLoading] = useState(true);
@@ -171,17 +175,14 @@ export default function StorePage(): JSX.Element {
   }
 
   const fetchApiData = async () => {
-    useStoreStore.setState({ loadingApiKey: true });
+    setLoadingApiKey(true);
     try {
       const res = await checkHasApiKey();
-
-      useStoreStore.setState({
-        loadingApiKey: false,
-        validApiKey: res?.is_valid ?? false,
-        hasApiKey: res?.has_api_key ?? false,
-      });
+      setHasApiKey(res?.has_api_key ?? false);
+      setValidApiKey(res?.is_valid ?? false);
+      setLoadingApiKey(false);
     } catch (e) {
-      useStoreStore.setState({ loadingApiKey: false });
+      setLoadingApiKey(false);
       console.log(e);
     }
   };
