@@ -23,14 +23,22 @@ import {
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { StoreContext } from "../../contexts/storeContext";
-import { getStoreComponents, getStoreTags } from "../../controllers/API";
+import {
+  checkHasApiKey,
+  getStoreComponents,
+  getStoreTags,
+} from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
+import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+
 export default function StorePage(): JSX.Element {
-  const { validApiKey, setValidApiKey, hasApiKey, loadingApiKey } =
-    useContext(StoreContext);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
+
   const { apiKey } = useContext(AuthContext);
   const { setErrorData } = useContext(alertContext);
   const { setTabId } = useContext(FlowsContext);
@@ -161,6 +169,26 @@ export default function StorePage(): JSX.Element {
     setPageIndex(1);
     setPageSize(12);
   }
+
+  const fetchApiData = async () => {
+    useStoreStore.setState({ loadingApiKey: true });
+    try {
+      const res = await checkHasApiKey();
+
+      useStoreStore.setState({
+        loadingApiKey: false,
+        validApiKey: res?.is_valid ?? false,
+        hasApiKey: res?.has_api_key ?? false,
+      });
+    } catch (e) {
+      useStoreStore.setState({ loadingApiKey: false });
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchApiData();
+  }, [apiKey]);
 
   return (
     <PageLayout

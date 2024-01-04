@@ -7,14 +7,13 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { StoreContext } from "../../contexts/storeContext";
-import { typesContext } from "../../contexts/typesContext";
 import {
   getStoreComponents,
   getStoreTags,
   saveFlowStore,
   updateFlowStore,
 } from "../../controllers/API";
+import { useStoreStore } from "../../stores/storeStore";
 import { FlowType } from "../../types/flow";
 import {
   downloadNode,
@@ -41,7 +40,9 @@ export default function ShareModal({
   disabled?: boolean;
 }): JSX.Element {
   const { version } = useContext(FlowsContext);
-  const { hasApiKey, hasStore } = useContext(StoreContext);
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+
   const { setSuccessData, setErrorData } = useContext(alertContext);
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);

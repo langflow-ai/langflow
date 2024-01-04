@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
@@ -10,11 +9,11 @@ import {
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
 import { FlowsContext } from "../../../../contexts/flowsContext";
-import { StoreContext } from "../../../../contexts/storeContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
@@ -51,7 +50,10 @@ export default function NodeToolbarComponent({
     ).length
   );
   const { getNodeId } = useContext(FlowsContext);
-  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
+
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -64,7 +66,16 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent, version, flows, nodes, edges, setNodes, setEdges } = useContext(FlowsContext);
+  const {
+    paste,
+    saveComponent,
+    version,
+    flows,
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+  } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -155,8 +166,10 @@ export default function NodeToolbarComponent({
                   {
                     x: 50,
                     y: 10,
-                    paneX: nodes.find((node) => node.id === data.id)?.position.x,
-                    paneY: nodes.find((node) => node.id === data.id)?.position.y,
+                    paneX: nodes.find((node) => node.id === data.id)?.position
+                      .x,
+                    paneY: nodes.find((node) => node.id === data.id)?.position
+                      .y,
                   }
                 );
               }}

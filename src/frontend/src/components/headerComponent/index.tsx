@@ -5,10 +5,10 @@ import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { StoreContext } from "../../contexts/storeContext";
 
 import { FlowsContext } from "../../contexts/flowsContext";
 import { useDarkStore } from "../../stores/darkStore";
+import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -28,8 +28,9 @@ export default function Header(): JSX.Element {
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
-  const { hasStore } = useContext(StoreContext);
   const navigate = useNavigate();
+
+  const hasStore = useStoreStore((state) => state.hasStore);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.updateDark);
