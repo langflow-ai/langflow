@@ -3,7 +3,6 @@ import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
 import { alertContext } from "../../../contexts/alertContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
@@ -36,10 +35,7 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(
-        nodes,
-        edges
-      );
+      const errors = validateNodes(nodes, edges);
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",

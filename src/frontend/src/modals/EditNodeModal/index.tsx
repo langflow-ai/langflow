@@ -30,9 +30,7 @@ import {
 } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
-import { typesContext } from "../../contexts/typesContext";
 import { NodeDataType } from "../../types/flow";
-import { FlowsState } from "../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,

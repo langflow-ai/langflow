@@ -8,7 +8,6 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { StoreContext } from "../../contexts/storeContext";
-import { typesContext } from "../../contexts/typesContext";
 import {
   getStoreComponents,
   getStoreTags,

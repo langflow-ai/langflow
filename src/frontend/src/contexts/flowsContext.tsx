@@ -31,7 +31,7 @@ import {
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
-import { APIClassType, APITemplateType } from "../types/api";
+import { APIClassType } from "../types/api";
 import { tweakType } from "../types/components";
 import {
   FlowType,
@@ -51,7 +51,6 @@ import {
   scapedJSONStringfy,
   updateEdgesHandleIds,
   updateIds,
-  updateTemplate,
 } from "../utils/reactflowUtils";
 import {
   createRandomKey,
@@ -153,8 +152,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const onNodesChange = useCallback(
     (change: NodeChange[]) => {
       onNodesChangeInternal(change);
-      if(!isPending)
-        setPending(true);
+      if (!isPending) setPending(true);
     },
     [onNodesChangeInternal, setPending, isPending]
   );
@@ -162,8 +160,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const onEdgesChange = useCallback(
     (edges: EdgeChange[]) => {
       onEdgesChangeInternal(edges);
-      if(!isPending)
-        setPending(true);
+      if (!isPending) setPending(true);
     },
     [onEdgesChangeInternal, setPending, isPending]
   );
@@ -697,7 +694,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const saveTimeoutId = useRef<NodeJS.Timeout | null>(null);
 
-  const saveCurrentFlow = (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+  const saveCurrentFlow = (
+    nodes: Node[],
+    edges: Edge[],
+    viewport: Viewport
+  ) => {
     // Clear the previous timeout if it exists.
     if (saveTimeoutId.current) {
       clearTimeout(saveTimeoutId.current);
@@ -710,8 +711,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         saveFlow({ ...currentFlow, data: { nodes, edges, viewport } }, true);
       }
     }, 300); // Delay of 300ms.
-  }
-
+  };
 
   async function saveFlow(flow?: FlowType, silent?: boolean) {
     let newFlow;

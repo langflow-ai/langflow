@@ -82,7 +82,7 @@ export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   nodes: Node[],
-  edges: Edge[],
+  edges: Edge[]
 ) {
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
@@ -98,16 +98,12 @@ export function isValidConnection(
   ) {
     let targetNode = nodes.find((node) => node.id === target!)?.data?.node;
     if (!targetNode) {
-      if (
-        !edges
-          .find((e) => e.targetHandle === targetHandle)
-      ) {
+      if (!edges.find((e) => e.targetHandle === targetHandle)) {
         return true;
       }
     } else if (
       (!targetNode.template[targetHandleObject.fieldName].list &&
-        !edges
-          .find((e) => e.targetHandle === targetHandle)) ||
+        !edges.find((e) => e.targetHandle === targetHandle)) ||
       targetNode.template[targetHandleObject.fieldName].list
     ) {
       return true;
@@ -505,7 +501,7 @@ export function generateFlow(
   edges: Edge[],
   name: string
 ): generateFlowType {
-  const newFlowData = {nodes, edges, viewport: { zoom: 1, x: 0, y: 0 }};
+  const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
   const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
 		in future we can save this edges to when ungrouping reconect to the old nodes
@@ -539,14 +535,10 @@ export function generateFlow(
 export function filterFlow(
   selection: OnSelectionChangeParams,
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
-  setNodes((nodes) =>
-    nodes.filter((node) => !selection.nodes.includes(node))
-  );
-  setEdges((edges) =>
-    edges.filter((edge) => !selection.edges.includes(edge))
-  );
+  setNodes((nodes) => nodes.filter((node) => !selection.nodes.includes(node)));
+  setEdges((edges) => edges.filter((edge) => !selection.edges.includes(edge)));
 }
 
 export function findLastNode({ nodes, edges }: findLastNodeType) {
@@ -572,7 +564,7 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
 export function concatFlows(
   flow: FlowType,
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
   const { nodes, edges } = flow.data!;
   setNodes((old) => [...old, ...nodes]);

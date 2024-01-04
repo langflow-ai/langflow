@@ -95,7 +95,6 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-
   return (
     <typesContext.Provider
       value={{
