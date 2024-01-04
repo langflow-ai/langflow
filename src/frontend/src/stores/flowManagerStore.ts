@@ -11,7 +11,9 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
 } from "reactflow";
+import ShortUniqueId from "short-unique-id";
 import { create } from "zustand";
+const uid = new ShortUniqueId({ length: 5 });
 
 type RFState = {
   nodes: Node[];
@@ -27,6 +29,8 @@ type RFState = {
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any };
+  nodeId: string;
+  incrementNodeId: () => void;
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -63,6 +67,10 @@ const useStore = create<RFState>((set, get) => ({
   },
   paste: (selection, position) => {},
   lastCopiedSelection: { nodes: [], edges: [] },
+  nodeId: uid(),
+  incrementNodeId: () => {
+    set((state) => ({ nodeId: uid() }));
+  },
 }));
 
 export default useStore;

@@ -64,6 +64,7 @@ import { typesContext } from "./typesContext";
 const uid = new ShortUniqueId({ length: 5 });
 
 const FlowsContextInitialValue: FlowsContextType = {
+  //Remove tab id and get current id from url
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
@@ -83,7 +84,6 @@ const FlowsContextInitialValue: FlowsContextType = {
   uploadFlow: async () => "",
   isBuilt: false,
   setIsBuilt: (state: boolean) => {},
-  hardReset: () => {},
   saveFlow: async (flow?: FlowType, silent?: boolean) => {},
   lastCopiedSelection: null,
   setLastCopiedSelection: (selection: any) => {},
@@ -209,12 +209,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     setEdgesInternal(newChange);
   };
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      hardReset();
-    }
-  }, [isAuthenticated]);
-
   const newNodeId = useRef(uid());
 
   function incrementNodeId() {
@@ -293,14 +287,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   function updateStateWithDbData(tabsData: FlowType[]) {
     setFlows(tabsData);
-  }
-
-  function hardReset() {
-    newNodeId.current = uid();
-    setTabId("");
-    setFlows([]);
-    setIsLoading(true);
-    setId(uid());
   }
 
   /**
@@ -799,7 +785,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         setIsBuilt,
         lastCopiedSelection,
         setLastCopiedSelection,
-        hardReset,
         tabId,
         setTabId,
         flows,

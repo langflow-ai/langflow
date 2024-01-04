@@ -40,7 +40,6 @@ export type FlowsContextType = {
     isComponent?: boolean;
     position?: XYPosition;
   }) => Promise<String | never>;
-  hardReset: () => void;
   getNodeId: (nodeType: string) => string;
   isPending: boolean;
   setPending: (pending: boolean) => void;
