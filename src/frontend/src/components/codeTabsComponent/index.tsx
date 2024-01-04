@@ -28,8 +28,8 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
-import { darkContext } from "../../contexts/darkContext";
-import { typesContext } from "../../contexts/typesContext";
+import { FlowsContext } from "../../contexts/flowsContext";
+import { useDarkStore } from "../../stores/darkStore";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -41,7 +41,6 @@ import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import KeypairListComponent from "../keypairListComponent";
-import { FlowsContext } from "../../contexts/flowsContext";
 
 export default function CodeTabsComponent({
   flow,
@@ -54,8 +53,9 @@ export default function CodeTabsComponent({
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
-  const { dark } = useContext(darkContext);
-  const {setNodes} = useContext(FlowsContext);
+  const dark = useDarkStore((state) => state.dark);
+
+  const { setNodes } = useContext(FlowsContext);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {

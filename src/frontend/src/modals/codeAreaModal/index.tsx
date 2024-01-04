@@ -11,9 +11,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
-import { darkContext } from "../../contexts/darkContext";
-import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import { useDarkStore } from "../../stores/darkStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -27,7 +26,8 @@ export default function CodeAreaModal({
   readonly = false,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
-  const { dark } = useContext(darkContext);
+  const dark = useDarkStore((state) => state.dark);
+
   const [height, setHeight] = useState<string | null>(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{

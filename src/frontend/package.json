@@ -66,7 +66,8 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.0",
     "vite-plugin-svgr": "^3.2.0",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zustand": "^4.4.7"
   },
   "scripts": {
     "dev:docker": "vite --host 0.0.0.0",

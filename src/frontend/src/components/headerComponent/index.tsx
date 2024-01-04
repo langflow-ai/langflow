@@ -1,14 +1,14 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { darkContext } from "../../contexts/darkContext";
 import { StoreContext } from "../../contexts/storeContext";
 
 import { FlowsContext } from "../../contexts/flowsContext";
+import { useDarkStore } from "../../stores/darkStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -25,13 +25,25 @@ import MenuBar from "./components/menuBar";
 
 export default function Header(): JSX.Element {
   const { flows, tabId } = useContext(FlowsContext);
-  const { dark, setDark } = useContext(darkContext);
   const { notificationCenter } = useContext(alertContext);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const { hasStore } = useContext(StoreContext);
-  const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
+
+  const dark = useDarkStore((state) => state.dark);
+  const setDark = useDarkStore((state) => state.updateDark);
+  const stars = useDarkStore((state) => state.stars);
+  const gradientIndex = useDarkStore((state) => state.gradientIndex);
+
+  useEffect(() => {
+    if (dark) {
+      document.getElementById("body")!.classList.add("dark");
+    } else {
+      document.getElementById("body")!.classList.remove("dark");
+    }
+    window.localStorage.setItem("isDark", dark.toString());
+  }, [dark]);
 
   return (
     <div className="header-arrangement">
