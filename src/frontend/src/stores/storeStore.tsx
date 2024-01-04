@@ -22,9 +22,9 @@ export const useStoreStore = create<State & Action>((set) => ({
   loadingApiKey: true,
   updateHasStore: (hasStore) => set(() => ({ hasStore: hasStore })),
   updateValidApiKey: (validApiKey) => set(() => ({ validApiKey: validApiKey })),
-  updateLoadingApiKey: (hasApiKey) => set(() => ({ hasApiKey: hasApiKey })),
-  updateHasApiKey: (loadingApiKey) =>
+  updateLoadingApiKey: (loadingApiKey) =>
     set(() => ({ loadingApiKey: loadingApiKey })),
+  updateHasApiKey: (hasApiKey) => set(() => ({ hasApiKey: hasApiKey })),
 }));
 
 checkHasStore().then((res) => {
