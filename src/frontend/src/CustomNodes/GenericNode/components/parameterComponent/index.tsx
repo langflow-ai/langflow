@@ -70,13 +70,7 @@ export default function ParameterComponent({
   const { setErrorData, modalContextOpen } = useContext(alertContext);
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
-  const {
-    tabId,
-    flows,
-    nodes,
-    edges,
-    setNode,
-  } = useContext(FlowsContext);
+  const { tabId, flows, nodes, edges, setNode } = useContext(FlowsContext);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 
@@ -133,8 +127,8 @@ export default function ParameterComponent({
       let newNode = cloneDeep(oldNode);
 
       newNode.data = {
-        ...newNode.data
-      }
+        ...newNode.data,
+      };
 
       newNode.data.node.template[name].value = newValue;
 

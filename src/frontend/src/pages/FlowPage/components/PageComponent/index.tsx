@@ -17,7 +17,6 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
-  useReactFlow,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -29,7 +28,6 @@ import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
-import { FlowsState } from "../../../../types/tabs";
 import {
   generateFlow,
   generateNodeFromFlow,
@@ -72,7 +70,17 @@ export default function Page({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const { takeSnapshot } = useContext(undoRedoContext);
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, setPending, saveFlow, isPending } = useContext(FlowsContext);
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    onNodesChange,
+    onEdgesChange,
+    setPending,
+    saveFlow,
+    isPending,
+  } = useContext(FlowsContext);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -136,11 +144,7 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [
-    lastCopiedSelection,
-    lastSelection,
-    takeSnapshot,
-  ]);
+  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
@@ -155,10 +159,12 @@ export default function Page({
 
   useEffect(() => {
     setLoading(true);
-    if(reactFlowInstance){
+    if (reactFlowInstance) {
       reactFlowInstance.setNodes(flow?.data?.nodes ?? []);
       reactFlowInstance.setEdges(flow?.data?.edges ?? []);
-      reactFlowInstance.setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
+      reactFlowInstance.setViewport(
+        flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 }
+      );
     }
 
     // Clear the previous timeout
@@ -370,8 +376,7 @@ export default function Page({
   }, []);
 
   const onMove = useCallback(() => {
-    if(!isPending)
-      setPending(true);
+    if (!isPending) setPending(true);
   }, [setPending]);
 
   return (
@@ -479,9 +484,7 @@ export default function Page({
                     }}
                   />
                 </ReactFlow>
-                {!view && (
-                  <Chat flow={flow} />
-                )}
+                {!view && <Chat flow={flow} />}
               </div>
             ) : (
               <></>

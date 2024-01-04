@@ -19,16 +19,17 @@ type RFState = {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  setEdges: (edges: Edge[]) => void;
-  setNodes: (nodes: Node[]) => void;
   deleteNode: (nodeId: string) => void;
   deleteEdge: (edgeId: string) => void;
+  isBuilt: boolean;
 };
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<RFState>((set, get) => ({
   nodes: [],
   edges: [],
+  isBuilt: false,
+  copiedSelection: { nodes: [], edges: [] },
   onNodesChange: (changes: NodeChange[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -44,8 +45,6 @@ const useStore = create<RFState>((set, get) => ({
       edges: addEdge(connection, get().edges),
     });
   },
-  setEdges: (edges) => set({ edges }),
-  setNodes: (nodes) => set({ nodes }),
   deleteNode: (nodeId) => {
     set({
       nodes: get().nodes.filter((node) => node.id !== nodeId),

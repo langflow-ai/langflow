@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useReactFlow } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
@@ -64,7 +63,16 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent, version, flows, nodes, edges, setNodes, setEdges } = useContext(FlowsContext);
+  const {
+    paste,
+    saveComponent,
+    version,
+    flows,
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+  } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -155,8 +163,10 @@ export default function NodeToolbarComponent({
                   {
                     x: 50,
                     y: 10,
-                    paneX: nodes.find((node) => node.id === data.id)?.position.x,
-                    paneY: nodes.find((node) => node.id === data.id)?.position.y,
+                    paneX: nodes.find((node) => node.id === data.id)?.position
+                      .x,
+                    paneY: nodes.find((node) => node.id === data.id)?.position
+                      .y,
                   }
                 );
               }}

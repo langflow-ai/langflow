@@ -1,6 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { typesContext } from "../../contexts/typesContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";
@@ -383,10 +382,7 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage(): void {
-    let nodeValidationErrors = validateNodes(
-      nodes,
-      edges
-    );
+    let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;
