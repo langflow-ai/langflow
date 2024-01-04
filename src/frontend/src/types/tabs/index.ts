@@ -5,14 +5,19 @@ import { FlowType, NodeDataType } from "../flow";
 type OnChange<ChangesType> = (changes: ChangesType[]) => void;
 
 export type FlowsContextType = {
+  //keep
   saveFlow: (flow?: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
+  //keep
   isLoading: boolean;
   setTabId: (index: string) => void;
+  //keep
   flows: Array<FlowType>;
   deleteNode: (idx: string | Array<string>) => void;
   deleteEdge: (idx: string | Array<string>) => void;
+  //keep
   removeFlow: (id: string) => void;
+  //keep
   addFlow: (
     newProject: boolean,
     flow?: FlowType,
@@ -25,7 +30,9 @@ export type FlowsContextType = {
     flowName: string,
     flowDescription?: string
   ) => void;
+  //keep
   downloadFlows: () => void;
+  //keep
   uploadFlows: () => void;
   isBuilt: boolean;
   setIsBuilt: (state: boolean) => void;
