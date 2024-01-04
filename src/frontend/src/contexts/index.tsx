@@ -6,7 +6,6 @@ import { ApiInterceptor } from "../controllers/API/api";
 import { SSEProvider } from "./SSEContext";
 import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
-import { DarkProvider } from "./darkContext";
 import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
 import { StoreProvider } from "./storeContext";
@@ -23,20 +22,18 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
           <AuthProvider>
             <TooltipProvider>
               <ReactFlowProvider>
-                <DarkProvider>
-                  <TypesProvider>
-                    <LocationProvider>
-                      <ApiInterceptor />
-                      <SSEProvider>
-                        <FlowsProvider>
-                          <UndoRedoProvider>
-                            <StoreProvider>{children}</StoreProvider>
-                          </UndoRedoProvider>
-                        </FlowsProvider>
-                      </SSEProvider>
-                    </LocationProvider>
-                  </TypesProvider>
-                </DarkProvider>
+                <TypesProvider>
+                  <LocationProvider>
+                    <ApiInterceptor />
+                    <SSEProvider>
+                      <FlowsProvider>
+                        <UndoRedoProvider>
+                          <StoreProvider>{children}</StoreProvider>
+                        </UndoRedoProvider>
+                      </FlowsProvider>
+                    </SSEProvider>
+                  </LocationProvider>
+                </TypesProvider>
               </ReactFlowProvider>
             </TooltipProvider>
           </AuthProvider>
