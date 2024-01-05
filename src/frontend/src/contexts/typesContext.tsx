@@ -21,6 +21,7 @@ const initialValue: typesContextType = {
   setTemplates: () => {},
   data: {},
   setData: () => {},
+  getTypes: () => {},
   setFetchError: () => {},
   fetchError: false,
   setFilterEdge: (filter) => {},
@@ -35,15 +36,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
   const setLoading = useAlertStore((state) => state.setLoading);
-  const { getAuthentication } = useContext(AuthContext);
   const [getFilterEdge, setFilterEdge] = useState([]);
-
-  useEffect(() => {
-    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (getAuthentication() === true) {
-      getTypes();
-    }
-  }, [getAuthentication()]);
 
   async function getTypes(): Promise<void> {
     // We will keep a flag to handle the case where the component is unmounted before the API call resolves.
@@ -99,6 +92,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
         templates,
         data,
         setData,
+        getTypes,
         fetchError,
         setFetchError,
         setFilterEdge,

@@ -17,6 +17,8 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
+  useEdgesState,
+  useNodesState,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -67,6 +69,7 @@ export default function Page({
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
   );
+
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);

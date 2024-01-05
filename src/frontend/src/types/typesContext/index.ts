@@ -13,6 +13,7 @@ export type typesContextType = {
   setTemplates: (newState: {}) => void;
   data: APIDataType;
   setData: (newState: {}) => void;
+  getTypes: () => void;
   fetchError: boolean;
   setFetchError: (newState: boolean) => void;
   setFilterEdge: (newState) => void;
