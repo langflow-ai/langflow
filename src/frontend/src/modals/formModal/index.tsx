@@ -39,7 +39,8 @@ export default function FormModal({
   flow: FlowType;
 }): JSX.Element {
   const { tabsState, setTabsState } = useContext(FlowsContext);
-  const { nodes, edges } = useFlow();
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];

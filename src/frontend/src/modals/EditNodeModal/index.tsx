@@ -57,7 +57,10 @@ const EditNodeModal = forwardRef(
   ) => {
     const [myData, setMyData] = useState(data);
 
-    const { setPending, edges, setNode } = useFlow();
+    const setPending = useFlow((state) => state.setPending);
+    const edges = useFlow((state) => state.edges);
+    const setNode = useFlow((state) => state.setNode);
+    
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {

@@ -104,7 +104,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const { setData } = useContext(typesContext);
   const [tabsState, setTabsState] = useState<FlowsState>({});
 
-  const {nodes, edges, paste, setPending, reactFlowInstance} = useFlow();
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
+  const reactFlowInstance = useFlow((state) => state.reactFlowInstance);
+  const setPending = useFlow((state) => state.setPending);
+  const paste = useFlow((state) => state.paste);
 
   function refreshFlows() {
     setIsLoading(true);
