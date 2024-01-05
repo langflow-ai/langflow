@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import Response, APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -16,6 +16,7 @@ router = APIRouter(tags=["Login"])
 
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
@@ -31,7 +32,10 @@ async def login_to_get_access_token(
         ) from exc
 
     if user:
-        return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, secure=True, samesite="strict")
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, secure=True, samesite="strict")
+        return tokens
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -55,9 +59,12 @@ async def auto_login(db: Session = Depends(get_session), settings_service=Depend
 
 
 @router.post("/refresh")
-async def refresh_token(token: str):
+async def refresh_token(response: Response, token: str):
     if token:
-        return create_refresh_token(token)
+        tokens = create_refresh_token(token)
+        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, secure=True, samesite="strict")
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, secure=True, samesite="strict")
+        return tokens
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
