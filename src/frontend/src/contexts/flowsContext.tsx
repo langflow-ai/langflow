@@ -122,7 +122,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [tabId, setTabId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
-  const [id, setId] = useState(uid());
   const { reactFlowInstance, setData } = useContext(typesContext);
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
     nodes: any;

@@ -27,6 +27,7 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { getFieldTitle, toTitleCase } from "./utils";
+const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
   let newEdges = _.cloneDeep(edges);
@@ -493,6 +494,19 @@ export function getMiddlePoint(nodes: Node[]) {
   const averageY = middlePointY / totalNodes;
 
   return { x: averageX, y: averageY };
+}
+
+export function getNodeId(nodeType: string) {
+  return nodeType + "-" + uid();
+}
+
+export function getHandleId(source: string, sourceHandle: string, target: string, targetHandle: string){
+  return "reactflow__edge-" +
+  source +
+  sourceHandle +
+  "-" +
+  target +
+  targetHandle;
 }
 
 export function generateFlow(
