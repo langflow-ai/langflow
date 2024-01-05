@@ -5,7 +5,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -72,6 +71,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   setTabId: (index: string) => {},
   isLoading: true,
   flows: [],
+  setVersion: () => {},
   removeFlow: (id: string) => {},
   addFlow: async (
     newProject: boolean,
@@ -88,6 +88,7 @@ const FlowsContextInitialValue: FlowsContextType = {
   saveComponent: async (component: NodeDataType, override: boolean) => "",
   deleteComponent: (key: string) => {},
   version: "",
+  refreshFlows: () => {},
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -101,8 +102,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [tabId, setTabId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
-  const { setData } = useContext(typesContext);
   const [tabsState, setTabsState] = useState<FlowsState>({});
+  const {setData} = useContext(typesContext);
 
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -122,14 +123,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       }
     });
   }
-
-  useEffect(() => {
-    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (getAuthentication() === true) {
-      // get data from db
-      refreshFlows();
-    }
-  }, [getAuthentication(), tabId]);
 
   function getTabsDataFromDB() {
     //get tabs from db
@@ -386,7 +379,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       // updateNodes(data.nodes, data.edges);
       if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     }
-
     return data;
   };
 
@@ -506,17 +498,13 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
-  useEffect(() => {
-    getVersion().then((data) => {
-      setVersion(data.version);
-    });
-  }, []);
 
 
   return (
     <FlowsContext.Provider
       value={{
         version,
+        setVersion,
         flows,
         saveFlow,
         tabId,
@@ -529,6 +517,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         uploadFlow,
         tabsState,
         setTabsState,
+        refreshFlows,
         isLoading,
         saveComponent,
         deleteComponent,
