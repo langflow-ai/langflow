@@ -26,21 +26,20 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import useFlow from "../../../../stores/flowManagerStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
+import { FlowType, NodeType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
-  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import useFlow from "../../../../stores/flowManagerStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -53,15 +52,8 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  let {
-    uploadFlow,
-    saveFlow,
-  } = useContext(FlowsContext);
-  const {
-    types,
-    templates,
-    setFilterEdge,
-  } = useContext(typesContext);
+  let { uploadFlow, saveFlow } = useContext(FlowsContext);
+  const { types, templates, setFilterEdge } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{
@@ -71,7 +63,22 @@ export default function Page({
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
-  const { reactFlowInstance, setReactFlowInstance, nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes, setEdges, deleteNode, deleteEdge, setPending, isPending, paste } = useFlow();
+  const {
+    reactFlowInstance,
+    setReactFlowInstance,
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    setNodes,
+    setEdges,
+    deleteNode,
+    deleteEdge,
+    setPending,
+    isPending,
+    paste,
+  } = useFlow();
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
