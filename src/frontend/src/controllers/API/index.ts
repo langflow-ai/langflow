@@ -297,8 +297,8 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  const respnose = await api.get(`${BASE_URL_API}version`);
-  return respnose.data;
+  const response = await api.get(`${BASE_URL_API}version`);
+  return response.data;
 }
 
 /**

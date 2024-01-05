@@ -19,6 +19,9 @@ import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
+import { AuthContext } from "./contexts/authContext";
+import { FlowsContext } from "./contexts/flowsContext";
+import { getVersion } from "./controllers/API";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -42,7 +45,7 @@ export default function App() {
     setSuccessOpen,
     loading,
   } = useContext(alertContext);
-  const navigate = useNavigate();
+
   const { fetchError } = useContext(typesContext);
 
   // Initialize state variable for the list of alerts
@@ -128,6 +131,21 @@ export default function App() {
       prevAlertsList.filter((alert) => alert.id !== id)
     );
   };
+
+  const { getAuthentication } = useContext(AuthContext);
+  const { refreshFlows, setVersion } = useContext(FlowsContext);
+
+  useEffect(() => {
+    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
+    if (getAuthentication() === true) {
+      // get data from db
+      refreshFlows();
+    }
+    
+    getVersion().then((data) => {
+      setVersion(data.version);
+    });
+  }, [getAuthentication()]);
 
   return (
     //need parent component with width and height

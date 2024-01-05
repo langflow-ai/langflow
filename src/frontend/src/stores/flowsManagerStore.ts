@@ -1,9 +1,11 @@
 import { create } from "zustand";
-import { FlowsContextType } from "../types/tabs";
 import { FlowsManagerStoreType } from "../types/zustand/flowsManager";
   
-const useFlowStore = create<FlowsManagerStoreType>((set, get) => ({
+let currentFlowId: string = "";
+
+const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     flows: [],
+    currentFlow: get().flows[currentFlowId],
 }));
 
-export default useFlowStore;
+export default useFlowsManagerStore;

@@ -13,6 +13,7 @@ export type FlowsContextType = {
   setTabId: (index: string) => void;
   //keep
   removeFlow: (id: string) => void;
+  refreshFlows: () => void;
   //keep
   addFlow: (
     newProject: boolean,
@@ -29,6 +30,7 @@ export type FlowsContextType = {
   downloadFlows: () => void;
   //keep
   uploadFlows: () => void;
+  setVersion: (version: string) => void;
   uploadFlow: ({
     newProject,
     file,
