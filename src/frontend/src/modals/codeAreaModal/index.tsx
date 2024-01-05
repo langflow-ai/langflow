@@ -26,7 +26,7 @@ export default function CodeAreaModal({
   readonly = false,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
-  const dark = useDarkStore((state) => state.dark);
+  const {dark} = useDarkStore();
 
   const [height, setHeight] = useState<string | null>(null);
   const { setErrorData, setSuccessData } = useContext(alertContext);

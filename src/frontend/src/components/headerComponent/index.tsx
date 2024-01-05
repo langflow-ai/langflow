@@ -31,10 +31,7 @@ export default function Header(): JSX.Element {
   const { hasStore } = useContext(StoreContext);
   const navigate = useNavigate();
 
-  const dark = useDarkStore((state) => state.dark);
-  const setDark = useDarkStore((state) => state.updateDark);
-  const stars = useDarkStore((state) => state.stars);
-  const gradientIndex = useDarkStore((state) => state.gradientIndex);
+  const {dark, setDark, stars, gradientIndex} = useDarkStore();
 
   useEffect(() => {
     if (dark) {
