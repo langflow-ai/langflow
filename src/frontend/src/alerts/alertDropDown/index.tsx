@@ -1,18 +1,17 @@
-import { useContext, useState } from "react";
+import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
+import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
-import useAlertStore from "../../stores/alertStore";
 
 export default function AlertDropdown({
   children,
 }: AlertDropdownType): JSX.Element {
-
   const notificationList = useAlertStore((state) => state.notificationList);
   const clearNotificationList = useAlertStore(
     (state) => state.clearNotificationList
@@ -23,7 +22,6 @@ export default function AlertDropdown({
   const setNotificationCenter = useAlertStore(
     (state) => state.setNotificationCenter
   );
-
 
   const [open, setOpen] = useState(false);
 

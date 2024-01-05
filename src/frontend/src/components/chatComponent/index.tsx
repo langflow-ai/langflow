@@ -8,8 +8,8 @@ import * as _ from "lodash";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
-import { NodeType } from "../../types/flow";
 import useFlowStore from "../../stores/flowStore";
+import { NodeType } from "../../types/flow";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -17,8 +17,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
   const isPending = useFlowStore((state) => state.isPending);
-  const { tabsState } =
-    useContext(FlowsContext);
+  const { tabsState } = useContext(FlowsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -1,8 +1,6 @@
-import { XYPosition } from "reactflow";
-import { FlowType, NodeDataType } from "../../flow";
-import { FlowsState } from "../../tabs";
+import { FlowType } from "../../flow";
 
 export type FlowsManagerStoreType = {
-    flows: Array<FlowType>;
-    currentFlow: FlowType | undefined;
-  };
+  flows: Array<FlowType>;
+  currentFlow: FlowType | undefined;
+};

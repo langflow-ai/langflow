@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import useFlowStore from "../stores/flowStore";
 import {
   HistoryItem,
   UseUndoRedoOptions,
@@ -13,7 +14,6 @@ import {
 } from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
 import { FlowsContext } from "./flowsContext";
-import useFlowStore from "../stores/flowStore";
 
 const initialValue = {
   undo: () => {},
@@ -29,8 +29,7 @@ const defaultOptions: UseUndoRedoOptions = {
 export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
 
 export function UndoRedoProvider({ children }) {
-  const { tabId, flows } =
-    useContext(FlowsContext);
+  const { tabId, flows } = useContext(FlowsContext);
 
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);

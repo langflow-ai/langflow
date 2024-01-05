@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { forwardRef, useContext, useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
@@ -28,6 +28,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
+import useFlowStore from "../../stores/flowStore";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -37,7 +38,6 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import useFlowStore from "../../stores/flowStore";
 
 const EditNodeModal = forwardRef(
   (

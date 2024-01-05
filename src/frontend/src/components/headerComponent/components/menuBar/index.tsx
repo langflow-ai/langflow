@@ -11,10 +11,10 @@ import {
 import { useNavigate } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
+import useAlertStore from "../../../../stores/alertStore";
 import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
-import useAlertStore from "../../../../stores/alertStore";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
   const { addFlow } = useContext(FlowsContext);

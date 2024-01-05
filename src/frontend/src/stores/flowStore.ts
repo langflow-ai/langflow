@@ -5,10 +5,6 @@ import {
   EdgeChange,
   Node,
   NodeChange,
-  OnConnect,
-  OnEdgesChange,
-  OnNodesChange,
-  ReactFlowInstance,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -20,6 +16,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
+import { FlowStoreType } from "../types/zustand/flow";
 import {
   cleanEdges,
   getHandleId,
@@ -27,7 +24,6 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
-import { FlowStoreType } from "../types/zustand/flow";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({

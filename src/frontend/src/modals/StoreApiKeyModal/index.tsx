@@ -5,10 +5,10 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { AuthContext } from "../../contexts/authContext";
 import { addApiKeyStore } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
-import useAlertStore from "../../stores/alertStore";
 
 export default function StoreApiKeyModal({
   children,

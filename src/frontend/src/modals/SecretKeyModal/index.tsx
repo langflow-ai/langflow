@@ -1,13 +1,13 @@
 import * as Form from "@radix-ui/react-form";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { createApiKey } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { ApiKeyType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
-import useAlertStore from "../../stores/alertStore";
 
 export default function SecretKeyModal({
   title,

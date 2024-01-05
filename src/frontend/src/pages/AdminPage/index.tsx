@@ -30,9 +30,9 @@ import {
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
+import useAlertStore from "../../stores/alertStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
-import useAlertStore from "../../stores/alertStore";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");

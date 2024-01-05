@@ -30,6 +30,7 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
@@ -47,7 +48,6 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
-import useAlertStore from "../../../../stores/alertStore";
 
 export default function ParameterComponent({
   left,
@@ -68,13 +68,13 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);  const updateNodeInternals = useUpdateNodeInternals();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { tabId, flows } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
-
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 

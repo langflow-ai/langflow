@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -29,6 +29,7 @@ import {
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -40,7 +41,6 @@ import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import KeypairListComponent from "../keypairListComponent";
-import useFlowStore from "../../stores/flowStore";
 
 export default function CodeTabsComponent({
   flow,

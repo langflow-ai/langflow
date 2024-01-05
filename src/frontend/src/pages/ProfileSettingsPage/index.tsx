@@ -10,12 +10,12 @@ import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { resetPassword, updateUser } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
-import useAlertStore from "../../stores/alertStore";
 export default function ProfileSettingsPage(): JSX.Element {
   const { setTabId } = useContext(FlowsContext);
 

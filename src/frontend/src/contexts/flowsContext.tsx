@@ -1,56 +1,33 @@
 import { AxiosError } from "axios";
 import _, { cloneDeep } from "lodash";
-import {
-  ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-} from "react";
+import { ReactNode, createContext, useContext, useRef, useState } from "react";
 import {
   Edge,
-  EdgeChange,
   Node,
-  NodeChange,
   ReactFlowJsonObject,
   Viewport,
   XYPosition,
-  addEdge,
-  useEdgesState,
-  useNodesState,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
   deleteFlowFromDatabase,
   downloadFlowsFromDatabase,
-  getVersion,
   readFlowsFromDatabase,
   saveFlowToDatabase,
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
+import useAlertStore from "../stores/alertStore";
+import useFlowStore from "../stores/flowStore";
 import { APIClassType } from "../types/api";
-import { tweakType } from "../types/components";
-import {
-  FlowType,
-  NodeDataType,
-  NodeType,
-  sourceHandleType,
-  targetHandleType,
-} from "../types/flow";
+import { FlowType, NodeDataType } from "../types/flow";
 import { FlowsContextType, FlowsState } from "../types/tabs";
 import {
   addVersionToDuplicates,
-  checkOldEdgesHandles,
-  cleanEdges,
   createFlowComponent,
   processFlowEdges,
   removeFileNameFromComponents,
-  scapeJSONParse,
-  scapedJSONStringfy,
   updateEdges,
-  updateEdgesHandleIds,
   updateIds,
 } from "../utils/reactflowUtils";
 import {
@@ -58,10 +35,7 @@ import {
   getRandomDescription,
   getRandomName,
 } from "../utils/utils";
-import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
-import useFlowStore from "../stores/flowStore";
-import useAlertStore from "../stores/alertStore";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -102,7 +76,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [tabsState, setTabsState] = useState<FlowsState>({});
-  const {setData} = useContext(typesContext);
+  const { setData } = useContext(typesContext);
 
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -497,7 +471,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
-
 
   return (
     <FlowsContext.Provider

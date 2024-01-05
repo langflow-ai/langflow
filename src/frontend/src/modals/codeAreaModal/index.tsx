@@ -4,17 +4,17 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
-import useAlertStore from "../../stores/alertStore";
 
 export default function CodeAreaModal({
   value,
@@ -30,7 +30,8 @@ export default function CodeAreaModal({
 
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);  const [error, setError] = useState<{
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
 

@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { FormEvent, useContext, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -9,12 +9,12 @@ import {
   SIGN_UP_SUCCESS,
 } from "../../constants/constants";
 import { addUser } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import {
   UserInputType,
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-import useAlertStore from "../../stores/alertStore";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
