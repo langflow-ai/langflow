@@ -6,13 +6,13 @@ import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
 import { FlowsContext } from "../../../contexts/flowsContext";
+import useAlertStore from "../../../stores/alertStore";
+import useFlowStore from "../../../stores/flowStore";
 import { parsedDataType } from "../../../types/components";
 import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import useFlowStore from "../../../stores/flowStore";
-import useAlertStore from "../../../stores/alertStore";
 
 export default function BuildTrigger({
   open,
@@ -30,7 +30,7 @@ export default function BuildTrigger({
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  
+
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);

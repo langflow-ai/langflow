@@ -9,6 +9,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
@@ -24,7 +25,6 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
-import useAlertStore from "../../../../stores/alertStore";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =

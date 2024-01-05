@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
 import { autoLogin as autoLoginApi, getLoggedUser } from "../controllers/API";
+import useAlertStore from "../stores/alertStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import useAlertStore from "../stores/alertStore";
 
 const initialValue: AuthContextType = {
   isAdmin: false,

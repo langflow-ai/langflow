@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
+import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent from "../../utils/storeUtils";
@@ -17,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import useAlertStore from "../../stores/alertStore";
 
 export default function CollectionCardComponent({
   data,

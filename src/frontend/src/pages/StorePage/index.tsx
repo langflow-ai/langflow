@@ -28,10 +28,10 @@ import {
   getStoreTags,
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
+import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import useAlertStore from "../../stores/alertStore";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);

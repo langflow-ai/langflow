@@ -5,12 +5,12 @@ import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import { getLoggedUser, onLogin } from "../../../controllers/API";
+import useAlertStore from "../../../stores/alertStore";
 import { LoginType } from "../../../types/api";
 import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
-import useAlertStore from "../../../stores/alertStore";
 
 export default function LoginAdminPage() {
   const navigate = useNavigate();

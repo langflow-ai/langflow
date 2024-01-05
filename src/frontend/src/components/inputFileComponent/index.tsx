@@ -1,9 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { uploadFile } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
-import useAlertStore from "../../stores/alertStore";
 
 export default function InputFileComponent({
   value,
@@ -15,7 +15,8 @@ export default function InputFileComponent({
 }: FileComponentType): JSX.Element {
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
-  const setErrorData = useAlertStore((state) => state.setErrorData);  const { tabId } = useContext(FlowsContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { tabId } = useContext(FlowsContext);
 
   // Clear component state
   useEffect(() => {

@@ -148,9 +148,7 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(
-  newFlow: ReactFlowJsonObject,
-) {
+export function updateIds(newFlow: ReactFlowJsonObject) {
   let idsMap = {};
 
   if (newFlow.nodes)
@@ -280,7 +278,7 @@ export function updateEdges(edges: Edge[]) {
           : "stroke-gray-900 ") + " stroke-connection";
       edge.animated = targetHandleObject.type === "Text";
     });
-};
+}
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   const existingNames = flows.map((item) => item.name);
@@ -513,13 +511,15 @@ export function getNodeId(nodeType: string) {
   return nodeType + "-" + uid();
 }
 
-export function getHandleId(source: string, sourceHandle: string, target: string, targetHandle: string){
-  return "reactflow__edge-" +
-  source +
-  sourceHandle +
-  "-" +
-  target +
-  targetHandle;
+export function getHandleId(
+  source: string,
+  sourceHandle: string,
+  target: string,
+  targetHandle: string
+) {
+  return (
+    "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle
+  );
 }
 
 export function generateFlow(

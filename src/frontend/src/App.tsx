@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -15,12 +15,12 @@ import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
-import { locationContext } from "./contexts/locationContext";
-import { typesContext } from "./contexts/typesContext";
-import Router from "./routes";
 import { AuthContext } from "./contexts/authContext";
 import { FlowsContext } from "./contexts/flowsContext";
+import { locationContext } from "./contexts/locationContext";
+import { typesContext } from "./contexts/typesContext";
 import { getVersion } from "./controllers/API";
+import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 
 export default function App() {
@@ -139,7 +139,7 @@ export default function App() {
       // get data from db
       refreshFlows();
     }
-    
+
     getVersion().then((data) => {
       setVersion(data.version);
     });

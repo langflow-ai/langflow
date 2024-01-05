@@ -1,5 +1,4 @@
-import { Edge, EdgeChange, Node, NodeChange, XYPosition } from "reactflow";
-import { tweakType } from "../components";
+import { XYPosition } from "reactflow";
 import { FlowType, NodeDataType } from "../flow";
 
 type OnChange<ChangesType> = (changes: ChangesType[]) => void;

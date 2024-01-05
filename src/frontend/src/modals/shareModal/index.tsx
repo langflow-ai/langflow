@@ -12,6 +12,7 @@ import {
   saveFlowStore,
   updateFlowStore,
 } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { FlowType } from "../../types/flow";
 import {
@@ -22,7 +23,6 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
-import useAlertStore from "../../stores/alertStore";
 
 export default function ShareModal({
   component,
@@ -44,7 +44,8 @@ export default function ShareModal({
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);  const [internalOpen, internalSetOpen] = useState(children ? false : true);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";
 

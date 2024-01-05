@@ -1,4 +1,4 @@
-import { Edge, Node, ReactFlowInstance } from "reactflow";
+import { Edge, Node } from "reactflow";
 import { AlertItemType } from "../alerts";
 import { APIClassType, APIDataType } from "../api";
 

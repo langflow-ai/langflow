@@ -6,6 +6,7 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
 import { FlowsContext } from "../../contexts/flowsContext";
+import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
@@ -21,7 +22,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import useAlertStore from "../../stores/alertStore";
 
 export default function Header(): JSX.Element {
   const { flows, tabId } = useContext(FlowsContext);
