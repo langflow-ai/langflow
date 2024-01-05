@@ -63,22 +63,20 @@ export default function Page({
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
-  const {
-    reactFlowInstance,
-    setReactFlowInstance,
-    nodes,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    setNodes,
-    setEdges,
-    deleteNode,
-    deleteEdge,
-    setPending,
-    isPending,
-    paste,
-  } = useFlow();
+  const reactFlowInstance = useFlow((state) => state.reactFlowInstance);
+  const setReactFlowInstance = useFlow((state) => state.setReactFlowInstance);
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
+  const onNodesChange = useFlow((state) => state.onNodesChange);
+  const onEdgesChange = useFlow((state) => state.onEdgesChange);
+  const onConnect = useFlow((state) => state.onConnect);
+  const setNodes = useFlow((state) => state.setNodes);
+  const setEdges = useFlow((state) => state.setEdges);
+  const deleteNode = useFlow((state) => state.deleteNode);
+  const deleteEdge = useFlow((state) => state.deleteEdge);
+  const setPending = useFlow((state) => state.setPending);
+  const isPending = useFlow((state) => state.isPending);
+  const paste = useFlow((state) => state.paste);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =

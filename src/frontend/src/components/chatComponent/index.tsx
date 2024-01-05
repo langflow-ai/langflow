@@ -14,7 +14,9 @@ import useFlow from "../../stores/flowManagerStore";
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const { isBuilt, setIsBuilt, isPending } = useFlow();
+  const isBuilt = useFlow((state) => state.isBuilt);
+  const setIsBuilt = useFlow((state) => state.setIsBuilt);
+  const isPending = useFlow((state) => state.isPending);
   const { tabsState } =
     useContext(FlowsContext);
 

@@ -30,7 +30,8 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const { types } = useContext(typesContext);
-  const { deleteNode, setNode } = useFlow();
+  const deleteNode = useFlow((state) => state.deleteNode);
+  const setNode = useFlow((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);

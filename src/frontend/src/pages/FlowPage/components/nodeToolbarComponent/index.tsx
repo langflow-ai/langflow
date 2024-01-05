@@ -66,7 +66,11 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, nodes, edges, setNodes, setEdges } = useFlow();
+  const paste = useFlow((state) => state.paste);
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
+  const setNodes = useFlow((state) => state.setNodes);
+  const setEdges = useFlow((state) => state.setEdges);
 
   const { saveComponent, flows, version } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);

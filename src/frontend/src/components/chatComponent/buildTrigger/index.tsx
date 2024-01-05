@@ -26,7 +26,8 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { setTabsState, saveFlow } = useContext(FlowsContext);
-  const { nodes, edges } = useFlow();
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";

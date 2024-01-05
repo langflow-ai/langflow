@@ -72,7 +72,10 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { tabId, flows } = useContext(FlowsContext);
-  const { nodes, edges, setNode } = useFlow();
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
+  const setNode = useFlow((state) => state.setNode);
+
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
 

@@ -32,7 +32,10 @@ export function UndoRedoProvider({ children }) {
   const { tabId, flows } =
     useContext(FlowsContext);
 
-  const {setNodes, setEdges, nodes, edges} = useFlow();
+  const setNodes = useFlow((state) => state.setNodes);
+  const setEdges = useFlow((state) => state.setEdges);
+  const nodes = useFlow((state) => state.nodes);
+  const edges = useFlow((state) => state.edges);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));

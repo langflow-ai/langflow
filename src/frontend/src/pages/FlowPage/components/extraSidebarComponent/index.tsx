@@ -35,7 +35,8 @@ export default function ExtraSidebar(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  const { isBuilt, isPending } = useFlow();
+  const isBuilt = useFlow((state) => state.isBuilt);
+  const isPending = useFlow((state) => state.isPending);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");

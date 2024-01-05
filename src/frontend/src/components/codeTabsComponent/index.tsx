@@ -55,7 +55,8 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const {dark} = useDarkStore();
 
-  const { setNodes } = useFlow();
+  const setNodes = useFlow((state) => state.setNodes);
+
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
