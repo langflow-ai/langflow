@@ -29,8 +29,7 @@ import SidebarDraggableComponent from "./sideBarDraggableComponent";
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
-    useContext(FlowsContext);
+  const { flows, tabId, uploadFlow, saveFlow } = useContext(FlowsContext);
 
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
