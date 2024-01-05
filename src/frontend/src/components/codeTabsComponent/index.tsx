@@ -53,7 +53,7 @@ export default function CodeTabsComponent({
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
-  const {dark} = useDarkStore();
+  const dark = useDarkStore((state) => state.dark);
 
   const setNodes = useFlow((state) => state.setNodes);
 
