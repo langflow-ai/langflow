@@ -4,7 +4,6 @@ import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { SSEProvider } from "./SSEContext";
-import { AlertProvider } from "./alertContext";
 import { AuthProvider } from "./authContext";
 import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
@@ -17,24 +16,22 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
   return (
     <>
       <BrowserRouter>
-        <AlertProvider>
-          <AuthProvider>
-            <TooltipProvider>
-              <ReactFlowProvider>
-                <TypesProvider>
-                  <LocationProvider>
-                    <ApiInterceptor />
-                    <SSEProvider>
-                      <FlowsProvider>
-                        <UndoRedoProvider>{children}</UndoRedoProvider>
-                      </FlowsProvider>
-                    </SSEProvider>
-                  </LocationProvider>
-                </TypesProvider>
-              </ReactFlowProvider>
-            </TooltipProvider>
-          </AuthProvider>
-        </AlertProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <ReactFlowProvider>
+              <TypesProvider>
+                <LocationProvider>
+                  <ApiInterceptor />
+                  <SSEProvider>
+                    <FlowsProvider>
+                      <UndoRedoProvider>{children}</UndoRedoProvider>
+                    </FlowsProvider>
+                  </SSEProvider>
+                </LocationProvider>
+              </TypesProvider>
+            </ReactFlowProvider>
+          </TooltipProvider>
+        </AuthProvider>
       </BrowserRouter>
     </>
   );
