@@ -1,13 +1,13 @@
-from typing import Optional, List
+from typing import Optional, Union
 from langflow import CustomComponent
 
 from langchain.vectorstores.pgvector import PGVector
 from langchain.schema import Document
 from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
+from langchain.schema import BaseRetriever
 
-
-class PostgresqlVectorComponent(CustomComponent):
+class PGVectorComponent(CustomComponent):
     """
     A custom component for implementing a Vector Store using PostgreSQL.
     """
@@ -15,7 +15,6 @@ class PostgresqlVectorComponent(CustomComponent):
     display_name: str = "PGVector"
     description: str = "Implementation of Vector Store using PostgreSQL"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
-    beta = True
 
     def build_config(self):
         """
@@ -25,8 +24,7 @@ class PostgresqlVectorComponent(CustomComponent):
         - dict: A dictionary containing the configuration options for the component.
         """
         return {
-            "index_name": {"display_name": "Index Name", "value": "your_index"},
-            "code": {"show": True, "display_name": "Code"},
+            "code": {"show": False},
             "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {"display_name": "Embedding"},
             "pg_server_url": {
@@ -41,8 +39,8 @@ class PostgresqlVectorComponent(CustomComponent):
         embedding: Embeddings,
         pg_server_url: str,
         collection_name: str,
-        documents: Optional[List[Document]] = None,
-    ) -> VectorStore:
+        documents: Optional[Document] = None,
+    ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -58,13 +56,13 @@ class PostgresqlVectorComponent(CustomComponent):
 
         try:
             if documents is None:
-                return PGVector.from_existing_index(
+                embedding = PGVector.from_existing_index(
                     embedding=embedding,
                     collection_name=collection_name,
                     connection_string=pg_server_url,
                 )
 
-            return PGVector.from_documents(
+            embedding = PGVector.from_documents(
                 embedding=embedding,
                 documents=documents,
                 collection_name=collection_name,
@@ -72,3 +70,4 @@ class PostgresqlVectorComponent(CustomComponent):
             )
         except Exception as e:
             raise RuntimeError(f"Failed to build PGVector: {e}")
+        return embedding
