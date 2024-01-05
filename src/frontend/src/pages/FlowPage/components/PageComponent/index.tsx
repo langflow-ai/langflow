@@ -31,6 +31,7 @@ import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
+  getNodeId,
   isValidConnection,
   scapeJSONParse,
   validateSelection,
@@ -39,6 +40,7 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import useFlow from "../../../../stores/flowManagerStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -53,34 +55,23 @@ export default function Page({
 }): JSX.Element {
   let {
     uploadFlow,
-    getNodeId,
-    paste,
-    lastCopiedSelection,
-    setLastCopiedSelection,
-    deleteNode,
-    deleteEdge,
+    saveFlow,
   } = useContext(FlowsContext);
   const {
     types,
-    reactFlowInstance,
-    setReactFlowInstance,
     templates,
     setFilterEdge,
   } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
+    nodes: any;
+    edges: any;
+  } | null>(null);
+
   const { takeSnapshot } = useContext(undoRedoContext);
-  const {
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-    onNodesChange,
-    onEdgesChange,
-    setPending,
-    saveFlow,
-    isPending,
-  } = useContext(FlowsContext);
+
+  const { reactFlowInstance, setReactFlowInstance, nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes, setEdges, deleteNode, deleteEdge, setPending, isPending, paste } = useFlow();
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -183,30 +174,10 @@ export default function Page({
     };
   }, [flow, reactFlowInstance]);
 
-  const onConnect = useCallback(
+  const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            data: {
-              targetHandle: scapeJSONParse(params.targetHandle!),
-              sourceHandle: scapeJSONParse(params.sourceHandle!),
-            },
-            style: { stroke: "#555" },
-            className:
-              ((scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text"
-                ? "stroke-foreground "
-                : "stroke-foreground ") + " stroke-connection",
-            animated:
-              (scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text",
-          },
-          eds
-        )
-      );
+      onConnect(params);
     },
     [setEdges, takeSnapshot, addEdge]
   );
@@ -404,7 +375,7 @@ export default function Page({
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
+                  onConnect={onConnectMod}
                   disableKeyboardA11y={true}
                   onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
