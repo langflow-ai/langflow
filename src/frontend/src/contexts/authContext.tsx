@@ -4,6 +4,7 @@ import { autoLogin as autoLoginApi, getLoggedUser } from "../controllers/API";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 import { alertContext } from "./alertContext";
+import useAlertStore from "../stores/alertStore";
 
 const initialValue: AuthContextType = {
   isAdmin: false,
@@ -38,7 +39,7 @@ export function AuthProvider({ children }): React.ReactElement {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
-  const { setLoading } = useContext(alertContext);
+  const setLoading = useAlertStore((state) => state.setLoading);
   const [apiKey, setApiKey] = useState<string | null>(
     cookies.get("apikey_tkn_lflw")
   );

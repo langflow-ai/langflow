@@ -21,11 +21,11 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import Loading from "../../../../components/ui/loading";
-import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
@@ -64,7 +64,9 @@ export default function Page({
   const { takeSnapshot } = useContext(undoRedoContext);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
-  const setReactFlowInstance = useFlowStore((state) => state.setReactFlowInstance);
+  const setReactFlowInstance = useFlowStore(
+    (state) => state.setReactFlowInstance
+  );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
@@ -145,7 +147,7 @@ export default function Page({
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
   const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const edgeUpdateSuccessful = useRef(true);
 
@@ -350,7 +352,7 @@ export default function Page({
   const onMove = useCallback(() => {
     if (!isPending) setPending(true);
   }, [setPending]);
-  
+
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}

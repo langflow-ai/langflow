@@ -10,6 +10,7 @@ import {
 import { alertContext } from "../../../contexts/alertContext";
 import { chatTriggerPropType } from "../../../types/components";
 import IconComponent from "../../genericIconComponent";
+import useAlertStore from "../../../stores/alertStore";
 
 export default function ChatTrigger({
   open,
@@ -17,7 +18,7 @@ export default function ChatTrigger({
   isBuilt,
   canOpen,
 }: chatTriggerPropType): JSX.Element {
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function handleClick(): void {
     if (isBuilt) {

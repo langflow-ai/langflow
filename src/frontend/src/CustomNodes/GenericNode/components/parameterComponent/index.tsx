@@ -48,6 +48,7 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
+import useAlertStore from "../../../../stores/alertStore";
 
 export default function ParameterComponent({
   left,
@@ -68,8 +69,7 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const { setErrorData, modalContextOpen } = useContext(alertContext);
-  const updateNodeInternals = useUpdateNodeInternals();
+  const setErrorData = useAlertStore((state) => state.setErrorData);  const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { tabId, flows } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);

@@ -9,6 +9,7 @@ import { addApiKeyStore } from "../../controllers/API";
 import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
+import useAlertStore from "../../stores/alertStore";
 
 export default function StoreApiKeyModal({
   children,
@@ -16,7 +17,8 @@ export default function StoreApiKeyModal({
 }: StoreApiKeyType) {
   if (disabled) return <>{children}</>;
   const [open, setOpen] = useState(false);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { storeApiKey } = useContext(AuthContext);
   const [apiKeyValue, setApiKeyValue] = useState("");
 

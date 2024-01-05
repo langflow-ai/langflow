@@ -50,7 +50,6 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const [successOpen, setSuccessOpen] = useState(false);
   const [notificationCenter, setNotificationCenter] = useState(false);
   const [notificationList, setNotificationList] = useState<AlertItemType[]>([]);
-  const [isTweakPage, setIsTweakPage] = useState<boolean>(false);
   const [modalContextOpen, setModalContextOpen] = useState<boolean>(false);
   const pushNotificationList = (notification: AlertItemType) => {
     setNotificationList((old) => {

@@ -22,6 +22,7 @@ import Router from "./routes";
 import { AuthContext } from "./contexts/authContext";
 import { FlowsContext } from "./contexts/flowsContext";
 import { getVersion } from "./controllers/API";
+import useAlertStore from "./stores/alertStore";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -33,18 +34,16 @@ export default function App() {
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
 
-  const {
-    errorData,
-    errorOpen,
-    setErrorOpen,
-    noticeData,
-    noticeOpen,
-    setNoticeOpen,
-    successData,
-    successOpen,
-    setSuccessOpen,
-    loading,
-  } = useContext(alertContext);
+  const errorData = useAlertStore((state) => state.errorData);
+  const errorOpen = useAlertStore((state) => state.errorOpen);
+  const setErrorOpen = useAlertStore((state) => state.setErrorOpen);
+  const noticeData = useAlertStore((state) => state.noticeData);
+  const noticeOpen = useAlertStore((state) => state.noticeOpen);
+  const setNoticeOpen = useAlertStore((state) => state.setNoticeOpen);
+  const successData = useAlertStore((state) => state.successData);
+  const successOpen = useAlertStore((state) => state.successOpen);
+  const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
+  const loading = useAlertStore((state) => state.loading);
 
   const { fetchError } = useContext(typesContext);
 

@@ -62,6 +62,7 @@ import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
 import useFlowStore from "../stores/flowStore";
+import useAlertStore from "../stores/alertStore";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -96,9 +97,8 @@ export const FlowsContext = createContext<FlowsContextType>(
 );
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { getAuthentication, isAuthenticated } = useContext(AuthContext);
-
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [tabId, setTabId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);

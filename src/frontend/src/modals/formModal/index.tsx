@@ -28,6 +28,7 @@ import { getBuildStatus } from "../../controllers/API";
 import useFlowStore from "../../stores/flowStore";
 import { FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
+import useAlertStore from "../../stores/alertStore";
 
 export default function FormModal({
   flow,
@@ -65,8 +66,7 @@ export default function FormModal({
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const template = useRef(tabsState[flow.id].formKeysData.template);
   const { accessToken } = useContext(AuthContext);
-  const { setErrorData } = useContext(alertContext);
-  const ws = useRef<WebSocket | null>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);  const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
   const messagesRef = useRef<HTMLDivElement | null>(null);

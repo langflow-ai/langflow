@@ -15,6 +15,7 @@ import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { useDarkStore } from "../../stores/darkStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import useAlertStore from "../../stores/alertStore";
 
 export default function CodeAreaModal({
   value,
@@ -29,8 +30,8 @@ export default function CodeAreaModal({
   const dark = useDarkStore((state) => state.dark);
 
   const [height, setHeight] = useState<string | null>(null);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [error, setError] = useState<{
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);  const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
 

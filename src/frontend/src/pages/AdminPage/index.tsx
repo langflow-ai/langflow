@@ -33,6 +33,7 @@ import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
+import useAlertStore from "../../stores/alertStore";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -40,7 +41,8 @@ export default function AdminPage() {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
 

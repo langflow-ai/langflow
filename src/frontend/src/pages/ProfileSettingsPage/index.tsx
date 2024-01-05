@@ -16,6 +16,7 @@ import {
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
+import useAlertStore from "../../stores/alertStore";
 export default function ProfileSettingsPage(): JSX.Element {
   const { setTabId } = useContext(FlowsContext);
 
@@ -27,7 +28,8 @@ export default function ProfileSettingsPage(): JSX.Element {
   useEffect(() => {
     setTabId("");
   }, []);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
