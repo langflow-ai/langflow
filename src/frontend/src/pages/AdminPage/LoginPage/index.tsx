@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
-import { alertContext } from "../../../contexts/alertContext";
 import { AuthContext } from "../../../contexts/authContext";
 import { getLoggedUser, onLogin } from "../../../controllers/API";
 import { LoginType } from "../../../types/api";

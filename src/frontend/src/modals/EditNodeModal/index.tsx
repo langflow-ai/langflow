@@ -28,7 +28,6 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,

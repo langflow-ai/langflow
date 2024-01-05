@@ -2,7 +2,6 @@ import { Transition } from "@headlessui/react";
 import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
-import { alertContext } from "../../../contexts/alertContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 

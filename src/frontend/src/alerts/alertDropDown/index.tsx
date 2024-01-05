@@ -5,7 +5,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
-import { alertContext } from "../../contexts/alertContext";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 import useAlertStore from "../../stores/alertStore";

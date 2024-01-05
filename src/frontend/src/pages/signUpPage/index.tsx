@@ -8,7 +8,6 @@ import {
   CONTROL_INPUT_STATE,
   SIGN_UP_SUCCESS,
 } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { addUser } from "../../controllers/API";
 import {
   UserInputType,

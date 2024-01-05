@@ -10,7 +10,6 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import { useDarkStore } from "../../stores/darkStore";
 import { codeAreaModalPropsType } from "../../types/components";

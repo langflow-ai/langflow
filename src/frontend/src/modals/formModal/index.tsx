@@ -1,5 +1,4 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";

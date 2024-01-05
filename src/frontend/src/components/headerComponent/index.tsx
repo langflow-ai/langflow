@@ -3,7 +3,6 @@ import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 
 import { FlowsContext } from "../../contexts/flowsContext";
