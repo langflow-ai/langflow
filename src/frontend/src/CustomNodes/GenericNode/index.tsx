@@ -7,7 +7,6 @@ import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { typesContext } from "../../contexts/typesContext";
 import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -17,6 +16,7 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import useFlow from "../../stores/flowManagerStore";
 
 export default function GenericNode({
   data,
@@ -30,7 +30,7 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const { types } = useContext(typesContext);
-  const { deleteNode, setNode } = useContext(FlowsContext);
+  const { deleteNode, setNode } = useFlow();
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);

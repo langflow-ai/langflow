@@ -24,12 +24,14 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import useFlow from "../../../../stores/flowManagerStore";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, isPending } =
+  const { flows, tabId, uploadFlow, tabsState, saveFlow } =
     useContext(FlowsContext);
+  const { isBuilt, isPending } = useFlow();
   const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
