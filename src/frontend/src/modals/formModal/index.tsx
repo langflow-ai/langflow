@@ -25,7 +25,7 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
-import useFlow from "../../stores/flowManagerStore";
+import useFlowStore from "../../stores/flowStore";
 import { FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
@@ -39,8 +39,8 @@ export default function FormModal({
   flow: FlowType;
 }): JSX.Element {
   const { tabsState, setTabsState } = useContext(FlowsContext);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];

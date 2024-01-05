@@ -13,7 +13,7 @@ import {
 } from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
 import { FlowsContext } from "./flowsContext";
-import useFlow from "../stores/flowManagerStore";
+import useFlowStore from "../stores/flowStore";
 
 const initialValue = {
   undo: () => {},
@@ -32,10 +32,10 @@ export function UndoRedoProvider({ children }) {
   const { tabId, flows } =
     useContext(FlowsContext);
 
-  const setNodes = useFlow((state) => state.setNodes);
-  const setEdges = useFlow((state) => state.setEdges);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
+  const setNodes = useFlowStore((state) => state.setNodes);
+  const setEdges = useFlowStore((state) => state.setEdges);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
 
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));

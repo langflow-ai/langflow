@@ -16,7 +16,7 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import useFlow from "../../stores/flowManagerStore";
+import useFlowStore from "../../stores/flowStore";
 
 export default function GenericNode({
   data,
@@ -30,8 +30,8 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const { types } = useContext(typesContext);
-  const deleteNode = useFlow((state) => state.deleteNode);
-  const setNode = useFlow((state) => state.setNode);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
+  const setNode = useFlowStore((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);

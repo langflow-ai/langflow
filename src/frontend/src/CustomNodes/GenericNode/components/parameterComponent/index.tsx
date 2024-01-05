@@ -31,7 +31,7 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
-import useFlow from "../../../../stores/flowManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
@@ -72,9 +72,9 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [position, setPosition] = useState(0);
   const { tabId, flows } = useContext(FlowsContext);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
-  const setNode = useFlow((state) => state.setNode);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNode = useFlowStore((state) => state.setNode);
 
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;

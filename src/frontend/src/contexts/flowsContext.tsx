@@ -62,7 +62,7 @@ import {
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
-import useFlow from "../stores/flowManagerStore";
+import useFlowStore from "../stores/flowStore";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -104,11 +104,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const { setData } = useContext(typesContext);
   const [tabsState, setTabsState] = useState<FlowsState>({});
 
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
-  const reactFlowInstance = useFlow((state) => state.reactFlowInstance);
-  const setPending = useFlow((state) => state.setPending);
-  const paste = useFlow((state) => state.paste);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
+  const setPending = useFlowStore((state) => state.setPending);
+  const paste = useFlowStore((state) => state.paste);
 
   function refreshFlows() {
     setIsLoading(true);

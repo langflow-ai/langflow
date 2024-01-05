@@ -12,7 +12,7 @@ import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import useFlow from "../../../stores/flowManagerStore";
+import useFlowStore from "../../../stores/flowStore";
 
 export default function BuildTrigger({
   open,
@@ -26,8 +26,8 @@ export default function BuildTrigger({
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
   const { setTabsState, saveFlow } = useContext(FlowsContext);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";

@@ -1,17 +1,6 @@
 import { create } from "zustand";
 import { getRepoStars } from "../controllers/API";
-
-type State = {
-  dark: boolean;
-  stars: number;
-  gradientIndex: number;
-};
-
-type Action = {
-  setDark: (dark: State["dark"]) => void;
-  setStars: (starts: State["stars"]) => void;
-  setGradientIndex: (gradientIndex: State["gradientIndex"]) => void;
-};
+import { DarkStoreType } from "../types/zustand/dark";
 
 function gradientIndexInitialState() {
   const min = 0;
@@ -19,7 +8,7 @@ function gradientIndexInitialState() {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export const useDarkStore = create<State & Action>((set) => ({
+export const useDarkStore = create<DarkStoreType>((set) => ({
   dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
   stars: 0,
   gradientIndex: gradientIndexInitialState(),

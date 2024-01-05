@@ -13,7 +13,7 @@ import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
-import useFlow from "../../../../stores/flowManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -66,11 +66,11 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const paste = useFlow((state) => state.paste);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
-  const setNodes = useFlow((state) => state.setNodes);
-  const setEdges = useFlow((state) => state.setEdges);
+  const paste = useFlowStore((state) => state.paste);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNodes = useFlowStore((state) => state.setNodes);
+  const setEdges = useFlowStore((state) => state.setEdges);
 
   const { saveComponent, flows, version } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
