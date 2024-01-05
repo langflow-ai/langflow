@@ -40,11 +40,11 @@ type RFState = {
   onConnect: OnConnect;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
-  isBuilt: boolean;
   paste: (
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => void;
+    ) => void;
+  isBuilt: boolean;
   isPending: boolean;
   setPending: (pending: boolean) => void;
 };
