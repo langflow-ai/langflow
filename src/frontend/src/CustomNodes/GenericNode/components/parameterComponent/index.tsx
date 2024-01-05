@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Handle, Position, useUpdateNodeInternals } from "reactflow";
+import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
@@ -69,26 +69,12 @@ export default function ParameterComponent({
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const [position, setPosition] = useState(0);
   const { tabId, flows } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
 
   const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
-
-  // Update component position
-  useEffect(() => {
-    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
-      updateNodeInternals(data.id);
-    }
-  }, [data.id, ref, ref.current, ref.current?.offsetTop, updateNodeInternals]);
-
-  useEffect(() => {
-    updateNodeInternals(data.id);
-  }, [data.id, position, updateNodeInternals]);
 
   const groupedEdge = useRef(null);
 
@@ -300,7 +286,6 @@ export default function ParameterComponent({
               )}
               style={{
                 borderColor: color,
-                top: position,
               }}
               onClick={() => {
                 setFilterEdge(groupedEdge.current);
@@ -313,7 +298,7 @@ export default function ParameterComponent({
   ) : (
     <div
       ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className="mt-1 flex w-full flex-wrap items-center justify-between relative bg-muted px-5 py-2"
     >
       <>
         <div
@@ -373,7 +358,6 @@ export default function ParameterComponent({
                   )}
                   style={{
                     borderColor: color,
-                    top: position,
                   }}
                   onClick={() => {
                     setFilterEdge(groupedEdge.current);

@@ -132,12 +132,14 @@ export default function App() {
 
   const { getAuthentication } = useContext(AuthContext);
   const { refreshFlows, setVersion } = useContext(FlowsContext);
+  const { getTypes } = useContext(typesContext);
 
   useEffect(() => {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (getAuthentication() === true) {
       // get data from db
       refreshFlows();
+      getTypes();
     }
 
     getVersion().then((data) => {

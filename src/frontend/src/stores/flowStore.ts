@@ -38,18 +38,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilt });
   },
   onNodesChange: (changes: NodeChange[]) => {
+    console.log("a")
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     });
     if (!get().isPending) set({ isPending: true });
   },
   onEdgesChange: (changes: EdgeChange[]) => {
+    console.log("b")
+
     set({
       edges: applyEdgeChanges(changes, get().edges),
     });
     if (!get().isPending) set({ isPending: true });
   },
   setNodes: (change) => {
+    console.log("c")
+
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
 
@@ -57,6 +62,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ nodes: newChange });
   },
   setEdges: (change) => {
+    console.log("d")
+
     let newChange = typeof change === "function" ? change(get().edges) : change;
 
     set({ edges: newChange });
