@@ -29,7 +29,6 @@ import {
   limitScrollFieldsModal,
 } from "../../constants/constants";
 import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -39,6 +38,7 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import useFlow from "../../stores/flowManagerStore";
 
 const EditNodeModal = forwardRef(
   (
@@ -57,7 +57,7 @@ const EditNodeModal = forwardRef(
   ) => {
     const [myData, setMyData] = useState(data);
 
-    const { setPending, edges, setNode } = useContext(FlowsContext);
+    const { setPending, edges, setNode } = useFlow();
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {

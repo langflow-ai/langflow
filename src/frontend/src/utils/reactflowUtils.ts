@@ -924,7 +924,6 @@ function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
 
 export function expandGroupNode(
   groupNode: NodeDataType,
-  getNodeId: (type: string) => string,
   nodes: Node[],
   edges: Edge[],
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,

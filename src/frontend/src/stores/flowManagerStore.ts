@@ -37,6 +37,8 @@ type RFState = {
   onEdgesChange: OnEdgesChange;
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
   setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
+  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
+  getNode: (id: string) => Node | undefined;
   onConnect: OnConnect;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
@@ -45,6 +47,7 @@ type RFState = {
     position: { x: number; y: number; paneX?: number; paneY?: number }
     ) => void;
   isBuilt: boolean;
+  setIsBuilt: (isBuilt: boolean) => void;
   isPending: boolean;
   setPending: (pending: boolean) => void;
 };
@@ -58,6 +61,9 @@ const useFlow = create<RFState>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilt: false,
+  setIsBuilt: (isBuilt) => {
+    set({ isBuilt });
+  },
   onNodesChange: (changes: NodeChange[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -81,6 +87,24 @@ const useFlow = create<RFState>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().edges) : change;
 
     set({ edges: newChange });
+  },
+  setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
+    let newChange =
+      typeof change === "function"
+        ? change(get().nodes.find((node) => node.id === id)!)
+        : change;
+
+    get().setNodes((oldNodes) =>
+      oldNodes.map((node) => {
+        if (node.id === id) {
+          return newChange;
+        }
+        return node;
+      })
+    );
+  },
+  getNode: (id: string) => {
+    return get().nodes.find((node) => node.id === id);
   },
   onConnect: (connection: Connection) => {
     set({

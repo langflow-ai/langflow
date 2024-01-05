@@ -221,10 +221,6 @@ export default function Page({
       if (event.dataTransfer.types.some((types) => types === "nodedata")) {
         takeSnapshot();
 
-        // Get the current bounds of the ReactFlow wrapper element
-        const reactflowBounds =
-          reactFlowWrapper.current?.getBoundingClientRect();
-
         // Extract the data from the drag event and parse it as a JSON object
         let data: { type: string; node?: APIClassType } = JSON.parse(
           event.dataTransfer.getData("nodedata")
@@ -356,7 +352,7 @@ export default function Page({
   const onMove = useCallback(() => {
     if (!isPending) setPending(true);
   }, [setPending]);
-
+  
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}

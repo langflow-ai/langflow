@@ -23,6 +23,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
+import useFlow from "../../../../stores/flowManagerStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -49,7 +50,6 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "NestedDict")
     ).length
   );
-  const { getNodeId } = useContext(FlowsContext);
   const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
 
   function canMinimize() {
@@ -65,13 +65,16 @@ export default function NodeToolbarComponent({
 
   const {
     paste,
-    saveComponent,
-    version,
-    flows,
     nodes,
     edges,
     setNodes,
     setEdges,
+  } = useFlow();
+
+  const {
+    saveComponent,
+    flows,
+    version,
   } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -120,7 +123,7 @@ export default function NodeToolbarComponent({
       case "ungroup":
         takeSnapshot();
         updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, getNodeId, nodes, edges, setNodes, setEdges);
+        expandGroupNode(data, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);

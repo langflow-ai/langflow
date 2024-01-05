@@ -12,10 +12,6 @@ export type FlowsContextType = {
   isLoading: boolean;
   setTabId: (index: string) => void;
   //keep
-  flows: Array<FlowType>;
-  deleteNode: (idx: string | Array<string>) => void;
-  deleteEdge: (idx: string | Array<string>) => void;
-  //keep
   removeFlow: (id: string) => void;
   //keep
   addFlow: (
@@ -24,7 +20,6 @@ export type FlowsContextType = {
     override?: boolean,
     position?: XYPosition
   ) => Promise<String | undefined>;
-  incrementNodeId: () => string;
   downloadFlow: (
     flow: FlowType,
     flowName: string,
@@ -34,8 +29,6 @@ export type FlowsContextType = {
   downloadFlows: () => void;
   //keep
   uploadFlows: () => void;
-  isBuilt: boolean;
-  setIsBuilt: (state: boolean) => void;
   uploadFlow: ({
     newProject,
     file,
@@ -47,35 +40,17 @@ export type FlowsContextType = {
     isComponent?: boolean;
     position?: XYPosition;
   }) => Promise<String | never>;
-  getNodeId: (nodeType: string) => string;
-  isPending: boolean;
-  setPending: (pending: boolean) => void;
   tabsState: FlowsState;
   setTabsState: (
     update: FlowsState | ((oldState: FlowsState) => FlowsState)
   ) => void;
-  paste: (
-    selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => void;
-  lastCopiedSelection: { nodes: any; edges: any } | null;
-  setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
-  setTweak: (tweak: tweakType) => tweakType | void;
-  getTweak: tweakType;
   saveComponent: (
     component: NodeDataType,
     override: boolean
   ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
-  nodes: Array<Node>;
-  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
-  setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
-  getNode: (id: string) => Node | undefined;
-  onNodesChange: OnChange<NodeChange>;
-  edges: Array<Edge>;
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
-  onEdgesChange: OnChange<EdgeChange>;
+  flows: Array<FlowType>;
 };
 
 export type FlowsState = {
