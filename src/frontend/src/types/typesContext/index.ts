@@ -7,8 +7,6 @@ const template: { [char: string]: APIClassType } = {};
 const data: { [char: string]: string } = {};
 
 export type typesContextType = {
-  reactFlowInstance: ReactFlowInstance | null;
-  setReactFlowInstance: (newState: ReactFlowInstance) => void;
   types: typeof types;
   setTypes: (newState: {}) => void;
   templates: typeof template;

@@ -150,7 +150,6 @@ export function updateTemplate(
 
 export function updateIds(
   newFlow: ReactFlowJsonObject,
-  getNodeId: (type: string) => string
 ) {
   let idsMap = {};
 
@@ -268,6 +267,20 @@ export function validateNodes(nodes: Node[], edges: Edge[]) {
   }
   return nodes.flatMap((n: NodeType) => validateNode(n, edges));
 }
+
+export function updateEdges(edges: Edge[]) {
+  if (edges)
+    edges.forEach((edge) => {
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      edge.className =
+        (targetHandleObject.type === "Text"
+          ? "stroke-gray-800 "
+          : "stroke-gray-900 ") + " stroke-connection";
+      edge.animated = targetHandleObject.type === "Text";
+    });
+};
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   const existingNames = flows.map((item) => item.name);
@@ -922,6 +935,19 @@ function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
   });
 }
 
+export function processFlowEdges(flow: FlowType) {
+  if (!flow.data || !flow.data.edges) return;
+  if (checkOldEdgesHandles(flow.data.edges)) {
+    const newEdges = updateEdgesHandleIds(flow.data);
+    flow.data.edges = newEdges;
+  }
+  //update edges colors
+  flow.data.edges.forEach((edge) => {
+    edge.className = "";
+    edge.style = { stroke: "#555" };
+  });
+}
+
 export function expandGroupNode(
   groupNode: NodeDataType,
   nodes: Node[],
@@ -930,7 +956,7 @@ export function expandGroupNode(
   setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
   const { template, flow } = _.cloneDeep(groupNode.node!);
-  const idsMap = updateIds(flow!.data!, getNodeId);
+  const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
   let flowEdges = edges;
   updateEdgesIds(flowEdges, idsMap);
