@@ -8,9 +8,9 @@ type State = {
 };
 
 type Action = {
-  updateDark: (dark: State["dark"]) => void;
-  updateStars: (starts: State["stars"]) => void;
-  updateGradientIndex: (gradientIndex: State["gradientIndex"]) => void;
+  setDark: (dark: State["dark"]) => void;
+  setStars: (starts: State["stars"]) => void;
+  setGradientIndex: (gradientIndex: State["gradientIndex"]) => void;
 };
 
 function gradientIndexInitialState() {
@@ -23,9 +23,9 @@ export const useDarkStore = create<State & Action>((set) => ({
   dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
   stars: 0,
   gradientIndex: gradientIndexInitialState(),
-  updateDark: (dark) => set(() => ({ dark: dark })),
-  updateStars: (starts) => set(() => ({ stars: starts })),
-  updateGradientIndex: (gradientIndex) =>
+  setDark: (dark) => set(() => ({ dark: dark })),
+  setStars: (starts) => set(() => ({ stars: starts })),
+  setGradientIndex: (gradientIndex) =>
     set(() => ({ gradientIndex: gradientIndex })),
 }));
 

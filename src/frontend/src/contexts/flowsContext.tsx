@@ -31,7 +31,7 @@ import {
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
-import { APIClassType, APITemplateType } from "../types/api";
+import { APIClassType } from "../types/api";
 import { tweakType } from "../types/components";
 import {
   FlowType,
@@ -46,12 +46,13 @@ import {
   checkOldEdgesHandles,
   cleanEdges,
   createFlowComponent,
+  processFlowEdges,
   removeFileNameFromComponents,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateEdges,
   updateEdgesHandleIds,
   updateIds,
-  updateTemplate,
 } from "../utils/reactflowUtils";
 import {
   createRandomKey,
@@ -61,10 +62,12 @@ import {
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import { typesContext } from "./typesContext";
+import useFlow from "../stores/flowManagerStore";
 
 const uid = new ShortUniqueId({ length: 5 });
 
 const FlowsContextInitialValue: FlowsContextType = {
+  //Remove tab id and get current id from url
   tabId: "",
   setTabId: (index: string) => {},
   isLoading: true,
@@ -75,41 +78,16 @@ const FlowsContextInitialValue: FlowsContextType = {
     flowData?: FlowType,
     override?: boolean
   ) => "",
-  deleteNode: () => {},
-  deleteEdge: () => {},
-  incrementNodeId: () => uid(),
   downloadFlow: (flow: FlowType) => {},
   downloadFlows: () => {},
   uploadFlows: () => {},
   uploadFlow: async () => "",
-  isBuilt: false,
-  setIsBuilt: (state: boolean) => {},
-  hardReset: () => {},
   saveFlow: async (flow?: FlowType, silent?: boolean) => {},
-  lastCopiedSelection: null,
-  setLastCopiedSelection: (selection: any) => {},
-  isPending: false,
-  setPending: (pending: boolean) => {},
   tabsState: {},
   setTabsState: () => {},
-  getNodeId: (nodeType: string) => "",
-  setTweak: (tweak: any) => {},
-  getTweak: [],
-  paste: (
-    selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) => {},
   saveComponent: async (component: NodeDataType, override: boolean) => "",
   deleteComponent: (key: string) => {},
   version: "",
-  nodes: [],
-  setNodes: () => {},
-  setNode: () => {},
-  getNode: () => undefined,
-  onNodesChange: () => {},
-  edges: [],
-  setEdges: () => {},
-  onEdgesChange: () => {},
 };
 
 export const FlowsContext = createContext<FlowsContextType>(
@@ -123,107 +101,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [tabId, setTabId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
-  const [id, setId] = useState(uid());
-  const { reactFlowInstance, setData } = useContext(typesContext);
-  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
-    nodes: any;
-    edges: any;
-  } | null>(null);
+  const { setData } = useContext(typesContext);
   const [tabsState, setTabsState] = useState<FlowsState>({});
-  const [getTweak, setTweak] = useState<tweakType>([]);
 
-  const [nodes, setNodesInternal, onNodesChangeInternal] = useNodesState([]);
-
-  const [edges, setEdgesInternal, onEdgesChangeInternal] = useEdgesState([]);
-
-  const setPending = (pending: boolean) => {
-    setTabsState((prev: FlowsState) => {
-      return {
-        ...prev,
-        [tabId]: {
-          ...prev[tabId],
-          isPending: pending,
-        },
-      };
-    });
-  };
-
-  const isPending = tabsState[tabId]?.isPending ?? false;
-
-  const onNodesChange = useCallback(
-    (change: NodeChange[]) => {
-      onNodesChangeInternal(change);
-      if(!isPending)
-        setPending(true);
-    },
-    [onNodesChangeInternal, setPending, isPending]
-  );
-
-  const onEdgesChange = useCallback(
-    (edges: EdgeChange[]) => {
-      onEdgesChangeInternal(edges);
-      if(!isPending)
-        setPending(true);
-    },
-    [onEdgesChangeInternal, setPending, isPending]
-  );
-
-  const setNodes = (change: Node[] | ((oldState: Node[]) => Node[])) => {
-    let newChange = typeof change === "function" ? change(nodes) : change;
-    let newEdges = cleanEdges(newChange, edges);
-
-    saveCurrentFlow(
-      newChange,
-      newEdges,
-      reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 }
-    );
-    setEdgesInternal(newEdges);
-    setNodesInternal(newChange);
-  };
-
-  const setNode = (id: string, change: Node | ((oldState: Node) => Node)) => {
-    let newChange =
-      typeof change === "function"
-        ? change(nodes.find((node) => node.id === id)!)
-        : change;
-
-    setNodes((oldNodes) =>
-      oldNodes.map((node) => {
-        if (node.id === id) {
-          return newChange;
-        }
-        return node;
-      })
-    );
-  };
-
-  const getNode = (id: string) => {
-    return nodes.find((node) => node.id === id);
-  };
-
-  const setEdges = (change: Edge[] | ((oldState: Edge[]) => Edge[])) => {
-    let newChange = typeof change === "function" ? change(edges) : change;
-
-    saveCurrentFlow(
-      nodes,
-      newChange,
-      reactFlowInstance?.getViewport() ?? { zoom: 1, x: 0, y: 0 }
-    );
-    setEdgesInternal(newChange);
-  };
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      hardReset();
-    }
-  }, [isAuthenticated]);
-
-  const newNodeId = useRef(uid());
-
-  function incrementNodeId() {
-    newNodeId.current = uid();
-    return newNodeId.current;
-  }
+  const {nodes, edges, paste, setPending, reactFlowInstance} = useFlow();
 
   function refreshFlows() {
     setIsLoading(true);
@@ -231,7 +112,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       if (DbData) {
         try {
           processFlows(DbData, false);
-          updateStateWithDbData(DbData);
+          setFlows(DbData);
           setIsLoading(false);
         } catch (e) {}
       }
@@ -281,31 +162,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function processFlowEdges(flow: FlowType) {
-    if (!flow.data || !flow.data.edges) return;
-    if (checkOldEdgesHandles(flow.data.edges)) {
-      const newEdges = updateEdgesHandleIds(flow.data);
-      flow.data.edges = newEdges;
-    }
-    //update edges colors
-    flow.data.edges.forEach((edge) => {
-      edge.className = "";
-      edge.style = { stroke: "#555" };
-    });
-  }
-
-  function updateStateWithDbData(tabsData: FlowType[]) {
-    setFlows(tabsData);
-  }
-
-  function hardReset() {
-    newNodeId.current = uid();
-    setTabId("");
-    setFlows([]);
-    setIsLoading(true);
-    setId(uid());
-  }
-
   /**
    * Downloads the current flow as a JSON file
    */
@@ -353,11 +209,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       link.click();
     });
   }
-
-  function getNodeId(nodeType: string) {
-    return nodeType + "-" + incrementNodeId();
-  }
-
   /**
    * Creates a file input and listens to a change event to upload a JSON flow file.
    * If the file type is application/json, the file is read and parsed into a JSON object.
@@ -466,111 +317,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       processFlows(flows.filter((flow) => flow.id !== id));
     }
   }
-  /**
-   * Add a new flow to the list of flows.
-   * @param flow Optional flow to add.
-   */
-  function paste(
-    selectionInstance: { nodes: Node[]; edges: Edge[] },
-    position: { x: number; y: number; paneX?: number; paneY?: number }
-  ) {
-    let minimumX = Infinity;
-    let minimumY = Infinity;
-    let idsMap = {};
-    let newNodes: Node<NodeDataType>[] = nodes;
-    let newEdges = edges;
-    selectionInstance.nodes.forEach((node: Node) => {
-      if (node.position.y < minimumY) {
-        minimumY = node.position.y;
-      }
-      if (node.position.x < minimumX) {
-        minimumX = node.position.x;
-      }
-    });
-
-    const insidePosition = position.paneX
-      ? { x: position.paneX + position.x, y: position.paneY! + position.y }
-      : reactFlowInstance!.screenToFlowPosition({
-          x: position.x,
-          y: position.y,
-        });
-
-    selectionInstance.nodes.forEach((node: NodeType) => {
-      // Generate a unique node ID
-      let newId = getNodeId(node.data.type);
-      idsMap[node.id] = newId;
-
-      // Create a new node object
-      const newNode: NodeType = {
-        id: newId,
-        type: "genericNode",
-        position: {
-          x: insidePosition.x + node.position!.x - minimumX,
-          y: insidePosition.y + node.position!.y - minimumY,
-        },
-        data: {
-          ..._.cloneDeep(node.data),
-          id: newId,
-        },
-      };
-
-      // Add the new node to the list of nodes in state
-      newNodes = newNodes
-        .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
-    });
-    setNodes(newNodes);
-
-    selectionInstance.edges.forEach((edge: Edge) => {
-      let source = idsMap[edge.source];
-      let target = idsMap[edge.target];
-      const sourceHandleObject: sourceHandleType = scapeJSONParse(
-        edge.sourceHandle!
-      );
-      let sourceHandle = scapedJSONStringfy({
-        ...sourceHandleObject,
-        id: source,
-      });
-      sourceHandleObject.id = source;
-
-      edge.data.sourceHandle = sourceHandleObject;
-      const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!
-      );
-      let targetHandle = scapedJSONStringfy({
-        ...targetHandleObject,
-        id: target,
-      });
-      targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
-      let id =
-        "reactflow__edge-" +
-        source +
-        sourceHandle +
-        "-" +
-        target +
-        targetHandle;
-      newEdges = addEdge(
-        {
-          source,
-          target,
-          sourceHandle,
-          targetHandle,
-          id,
-          data: cloneDeep(edge.data),
-          style: { stroke: "#555" },
-          className:
-            targetHandleObject.type === "Text"
-              ? "stroke-gray-800 "
-              : "stroke-gray-900 ",
-          animated: targetHandleObject.type === "Text",
-          selected: false,
-        },
-        newEdges.map((edge) => ({ ...edge, selected: false }))
-      );
-    });
-    setEdges(newEdges);
-  }
 
   const addFlow = async (
     newProject: Boolean,
@@ -634,24 +380,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       //add animation to text type edges
       updateEdges(data.edges);
       // updateNodes(data.nodes, data.edges);
-      if (refreshIds) updateIds(data, getNodeId); // Assuming updateIds is defined elsewhere
+      if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     }
 
     return data;
-  };
-
-  const updateEdges = (edges: Edge[]) => {
-    if (edges)
-      edges.forEach((edge) => {
-        const targetHandleObject: targetHandleType = scapeJSONParse(
-          edge.targetHandle!
-        );
-        edge.className =
-          (targetHandleObject.type === "Text"
-            ? "stroke-gray-800 "
-            : "stroke-gray-900 ") + " stroke-connection";
-        edge.animated = targetHandleObject.type === "Text";
-      });
   };
 
   const createNewFlow = (
@@ -697,7 +429,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
   const saveTimeoutId = useRef<NodeJS.Timeout | null>(null);
 
-  const saveCurrentFlow = (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+  const saveCurrentFlow = (
+    nodes: Node[],
+    edges: Edge[],
+    viewport: Viewport
+  ) => {
     // Clear the previous timeout if it exists.
     if (saveTimeoutId.current) {
       clearTimeout(saveTimeoutId.current);
@@ -710,8 +446,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
         saveFlow({ ...currentFlow, data: { nodes, edges, viewport } }, true);
       }
     }, 300); // Delay of 300ms.
-  }
-
+  };
 
   async function saveFlow(flow?: FlowType, silent?: boolean) {
     let newFlow;
@@ -765,7 +500,6 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const [isBuilt, setIsBuilt] = useState(false);
   // Initialize state variable for the version
   const [version, setVersion] = useState("");
   useEffect(() => {
@@ -774,63 +508,26 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  function deleteNode(idx: string | Array<string>) {
-    setNodes((oldNodes) =>
-      oldNodes.filter((node) =>
-        typeof idx === "string" ? node.id !== idx : !idx.includes(node.id)
-      )
-    );
-  }
-
-  function deleteEdge(idx: string | Array<string>) {
-    setEdges((oldEdges) =>
-      oldEdges.filter((edge) =>
-        typeof idx === "string" ? edge.id !== idx : !idx.includes(edge.id)
-      )
-    );
-  }
 
   return (
     <FlowsContext.Provider
       value={{
         version,
+        flows,
         saveFlow,
-        isBuilt,
-        setIsBuilt,
-        lastCopiedSelection,
-        setLastCopiedSelection,
-        hardReset,
         tabId,
         setTabId,
-        flows,
-        incrementNodeId,
         removeFlow,
         addFlow,
         downloadFlow,
         downloadFlows,
         uploadFlows,
         uploadFlow,
-        getNodeId,
-        deleteNode,
-        deleteEdge,
-        isPending,
-        setPending,
         tabsState,
         setTabsState,
-        paste,
-        getTweak,
-        setTweak,
         isLoading,
         saveComponent,
         deleteComponent,
-        nodes,
-        setNodes,
-        setNode,
-        getNode,
-        onNodesChange,
-        edges,
-        setEdges,
-        onEdgesChange,
       }}
     >
       {children}

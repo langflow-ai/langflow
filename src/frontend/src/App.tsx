@@ -16,7 +16,6 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { alertContext } from "./contexts/alertContext";
-import { FlowsContext } from "./contexts/flowsContext";
 import { locationContext } from "./contexts/locationContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";
@@ -30,7 +29,6 @@ export default function App() {
     setShowSideBar(true);
     setIsStackedOpen(true);
   }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-  const { hardReset } = useContext(FlowsContext);
 
   const {
     errorData,
@@ -136,10 +134,7 @@ export default function App() {
     <div className="flex h-full flex-col">
       <ErrorBoundary
         onReset={() => {
-          window.localStorage.removeItem("tabsData");
-          window.localStorage.clear();
-          hardReset();
-          window.location.href = window.location.href;
+          // any reset function
         }}
         FallbackComponent={CrashErrorComponent}
       >

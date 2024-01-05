@@ -16,8 +16,6 @@ import { AuthContext } from "./authContext";
 //context to share types adn functions from nodes to flow
 
 const initialValue: typesContextType = {
-  reactFlowInstance: null,
-  setReactFlowInstance: (newState: ReactFlowInstance) => {},
   types: {},
   setTypes: () => {},
   templates: {},
@@ -34,8 +32,6 @@ export const typesContext = createContext<typesContextType>(initialValue);
 
 export function TypesProvider({ children }: { children: ReactNode }) {
   const [types, setTypes] = useState({});
-  const [reactFlowInstance, setReactFlowInstance] =
-    useState<ReactFlowInstance | null>(null);
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
@@ -95,14 +91,11 @@ export function TypesProvider({ children }: { children: ReactNode }) {
     }
   }
 
-
   return (
     <typesContext.Provider
       value={{
         types,
         setTypes,
-        reactFlowInstance,
-        setReactFlowInstance,
         setTemplates,
         templates,
         data,

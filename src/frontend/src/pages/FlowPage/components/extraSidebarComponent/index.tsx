@@ -10,6 +10,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
+import useFlow from "../../../../stores/flowManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
@@ -28,13 +29,11 @@ import SidebarDraggableComponent from "./sideBarDraggableComponent";
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
     useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, isPending } =
-    useContext(FlowsContext);
+  const { flows, tabId, uploadFlow, saveFlow } = useContext(FlowsContext);
 
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const { hasStore, hasApiKey, validApiKey } = useStoreStore();
 
+  const { isBuilt, isPending } = useFlow();
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -292,12 +291,9 @@ export default function ExtraSidebar(): JSX.Element {
           {flow && flow.data && (
             <ShadTooltip content="Save" side="top">
               <button
-                disabled={flow?.data?.nodes.length === 0}
                 className={
                   "extra-side-bar-buttons " +
-                  (isPending && flow!.data!.nodes?.length > 0
-                    ? ""
-                    : "button-disable")
+                  (isPending ? "" : "button-disable")
                 }
                 onClick={(event) => {
                   saveFlow();
@@ -307,9 +303,7 @@ export default function ExtraSidebar(): JSX.Element {
                   name="Save"
                   className={
                     "side-bar-button-size" +
-                    (isPending && flow!.data!.nodes?.length > 0
-                      ? " "
-                      : " extra-side-bar-save-disable")
+                    (isPending ? " " : " extra-side-bar-save-disable")
                   }
                 />
               </button>

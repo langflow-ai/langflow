@@ -13,6 +13,7 @@ import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import useFlow from "../../../../stores/flowManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -49,11 +50,8 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "NestedDict")
     ).length
   );
-  const { getNodeId } = useContext(FlowsContext);
 
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const { hasStore, hasApiKey, validApiKey } = useStoreStore();
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -66,16 +64,9 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const {
-    paste,
-    saveComponent,
-    version,
-    flows,
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-  } = useContext(FlowsContext);
+  const { paste, nodes, edges, setNodes, setEdges } = useFlow();
+
+  const { saveComponent, flows, version } = useContext(FlowsContext);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -123,7 +114,7 @@ export default function NodeToolbarComponent({
       case "ungroup":
         takeSnapshot();
         updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, getNodeId, nodes, edges, setNodes, setEdges);
+        expandGroupNode(data, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);

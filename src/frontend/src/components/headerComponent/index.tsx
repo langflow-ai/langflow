@@ -8,7 +8,6 @@ import { AuthContext } from "../../contexts/authContext";
 
 import { FlowsContext } from "../../contexts/flowsContext";
 import { useDarkStore } from "../../stores/darkStore";
-import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -30,12 +29,7 @@ export default function Header(): JSX.Element {
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const hasStore = useStoreStore((state) => state.hasStore);
-
-  const dark = useDarkStore((state) => state.dark);
-  const setDark = useDarkStore((state) => state.updateDark);
-  const stars = useDarkStore((state) => state.stars);
-  const gradientIndex = useDarkStore((state) => state.gradientIndex);
+  const { dark, setDark, stars, gradientIndex } = useDarkStore();
 
   useEffect(() => {
     if (dark) {
