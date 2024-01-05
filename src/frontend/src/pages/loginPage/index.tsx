@@ -19,7 +19,7 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login, getAuthentication, setUserData, setIsAdmin } =
+  const { login, isAuthenticated, setUserData, setIsAdmin } =
     useContext(AuthContext);
   const navigate = useNavigate();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,7 +38,6 @@ export default function LoginPage(): JSX.Element {
     onLogin(user)
       .then((user) => {
         login(user.access_token, user.refresh_token);
-        getUser();
         navigate("/");
       })
       .catch((error) => {
@@ -47,22 +46,6 @@ export default function LoginPage(): JSX.Element {
           list: [error["response"]["data"]["detail"]],
         });
       });
-  }
-
-  function getUser() {
-    if (getAuthentication()) {
-      setTimeout(() => {
-        getLoggedUser()
-          .then((user) => {
-            const isSuperUser = user!.is_superuser;
-            setIsAdmin(isSuperUser);
-            setUserData(user);
-          })
-          .catch((error) => {
-            console.log("login page", error);
-          });
-      }, 500);
-    }
   }
 
   return (

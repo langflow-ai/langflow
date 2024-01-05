@@ -17,7 +17,7 @@ export default function LoginAdminPage() {
 
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-  const { login, getAuthentication, setUserData } = useContext(AuthContext);
+  const { login, isAuthenticated, setUserData } = useContext(AuthContext);
 
   const { password, username } = inputState;
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -35,7 +35,6 @@ export default function LoginAdminPage() {
     onLogin(user)
       .then((user) => {
         login(user.access_token, user.refresh_token);
-        getUser();
         navigate("/admin/");
       })
       .catch((error) => {
@@ -44,20 +43,6 @@ export default function LoginAdminPage() {
           list: [error["response"]["data"]["detail"]],
         });
       });
-  }
-
-  function getUser() {
-    if (getAuthentication()) {
-      setTimeout(() => {
-        getLoggedUser()
-          .then((user) => {
-            setUserData(user);
-          })
-          .catch((error) => {
-            console.log("login admin page", error);
-          });
-      }, 1000);
-    }
   }
 
   return (
