@@ -15,7 +15,6 @@ import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
-import { alertContext } from "./contexts/alertContext";
 import { locationContext } from "./contexts/locationContext";
 import { typesContext } from "./contexts/typesContext";
 import Router from "./routes";

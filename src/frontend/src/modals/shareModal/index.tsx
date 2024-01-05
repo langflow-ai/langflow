@@ -5,7 +5,6 @@ import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import {
   getStoreComponents,

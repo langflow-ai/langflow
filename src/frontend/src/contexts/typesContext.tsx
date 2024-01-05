@@ -10,7 +10,6 @@ import { ReactFlowInstance } from "reactflow";
 import { getAll, getHealth } from "../controllers/API";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
-import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
 import useAlertStore from "../stores/alertStore";
 

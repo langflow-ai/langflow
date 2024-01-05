@@ -3,7 +3,6 @@ import Cookies from "universal-cookie";
 import { autoLogin as autoLoginApi, getLoggedUser } from "../controllers/API";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import { alertContext } from "./alertContext";
 import useAlertStore from "../stores/alertStore";
 
 const initialValue: AuthContextType = {

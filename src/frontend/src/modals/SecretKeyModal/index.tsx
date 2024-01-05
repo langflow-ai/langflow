@@ -3,7 +3,6 @@ import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { alertContext } from "../../contexts/alertContext";
 import { createApiKey } from "../../controllers/API";
 import { ApiKeyType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";

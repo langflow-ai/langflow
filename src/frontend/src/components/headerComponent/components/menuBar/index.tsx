@@ -9,7 +9,6 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
-import { alertContext } from "../../../../contexts/alertContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import { menuBarPropsType } from "../../../../types/components";

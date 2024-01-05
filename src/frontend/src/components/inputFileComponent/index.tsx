@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { uploadFile } from "../../controllers/API";
 import { FileComponentType } from "../../types/components";

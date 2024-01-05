@@ -7,7 +7,6 @@ import {
   FLOW_NOT_BUILT_DESCRIPTION,
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants/constants";
-import { alertContext } from "../../../contexts/alertContext";
 import { chatTriggerPropType } from "../../../types/components";
 import IconComponent from "../../genericIconComponent";
 import useAlertStore from "../../../stores/alertStore";

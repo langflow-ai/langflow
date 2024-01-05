@@ -10,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { deleteApiKey, getApiKey } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
