@@ -7,18 +7,12 @@ export const ProtectedAdminRoute = ({ children }) => {
     isAdmin,
     isAuthenticated,
     logout,
-    getAuthentication,
     userData,
     autoLogin,
   } = useContext(AuthContext);
-  useEffect(() => {
-    if (!isAuthenticated && !getAuthentication()) {
-      window.location.replace("/login");
-      logout();
-    }
-  }, [isAuthenticated, getAuthentication, logout, userData]);
 
-  if (!isAuthenticated && !getAuthentication()) {
+  if (!isAuthenticated) {
+    logout();
     return <Navigate to="/login" replace />;
   }
 

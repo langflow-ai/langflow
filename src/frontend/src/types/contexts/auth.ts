@@ -10,7 +10,6 @@ export type AuthContextType = {
   logout: () => void;
   userData: Users | null;
   setUserData: (userData: Users | null) => void;
-  getAuthentication: () => boolean;
   authenticationErrorCount: number;
   autoLogin: boolean;
   setAutoLogin: (autoLogin: boolean) => void;

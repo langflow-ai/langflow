@@ -15,7 +15,6 @@ const initialValue: AuthContextType = {
   logout: () => {},
   userData: null,
   setUserData: () => {},
-  getAuthentication: () => false,
   authenticationErrorCount: 0,
   autoLogin: false,
   setAutoLogin: () => {},
@@ -34,7 +33,9 @@ export function AuthProvider({ children }): React.ReactElement {
   const [refreshToken, setRefreshToken] = useState<string | null>(
     cookies.get("refresh_tkn_lflw")
   );
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
+    cookies.get("refresh_tkn_lflw") && cookies.get("access_tkn_lflw")
+  );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
@@ -72,29 +73,26 @@ export function AuthProvider({ children }): React.ReactElement {
       })
       .catch((error) => {
         setAutoLogin(false);
-        if (getAuthentication() && !isLoginPage) {
-          getLoggedUser()
-            .then((user) => {
-              setUserData(user);
-              setLoading(false);
-              const isSuperUser = user!.is_superuser;
-              setIsAdmin(isSuperUser);
-            })
-            .catch((error) => {
-              console.log("auth context");
-              setLoading(false);
-            });
+        if (isAuthenticated && !isLoginPage) {
+          getUser();
         } else {
           setLoading(false);
         }
       });
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
-  function getAuthentication() {
-    const storedRefreshToken = cookies.get("refresh_tkn_lflw");
-    const storedAccess = cookies.get("access_tkn_lflw");
-    const auth = storedAccess && storedRefreshToken ? true : false;
-    return auth;
+  function getUser(){
+    getLoggedUser()
+      .then((user) => {
+        setUserData(user);
+        setLoading(false);
+        const isSuperUser = user!.is_superuser;
+        setIsAdmin(isSuperUser);
+      })
+      .catch((error) => {
+        console.log("auth context");
+        setLoading(false);
+      });
   }
 
   function login(newAccessToken: string, refreshToken: string) {
@@ -103,6 +101,8 @@ export function AuthProvider({ children }): React.ReactElement {
     setAccessToken(newAccessToken);
     setRefreshToken(refreshToken);
     setIsAuthenticated(true);
+    setTimeout(() => {getUser();}, 500)
+    
   }
 
   function logout() {
@@ -127,14 +127,13 @@ export function AuthProvider({ children }): React.ReactElement {
       value={{
         isAdmin,
         setIsAdmin,
-        isAuthenticated: !!accessToken,
+        isAuthenticated,
         accessToken,
         refreshToken,
         login,
         logout,
         setUserData,
         userData,
-        getAuthentication,
         authenticationErrorCount: 0,
         setAutoLogin,
         autoLogin,
