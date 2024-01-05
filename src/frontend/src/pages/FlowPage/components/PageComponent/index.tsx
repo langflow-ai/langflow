@@ -17,7 +17,6 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
-  useReactFlow,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -27,14 +26,14 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
+import useFlow from "../../../../stores/flowManagerStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
-import { FlowsState } from "../../../../types/tabs";
+import { FlowType, NodeType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
+  getNodeId,
   isValidConnection,
-  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -53,26 +52,33 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  let {
-    uploadFlow,
-    getNodeId,
-    paste,
-    lastCopiedSelection,
-    setLastCopiedSelection,
-    deleteNode,
-    deleteEdge,
-  } = useContext(FlowsContext);
-  const {
-    types,
-    reactFlowInstance,
-    setReactFlowInstance,
-    templates,
-    setFilterEdge,
-  } = useContext(typesContext);
+  let { uploadFlow, saveFlow } = useContext(FlowsContext);
+  const { types, templates, setFilterEdge } = useContext(typesContext);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
+    nodes: any;
+    edges: any;
+  } | null>(null);
+
   const { takeSnapshot } = useContext(undoRedoContext);
-  const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, setPending, saveFlow, isPending } = useContext(FlowsContext);
+
+  const {
+    reactFlowInstance,
+    setReactFlowInstance,
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    setNodes,
+    setEdges,
+    deleteNode,
+    deleteEdge,
+    setPending,
+    isPending,
+    paste,
+  } = useFlow();
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -136,11 +142,7 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [
-    lastCopiedSelection,
-    lastSelection,
-    takeSnapshot,
-  ]);
+  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
@@ -155,10 +157,12 @@ export default function Page({
 
   useEffect(() => {
     setLoading(true);
-    if(reactFlowInstance){
+    if (reactFlowInstance) {
       reactFlowInstance.setNodes(flow?.data?.nodes ?? []);
       reactFlowInstance.setEdges(flow?.data?.edges ?? []);
-      reactFlowInstance.setViewport(flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 });
+      reactFlowInstance.setViewport(
+        flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 }
+      );
     }
 
     // Clear the previous timeout
@@ -177,30 +181,10 @@ export default function Page({
     };
   }, [flow, reactFlowInstance]);
 
-  const onConnect = useCallback(
+  const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...params,
-            data: {
-              targetHandle: scapeJSONParse(params.targetHandle!),
-              sourceHandle: scapeJSONParse(params.sourceHandle!),
-            },
-            style: { stroke: "#555" },
-            className:
-              ((scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text"
-                ? "stroke-foreground "
-                : "stroke-foreground ") + " stroke-connection",
-            animated:
-              (scapeJSONParse(params.targetHandle!) as targetHandleType)
-                .type === "Text",
-          },
-          eds
-        )
-      );
+      onConnect(params);
     },
     [setEdges, takeSnapshot, addEdge]
   );
@@ -236,10 +220,6 @@ export default function Page({
       event.preventDefault();
       if (event.dataTransfer.types.some((types) => types === "nodedata")) {
         takeSnapshot();
-
-        // Get the current bounds of the ReactFlow wrapper element
-        const reactflowBounds =
-          reactFlowWrapper.current?.getBoundingClientRect();
 
         // Extract the data from the drag event and parse it as a JSON object
         let data: { type: string; node?: APIClassType } = JSON.parse(
@@ -370,10 +350,9 @@ export default function Page({
   }, []);
 
   const onMove = useCallback(() => {
-    if(!isPending)
-      setPending(true);
+    if (!isPending) setPending(true);
   }, [setPending]);
-
+  
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}
@@ -399,7 +378,7 @@ export default function Page({
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
+                  onConnect={onConnectMod}
                   disableKeyboardA11y={true}
                   onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
@@ -479,9 +458,7 @@ export default function Page({
                     }}
                   />
                 </ReactFlow>
-                {!view && (
-                  <Chat flow={flow} />
-                )}
+                {!view && <Chat flow={flow} />}
               </div>
             ) : (
               <></>

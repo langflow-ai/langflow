@@ -9,11 +9,14 @@ import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
+import useFlow from "../../stores/flowManagerStore";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const { tabsState, isBuilt, setIsBuilt, isPending } = useContext(FlowsContext);
+  const { isBuilt, setIsBuilt, isPending } = useFlow();
+  const { tabsState } =
+    useContext(FlowsContext);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

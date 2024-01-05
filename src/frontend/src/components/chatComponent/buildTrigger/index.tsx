@@ -3,7 +3,6 @@ import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { useSSE } from "../../../contexts/SSEContext";
 import { alertContext } from "../../../contexts/alertContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
@@ -13,6 +12,7 @@ import { FlowsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
+import useFlow from "../../../stores/flowManagerStore";
 
 export default function BuildTrigger({
   open,
@@ -25,7 +25,8 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { setTabsState, saveFlow, nodes, edges } = useContext(FlowsContext);
+  const { setTabsState, saveFlow } = useContext(FlowsContext);
+  const { nodes, edges } = useFlow();
   const { setErrorData, setSuccessData } = useContext(alertContext);
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -36,10 +37,7 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(
-        nodes,
-        edges
-      );
+      const errors = validateNodes(nodes, edges);
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",

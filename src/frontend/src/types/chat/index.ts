@@ -1,6 +1,6 @@
 import { FlowType } from "../flow";
 
-export type ChatType = { flow: FlowType; };
+export type ChatType = { flow: FlowType };
 export type ChatMessageType = {
   message: string | Object;
   template?: string;

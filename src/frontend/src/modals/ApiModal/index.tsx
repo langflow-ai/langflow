@@ -48,7 +48,8 @@ const ApiModal = forwardRef(
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
-    const { setTweak, getTweak, tabsState } = useContext(FlowsContext);
+    const { tabsState } = useContext(FlowsContext);
+    const [getTweak, setTweak] = useState<tweakType>([]);
     const pythonApiCode = getPythonApiCode(
       flow,
       autoLogin,

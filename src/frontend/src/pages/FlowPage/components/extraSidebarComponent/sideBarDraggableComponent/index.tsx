@@ -12,6 +12,7 @@ import { APIClassType } from "../../../../../types/api";
 import {
   createFlowComponent,
   downloadNode,
+  getNodeId,
 } from "../../../../../utils/reactflowUtils";
 import { removeCountFromString } from "../../../../../utils/utils";
 
@@ -35,7 +36,7 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { getNodeId, deleteComponent, version } = useContext(FlowsContext);
+  const { deleteComponent, version } = useContext(FlowsContext);
   const { autoLogin, userData } = useContext(AuthContext);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const popoverRef = useRef<HTMLDivElement>(null);

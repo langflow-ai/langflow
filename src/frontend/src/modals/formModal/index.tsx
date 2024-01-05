@@ -1,6 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { alertContext } from "../../contexts/alertContext";
-import { typesContext } from "../../contexts/typesContext";
 import { sendAllProps } from "../../types/api";
 import { ChatMessageType } from "../../types/chat";
 import { FlowType } from "../../types/flow";
@@ -26,6 +25,7 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
+import useFlow from "../../stores/flowManagerStore";
 import { FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
@@ -38,7 +38,8 @@ export default function FormModal({
   setOpen: (open: boolean) => void;
   flow: FlowType;
 }): JSX.Element {
-  const { tabsState, setTabsState, nodes, edges } = useContext(FlowsContext);
+  const { tabsState, setTabsState } = useContext(FlowsContext);
+  const { nodes, edges } = useFlow();
   const [chatValue, setChatValue] = useState(() => {
     try {
       const { formKeysData } = tabsState[flow.id];
@@ -383,10 +384,7 @@ export default function FormModal({
   }, [open]);
 
   function sendMessage(): void {
-    let nodeValidationErrors = validateNodes(
-      nodes,
-      edges
-    );
+    let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       let inputs = tabsState[id.current].formKeysData.input_keys;
