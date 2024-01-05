@@ -300,7 +300,7 @@ export default function ParameterComponent({
   ) : (
     <div
       ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between relative bg-muted px-5 py-2"
+      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
         <div
