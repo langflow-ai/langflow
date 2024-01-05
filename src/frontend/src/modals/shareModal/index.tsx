@@ -23,6 +23,7 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import useAlertStore from "../../stores/alertStore";
 
 export default function ShareModal({
   component,
@@ -43,8 +44,8 @@ export default function ShareModal({
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
-  const { setSuccessData, setErrorData } = useContext(alertContext);
-  const [internalOpen, internalSetOpen] = useState(children ? false : true);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);  const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";
 

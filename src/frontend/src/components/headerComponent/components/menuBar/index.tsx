@@ -15,10 +15,11 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import useAlertStore from "../../../../stores/alertStore";
 
 export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
   const { addFlow } = useContext(FlowsContext);
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
 

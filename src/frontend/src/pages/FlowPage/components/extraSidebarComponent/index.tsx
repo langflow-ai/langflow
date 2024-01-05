@@ -25,6 +25,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import useAlertStore from "../../../../stores/alertStore";
 
 export default function ExtraSidebar(): JSX.Element {
   const { data, templates, getFilterEdge, setFilterEdge } =
@@ -37,7 +38,7 @@ export default function ExtraSidebar(): JSX.Element {
 
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const isPending = useFlowStore((state) => state.isPending);
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
   function onDragStart(

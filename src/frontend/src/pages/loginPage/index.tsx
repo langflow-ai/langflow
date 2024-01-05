@@ -5,9 +5,9 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { getLoggedUser, onLogin } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
@@ -22,7 +22,7 @@ export default function LoginPage(): JSX.Element {
   const { login, getAuthentication, setUserData, setIsAdmin } =
     useContext(AuthContext);
   const navigate = useNavigate();
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function handleInput({
     target: { name, value },

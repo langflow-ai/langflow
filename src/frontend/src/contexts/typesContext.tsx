@@ -12,6 +12,7 @@ import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
 import { alertContext } from "./alertContext";
 import { AuthContext } from "./authContext";
+import useAlertStore from "../stores/alertStore";
 
 //context to share types adn functions from nodes to flow
 
@@ -35,7 +36,7 @@ export function TypesProvider({ children }: { children: ReactNode }) {
   const [templates, setTemplates] = useState({});
   const [data, setData] = useState({});
   const [fetchError, setFetchError] = useState(false);
-  const { setLoading } = useContext(alertContext);
+  const setLoading = useAlertStore((state) => state.setLoading);
   const { getAuthentication } = useContext(AuthContext);
   const [getFilterEdge, setFilterEdge] = useState([]);
 

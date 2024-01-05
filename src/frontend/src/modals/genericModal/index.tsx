@@ -19,6 +19,7 @@ import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import useAlertStore from "../../stores/alertStore";
 
 export default function GenericModal({
   field_name = "",
@@ -40,8 +41,9 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
-  const { setErrorData, setSuccessData, setNoticeData, setModalContextOpen } =
-    useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
@@ -154,10 +156,6 @@ export default function GenericModal({
         });
       });
   }
-
-  useEffect(() => {
-    setModalContextOpen(modalOpen);
-  }, [modalOpen]);
 
   return (
     <BaseModal

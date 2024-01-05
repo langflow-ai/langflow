@@ -61,8 +61,6 @@ const EditNodeModal = forwardRef(
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
 
-    const { setModalContextOpen } = useContext(alertContext);
-
     function changeAdvanced(n) {
       setMyData((old) => {
         let newData = cloneDeep(old);
@@ -84,7 +82,6 @@ const EditNodeModal = forwardRef(
       if (open) {
         setMyData(data); // reset data to what it is on node when opening modal
       }
-      setModalContextOpen(open);
     }, [open]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);

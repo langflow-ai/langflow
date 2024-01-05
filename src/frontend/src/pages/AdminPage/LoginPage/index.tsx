@@ -11,6 +11,7 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
+import useAlertStore from "../../../stores/alertStore";
 
 export default function LoginAdminPage() {
   const navigate = useNavigate();
@@ -20,8 +21,7 @@ export default function LoginAdminPage() {
   const { login, getAuthentication, setUserData } = useContext(AuthContext);
 
   const { password, username } = inputState;
-  const { setErrorData } = useContext(alertContext);
-
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {

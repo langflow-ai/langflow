@@ -8,16 +8,23 @@ import {
 import { alertContext } from "../../contexts/alertContext";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
+import useAlertStore from "../../stores/alertStore";
 
 export default function AlertDropdown({
   children,
 }: AlertDropdownType): JSX.Element {
-  const {
-    notificationList,
-    clearNotificationList,
-    removeFromNotificationList,
-    setNotificationCenter,
-  } = useContext(alertContext);
+
+  const notificationList = useAlertStore((state) => state.notificationList);
+  const clearNotificationList = useAlertStore(
+    (state) => state.clearNotificationList
+  );
+  const removeFromNotificationList = useAlertStore(
+    (state) => state.removeFromNotificationList
+  );
+  const setNotificationCenter = useAlertStore(
+    (state) => state.setNotificationCenter
+  );
+
 
   const [open, setOpen] = useState(false);
 

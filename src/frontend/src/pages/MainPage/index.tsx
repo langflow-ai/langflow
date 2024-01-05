@@ -7,12 +7,13 @@ import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { FlowsContext } from "../../contexts/flowsContext";
+import useAlertStore from "../../stores/alertStore";
 export default function HomePage(): JSX.Element {
   const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
     useContext(FlowsContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const location = useLocation();
   const pathname = location.pathname;
   const is_component = pathname === "/components";

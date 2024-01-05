@@ -26,11 +26,12 @@ import {
   LAST_USED_SPAN_2,
 } from "../../constants/constants";
 import { ApiKey } from "../../types/components";
+import useAlertStore from "../../stores/alertStore";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { userData } = useContext(AuthContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);  const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
   const keysList = useRef([]);
 

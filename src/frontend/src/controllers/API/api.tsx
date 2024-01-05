@@ -3,8 +3,8 @@ import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
+import useAlertStore from "../../stores/alertStore";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -12,7 +12,7 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, login, logout, authenticationErrorCount } =
     useContext(AuthContext);
   const navigate = useNavigate();

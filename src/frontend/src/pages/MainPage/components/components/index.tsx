@@ -6,8 +6,8 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import { alertContext } from "../../../../contexts/alertContext";
 import { FlowsContext } from "../../../../contexts/flowsContext";
+import useAlertStore from "../../../../stores/alertStore";
 import { FlowType } from "../../../../types/flow";
 
 export default function ComponentsComponent({
@@ -17,7 +17,8 @@ export default function ComponentsComponent({
 }) {
   const { flows, removeFlow, uploadFlow, addFlow, isLoading } =
     useContext(FlowsContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);

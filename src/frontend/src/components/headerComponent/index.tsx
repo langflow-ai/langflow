@@ -22,10 +22,11 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import useAlertStore from "../../stores/alertStore";
 
 export default function Header(): JSX.Element {
   const { flows, tabId } = useContext(FlowsContext);
-  const { notificationCenter } = useContext(alertContext);
+  const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const navigate = useNavigate();

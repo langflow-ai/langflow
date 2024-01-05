@@ -15,6 +15,7 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
+import useAlertStore from "../../stores/alertStore";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -23,7 +24,8 @@ export default function SignUp(): JSX.Element {
   const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
   const { password, cnfPassword, username } = inputState;
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const navigate = useNavigate();
 
   function handleInput({

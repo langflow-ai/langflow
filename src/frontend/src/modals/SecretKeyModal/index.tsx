@@ -8,6 +8,7 @@ import { createApiKey } from "../../controllers/API";
 import { ApiKeyType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import useAlertStore from "../../stores/alertStore";
 
 export default function SecretKeyModal({
   title,
@@ -24,7 +25,7 @@ export default function SecretKeyModal({
   const [apiKeyValue, setApiKeyValue] = useState("");
   const [renderKey, setRenderKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
-  const { setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {

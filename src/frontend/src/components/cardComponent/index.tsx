@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import useAlertStore from "../../stores/alertStore";
 
 export default function CollectionCardComponent({
   data,
@@ -33,7 +34,8 @@ export default function CollectionCardComponent({
   onDelete?: () => void;
 }) {
   const { addFlow } = useContext(FlowsContext);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
   const isStore = false;
   const [loading, setLoading] = useState(false);
