@@ -237,31 +237,17 @@ export default function Page({
         let newId = getNodeId(type);
         let newNode: NodeType;
 
-        if (data.type !== "groupNode") {
-          // Create a new node object
-          newNode = {
+        // Create a new node object
+        newNode = {
+          id: newId,
+          type: "genericNode",
+          position,
+          data: {
+            ...data,
             id: newId,
-            type: "genericNode",
-            position,
-            data: {
-              ...data,
-              id: newId,
-            },
-          };
-        } else {
-          // Create a new node object
-          newNode = {
-            id: newId,
-            type: "genericNode",
-            position,
-            data: {
-              ...data,
-              id: newId,
-            },
-          };
+          },
+        };
 
-          // Add the new node to the list of nodes in state
-        }
         setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
