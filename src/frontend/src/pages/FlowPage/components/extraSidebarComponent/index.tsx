@@ -290,10 +290,9 @@ export default function ExtraSidebar(): JSX.Element {
           {flow && flow.data && (
             <ShadTooltip content="Save" side="top">
               <button
-                disabled={flow?.data?.nodes.length === 0}
                 className={
                   "extra-side-bar-buttons " +
-                  (isPending && flow!.data!.nodes?.length > 0
+                  (isPending 
                     ? ""
                     : "button-disable")
                 }
@@ -305,7 +304,7 @@ export default function ExtraSidebar(): JSX.Element {
                   name="Save"
                   className={
                     "side-bar-button-size" +
-                    (isPending && flow!.data!.nodes?.length > 0
+                    (isPending 
                       ? " "
                       : " extra-side-bar-save-disable")
                   }
