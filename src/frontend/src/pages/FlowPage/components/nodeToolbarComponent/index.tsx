@@ -51,7 +51,9 @@ export default function NodeToolbarComponent({
     ).length
   );
 
-  const { hasStore, hasApiKey, validApiKey } = useStoreStore();
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
 
   function canMinimize() {
     let countHandles: number = 0;
