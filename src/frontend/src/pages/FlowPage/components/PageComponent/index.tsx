@@ -26,7 +26,7 @@ import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
-import useFlow from "../../../../stores/flowManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import {
@@ -63,20 +63,20 @@ export default function Page({
 
   const { takeSnapshot } = useContext(undoRedoContext);
 
-  const reactFlowInstance = useFlow((state) => state.reactFlowInstance);
-  const setReactFlowInstance = useFlow((state) => state.setReactFlowInstance);
-  const nodes = useFlow((state) => state.nodes);
-  const edges = useFlow((state) => state.edges);
-  const onNodesChange = useFlow((state) => state.onNodesChange);
-  const onEdgesChange = useFlow((state) => state.onEdgesChange);
-  const onConnect = useFlow((state) => state.onConnect);
-  const setNodes = useFlow((state) => state.setNodes);
-  const setEdges = useFlow((state) => state.setEdges);
-  const deleteNode = useFlow((state) => state.deleteNode);
-  const deleteEdge = useFlow((state) => state.deleteEdge);
-  const setPending = useFlow((state) => state.setPending);
-  const isPending = useFlow((state) => state.isPending);
-  const paste = useFlow((state) => state.paste);
+  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
+  const setReactFlowInstance = useFlowStore((state) => state.setReactFlowInstance);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const onNodesChange = useFlowStore((state) => state.onNodesChange);
+  const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
+  const onConnect = useFlowStore((state) => state.onConnect);
+  const setNodes = useFlowStore((state) => state.setNodes);
+  const setEdges = useFlowStore((state) => state.setEdges);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
+  const deleteEdge = useFlowStore((state) => state.deleteEdge);
+  const setPending = useFlowStore((state) => state.setPending);
+  const isPending = useFlowStore((state) => state.isPending);
+  const paste = useFlowStore((state) => state.paste);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =

@@ -38,7 +38,7 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import useFlow from "../../stores/flowManagerStore";
+import useFlowStore from "../../stores/flowStore";
 
 const EditNodeModal = forwardRef(
   (
@@ -57,10 +57,10 @@ const EditNodeModal = forwardRef(
   ) => {
     const [myData, setMyData] = useState(data);
 
-    const setPending = useFlow((state) => state.setPending);
-    const edges = useFlow((state) => state.edges);
-    const setNode = useFlow((state) => state.setNode);
-    
+    const setPending = useFlowStore((state) => state.setPending);
+    const edges = useFlowStore((state) => state.edges);
+    const setNode = useFlowStore((state) => state.setNode);
+
     const { setModalContextOpen } = useContext(alertContext);
 
     function changeAdvanced(n) {

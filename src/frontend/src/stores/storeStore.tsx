@@ -1,21 +1,8 @@
 import { create } from "zustand";
 import { checkHasApiKey, checkHasStore } from "../controllers/API";
+import { StoreStoreType } from "../types/zustand/store";
 
-type State = {
-  hasStore: boolean;
-  validApiKey: boolean;
-  hasApiKey: boolean;
-  loadingApiKey: boolean;
-};
-
-type Action = {
-  updateHasStore: (hasStore: State["hasStore"]) => void;
-  updateValidApiKey: (validApiKey: State["validApiKey"]) => void;
-  updateHasApiKey: (hasApiKey: State["hasApiKey"]) => void;
-  updateLoadingApiKey: (loadingApiKey: State["loadingApiKey"]) => void;
-};
-
-export const useStoreStore = create<State & Action>((set) => ({
+export const useStoreStore = create<StoreStoreType>((set) => ({
   hasStore: true,
   validApiKey: false,
   hasApiKey: false,

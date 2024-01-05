@@ -10,7 +10,7 @@ import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
-import useFlow from "../../../../stores/flowManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
@@ -35,8 +35,8 @@ export default function ExtraSidebar(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  const isBuilt = useFlow((state) => state.isBuilt);
-  const isPending = useFlow((state) => state.isPending);
+  const isBuilt = useFlowStore((state) => state.isBuilt);
+  const isPending = useFlowStore((state) => state.isPending);
   const { setErrorData } = useContext(alertContext);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");

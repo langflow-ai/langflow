@@ -9,14 +9,14 @@ import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import { NodeType } from "../../types/flow";
-import useFlow from "../../stores/flowManagerStore";
+import useFlowStore from "../../stores/flowStore";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
-  const isBuilt = useFlow((state) => state.isBuilt);
-  const setIsBuilt = useFlow((state) => state.setIsBuilt);
-  const isPending = useFlow((state) => state.isPending);
+  const isBuilt = useFlowStore((state) => state.isBuilt);
+  const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
+  const isPending = useFlowStore((state) => state.isPending);
   const { tabsState } =
     useContext(FlowsContext);
 
