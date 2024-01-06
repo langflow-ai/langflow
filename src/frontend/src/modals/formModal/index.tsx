@@ -6,7 +6,7 @@ import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import AccordionComponent from "../../components/AccordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
@@ -22,11 +22,11 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { FlowsState } from "../../types/tabs";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { FlowState, FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
@@ -38,12 +38,17 @@ export default function FormModal({
   setOpen: (open: boolean) => void;
   flow: FlowType;
 }): JSX.Element {
-  const { tabsState, setTabsState } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const currentFlowState = useFlowsManagerStore(
+    (state) => state.currentFlowState
+  );
+  const setCurrentFlowState = useFlowsManagerStore(
+    (state) => state.setCurrentFlowState
+  );
   const [chatValue, setChatValue] = useState(() => {
     try {
-      const { formKeysData } = tabsState[flow.id];
+      const formKeysData = currentFlowState?.formKeysData;
       if (!formKeysData) {
         throw new Error("formKeysData is undefined");
       }
@@ -63,23 +68,20 @@ export default function FormModal({
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
-  const template = useRef(tabsState[flow.id].formKeysData.template);
+  const template = useRef(currentFlowState?.formKeysData.template ?? undefined);
   const { accessToken } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const ws = useRef<WebSocket | null>(null);
   const [lockChat, setLockChat] = useState(false);
   const isOpen = useRef(open);
   const messagesRef = useRef<HTMLDivElement | null>(null);
-  const id = useRef(flow.id);
-  const tabsStateFlowId = tabsState[flow.id];
-  const tabsStateFlowIdFormKeysData = tabsStateFlowId.formKeysData;
+
   const [chatKey, setChatKey] = useState(() => {
-    if (tabsState[flow.id]?.formKeysData?.input_keys) {
-      return Object.keys(tabsState[flow.id].formKeysData.input_keys!).find(
+    if (currentFlowState?.formKeysData?.input_keys) {
+      return Object.keys(currentFlowState.formKeysData.input_keys!).find(
         (key) =>
-          !tabsState[flow.id].formKeysData.handle_keys!.some(
-            (j) => j === key
-          ) && tabsState[flow.id].formKeysData.input_keys![key] === ""
+          !currentFlowState.formKeysData.handle_keys!.some((j) => j === key) &&
+          currentFlowState.formKeysData.input_keys![key] === ""
       );
     }
     // TODO: return a sensible default
@@ -94,9 +96,6 @@ export default function FormModal({
   useEffect(() => {
     isOpen.current = open;
   }, [open]);
-  useEffect(() => {
-    id.current = flow.id;
-  }, [flow.id, tabsStateFlowId, tabsStateFlowIdFormKeysData]);
 
   var isStream = false;
 
@@ -297,7 +296,7 @@ export default function FormModal({
   function connectWS(): void {
     try {
       const urlWs = getWebSocketUrl(
-        id.current,
+        flow.id,
         process.env.NODE_ENV === "development"
       );
       const newWs = new WebSocket(urlWs);
@@ -388,7 +387,7 @@ export default function FormModal({
     let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
-      let inputs = tabsState[id.current].formKeysData.input_keys;
+      let inputs = currentFlowState?.formKeysData.input_keys;
       setChatValue("");
       const message = inputs;
       addChatHistory(message!, true, chatKey!, template.current);
@@ -400,12 +399,13 @@ export default function FormModal({
         description: flow.description,
         chatKey: chatKey!,
       });
-      setTabsState((old: FlowsState) => {
-        if (!chatKey) return old;
-        let newTabsState = _.cloneDeep(old);
-        newTabsState[id.current].formKeysData.input_keys![chatKey] = "";
-        return newTabsState;
-      });
+      if (currentFlowState && chatKey) {
+        setCurrentFlowState((old: FlowState | undefined) => {
+          let newFlowState = cloneDeep(old!);
+          newFlowState.formKeysData.input_keys![chatKey] = "";
+          return newFlowState;
+        });
+      }
     } else {
       setErrorData({
         title: "Oops! Looks like you missed some required information:",
@@ -415,7 +415,7 @@ export default function FormModal({
   }
   function clearChat(): void {
     setChatHistory([]);
-    template.current = tabsState[id.current].formKeysData.template;
+    template.current = currentFlowState?.formKeysData.template;
     ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
@@ -423,7 +423,7 @@ export default function FormModal({
   function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
       setChatKey(i);
-      setChatValue(tabsState[flow.id].formKeysData.input_keys![i]);
+      setChatValue(currentFlowState?.formKeysData.input_keys![i] ?? "");
     } else {
       setChatKey(null!);
       setChatValue("");
@@ -432,7 +432,7 @@ export default function FormModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger hidden></DialogTrigger>
-      {tabsState[flow.id].formKeysData && (
+      {currentFlowState && currentFlowState.formKeysData && (
         <DialogContent className="min-w-[80vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
@@ -468,106 +468,103 @@ export default function FormModal({
                 </div>
               </div>
 
-              {tabsState[id.current]?.formKeysData?.input_keys
-                ? Object.keys(
-                    tabsState[id.current].formKeysData.input_keys!
-                  ).map((key, index) => (
-                    <div className="file-component-accordion-div" key={index}>
-                      <AccordionComponent
-                        trigger={
-                          <div className="file-component-badge-div">
-                            <Badge variant="gray" size="md">
-                              {key}
-                            </Badge>
+              {currentFlowState?.formKeysData?.input_keys
+                ? Object.keys(currentFlowState?.formKeysData.input_keys!).map(
+                    (key, index) => (
+                      <div className="file-component-accordion-div" key={index}>
+                        <AccordionComponent
+                          trigger={
+                            <div className="file-component-badge-div">
+                              <Badge variant="gray" size="md">
+                                {key}
+                              </Badge>
 
-                            <div
-                              className="-mb-1"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                              }}
-                            >
-                              <ToggleShadComponent
-                                enabled={chatKey === key}
-                                setEnabled={(value) =>
-                                  handleOnCheckedChange(value, key)
+                              <div
+                                className="-mb-1"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                }}
+                              >
+                                <ToggleShadComponent
+                                  enabled={chatKey === key}
+                                  setEnabled={(value) =>
+                                    handleOnCheckedChange(value, key)
+                                  }
+                                  size="small"
+                                  disabled={currentFlowState.formKeysData.handle_keys!.some(
+                                    (t) => t === key
+                                  )}
+                                />
+                              </div>
+                            </div>
+                          }
+                          key={index}
+                          keyValue={key}
+                        >
+                          <div className="file-component-tab-column">
+                            {currentFlowState?.formKeysData.handle_keys!.some(
+                              (t) => t === key
+                            ) && (
+                              <div className="font-normal text-muted-foreground ">
+                                Source: Component
+                              </div>
+                            )}
+                            <Textarea
+                              className="custom-scroll"
+                              value={
+                                currentFlowState?.formKeysData.input_keys![key]
+                              }
+                              onChange={(e) => {
+                                if (currentFlowState) {
+                                  setCurrentFlowState(
+                                    (old: FlowState | undefined) => {
+                                      let newFlowState = cloneDeep(old!);
+                                      newFlowState.formKeysData.input_keys![
+                                        key
+                                      ] = e.target.value;
+                                      return newFlowState;
+                                    }
+                                  );
                                 }
-                                size="small"
-                                disabled={tabsState[
-                                  id.current
-                                ].formKeysData.handle_keys!.some(
-                                  (t) => t === key
-                                )}
-                              />
-                            </div>
+                              }}
+                              disabled={chatKey === key}
+                              placeholder="Enter text..."
+                            ></Textarea>
                           </div>
-                        }
-                        key={index}
-                        keyValue={key}
-                      >
-                        <div className="file-component-tab-column">
-                          {tabsState[id.current].formKeysData.handle_keys!.some(
-                            (t) => t === key
-                          ) && (
-                            <div className="font-normal text-muted-foreground ">
-                              Source: Component
-                            </div>
-                          )}
-                          <Textarea
-                            className="custom-scroll"
-                            value={
-                              tabsState[id.current].formKeysData.input_keys![
-                                key
-                              ]
-                            }
-                            onChange={(e) => {
-                              setTabsState((old: FlowsState) => {
-                                let newTabsState = _.cloneDeep(old);
-                                newTabsState[
-                                  id.current
-                                ].formKeysData.input_keys![key] =
-                                  e.target.value;
-                                return newTabsState;
-                              });
-                            }}
-                            disabled={chatKey === key}
-                            placeholder="Enter text..."
-                          ></Textarea>
-                        </div>
-                      </AccordionComponent>
-                    </div>
-                  ))
+                        </AccordionComponent>
+                      </div>
+                    )
+                  )
                 : null}
-              {tabsState[id.current].formKeysData.memory_keys!.map(
-                (key, index) => (
-                  <div className="file-component-accordion-div" key={index}>
-                    <AccordionComponent
-                      trigger={
-                        <div className="file-component-badge-div">
-                          <Badge variant="gray" size="md">
-                            {key}
-                          </Badge>
-                          <div className="-mb-1">
-                            <ToggleShadComponent
-                              enabled={chatKey === key}
-                              setEnabled={() => {}}
-                              size="small"
-                              disabled={true}
-                            />
-                          </div>
-                        </div>
-                      }
-                      key={index}
-                      keyValue={key}
-                    >
-                      <div className="file-component-tab-column">
-                        <div className="font-normal text-muted-foreground ">
-                          Source: Memory
+              {currentFlowState?.formKeysData.memory_keys!.map((key, index) => (
+                <div className="file-component-accordion-div" key={index}>
+                  <AccordionComponent
+                    trigger={
+                      <div className="file-component-badge-div">
+                        <Badge variant="gray" size="md">
+                          {key}
+                        </Badge>
+                        <div className="-mb-1">
+                          <ToggleShadComponent
+                            enabled={chatKey === key}
+                            setEnabled={() => {}}
+                            size="small"
+                            disabled={true}
+                          />
                         </div>
                       </div>
-                    </AccordionComponent>
-                  </div>
-                )
-              )}
+                    }
+                    key={index}
+                    keyValue={key}
+                  >
+                    <div className="file-component-tab-column">
+                      <div className="font-normal text-muted-foreground ">
+                        Source: Memory
+                      </div>
+                    </div>
+                  </AccordionComponent>
+                </div>
+              ))}
             </div>
             <div className="eraser-column-arrangement">
               <div className="eraser-size">
@@ -631,13 +628,17 @@ export default function FormModal({
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
-                        setTabsState((old: FlowsState) => {
-                          let newTabsState = _.cloneDeep(old);
-                          newTabsState[id.current].formKeysData.input_keys![
-                            chatKey!
-                          ] = value;
-                          return newTabsState;
-                        });
+                        if (currentFlowState && chatKey) {
+                          setCurrentFlowState(
+                            (old: FlowState | undefined) => {
+                              let newFlowState = cloneDeep(old!);
+                              newFlowState.formKeysData.input_keys![
+                                chatKey
+                              ] = value;
+                              return newFlowState;
+                            }
+                          );
+                        }
                       }}
                       inputRef={ref}
                     />

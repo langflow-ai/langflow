@@ -8,8 +8,9 @@ import { FlowType } from "../../../types/flow";
 import { FlowsContext } from "../../../contexts/flowsContext";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { parsedDataType } from "../../../types/components";
-import { FlowsState } from "../../../types/tabs";
+import { FlowState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -25,11 +26,14 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { setTabsState, saveFlow } = useContext(FlowsContext);
+  const { saveFlow } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setCurrentFlowState = useFlowsManagerStore(
+    (state) => state.setCurrentFlowState
+  );
 
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -99,15 +103,7 @@ export default function BuildTrigger({
           // If the event is a log, log it
           setSuccessData({ title: parsedData.log });
         } else if (parsedData.input_keys !== undefined) {
-          setTabsState((old: FlowsState) => {
-            return {
-              ...old,
-              [flowId]: {
-                ...old[flowId],
-                formKeysData: parsedData,
-              },
-            };
-          });
+          setCurrentFlowState(parsedData);
         } else {
           // Otherwise, process the data
           const isValid = processStreamResult(parsedData);
