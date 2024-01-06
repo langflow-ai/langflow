@@ -100,7 +100,6 @@ export default function Page({
           event.preventDefault(); // prevent the default action
           redo();
         } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
-          console.log("nao era pra tar aqui");
           event.preventDefault();
           undo();
         }
