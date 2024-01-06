@@ -22,6 +22,7 @@ import { getHealth, getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useTypesStore } from "./stores/typesStore";
+import { useDarkStore } from "./stores/darkStore";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -130,7 +131,8 @@ export default function App() {
   };
 
   const { isAuthenticated } = useContext(AuthContext);
-  const { refreshFlows, setVersion } = useContext(FlowsContext);
+  const { refreshFlows } = useContext(FlowsContext);
+  const setVersion = useDarkStore((state) => state.setVersion);
   const getTypes = useTypesStore((state) => state.getTypes);
 
   useEffect(() => {

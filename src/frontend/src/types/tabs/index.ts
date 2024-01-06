@@ -55,14 +55,16 @@ export type FlowsContextType = {
 };
 
 export type FlowsState = {
-  [key: string]: {
-    isPending: boolean;
-    formKeysData: {
-      template?: string;
-      input_keys?: Object;
-      memory_keys?: Array<string>;
-      handle_keys?: Array<string>;
-    };
+  [key: string]: FlowState;
+};
+
+export type FlowState = {
+  isPending: boolean;
+  formKeysData: {
+    template?: string;
+    input_keys?: Object;
+    memory_keys?: Array<string>;
+    handle_keys?: Array<string>;
   };
 };
 

@@ -8,10 +8,12 @@ import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { useDarkStore } from "../../stores/darkStore";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow, version } = useContext(FlowsContext);
+    const { flows, tabId, downloadFlow  } = useContext(FlowsContext);
+    const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(true);
     const flow = flows.find((f) => f.id === tabId);

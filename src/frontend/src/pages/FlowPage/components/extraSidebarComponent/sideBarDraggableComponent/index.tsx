@@ -15,6 +15,7 @@ import {
   getNodeId,
 } from "../../../../../utils/reactflowUtils";
 import { removeCountFromString } from "../../../../../utils/utils";
+import { useDarkStore } from "../../../../../stores/darkStore";
 
 export default function SidebarDraggableComponent({
   sectionName,
@@ -36,8 +37,8 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { deleteComponent, version } = useContext(FlowsContext);
-  const { autoLogin, userData } = useContext(AuthContext);
+  const { deleteComponent } = useContext(FlowsContext);
+  const version = useDarkStore((state) => state.version);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const popoverRef = useRef<HTMLDivElement>(null);
 

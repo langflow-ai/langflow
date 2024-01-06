@@ -12,6 +12,8 @@ export const useDarkStore = create<DarkStoreType>((set) => ({
   dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
   stars: 0,
   gradientIndex: gradientIndexInitialState(),
+  version: "",
+  setVersion: (version) => set(() => ({ version: version })),
   setDark: (dark) => set(() => ({ dark: dark })),
   setStars: (starts) => set(() => ({ stars: starts })),
   setGradientIndex: (gradientIndex) =>

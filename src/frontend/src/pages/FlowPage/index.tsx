@@ -3,9 +3,11 @@ import { useParams } from "react-router-dom";
 import Header from "../../components/headerComponent";
 import { FlowsContext } from "../../contexts/flowsContext";
 import Page from "./components/PageComponent";
+import { useDarkStore } from "../../stores/darkStore";
 
 export default function FlowPage(): JSX.Element {
-  const { flows, tabId, setTabId, version } = useContext(FlowsContext);
+  const { flows, tabId, setTabId } = useContext(FlowsContext);
+  const version = useDarkStore((state) => state.version);
   const { id } = useParams();
 
   // Set flow tab id
