@@ -429,7 +429,6 @@ export async function getLoggedUser(): Promise<Users | null> {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return null;
@@ -443,7 +442,6 @@ export async function addUser(user: UserInputType): Promise<Array<Users>> {
     }
     return res.data;
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -460,7 +458,6 @@ export async function getUsersPage(
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return [];
@@ -473,7 +470,6 @@ export async function deleteUser(user_id: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -485,7 +481,6 @@ export async function updateUser(user_id: string, user: changeUser) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -500,7 +495,6 @@ export async function resetPassword(user_id: string, user: resetPasswordType) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -512,7 +506,6 @@ export async function getApiKey() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -524,7 +517,6 @@ export async function createApiKey(name: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -536,7 +528,6 @@ export async function deleteApiKey(api_key: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -550,7 +541,6 @@ export async function addApiKeyStore(key: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -684,7 +674,6 @@ export async function getStoreComponents({
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -696,7 +685,6 @@ export async function postStoreComponents(component: Component) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -710,7 +698,6 @@ export async function getComponent(component_id: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -750,7 +737,6 @@ export async function searchComponent(
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -762,7 +748,6 @@ export async function checkHasApiKey() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -774,7 +759,6 @@ export async function checkHasStore() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -797,7 +781,6 @@ export async function getCountComponents(is_component?: boolean | null) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -809,7 +792,6 @@ export async function getStoreTags() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
