@@ -122,24 +122,21 @@ export default function GenericModal({
         }
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
+          if (
+            JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
+          ) {
+            setNodeClass!(apiReturn.data?.frontend_node, inputValue);
+            setModalOpen(closeModal);
+            setIsEdit(false);
+          }
           if (!inputVariables || inputVariables.length === 0) {
-            setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
             });
-            setModalOpen(false);
           } else {
-            if (
-              JSON.stringify(apiReturn.data?.frontend_node) !==
-              JSON.stringify({})
-            ) {
-              setNodeClass!(apiReturn.data?.frontend_node, inputValue);
-              setModalOpen(closeModal);
-              setIsEdit(false);
-              setSuccessData({
-                title: "Prompt is ready",
-              });
-            }
+            setSuccessData({
+              title: "Prompt is ready",
+            });
           }
         } else {
           setIsEdit(true);

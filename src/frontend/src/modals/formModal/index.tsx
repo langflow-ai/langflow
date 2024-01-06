@@ -146,13 +146,14 @@ export default function FormModal({
             newChat[newChat.length - 1].message + str;
         }
       }
-      if (thought) {
+
+      if (thought && newChat[newChat.length - 1]?.thought) {
         newChat[newChat.length - 1].thought = thought;
       }
-      if (files) {
+      if (files && newChat[newChat.length - 1]?.files) {
         newChat[newChat.length - 1].files = files;
       }
-      if (prompt) {
+      if (prompt && newChat[newChat.length - 2]?.template) {
         newChat[newChat.length - 2].template = prompt;
       }
       return newChat;
