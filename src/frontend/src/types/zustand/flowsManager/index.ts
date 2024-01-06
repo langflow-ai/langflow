@@ -11,4 +11,5 @@ export type FlowsManagerStoreType = {
   flowsState: FlowsState;
   currentFlowState: FlowState | undefined;
   setCurrentFlowState: (state: FlowState | ((oldState: FlowState | undefined) => FlowState)) => void;
+  refreshFlows: () => Promise<void>;
 };

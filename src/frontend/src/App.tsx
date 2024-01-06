@@ -23,6 +23,7 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useTypesStore } from "./stores/typesStore";
 import { useDarkStore } from "./stores/darkStore";
+import useFlowsManagerStore from "./stores/flowsManagerStore";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -131,7 +132,7 @@ export default function App() {
   };
 
   const { isAuthenticated } = useContext(AuthContext);
-  const { refreshFlows } = useContext(FlowsContext);
+  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
   const setVersion = useDarkStore((state) => state.setVersion);
   const getTypes = useTypesStore((state) => state.getTypes);
 
