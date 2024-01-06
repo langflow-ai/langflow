@@ -415,6 +415,19 @@ export function handleKeyDown(
   }
 }
 
+export function handleOnlyIntegerInput(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (
+    event.key === "." ||
+    event.key === "-" ||
+    event.key === "," ||
+    event.key === "e" ||
+    event.key === "E" ||
+    event.key === "+"
+  ) {
+    event.preventDefault();
+  }
+}
+
 export function getConnectedNodes(
   edge: Edge,
   nodes: Array<NodeType>
