@@ -112,6 +112,8 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
+    
+    data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
 
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
