@@ -6,7 +6,7 @@ import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
 import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
+import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
 import {
   Table,
@@ -308,6 +308,7 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
+                              size="x-small"
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -330,10 +331,9 @@ export default function AdminPage() {
                                   you are making to this user?
                                 </span>
                               </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger asChild>
+                              <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <Checkbox
-                                    id="is_active"
+                                  <CheckBoxDiv
                                     checked={user.is_active}
                                   />
                                 </div>
@@ -342,6 +342,7 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
+                              size="x-small"
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -364,10 +365,9 @@ export default function AdminPage() {
                                   you are making to this user?
                                 </span>
                               </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger asChild>
+                              <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <Checkbox
-                                    id="is_superuser"
+                                  <CheckBoxDiv
                                     checked={user.is_superuser}
                                   />
                                 </div>
@@ -411,6 +411,7 @@ export default function AdminPage() {
                               </UserManagementModal>
 
                               <ConfirmationModal
+                                size="x-small"
                                 title="Delete"
                                 titleHeader="Delete User"
                                 modalContentTitle="Attention!"
@@ -429,7 +430,7 @@ export default function AdminPage() {
                                     This action cannot be undone.
                                   </span>
                                 </ConfirmationModal.Content>
-                                <ConfirmationModal.Trigger tooltipContent="Delete">
+                                <ConfirmationModal.Trigger>
                                   <IconComponent
                                     name="Trash2"
                                     className="ml-2 h-4 w-4 cursor-pointer"

@@ -270,7 +270,6 @@ export type TriggerProps = {
   children: ReactNode;
   tooltipContent?: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
-  asChild?: boolean;
 };
 
 export interface languageMap {
