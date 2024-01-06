@@ -18,7 +18,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { FlowsContext } from "../../contexts/flowsContext";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
@@ -48,17 +48,19 @@ const ApiModal = forwardRef(
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
-    const { tabsState } = useContext(FlowsContext);
     const [getTweak, setTweak] = useState<tweakType>([]);
+    const currentFlowState = useFlowsManagerStore(
+      (state) => state.currentFlowState
+    );
     const pythonApiCode = getPythonApiCode(
       flow,
       autoLogin,
       tweak.current,
-      tabsState
+      currentFlowState
     );
-    const curl_code = getCurlCode(flow, autoLogin, tweak.current, tabsState);
-    const pythonCode = getPythonCode(flow, tweak.current, tabsState);
-    const widgetCode = getWidgetCode(flow, autoLogin, tabsState);
+    const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
+    const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
+    const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
       curl_code,
@@ -169,11 +171,11 @@ const ApiModal = forwardRef(
         flow,
         autoLogin,
         tweak.current,
-        tabsState
+        currentFlowState
       );
-      const curl_code = getCurlCode(flow, autoLogin, tweak.current, tabsState);
-      const pythonCode = getPythonCode(flow, tweak.current, tabsState);
-      const widgetCode = getWidgetCode(flow, autoLogin, tabsState);
+      const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
+      const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
+      const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
 
       tabs![0].code = curl_code;
       tabs![1].code = pythonApiCode;

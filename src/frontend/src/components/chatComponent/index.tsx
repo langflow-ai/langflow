@@ -10,6 +10,7 @@ import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -17,7 +18,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
   const isPending = useFlowStore((state) => state.isPending);
-  const { tabsState } = useContext(FlowsContext);
+  const currentFlowState = useFlowsManagerStore((state) => state.currentFlowState);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -61,10 +62,9 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       setIsBuilt(false);
     }
     if (
-      tabsState &&
-      tabsState[flow.id] &&
-      tabsState[flow.id].formKeysData &&
-      tabsState[flow.id].formKeysData.input_keys !== null
+      currentFlowState &&
+      currentFlowState.formKeysData &&
+      currentFlowState.formKeysData.input_keys !== null
     ) {
       setCanOpen(true);
     } else {
@@ -72,7 +72,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     }
 
     prevNodesRef.current = currentNodes;
-  }, [tabsState, flow.id]);
+  }, [currentFlowState, flow.id]);
 
   return (
     <>
@@ -84,8 +84,8 @@ export default function Chat({ flow }: ChatType): JSX.Element {
           isBuilt={isBuilt}
         />
         {isBuilt &&
-          tabsState[flow.id] &&
-          tabsState[flow.id].formKeysData &&
+          currentFlowState &&
+          currentFlowState.formKeysData &&
           canOpen && (
             <FormModal
               key={flow.id}

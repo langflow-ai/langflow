@@ -59,7 +59,6 @@ export type FlowsState = {
 };
 
 export type FlowState = {
-  isPending: boolean;
   formKeysData: {
     template?: string;
     input_keys?: Object;

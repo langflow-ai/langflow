@@ -13,7 +13,7 @@ import {
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { FlowsState } from "../types/tabs";
+import { FlowState, FlowsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -217,13 +217,12 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(tabsState: FlowsState, id: string): string {
-  return tabsState &&
-    tabsState[id] &&
-    tabsState[id].formKeysData &&
-    tabsState[id].formKeysData.input_keys &&
-    Object.keys(tabsState[id].formKeysData.input_keys!).length > 0
-    ? JSON.stringify(tabsState[id].formKeysData.input_keys)
+export function buildInputs(currentFlowState?: FlowState): string {
+  return currentFlowState &&
+    currentFlowState.formKeysData &&
+    currentFlowState.formKeysData.input_keys &&
+    Object.keys(currentFlowState.formKeysData.input_keys!).length > 0
+    ? JSON.stringify(currentFlowState.formKeysData.input_keys)
     : '{"input": "message"}';
 }
 
@@ -298,17 +297,16 @@ export function buildTweakObject(tweak: tweakType) {
  * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, tabsState?: FlowsState) {
+export function getChatInputField(flow: FlowType, currentFlowState?: FlowState) {
   let chat_input_field = "text";
 
   if (
-    tabsState &&
-    tabsState[flow.id] &&
-    tabsState[flow.id].formKeysData &&
-    tabsState[flow.id].formKeysData.input_keys
+    currentFlowState &&
+    currentFlowState.formKeysData &&
+    currentFlowState.formKeysData.input_keys
   ) {
     chat_input_field = Object.keys(
-      tabsState[flow.id].formKeysData.input_keys!
+      currentFlowState.formKeysData.input_keys!
     )[0];
   }
   return chat_input_field;
@@ -323,7 +321,7 @@ export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: FlowsState
+  currentFlowState?: FlowState
 ): string {
   const flowId = flow.id;
 
@@ -332,7 +330,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(currentFlowState);
   return `import requests
 from typing import Optional
 
@@ -387,11 +385,11 @@ export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: FlowsState
+  currentFlowState?: FlowState
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(currentFlowState);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -415,11 +413,11 @@ export function getCurlCode(
 export function getPythonCode(
   flow: FlowType,
   tweak?: any[],
-  tabsState?: FlowsState
+  currentFlowState?: FlowState
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(currentFlowState);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -440,12 +438,12 @@ flow(inputs)`;
 export function getWidgetCode(
   flow: FlowType,
   isAuth: boolean,
-  tabsState?: FlowsState
+  currentFlowState?: FlowState
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(tabsState!, flow.id);
-  let chat_input_field = getChatInputField(flow, tabsState);
+  const inputs = buildInputs(currentFlowState);
+  let chat_input_field = getChatInputField(flow, currentFlowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -456,7 +454,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    tabsState![flow.id] && tabsState![flow.id].formKeysData
+    currentFlowState && currentFlowState.formKeysData
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `
