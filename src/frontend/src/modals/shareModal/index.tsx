@@ -182,9 +182,6 @@ export default function ShareModal({
               Warning: This action cannot be undone.
             </span>
           </ConfirmationModal.Content>
-          <ConfirmationModal.Trigger>
-            <></>
-          </ConfirmationModal.Trigger>
         </ConfirmationModal>
       </>
     );

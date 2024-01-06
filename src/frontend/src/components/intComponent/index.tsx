@@ -25,11 +25,11 @@ export default function IntComponent({
         id={id}
         onKeyDown={(event) => {
           handleOnlyIntegerInput(event);
-          handleKeyDown(event, value, "0");
+          handleKeyDown(event, value, "");
         }}
         type="number"
         step="1"
-        min={min}
+        min={0}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
           if (Number(event.target.value) < min) {
             event.target.value = min.toString();

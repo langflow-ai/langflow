@@ -48,7 +48,7 @@ export default function FloatComponent({
           onChange(event.target.value);
         }}
         onKeyDown={(e) => {
-          handleKeyDown(e, value, "0");
+          handleKeyDown(e, value, "");
         }}
       />
     </div>

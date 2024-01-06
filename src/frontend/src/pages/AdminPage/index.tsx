@@ -308,7 +308,6 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
-                              asChild
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -331,7 +330,7 @@ export default function AdminPage() {
                                   you are making to this user?
                                 </span>
                               </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger>
+                              <ConfirmationModal.Trigger asChild>
                                 <div className="flex w-fit">
                                   <Checkbox
                                     id="is_active"
@@ -343,7 +342,6 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
-                              asChild
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -366,7 +364,7 @@ export default function AdminPage() {
                                   you are making to this user?
                                 </span>
                               </ConfirmationModal.Content>
-                              <ConfirmationModal.Trigger>
+                              <ConfirmationModal.Trigger asChild>
                                 <div className="flex w-fit">
                                   <Checkbox
                                     id="is_superuser"
@@ -431,13 +429,11 @@ export default function AdminPage() {
                                     This action cannot be undone.
                                   </span>
                                 </ConfirmationModal.Content>
-                                <ConfirmationModal.Trigger>
-                                  <ShadTooltip content="Delete" side="top">
-                                    <IconComponent
-                                      name="Trash2"
-                                      className="ml-2 h-4 w-4 cursor-pointer"
-                                    />
-                                  </ShadTooltip>
+                                <ConfirmationModal.Trigger tooltipContent="Delete">
+                                  <IconComponent
+                                    name="Trash2"
+                                    className="ml-2 h-4 w-4 cursor-pointer"
+                                  />
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             </div>
