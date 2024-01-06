@@ -6,7 +6,6 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import useAlertStore from "../../../../stores/alertStore";
 import { FlowType } from "../../../../types/flow";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -16,8 +15,9 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { removeFlow, uploadFlow, addFlow } =
-    useContext(FlowsContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);

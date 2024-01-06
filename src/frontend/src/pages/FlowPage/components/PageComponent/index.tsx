@@ -21,7 +21,6 @@ import ReactFlow, {
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import Loading from "../../../../components/ui/loading";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import useAlertStore from "../../../../stores/alertStore";
@@ -53,7 +52,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  let { uploadFlow } = useContext(FlowsContext);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow
   );

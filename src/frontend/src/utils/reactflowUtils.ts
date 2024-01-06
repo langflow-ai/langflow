@@ -12,6 +12,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   specialCharsRegex,
 } from "../constants/constants";
+import { downloadFlowsFromDatabase } from "../controllers/API";
 import {
   APIClassType,
   APIKindType,
@@ -32,8 +33,13 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { createRandomKey, getFieldTitle, toTitleCase } from "./utils";
-import { downloadFlowsFromDatabase } from "../controllers/API";
+import {
+  createRandomKey,
+  getFieldTitle,
+  getRandomDescription,
+  getRandomName,
+  toTitleCase,
+} from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
@@ -189,6 +195,7 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     // updateNodes(data.nodes, data.edges);
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
   }
+  return data;
 };
 
 export function updateIds(newFlow: ReactFlowJsonObject) {
@@ -1226,11 +1233,7 @@ export function downloadFlow(
   // create a link element and set its properties
   const link = document.createElement("a");
   link.href = jsonString;
-  link.download = `${
-    flowName && flowName != ""
-      ? flowName
-      : flow.name
-  }.json`;
+  link.download = `${flowName && flowName != "" ? flowName : flow.name}.json`;
 
   // simulate a click on the link element to trigger the download
   link.click();
@@ -1251,3 +1254,16 @@ export function downloadFlows() {
     link.click();
   });
 }
+
+export const createNewFlow = (
+  flowData: ReactFlowJsonObject,
+  flow: FlowType
+) => {
+  return {
+    description: flow?.description ?? getRandomDescription(),
+    name: flow?.name ?? getRandomName(),
+    data: flowData,
+    id: "",
+    is_component: flow?.is_component ?? false,
+  };
+};

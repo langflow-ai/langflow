@@ -4,7 +4,6 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -32,7 +31,7 @@ export default function ExtraSidebar(): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useTypesStore((state) => state.getFilterEdge);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
-  const { uploadFlow } = useContext(FlowsContext);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const nodes = useFlowStore((state) => state.nodes);
