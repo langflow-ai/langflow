@@ -4,16 +4,14 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
-import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
-import { removeApiKeys } from "../../utils/reactflowUtils";
+import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { downloadFlow  } = useContext(FlowsContext);
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(true);

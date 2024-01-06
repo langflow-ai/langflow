@@ -35,6 +35,8 @@ export default function ExtraSidebar(): JSX.Element {
   const { uploadFlow } = useContext(FlowsContext);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -304,7 +306,7 @@ export default function ExtraSidebar(): JSX.Element {
                   (isPending ? "" : "button-disable")
                 }
                 onClick={(event) => {
-                  saveFlow({...currentFlow, data: {...currentFlow.data!, viewport: reactFlowInstance?.getViewport()!} }, true);
+                  saveFlow({...currentFlow, data: {nodes, edges, viewport: reactFlowInstance?.getViewport()!} }, true);
                 }}
               >
                 <IconComponent

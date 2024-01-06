@@ -17,8 +17,6 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
-  useEdgesState,
-  useNodesState,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -28,6 +26,8 @@ import { locationContext } from "../../../../contexts/locationContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
 import {
@@ -41,8 +41,6 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { useTypesStore } from "../../../../stores/typesStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -56,7 +54,9 @@ export default function Page({
   view?: boolean;
 }): JSX.Element {
   let { uploadFlow } = useContext(FlowsContext);
-  const autoSaveCurrentFlow = useFlowsManagerStore((state) => state.autoSaveCurrentFlow);
+  const autoSaveCurrentFlow = useFlowsManagerStore(
+    (state) => state.autoSaveCurrentFlow
+  );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
@@ -160,13 +160,17 @@ export default function Page({
 
   const [loading, setLoading] = useState(true);
 
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
   const timeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     setLoading(true);
     if (reactFlowInstance) {
-      reactFlowInstance.setNodes(flow?.data?.nodes ?? []);
-      reactFlowInstance.setEdges(flow?.data?.edges ?? []);
+      useFlowStore.setState({
+        nodes: flow?.data?.nodes ?? [],
+        edges: flow?.data?.edges ?? [],
+      });
       reactFlowInstance.setViewport(
         flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 }
       );
@@ -186,7 +190,7 @@ export default function Page({
     return () => {
       clearTimeout(timeoutRef.current);
     };
-  }, [flow, reactFlowInstance]);
+  }, [currentFlowId, reactFlowInstance]);
 
   const onConnectMod = useCallback(
     (params: Connection) => {

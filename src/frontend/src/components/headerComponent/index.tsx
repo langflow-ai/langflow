@@ -5,7 +5,6 @@ import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -22,7 +21,6 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
