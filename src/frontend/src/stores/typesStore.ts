@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { getAll, getHealth } from "../controllers/API";
-import { APIDataType, APIKindType } from "../types/api";
+import { getAll } from "../controllers/API";
+import { APIDataType } from "../types/api";
 import { TypesStoreType } from "../types/zustand/types";
-import useAlertStore from "./alertStore";
 import { templatesGenerator, typesGenerator } from "../utils/reactflowUtils";
+import useAlertStore from "./alertStore";
 
 export const useTypesStore = create<TypesStoreType>((set, get) => ({
   types: {},
@@ -24,15 +24,13 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
           resolve();
         })
         .catch((error) => {
+          useAlertStore.getState().setErrorData({
+            title: "An error has occurred while fetching types.",
+            list: ["Please refresh the page."],
+          });
           console.error("An error has occurred while fetching types.");
           console.log(error);
-          getHealth().catch((e) => {
-            useAlertStore.setState({
-              fetchError: true,
-              loading: false,
-            });
-            reject();
-          });
+          reject();
         });
     });
   },
