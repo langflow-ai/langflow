@@ -42,7 +42,6 @@ export default function ExtraSidebar(): JSX.Element {
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
   const isBuilt = useFlowStore((state) => state.isBuilt);
-  const isPending = useFlowStore((state) => state.isPending);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -302,39 +301,6 @@ export default function ExtraSidebar(): JSX.Element {
             )}
           </div>
         </ShadTooltip>
-        <div className="side-bar-button" data-testid="save-button">
-          {currentFlow && currentFlow.data && (
-            <ShadTooltip content="Save" side="top">
-              <button
-                className={
-                  "extra-side-bar-buttons " +
-                  (isPending ? "" : "button-disable")
-                }
-                onClick={(event) => {
-                  saveFlow(
-                    {
-                      ...currentFlow,
-                      data: {
-                        nodes,
-                        edges,
-                        viewport: reactFlowInstance?.getViewport()!,
-                      },
-                    },
-                    true
-                  );
-                }}
-              >
-                <IconComponent
-                  name="Save"
-                  className={
-                    "side-bar-button-size" +
-                    (isPending ? " " : " extra-side-bar-save-disable")
-                  }
-                />
-              </button>
-            </ShadTooltip>
-          )}
-        </div>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">

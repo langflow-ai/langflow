@@ -42,13 +42,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     });
-    if (!get().isPending) set({ isPending: true });
   },
   onEdgesChange: (changes: EdgeChange[]) => {
     set({
       edges: applyEdgeChanges(changes, get().edges),
     });
-    if (!get().isPending) set({ isPending: true });
   },
   setNodes: (change) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
@@ -95,29 +93,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
-  },
-  onConnect: (connection: Connection) => {
-    set({
-      edges: addEdge(
-        {
-          ...connection,
-          data: {
-            targetHandle: scapeJSONParse(connection.targetHandle!),
-            sourceHandle: scapeJSONParse(connection.sourceHandle!),
-          },
-          style: { stroke: "#555" },
-          className:
-            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text"
-              ? "stroke-foreground "
-              : "stroke-foreground ") + " stroke-connection",
-          animated:
-            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text",
-        },
-        get().edges
-      ),
-    });
   },
   deleteNode: (nodeId) => {
     get().setNodes(
@@ -228,10 +203,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     });
     set({ edges: newEdges });
-  },
-  isPending: false,
-  setPending: (pending: boolean) => {
-    set({ isPending: pending });
   },
 }));
 

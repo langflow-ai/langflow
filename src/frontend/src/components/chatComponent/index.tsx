@@ -16,7 +16,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const [canOpen, setCanOpen] = useState(false);
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
-  const isPending = useFlowStore((state) => state.isPending);
   const currentFlowState = useFlowsManagerStore((state) => state.currentFlowState);
 
   useEffect(() => {
@@ -55,7 +54,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       _.cloneDeep(node.data.node?.template)
     );
     if (
-      isPending &&
       JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
     ) {
       setIsBuilt(false);

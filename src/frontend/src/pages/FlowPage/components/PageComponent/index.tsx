@@ -13,6 +13,7 @@ import ReactFlow, {
   Controls,
   Edge,
   NodeDragHandler,
+  OnMove,
   OnSelectionChangeParams,
   SelectionDragHandler,
   addEdge,
@@ -27,12 +28,13 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType } from "../../../../types/flow";
+import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -74,16 +76,13 @@ export default function Page({
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
-  const onConnect = useFlowStore((state) => state.onConnect);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
-  const setPending = useFlowStore((state) => state.setPending);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const isPending = useFlowStore((state) => state.isPending);
   const paste = useFlowStore((state) => state.paste);
 
   const position = useRef({ x: 0, y: 0 });
@@ -216,10 +215,15 @@ export default function Page({
   }, [takeSnapshot]);
 
   const onNodeDragStop: NodeDragHandler = useCallback(() => {
-    // 👇 make dragging a node undoable
     autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
     // 👉 you can place your event handlers here
-  }, [takeSnapshot]);
+  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+
+  const onMoveEnd: OnMove = useCallback(() => {
+    // 👇 make moving the canvas undoable
+    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
+  }
+  , [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -234,6 +238,39 @@ export default function Page({
       event.dataTransfer.dropEffect = "copy";
     }
   }, []);
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      const newEdges = addEdge(
+        {
+          ...connection,
+          data: {
+            targetHandle: scapeJSONParse(connection.targetHandle!),
+            sourceHandle: scapeJSONParse(connection.sourceHandle!),
+          },
+          style: { stroke: "#555" },
+          className:
+            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
+              .type === "Text"
+              ? "stroke-foreground "
+              : "stroke-foreground ") + " stroke-connection",
+          animated:
+            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
+              .type === "Text",
+        },
+        edges
+      );
+      setEdges(newEdges);
+      useFlowsManagerStore
+        .getState()
+        .autoSaveCurrentFlow(
+          nodes,
+          newEdges,
+          reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+        );
+    },
+    [nodes, edges, setEdges, reactFlowInstance, addEdge]
+  );
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -345,9 +382,6 @@ export default function Page({
     setFilterEdge([]);
   }, []);
 
-  const onMove = useCallback(() => {
-    if (!isPending) setPending(true);
-  }, [setPending]);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -370,7 +404,6 @@ export default function Page({
                 </div>
                 <ReactFlow
                   nodes={nodes}
-                  onMove={onMove}
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
@@ -388,6 +421,7 @@ export default function Page({
                   onSelectionStart={onSelectionStart}
                   connectionLineComponent={ConnectionLineComponent}
                   onDragOver={onDragOver}
+                  onMoveEnd={onMoveEnd}
                   onDrop={onDrop}
                   onSelectionChange={onSelectionChange}
                   deleteKeyCode={[]}

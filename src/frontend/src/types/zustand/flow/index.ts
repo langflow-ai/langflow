@@ -18,7 +18,6 @@ export type FlowStoreType = {
   setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
   getNode: (id: string) => Node | undefined;
-  onConnect: OnConnect;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
@@ -27,6 +26,4 @@ export type FlowStoreType = {
   ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
-  isPending: boolean;
-  setPending: (pending: boolean) => void;
 };

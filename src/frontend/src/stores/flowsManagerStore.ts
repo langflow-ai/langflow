@@ -130,7 +130,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             );
             //update tabs state
 
-            useFlowStore.setState({ isPending: false });
             resolve();
           }
         })
