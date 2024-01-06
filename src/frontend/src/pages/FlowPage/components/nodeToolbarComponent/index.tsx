@@ -8,7 +8,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -34,7 +33,7 @@ export default function NodeToolbarComponent({
   numberOfHandles,
   showNode,
 }: nodeToolbarPropsType): JSX.Element {
-  const [nodeLength, setNodeLength] = useState(
+  const nodeLength = 
     Object.keys(data.node!.template).filter(
       (templateField) =>
         templateField.charAt(0) !== "_" &&
@@ -49,8 +48,7 @@ export default function NodeToolbarComponent({
           data.node.template[templateField].type === "int" ||
           data.node.template[templateField].type === "dict" ||
           data.node.template[templateField].type === "NestedDict")
-    ).length
-  );
+    ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -76,7 +74,7 @@ export default function NodeToolbarComponent({
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
-  const { takeSnapshot } = useContext(undoRedoContext);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");

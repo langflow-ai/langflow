@@ -22,4 +22,7 @@ export type FlowsManagerStoreType = {
   deleteComponent: (key: string) => Promise<void>;
   removeFlow: (id: string) => Promise<void>;
   saveComponent: (component: any, override: boolean) => Promise<string | undefined>;
+  undo: () => void;
+  redo: () => void;
+  takeSnapshot: () => void;
 };
