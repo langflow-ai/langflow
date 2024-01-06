@@ -8,7 +8,6 @@ import { AuthProvider } from "./authContext";
 import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
 
-import { TypesProvider } from "./typesContext";
 import { UndoRedoProvider } from "./undoRedoContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
@@ -19,16 +18,14 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
         <AuthProvider>
           <TooltipProvider>
             <ReactFlowProvider>
-              <TypesProvider>
-                <LocationProvider>
-                  <ApiInterceptor />
-                  <SSEProvider>
-                    <FlowsProvider>
-                      <UndoRedoProvider>{children}</UndoRedoProvider>
-                    </FlowsProvider>
-                  </SSEProvider>
-                </LocationProvider>
-              </TypesProvider>
+              <LocationProvider>
+                <ApiInterceptor />
+                <SSEProvider>
+                  <FlowsProvider>
+                    <UndoRedoProvider>{children}</UndoRedoProvider>
+                  </FlowsProvider>
+                </SSEProvider>
+              </LocationProvider>
             </ReactFlowProvider>
           </TooltipProvider>
         </AuthProvider>

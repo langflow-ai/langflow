@@ -27,7 +27,6 @@ import {
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
 import { FlowsContext } from "../../../../contexts/flowsContext";
-import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -48,6 +47,7 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
+import { useTypesStore } from "../../../../stores/typesStore";
 
 export default function ParameterComponent({
   left,
@@ -78,14 +78,15 @@ export default function ParameterComponent({
 
   const groupedEdge = useRef(null);
 
-  const { setFilterEdge } = useContext(typesContext);
+  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
+
   let disabled =
     edges.some(
       (edge) =>
         edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
-  const { data: myData } = useContext(typesContext);
+  const myData = useTypesStore((state) => state.data);
 
   const { takeSnapshot } = useContext(undoRedoContext);
 

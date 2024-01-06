@@ -12,7 +12,12 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   specialCharsRegex,
 } from "../constants/constants";
-import { APITemplateType, TemplateVariableType } from "../types/api";
+import {
+  APIKindType,
+  APIObjectType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   FlowType,
   NodeDataType,
@@ -1137,4 +1142,29 @@ export function removeFileNameFromComponents(flow: FlowType) {
       removeFileNameFromComponents(node.data.node.flow);
     }
   });
+}
+
+export function typesGenerator(data: APIObjectType) {
+  return Object.keys(data)
+    .reverse()
+    .reduce((acc, curr) => {
+      Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+        acc[c] = curr;
+        // Add the base classes to the accumulator as well.
+        data[curr][c].base_classes?.forEach((b) => {
+          acc[b] = curr;
+        });
+      });
+      return acc;
+    }, {});
+}
+
+export function templatesGenerator(data: APIObjectType) {
+  return Object.keys(data).reduce((acc, curr) => {
+    Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+      //prevent wrong overwriting of the component template by a group of the same type
+      if (!data[curr][c].flow) acc[c] = data[curr][c];
+    });
+    return acc;
+  }, {});
 }
