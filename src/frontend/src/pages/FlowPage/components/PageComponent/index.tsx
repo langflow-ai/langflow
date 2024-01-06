@@ -242,33 +242,23 @@ export default function Page({
         takeSnapshot();
 
         // Extract the data from the drag event and parse it as a JSON object
-        let data: { type: string; node?: APIClassType } = JSON.parse(
+        const data: { type: string; node?: APIClassType } = JSON.parse(
           event.dataTransfer.getData("nodedata")
         );
 
-        // Calculate the position where the node should be created
-        const position = reactFlowInstance!.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
+        const newId = getNodeId(data.type);
 
-        // Generate a unique node ID
-        let { type } = data;
-        let newId = getNodeId(type);
-        let newNode: NodeType;
-
-        // Create a new node object
-        newNode = {
+        const newNode: NodeType = {
           id: newId,
           type: "genericNode",
-          position,
+          position: {x: 0, y:0},
           data: {
             ...data,
             id: newId,
           },
         };
+        paste({ nodes: [newNode], edges: [] }, {x: event.clientX, y: event.clientY});
 
-        setNodes((nds) => nds.concat(newNode));
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
