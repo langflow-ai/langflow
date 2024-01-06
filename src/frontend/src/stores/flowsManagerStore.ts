@@ -10,6 +10,7 @@ import {
 } from "../controllers/API";
 import { FlowType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import { UseUndoRedoOptions } from "../types/typesContext";
 import { FlowsManagerStoreType } from "../types/zustand/flowsManager";
 import {
   addVersionToDuplicates,
@@ -19,11 +20,19 @@ import {
   processFlows,
 } from "../utils/reactflowUtils";
 import useAlertStore from "./alertStore";
+import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useTypesStore } from "./typesStore";
-import { useDarkStore } from "./darkStore";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
+
+const defaultOptions: UseUndoRedoOptions = {
+  maxHistorySize: 100,
+  enableShortcuts: true,
+};
+
+const past = {};
+const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   currentFlowId: "",
@@ -328,7 +337,63 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   saveComponent: (component: NodeDataType, override: boolean) => {
     component.node!.official = false;
-    return get().addFlow(true, createFlowComponent(component, useDarkStore.getState().version), override);
+    return get().addFlow(
+      true,
+      createFlowComponent(component, useDarkStore.getState().version),
+      override
+    );
+  },
+  takeSnapshot: () => {
+    const currentFlowId = get().currentFlowId;
+    // push the current graph to the past state
+    const newState = useFlowStore.getState();
+    const pastLength = past[currentFlowId]?.length ?? 0;
+    if (
+      pastLength > 0 &&
+      JSON.stringify(past[currentFlowId][pastLength - 1]) !==
+        JSON.stringify(newState)
+    ) {
+      past[currentFlowId] = past[currentFlowId]
+        .slice(pastLength - defaultOptions.maxHistorySize + 1, pastLength)
+        
+      past[currentFlowId].push(newState);
+    } else {
+      past[currentFlowId] = [newState];
+    }
+
+    future[currentFlowId] = [];
+  },
+  undo: () => {
+    const newState = useFlowStore.getState();
+    const currentFlowId = get().currentFlowId;
+    const pastLength = past[currentFlowId]?.length ?? 0;
+    const pastState = past[currentFlowId][pastLength - 1] ?? null;
+
+    if (pastState) {
+      past[currentFlowId] = past[currentFlowId].slice(0, pastLength - 1);
+
+      if(!future[currentFlowId]) future[currentFlowId] = [];
+      future[currentFlowId].push({ nodes: newState.nodes, edges: newState.edges });
+
+      newState.setNodes(pastState.nodes);
+      newState.setEdges(pastState.edges);
+    }
+  },
+  redo: () => {
+    const newState = useFlowStore.getState();
+    const currentFlowId = get().currentFlowId;
+    const futureLength = future[currentFlowId]?.length ?? 0;
+    const futureState = future[currentFlowId][futureLength - 1] ?? null;
+
+    if (futureState) {
+      future[currentFlowId] = future[currentFlowId].slice(0, futureLength - 1);
+
+      if(!past[currentFlowId]) past[currentFlowId] = [];
+      past[currentFlowId].push({ nodes: newState.nodes, edges: newState.edges });
+
+      newState.setNodes(futureState.nodes);
+      newState.setEdges(futureState.edges);
+    }
   },
 }));
 

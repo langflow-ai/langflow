@@ -7,8 +7,6 @@ import { SSEProvider } from "./SSEContext";
 import { AuthProvider } from "./authContext";
 import { LocationProvider } from "./locationContext";
 
-import { UndoRedoProvider } from "./undoRedoContext";
-
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
   return (
@@ -20,7 +18,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
               <LocationProvider>
                 <ApiInterceptor />
                 <SSEProvider>
-                  <UndoRedoProvider>{children}</UndoRedoProvider>
+                  {children}
                 </SSEProvider>
               </LocationProvider>
             </ReactFlowProvider>

@@ -26,7 +26,6 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -88,7 +87,7 @@ export default function ParameterComponent({
 
   const myData = useTypesStore((state) => state.data);
 
-  const { takeSnapshot } = useContext(undoRedoContext);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const handleUpdateValues = async (name: string, data: NodeDataType) => {
     const code = data.node?.template["code"]?.value;
@@ -528,7 +527,6 @@ export default function ParameterComponent({
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
                 const valueToNumbers = convertValuesToNumbers(newValue);
-                data.node!.template[name].value = valueToNumbers;
                 setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
                 handleOnNewValue(valueToNumbers);
               }}

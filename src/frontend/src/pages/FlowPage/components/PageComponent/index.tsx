@@ -22,7 +22,6 @@ import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import Loading from "../../../../components/ui/loading";
 import { locationContext } from "../../../../contexts/locationContext";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -66,8 +65,6 @@ export default function Page({
     edges: any;
   } | null>(null);
 
-  const { takeSnapshot } = useContext(undoRedoContext);
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
@@ -83,6 +80,9 @@ export default function Page({
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const setPending = useFlowStore((state) => state.setPending);
+  const undo = useFlowsManagerStore((state) => state.undo);
+  const redo = useFlowsManagerStore((state) => state.redo);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const isPending = useFlowStore((state) => state.isPending);
   const paste = useFlowStore((state) => state.paste);
 
@@ -92,6 +92,19 @@ export default function Page({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isWrappedWithClass(event, "noundo")) {
+        if (
+          (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
+          (event.ctrlKey || event.metaKey)
+        ) {
+          event.preventDefault(); // prevent the default action
+          redo();
+        } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+          console.log("nao era pra tar aqui");
+          event.preventDefault();
+          undo();
+        }
+      }
       if (
         !isWrappedWithClass(event, "nocopy") &&
         window.getSelection()?.toString().length === 0
@@ -103,8 +116,7 @@ export default function Page({
         ) {
           event.preventDefault();
           setLastCopiedSelection(_.cloneDeep(lastSelection));
-        }
-        if (
+        } else if (
           (event.ctrlKey || event.metaKey) &&
           event.key === "v" &&
           lastCopiedSelection
@@ -115,8 +127,7 @@ export default function Page({
             x: position.current.x,
             y: position.current.y,
           });
-        }
-        if (
+        } else if (
           (event.ctrlKey || event.metaKey) &&
           event.key === "g" &&
           lastSelection

@@ -7,7 +7,6 @@ import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
-import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useFlowStore from "../../stores/flowStore";
 import { validationStatusType } from "../../types/components";
@@ -17,6 +16,7 @@ import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 import { useTypesStore } from "../../stores/typesStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function GenericNode({
   data,
@@ -44,7 +44,7 @@ export default function GenericNode({
   const [handles, setHandles] = useState<boolean[] | []>([]);
   let numberOfInputs: boolean[] = [];
 
-  const { takeSnapshot } = useContext(undoRedoContext);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   function countHandles(): void {
     numberOfInputs = Object.keys(data.node!.template)

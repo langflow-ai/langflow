@@ -59,9 +59,6 @@ export default function InputComponent({
               e.preventDefault();
             }}
             onKeyDown={(e) => {
-              if (e.ctrlKey && e.key === "c") {
-                // Perform any actions you need when Ctrl+C is detected
-              }
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
