@@ -35,7 +35,7 @@ import {
   getRandomDescription,
   getRandomName,
 } from "../utils/utils";
-import { typesContext } from "./typesContext";
+import { useTypesStore } from "../stores/typesStore";
 
 const uid = new ShortUniqueId({ length: 5 });
 
@@ -76,8 +76,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [flows, setFlows] = useState<Array<FlowType>>([]);
   const [tabsState, setTabsState] = useState<FlowsState>({});
-  const { setData } = useContext(typesContext);
-
+  const setData = useTypesStore((state) => state.setData);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);

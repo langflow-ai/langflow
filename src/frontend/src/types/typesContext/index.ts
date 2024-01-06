@@ -1,24 +1,5 @@
 import { Edge, Node } from "reactflow";
 import { AlertItemType } from "../alerts";
-import { APIClassType, APIDataType } from "../api";
-
-const types: { [char: string]: string } = {};
-const template: { [char: string]: APIClassType } = {};
-const data: { [char: string]: string } = {};
-
-export type typesContextType = {
-  types: typeof types;
-  setTypes: (newState: {}) => void;
-  templates: typeof template;
-  setTemplates: (newState: {}) => void;
-  data: APIDataType;
-  setData: (newState: {}) => void;
-  getTypes: () => void;
-  fetchError: boolean;
-  setFetchError: (newState: boolean) => void;
-  setFilterEdge: (newState) => void;
-  getFilterEdge: any[];
-};
 
 export type alertContextType = {
   errorData: { title: string; list?: Array<string> };

@@ -20,4 +20,6 @@ export type AlertStoreType = {
   removeFromNotificationList: (index: string) => void;
   loading: boolean;
   setLoading: (newState: boolean) => void;
+  fetchError: boolean;
+  setFetchError: (newState: boolean) => void;
 };

@@ -18,10 +18,10 @@ import {
 import { AuthContext } from "./contexts/authContext";
 import { FlowsContext } from "./contexts/flowsContext";
 import { locationContext } from "./contexts/locationContext";
-import { typesContext } from "./contexts/typesContext";
 import { getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
+import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -43,8 +43,7 @@ export default function App() {
   const successOpen = useAlertStore((state) => state.successOpen);
   const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
   const loading = useAlertStore((state) => state.loading);
-
-  const { fetchError } = useContext(typesContext);
+  const fetchError = useAlertStore((state) => state.fetchError);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -132,14 +131,15 @@ export default function App() {
 
   const { isAuthenticated } = useContext(AuthContext);
   const { refreshFlows, setVersion } = useContext(FlowsContext);
-  const { getTypes } = useContext(typesContext);
+  const getTypes = useTypesStore((state) => state.getTypes);
 
   useEffect(() => {
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (isAuthenticated === true) {
       // get data from db
-      refreshFlows();
-      getTypes();
+      getTypes().then(() => {
+        refreshFlows();
+      });
     }
 
     getVersion().then((data) => {
@@ -156,16 +156,14 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {loading ? (
+        {fetchError ? (
+          <FetchErrorComponent
+            description={FETCH_ERROR_DESCRIPION}
+            message={FETCH_ERROR_MESSAGE}
+          ></FetchErrorComponent>
+        ) : loading ? (
           <div className="loading-page-panel">
-            {fetchError ? (
-              <FetchErrorComponent
-                description={FETCH_ERROR_DESCRIPION}
-                message={FETCH_ERROR_MESSAGE}
-              ></FetchErrorComponent>
-            ) : (
-              <LoadingComponent remSize={50} />
-            )}
+            <LoadingComponent remSize={50} />
           </div>
         ) : (
           <>

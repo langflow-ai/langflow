@@ -25,7 +25,6 @@ import Chat from "../../../../components/chatComponent";
 import Loading from "../../../../components/ui/loading";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import { locationContext } from "../../../../contexts/locationContext";
-import { typesContext } from "../../../../contexts/typesContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -42,6 +41,7 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { useTypesStore } from "../../../../stores/typesStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -55,7 +55,9 @@ export default function Page({
   view?: boolean;
 }): JSX.Element {
   let { uploadFlow, saveFlow } = useContext(FlowsContext);
-  const { types, templates, setFilterEdge } = useContext(typesContext);
+  const types = useTypesStore((state) => state.types);
+  const templates = useTypesStore((state) => state.templates);
+  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const [lastCopiedSelection, setLastCopiedSelection] = useState<{

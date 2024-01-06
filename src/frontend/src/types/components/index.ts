@@ -3,8 +3,8 @@ import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { typesContextType } from "../typesContext";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
+import { TypesStoreType } from "../zustand/types";
 export type InputComponentType = {
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
@@ -48,7 +48,6 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
   proxy?: { field: string; id: string };

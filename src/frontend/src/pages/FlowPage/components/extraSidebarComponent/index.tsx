@@ -5,7 +5,6 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { FlowsContext } from "../../../../contexts/flowsContext";
-import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -25,10 +24,13 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { useTypesStore } from "../../../../stores/typesStore";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates, getFilterEdge, setFilterEdge } =
-    useContext(typesContext);
+  const data = useTypesStore((state) => state.data);
+  const templates = useTypesStore((state) => state.templates);
+  const getFilterEdge = useTypesStore((state) => state.getFilterEdge);
+  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
   const { flows, tabId, uploadFlow, saveFlow } = useContext(FlowsContext);
 
   const hasStore = useStoreStore((state) => state.hasStore);
