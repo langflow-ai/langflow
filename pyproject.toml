@@ -105,6 +105,7 @@ pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 langchain-google-genai = "^0.0.2"
 pytube = "^15.0.0"
+llama-index = "^0.9.24"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
