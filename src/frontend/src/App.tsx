@@ -18,7 +18,7 @@ import {
 import { AuthContext } from "./contexts/authContext";
 import { FlowsContext } from "./contexts/flowsContext";
 import { locationContext } from "./contexts/locationContext";
-import { getVersion } from "./controllers/API";
+import { getHealth, getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useTypesStore } from "./stores/typesStore";
@@ -43,7 +43,7 @@ export default function App() {
   const successOpen = useAlertStore((state) => state.successOpen);
   const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
   const loading = useAlertStore((state) => state.loading);
-  const fetchError = useAlertStore((state) => state.fetchError);
+  const [fetchError, setFetchError] = useState(false);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -146,6 +146,20 @@ export default function App() {
       setVersion(data.version);
     });
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Timer to call getHealth every 5 seconds
+    const timer = setInterval(() => {
+      getHealth().catch((e) => {
+        setFetchError(true);
+      });
+    }, 5000);
+
+    // Clean up the timer on component unmount
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
   return (
     //need parent component with width and height

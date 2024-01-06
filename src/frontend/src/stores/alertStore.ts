@@ -21,10 +21,6 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
   notificationCenter: false,
   notificationList: [],
   loading: true,
-  fetchError: false,
-  setFetchError: (newState: boolean) => {
-    set({ fetchError: newState });
-  },
   setErrorData: (newState: { title: string; list?: Array<string> }) => {
     if (newState.title && newState.title !== "") {
       set({
