@@ -4,19 +4,23 @@ import { FlowState } from "../types/tabs";
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   currentFlowId: "",
+  setCurrentFlowId: (currentFlowId: string) => {
+    set({ currentFlowId, currentFlow: get().flows.find((flow) => flow.id === currentFlowId) });
+},
   flows: [],
-  currentFlow: get().flows[get().currentFlowId],
+  currentFlow: undefined,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   flowsState: {},
-  currentFlowState: get().flowsState[get().currentFlowId],
-  setCurrentFlowState: (flowState: FlowState | ((oldState: FlowState) => FlowState)) => {
+  currentFlowState: undefined,
+  setCurrentFlowState: (flowState: FlowState | ((oldState: FlowState | undefined) => FlowState)) => {
     const newFlowState = typeof flowState === "function" ? flowState(get().currentFlowState) : flowState;
     set((state) => ({
       flowsState: {
         ...state.flowsState,
         [state.currentFlowId]: newFlowState,
       },
+      currentFlowState: newFlowState,
     }));
   },
 

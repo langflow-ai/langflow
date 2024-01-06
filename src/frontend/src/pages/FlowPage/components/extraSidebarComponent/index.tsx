@@ -25,14 +25,15 @@ import {
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { useTypesStore } from "../../../../stores/typesStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useTypesStore((state) => state.getFilterEdge);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
-  const { flows, tabId, uploadFlow, saveFlow } = useContext(FlowsContext);
-
+  const { uploadFlow, saveFlow } = useContext(FlowsContext);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -79,7 +80,7 @@ export default function ExtraSidebar(): JSX.Element {
       return ret;
     });
   }
-  const flow = flows.find((flow) => flow.id === tabId);
+
   useEffect(() => {
     // show components with error on load
     let errors: string[] = [];
@@ -194,7 +195,7 @@ export default function ExtraSidebar(): JSX.Element {
     () => (
       <ShareModal
         is_component={false}
-        component={flow!}
+        component={currentFlow!}
         disabled={!hasApiKey || !validApiKey || !hasStore}
       >
         <button
@@ -219,7 +220,7 @@ export default function ExtraSidebar(): JSX.Element {
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, flow, hasStore]
+    [hasApiKey, validApiKey, currentFlow, hasStore]
   );
 
   const ExportMemo = useMemo(
@@ -273,8 +274,8 @@ export default function ExtraSidebar(): JSX.Element {
         {(!hasApiKey || !validApiKey) && ExportMemo}
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
-            {flow && flow.data && (
-              <ApiModal flow={flow}>
+            {currentFlow && currentFlow.data && (
+              <ApiModal flow={currentFlow}>
                 <button
                   className={"w-full " + (!isBuilt ? "button-disable" : "")}
                 >
@@ -293,7 +294,7 @@ export default function ExtraSidebar(): JSX.Element {
           </div>
         </ShadTooltip>
         <div className="side-bar-button" data-testid="save-button">
-          {flow && flow.data && (
+          {currentFlow && currentFlow.data && (
             <ShadTooltip content="Save" side="top">
               <button
                 className={

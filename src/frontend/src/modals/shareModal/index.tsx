@@ -57,7 +57,7 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
-  const { saveFlow, flows, tabId } = useContext(FlowsContext);
+  const { saveFlow } = useContext(FlowsContext);
 
   const [loadingNames, setLoadingNames] = useState(false);
 

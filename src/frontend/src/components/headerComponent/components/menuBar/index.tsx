@@ -12,12 +12,13 @@ import { useNavigate } from "react-router-dom";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
-import { menuBarPropsType } from "../../../../types/components";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
+export const MenuBar = (): JSX.Element => {
   const { addFlow } = useContext(FlowsContext);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
@@ -34,9 +35,8 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
-  let current_flow = flows.find((flow) => flow.id === tabId);
 
-  return (
+  return currentFlow ? (
     <div className="round-button-div">
       <button
         onClick={() => {
@@ -51,7 +51,7 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
                 <div className="header-menu-flow-name">
-                  {current_flow!.name}
+                  {currentFlow.name}
                 </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
@@ -108,6 +108,8 @@ export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
         ></FlowSettingsModal>
       </div>
     </div>
+  ) : (
+    <></>
   );
 };
 

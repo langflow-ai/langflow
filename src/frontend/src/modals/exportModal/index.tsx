@@ -9,20 +9,21 @@ import useAlertStore from "../../stores/alertStore";
 import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow  } = useContext(FlowsContext);
+    const { downloadFlow  } = useContext(FlowsContext);
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(true);
-    const flow = flows.find((f) => f.id === tabId);
+    const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     useEffect(() => {
-      setName(flow!.name);
-      setDescription(flow!.description);
-    }, [flow!.name, flow!.description]);
-    const [name, setName] = useState(flow!.name);
-    const [description, setDescription] = useState(flow!.description);
+      setName(currentFlow!.name);
+      setDescription(currentFlow!.description);
+    }, [currentFlow!.name, currentFlow!.description]);
+    const [name, setName] = useState(currentFlow!.name);
+    const [description, setDescription] = useState(currentFlow!.description);
     const [open, setOpen] = useState(false);
 
     return (
@@ -67,8 +68,8 @@ const ExportModal = forwardRef(
               if (checked) {
                 downloadFlow(
                   {
-                    id: tabId,
-                    data: flow!.data!,
+                    id: currentFlow!.id,
+                    data: currentFlow!.data!,
                     description,
                     name,
                     last_tested_version: version,
@@ -84,8 +85,8 @@ const ExportModal = forwardRef(
               } else
                 downloadFlow(
                   removeApiKeys({
-                    id: tabId,
-                    data: flow!.data!,
+                    id: currentFlow!.id,
+                    data: currentFlow!.data!,
                     description,
                     name,
                     last_tested_version: version,

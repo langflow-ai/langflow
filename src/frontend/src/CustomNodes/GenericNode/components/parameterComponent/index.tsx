@@ -48,6 +48,7 @@ import {
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
 import { useTypesStore } from "../../../../stores/typesStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function ParameterComponent({
   left,
@@ -69,12 +70,12 @@ export default function ParameterComponent({
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { tabId, flows } = useContext(FlowsContext);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
 
-  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
+  const flow = currentFlow?.data?.nodes ?? null;
 
   const groupedEdge = useRef(null);
 
