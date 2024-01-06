@@ -263,12 +263,14 @@ export type LoadingComponentProps = {
 
 export type ContentProps = {
   children: ReactNode;
-  tolltipContent?: ReactNode;
-  side?: "top" | "right" | "bottom" | "left";
+  
 };
 export type HeaderProps = { children: ReactNode; description: string };
 export type TriggerProps = {
   children: ReactNode;
+  tooltipContent?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  asChild?: boolean;
 };
 
 export interface languageMap {
@@ -300,7 +302,6 @@ export type ConfirmationModalType = {
   onCancel?: () => void;
   title: string;
   titleHeader?: string;
-  asChild?: boolean;
   destructive?: boolean;
   modalContentTitle?: string;
   cancelText: string;
@@ -308,7 +309,7 @@ export type ConfirmationModalType = {
   children: [
     React.ReactElement<ContentProps>,
     React.ReactElement<TriggerProps>
-  ];
+  ] | React.ReactElement<ContentProps>;
   icon: string;
   data?: any;
   index?: number;

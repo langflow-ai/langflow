@@ -295,7 +295,6 @@ export default function NodeToolbarComponent({
           </Select>
 
           <ConfirmationModal
-            asChild
             open={showOverrideModal}
             title={`Replace`}
             cancelText="Create New"
@@ -315,9 +314,6 @@ export default function NodeToolbarComponent({
                 to replace it with the current or create a new one?
               </span>
             </ConfirmationModal.Content>
-            <ConfirmationModal.Trigger>
-              <></>
-            </ConfirmationModal.Trigger>
           </ConfirmationModal>
           <EditNodeModal
             data={data}
