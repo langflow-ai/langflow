@@ -9,9 +9,13 @@ import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function HomePage(): JSX.Element {
-  const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
+  const { downloadFlows, uploadFlows, addFlow, uploadFlow } =
     useContext(FlowsContext);
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const location = useLocation();
@@ -57,7 +61,7 @@ export default function HomePage(): JSX.Element {
 
   // Set a null id
   useEffect(() => {
-    setTabId("");
+    setCurrentFlowId("");
   }, [pathname]);
 
   const navigate = useNavigate();

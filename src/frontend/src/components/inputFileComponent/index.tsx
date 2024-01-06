@@ -4,6 +4,7 @@ import { uploadFile } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function InputFileComponent({
   value,
@@ -13,10 +14,10 @@ export default function InputFileComponent({
   onFileChange,
   editNode = false,
 }: FileComponentType): JSX.Element {
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { tabId } = useContext(FlowsContext);
 
   // Clear component state
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        uploadFile(file, tabId)
+        uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
             console.log("File uploaded successfully");

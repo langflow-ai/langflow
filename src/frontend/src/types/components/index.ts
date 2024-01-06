@@ -440,11 +440,6 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type menuBarPropsType = {
-  flows: Array<headerFlowsType>;
-  tabId: string;
-};
-
 export type chatInputType = {
   chatValue: string;
   inputRef: {

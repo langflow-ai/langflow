@@ -14,6 +14,7 @@ import {
 } from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
 import { FlowsContext } from "./flowsContext";
+import useFlowsManagerStore from "../stores/flowsManagerStore";
 
 const initialValue = {
   undo: () => {},
@@ -29,7 +30,8 @@ const defaultOptions: UseUndoRedoOptions = {
 export const undoRedoContext = createContext<undoRedoContextType>(initialValue);
 
 export function UndoRedoProvider({ children }) {
-  const { tabId, flows } = useContext(FlowsContext);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
@@ -39,7 +41,7 @@ export function UndoRedoProvider({ children }) {
   const [past, setPast] = useState<HistoryItem[][]>(flows.map(() => []));
   const [future, setFuture] = useState<HistoryItem[][]>(flows.map(() => []));
   const [tabIndex, setTabIndex] = useState(
-    flows.findIndex((flow) => flow.id === tabId)
+    flows.findIndex((flow) => flow.id === currentFlowId)
   );
 
   useEffect(() => {
@@ -50,8 +52,8 @@ export function UndoRedoProvider({ children }) {
     setFuture((old) =>
       flows.map((flow, index) => (old[index] ? old[index] : []))
     );
-    setTabIndex(flows.findIndex((flow) => flow.id === tabId));
-  }, [flows, tabId]);
+    setTabIndex(flows.findIndex((flow) => flow.id === currentFlowId));
+  }, [flows, currentFlowId]);
 
   const takeSnapshot = useCallback(() => {
     // push the current graph to the past state
@@ -79,7 +81,7 @@ export function UndoRedoProvider({ children }) {
       newFuture[tabIndex] = [];
       return newFuture;
     });
-  }, [nodes, edges, past, future, flows, tabId, setPast, setFuture]);
+  }, [nodes, edges, past, future, flows, currentFlowId, setPast, setFuture]);
 
   const undo = useCallback(() => {
     // get the last state that we want to go back to

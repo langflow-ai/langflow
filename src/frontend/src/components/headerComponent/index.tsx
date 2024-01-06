@@ -22,9 +22,9 @@ import {
 } from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function Header(): JSX.Element {
-  const { flows, tabId } = useContext(FlowsContext);
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
@@ -52,10 +52,7 @@ export default function Header(): JSX.Element {
         <Link to="/">
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-
-        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
-          <MenuBar flows={flows} tabId={tabId} />
-        )}
+        <MenuBar />
       </div>
       <div className="round-button-div">
         <Link to="/">

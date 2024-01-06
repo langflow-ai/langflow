@@ -16,8 +16,9 @@ import {
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function ProfileSettingsPage(): JSX.Element {
-  const { setTabId } = useContext(FlowsContext);
+  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE
@@ -25,7 +26,7 @@ export default function ProfileSettingsPage(): JSX.Element {
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setCurrentFlowId("");
   }, []);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
