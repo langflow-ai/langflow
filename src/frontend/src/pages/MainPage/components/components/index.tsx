@@ -9,14 +9,16 @@ import { Button } from "../../../../components/ui/button";
 import { FlowsContext } from "../../../../contexts/flowsContext";
 import useAlertStore from "../../../../stores/alertStore";
 import { FlowType } from "../../../../types/flow";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function ComponentsComponent({
   is_component = true,
 }: {
   is_component?: boolean;
 }) {
-  const { flows, removeFlow, uploadFlow, addFlow, isLoading } =
+  const { removeFlow, uploadFlow, addFlow, isLoading } =
     useContext(FlowsContext);
+  const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [pageSize, setPageSize] = useState(10);

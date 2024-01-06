@@ -24,6 +24,7 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
+import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -55,11 +56,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     set({ edges: newEdges });
     set({ nodes: newChange });
+
+    useFlowsManagerStore
+      .getState()
+      .autoSaveCurrentFlow(
+        newChange,
+        newEdges,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
 
     set({ edges: newChange });
+
+    useFlowsManagerStore
+      .getState()
+      .autoSaveCurrentFlow(
+        get().nodes,
+        newChange,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
   },
   setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
     let newChange =

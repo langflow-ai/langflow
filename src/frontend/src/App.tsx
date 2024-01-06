@@ -16,7 +16,6 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { FlowsContext } from "./contexts/flowsContext";
 import { locationContext } from "./contexts/locationContext";
 import { getHealth, getVersion } from "./controllers/API";
 import Router from "./routes";

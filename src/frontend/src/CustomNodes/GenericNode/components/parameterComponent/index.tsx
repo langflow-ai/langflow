@@ -26,7 +26,6 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";

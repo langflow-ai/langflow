@@ -26,7 +26,6 @@ export default function BuildTrigger({
   isBuilt: boolean;
 }): JSX.Element {
   const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { saveFlow } = useContext(FlowsContext);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -34,6 +33,7 @@ export default function BuildTrigger({
   const setCurrentFlowState = useFlowsManagerStore(
     (state) => state.setCurrentFlowState
   );
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
 
   const [isIconTouched, setIsIconTouched] = useState(false);
   const eventClick = isBuilding ? "pointer-events-none" : "";

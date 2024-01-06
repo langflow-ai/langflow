@@ -1,3 +1,4 @@
+import { Node, Edge, Viewport } from "reactflow";
 import { FlowType } from "../../flow";
 import { FlowState, FlowsState } from "../../tabs";
 
@@ -12,4 +13,6 @@ export type FlowsManagerStoreType = {
   currentFlowState: FlowState | undefined;
   setCurrentFlowState: (state: FlowState | ((oldState: FlowState | undefined) => FlowState)) => void;
   refreshFlows: () => Promise<void>;
+  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
+  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => void;
 };
