@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -9,7 +9,9 @@ import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   nodeColors,
@@ -23,8 +25,6 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
-import { useTypesStore } from "../../../../stores/typesStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -229,11 +229,9 @@ export default function ExtraSidebar(): JSX.Element {
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
-        <ShadTooltip content="Export" side="top">
-          <button className={classNames("extra-side-bar-buttons")}>
-            <IconComponent name="FileDown" className="side-bar-button-size" />
-          </button>
-        </ShadTooltip>
+        <button className={classNames("extra-side-bar-buttons")}>
+          <IconComponent name="FileDown" className="side-bar-button-size" />
+        </button>
       </ExportModal>
     ),
     []
@@ -274,7 +272,15 @@ export default function ExtraSidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        {(!hasApiKey || !validApiKey) && ExportMemo}
+        {(!hasApiKey || !validApiKey) && (
+          <ShadTooltip
+            content="Export"
+            side="top"
+            styleClasses="cursor-default"
+          >
+            <div className="side-bar-button">{ExportMemo}</div>
+          </ShadTooltip>
+        )}
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
             {currentFlow && currentFlow.data && (
@@ -305,7 +311,17 @@ export default function ExtraSidebar(): JSX.Element {
                   (isPending ? "" : "button-disable")
                 }
                 onClick={(event) => {
-                  saveFlow({...currentFlow, data: {nodes, edges, viewport: reactFlowInstance?.getViewport()!} }, true);
+                  saveFlow(
+                    {
+                      ...currentFlow,
+                      data: {
+                        nodes,
+                        edges,
+                        viewport: reactFlowInstance?.getViewport()!,
+                      },
+                    },
+                    true
+                  );
                 }}
               >
                 <IconComponent

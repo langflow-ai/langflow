@@ -34,8 +34,8 @@ export function AuthProvider({ children }): React.ReactElement {
     cookies.get("refresh_tkn_lflw")
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    cookies.get("refresh_tkn_lflw") && cookies.get("access_tkn_lflw")
-  );
+    !!cookies.get("refresh_tkn_lflw") && !!cookies.get("access_tkn_lflw")
+    );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
