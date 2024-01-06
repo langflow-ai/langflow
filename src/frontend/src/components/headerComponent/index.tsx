@@ -33,7 +33,6 @@ export default function Header(): JSX.Element {
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
-  const gradientIndex = useDarkStore((state) => state.gradientIndex);
 
   useEffect(() => {
     if (dark) {
@@ -167,7 +166,7 @@ export default function Header(): JSX.Element {
                   <button
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      (userData?.profile_image ?? gradients[gradientIndex])
+                      (userData?.profile_image ?? gradients[parseInt(userData?.id ?? "", 30) % gradients.length])
                     }
                   />
                 </DropdownMenuTrigger>

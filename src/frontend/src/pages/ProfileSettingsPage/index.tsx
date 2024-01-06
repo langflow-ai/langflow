@@ -98,6 +98,7 @@ export default function ProfileSettingsPage(): JSX.Element {
                     Password{" "}
                   </Form.Label>
                   <InputComponent
+                    id="pasword"
                     onChange={(value) => {
                       handleInput({ target: { name: "password", value } });
                     }}
@@ -119,6 +120,7 @@ export default function ProfileSettingsPage(): JSX.Element {
                   </Form.Label>
 
                   <InputComponent
+                    id="cnfPassword"
                     onChange={(value) => {
                       handleInput({ target: { name: "cnfPassword", value } });
                     }}
@@ -144,9 +146,9 @@ export default function ProfileSettingsPage(): JSX.Element {
                 <GradientChooserComponent
                   value={
                     gradient == ""
-                      ? userData!.profile_image ??
+                      ? userData?.profile_image ??
                         gradients[
-                          parseInt(userData!.id ?? "", 30) % gradients.length
+                          parseInt(userData?.id ?? "", 30) % gradients.length
                         ]
                       : gradient
                   }

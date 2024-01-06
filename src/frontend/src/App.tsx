@@ -17,7 +17,7 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
-import { getHealth, getVersion } from "./controllers/API";
+import { getHealth, getRepoStars, getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useTypesStore } from "./stores/typesStore";
@@ -132,10 +132,14 @@ export default function App() {
 
   const { isAuthenticated } = useContext(AuthContext);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
-  const setVersion = useDarkStore((state) => state.setVersion);
   const getTypes = useTypesStore((state) => state.getTypes);
+  const refreshVersion = useDarkStore((state) => state.refreshVersion);
+  const refreshStars = useDarkStore((state) => state.refreshStars);
 
   useEffect(() => {
+    refreshStars();
+    refreshVersion();
+
     // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
     if (isAuthenticated === true) {
       // get data from db
@@ -144,9 +148,6 @@ export default function App() {
       });
     }
 
-    getVersion().then((data) => {
-      setVersion(data.version);
-    });
   }, [isAuthenticated]);
 
   useEffect(() => {
