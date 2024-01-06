@@ -5,7 +5,6 @@ import { useSSE } from "../../../contexts/SSEContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
-import { FlowsContext } from "../../../contexts/flowsContext";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";

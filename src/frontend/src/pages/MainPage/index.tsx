@@ -10,11 +10,15 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { downloadFlows } from "../../utils/reactflowUtils";
 export default function HomePage(): JSX.Element {
-  const { downloadFlows, uploadFlows, addFlow, uploadFlow } =
+  const { addFlow, uploadFlow } =
     useContext(FlowsContext);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
+  );
+  const uploadFlows = useFlowsManagerStore(
+    (state) => state.uploadFlows
   );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);

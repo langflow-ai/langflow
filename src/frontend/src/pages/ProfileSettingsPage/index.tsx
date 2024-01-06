@@ -8,7 +8,6 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { resetPassword, updateUser } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import {

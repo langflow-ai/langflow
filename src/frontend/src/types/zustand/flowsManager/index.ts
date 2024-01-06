@@ -4,6 +4,7 @@ import { FlowState, FlowsState } from "../../tabs";
 
 export type FlowsManagerStoreType = {
   flows: Array<FlowType>;
+  setFlows: (flows: FlowType[]) => void;
   currentFlow: FlowType | undefined;
   currentFlowId: string;
   setCurrentFlowId: (currentFlowId: string) => void;
@@ -15,4 +16,5 @@ export type FlowsManagerStoreType = {
   refreshFlows: () => Promise<void>;
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
   autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => void;
+  uploadFlows: () => Promise<void>;
 };

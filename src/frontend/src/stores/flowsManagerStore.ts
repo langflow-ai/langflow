@@ -4,6 +4,7 @@ import { create } from "zustand";
 import {
   readFlowsFromDatabase,
   updateFlowInDatabase,
+  uploadFlowsToDatabase,
 } from "../controllers/API";
 import { FlowType } from "../types/flow";
 import { FlowState } from "../types/tabs";
@@ -25,6 +26,12 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     }));
   },
   flows: [],
+  setFlows: (flows: FlowType[]) => {
+    set({
+      flows,
+      currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
+    });
+  },
   currentFlow: undefined,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
@@ -52,7 +59,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            set({ flows, isLoading: false });
+            get().setFlows(flows);
+            set({ isLoading: false });
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
@@ -94,14 +102,14 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                 .getState()
                 .setSuccessData({ title: "Changes saved successfully" });
             }
-            set((oldState) => ({
-              flows: oldState.flows.map((flow) => {
+            get().setFlows(
+              get().flows.map((flow) => {
                 if (flow.id === updatedFlow.id) {
                   return updatedFlow;
                 }
                 return flow;
-              }),
-            }));
+              })
+            );
             //update tabs state
 
             useFlowStore.setState({ isPending: false });
@@ -115,6 +123,35 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           });
           reject(err);
         });
+    });
+  },
+  uploadFlows: () => {
+    return new Promise<void>((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      // add a change event listener to the file input
+      input.onchange = (event: Event) => {
+        // check if the file type is application/json
+        if (
+          (event.target as HTMLInputElement).files![0].type ===
+          "application/json"
+        ) {
+          // get the file from the file input
+          const file = (event.target as HTMLInputElement).files![0];
+          // read the file as text
+          const formData = new FormData();
+          formData.append("file", file);
+          uploadFlowsToDatabase(formData).then(() => {
+            get()
+              .refreshFlows()
+              .then(() => {
+                resolve();
+              });
+          });
+        }
+      };
+      // trigger the file input click event to open the file dialog
+      input.click();
     });
   },
 }));

@@ -33,6 +33,7 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, getFieldTitle, toTitleCase } from "./utils";
+import { downloadFlowsFromDatabase } from "../controllers/API";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
@@ -1204,4 +1205,49 @@ export function templatesGenerator(data: APIObjectType) {
     });
     return acc;
   }, {});
+}
+
+export function downloadFlow(
+  flow: FlowType,
+  flowName: string,
+  flowDescription?: string
+) {
+  let clonedFlow = cloneDeep(flow);
+  removeFileNameFromComponents(clonedFlow);
+  // create a data URI with the current flow data
+  const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+    JSON.stringify({
+      ...clonedFlow,
+      name: flowName,
+      description: flowDescription,
+    })
+  )}`;
+
+  // create a link element and set its properties
+  const link = document.createElement("a");
+  link.href = jsonString;
+  link.download = `${
+    flowName && flowName != ""
+      ? flowName
+      : flow.name
+  }.json`;
+
+  // simulate a click on the link element to trigger the download
+  link.click();
+}
+
+export function downloadFlows() {
+  downloadFlowsFromDatabase().then((flows) => {
+    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+      JSON.stringify(flows)
+    )}`;
+
+    // create a link element and set its properties
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `flows.json`;
+
+    // simulate a click on the link element to trigger the download
+    link.click();
+  });
 }

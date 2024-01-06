@@ -16,8 +16,9 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { removeFlow, uploadFlow, addFlow, isLoading } =
+  const { removeFlow, uploadFlow, addFlow } =
     useContext(FlowsContext);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -51,7 +52,7 @@ export default function ComponentsComponent({
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
     setData(all.slice(start, end));
-  }, [flows, pageIndex, pageSize]);
+  }, [flows, isLoading, pageIndex, pageSize]);
 
   const [data, setData] = useState<FlowType[]>([]);
 
