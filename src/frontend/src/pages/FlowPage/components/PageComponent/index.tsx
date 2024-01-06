@@ -42,6 +42,7 @@ import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
 import { useTypesStore } from "../../../../stores/typesStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -54,7 +55,8 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  let { uploadFlow, saveFlow } = useContext(FlowsContext);
+  let { uploadFlow } = useContext(FlowsContext);
+  const autoSaveCurrentFlow = useFlowsManagerStore((state) => state.autoSaveCurrentFlow);
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
@@ -202,7 +204,7 @@ export default function Page({
 
   const onNodeDragStop: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
-    saveFlow(undefined, true);
+    autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 

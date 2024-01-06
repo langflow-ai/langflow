@@ -32,7 +32,9 @@ export default function ExtraSidebar(): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const getFilterEdge = useTypesStore((state) => state.getFilterEdge);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
-  const { uploadFlow, saveFlow } = useContext(FlowsContext);
+  const { uploadFlow } = useContext(FlowsContext);
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -302,7 +304,7 @@ export default function ExtraSidebar(): JSX.Element {
                   (isPending ? "" : "button-disable")
                 }
                 onClick={(event) => {
-                  saveFlow();
+                  saveFlow({...currentFlow, data: {...currentFlow.data!, viewport: reactFlowInstance?.getViewport()!} }, true);
                 }}
               >
                 <IconComponent

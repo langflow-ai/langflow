@@ -13,7 +13,7 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { saveFlow } = useContext(FlowsContext);
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flows = useFlowsManagerStore((state) => state.flows);
   useEffect(() => {

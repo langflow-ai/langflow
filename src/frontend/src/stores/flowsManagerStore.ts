@@ -1,40 +1,19 @@
-import { cloneDeep } from "lodash";
-import ShortUniqueId from "short-unique-id";
+import { AxiosError } from "axios";
+import { Edge, Node, Viewport } from "reactflow";
 import { create } from "zustand";
-import { readFlowsFromDatabase } from "../controllers/API";
-import { APIClassType } from "../types/api";
-import { FlowType, NodeDataType } from "../types/flow";
+import {
+  readFlowsFromDatabase,
+  updateFlowInDatabase,
+} from "../controllers/API";
+import { FlowType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { FlowsManagerStoreType } from "../types/zustand/flowsManager";
-import { processDataFromFlow } from "../utils/reactflowUtils";
-import { createRandomKey } from "../utils/utils";
-import { useTypesStore } from "./typesStore";
+import { processFlows } from "../utils/reactflowUtils";
 import useAlertStore from "./alertStore";
+import useFlowStore from "./flowStore";
+import { useTypesStore } from "./typesStore";
 
-const uid = new ShortUniqueId({ length: 5 });
-
-const processFlows = (DbData: FlowType[], skipUpdate = true) => {
-  let savedComponents: { [key: string]: APIClassType } = {};
-  DbData.forEach((flow: FlowType) => {
-    try {
-      if (!flow.data) {
-        return;
-      }
-      if (flow.data && flow.is_component) {
-        (flow.data.nodes[0].data as NodeDataType).node!.display_name =
-          flow.name;
-        savedComponents[
-          createRandomKey((flow.data.nodes[0].data as NodeDataType).type, uid())
-        ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
-        return;
-      }
-      if (!skipUpdate) processDataFromFlow(flow, false);
-    } catch (e) {
-      console.log(e);
-    }
-  });
-  return { data: savedComponents, flows: DbData };
-};
+let saveTimeoutId: NodeJS.Timeout | null = null;
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   currentFlowId: "",
@@ -69,21 +48,73 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
       set({ isLoading: true });
-      readFlowsFromDatabase().then((dbData) => {
-        if (dbData) {
-          const { data, flows } = processFlows(dbData, false);
-          set({ flows, isLoading: false });
-          useTypesStore.setState((state) => ({
-            data: { ...state.data, ["saved_components"]: data },
-          }));
-          resolve();
-        }
-      }).catch((e) => {
-        useAlertStore.getState().setErrorData({
-          title: "Could not load flows from database",
+      readFlowsFromDatabase()
+        .then((dbData) => {
+          if (dbData) {
+            const { data, flows } = processFlows(dbData, false);
+            set({ flows, isLoading: false });
+            useTypesStore.setState((state) => ({
+              data: { ...state.data, ["saved_components"]: data },
+            }));
+            resolve();
+          }
+        })
+        .catch((e) => {
+          useAlertStore.getState().setErrorData({
+            title: "Could not load flows from database",
+          });
+          reject(e);
         });
-        reject(e);
-      });
+    });
+  },
+  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+    // Clear the previous timeout if it exists.
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    // Set up a new timeout.
+    saveTimeoutId = setTimeout(() => {
+      if (get().currentFlow) {
+        get().saveFlow(
+          { ...get().currentFlow!, data: { nodes, edges, viewport } },
+          true
+        );
+      }
+    }, 300); // Delay of 300ms.
+  },
+  saveFlow: (flow: FlowType, silent?: boolean) => {
+    return new Promise<void>((resolve, reject) => {
+      updateFlowInDatabase(flow)
+        .then((updatedFlow) => {
+          if (updatedFlow) {
+            // updates flow in state
+            if (!silent) {
+              useAlertStore
+                .getState()
+                .setSuccessData({ title: "Changes saved successfully" });
+            }
+            set((oldState) => ({
+              flows: oldState.flows.map((flow) => {
+                if (flow.id === updatedFlow.id) {
+                  return updatedFlow;
+                }
+                return flow;
+              }),
+            }));
+            //update tabs state
+
+            useFlowStore.setState({ isPending: false });
+            resolve();
+          }
+        })
+        .catch((err) => {
+          useAlertStore.getState().setErrorData({
+            title: "Error while saving changes",
+            list: [(err as AxiosError).message],
+          });
+          reject(err);
+        });
     });
   },
 }));

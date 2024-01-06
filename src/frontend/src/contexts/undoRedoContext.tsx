@@ -13,7 +13,6 @@ import {
   undoRedoContextType,
 } from "../types/typesContext";
 import { isWrappedWithClass } from "../utils/utils";
-import { FlowsContext } from "./flowsContext";
 import useFlowsManagerStore from "../stores/flowsManagerStore";
 
 const initialValue = {

@@ -25,6 +25,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 import { useDarkStore } from "../../../../stores/darkStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -73,7 +74,8 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
 
-  const { saveComponent, flows  } = useContext(FlowsContext);
+  const { saveComponent  } = useContext(FlowsContext);
+  const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);

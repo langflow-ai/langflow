@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -13,6 +13,7 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import {
+  APIClassType,
   APIKindType,
   APIObjectType,
   APITemplateType,
@@ -31,7 +32,7 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { getFieldTitle, toTitleCase } from "./utils";
+import { createRandomKey, getFieldTitle, toTitleCase } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
@@ -152,6 +153,29 @@ export function updateTemplate(
   }
   return clonedObject;
 }
+
+export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
+  let savedComponents: { [key: string]: APIClassType } = {};
+  DbData.forEach((flow: FlowType) => {
+    try {
+      if (!flow.data) {
+        return;
+      }
+      if (flow.data && flow.is_component) {
+        (flow.data.nodes[0].data as NodeDataType).node!.display_name =
+          flow.name;
+        savedComponents[
+          createRandomKey((flow.data.nodes[0].data as NodeDataType).type, uid())
+        ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+        return;
+      }
+      if (!skipUpdate) processDataFromFlow(flow, false);
+    } catch (e) {
+      console.log(e);
+    }
+  });
+  return { data: savedComponents, flows: DbData };
+};
 
 export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   let data = flow?.data ? flow.data : null;

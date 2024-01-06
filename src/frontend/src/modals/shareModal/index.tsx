@@ -24,6 +24,7 @@ import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function ShareModal({
   component,
@@ -57,7 +58,7 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
-  const { saveFlow } = useContext(FlowsContext);
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
 
   const [loadingNames, setLoadingNames] = useState(false);
 

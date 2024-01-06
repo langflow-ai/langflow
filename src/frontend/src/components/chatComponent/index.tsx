@@ -5,7 +5,6 @@ import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import useFlowStore from "../../stores/flowStore";
