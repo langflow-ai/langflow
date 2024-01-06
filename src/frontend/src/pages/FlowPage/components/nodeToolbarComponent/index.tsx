@@ -8,7 +8,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
@@ -74,7 +73,7 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
 
-  const { saveComponent  } = useContext(FlowsContext);
+  const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
   const { takeSnapshot } = useContext(undoRedoContext);

@@ -7,7 +7,6 @@ import {
   SelectTrigger,
 } from "../../../../../components/ui/select-custom";
 import { AuthContext } from "../../../../../contexts/authContext";
-import { FlowsContext } from "../../../../../contexts/flowsContext";
 import { APIClassType } from "../../../../../types/api";
 import {
   createFlowComponent,
@@ -16,6 +15,7 @@ import {
 } from "../../../../../utils/reactflowUtils";
 import { removeCountFromString } from "../../../../../utils/utils";
 import { useDarkStore } from "../../../../../stores/darkStore";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 
 export default function SidebarDraggableComponent({
   sectionName,
@@ -37,7 +37,9 @@ export default function SidebarDraggableComponent({
   official: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { deleteComponent } = useContext(FlowsContext);
+  const deleteComponent = useFlowsManagerStore(
+    (state) => state.deleteComponent
+  );
   const version = useDarkStore((state) => state.version);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const popoverRef = useRef<HTMLDivElement>(null);

@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
@@ -18,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function CollectionCardComponent({
   data,
@@ -32,7 +32,7 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   onDelete?: () => void;
 }) {
-  const { addFlow } = useContext(FlowsContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);

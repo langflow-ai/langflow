@@ -7,13 +7,12 @@ import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { FlowsContext } from "../../contexts/flowsContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
 export default function HomePage(): JSX.Element {
-  const { addFlow, uploadFlow } =
-    useContext(FlowsContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );

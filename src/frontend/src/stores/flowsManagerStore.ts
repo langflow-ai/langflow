@@ -1,18 +1,27 @@
 import { AxiosError } from "axios";
-import { Edge, Node, Viewport } from "reactflow";
+import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import {
+  deleteFlowFromDatabase,
   readFlowsFromDatabase,
+  saveFlowToDatabase,
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
-import { FlowType } from "../types/flow";
+import { FlowType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { FlowsManagerStoreType } from "../types/zustand/flowsManager";
-import { processFlows } from "../utils/reactflowUtils";
+import {
+  addVersionToDuplicates,
+  createFlowComponent,
+  createNewFlow,
+  processDataFromFlow,
+  processFlows,
+} from "../utils/reactflowUtils";
 import useAlertStore from "./alertStore";
 import useFlowStore from "./flowStore";
 import { useTypesStore } from "./typesStore";
+import { useDarkStore } from "./darkStore";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -153,6 +162,173 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       // trigger the file input click event to open the file dialog
       input.click();
     });
+  },
+  addFlow: async (
+    newProject: Boolean,
+    flow?: FlowType,
+    override?: boolean,
+    position?: XYPosition
+  ): Promise<string | undefined> => {
+    if (newProject) {
+      let flowData = flow
+        ? processDataFromFlow(flow)
+        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
+
+      // Create a new flow with a default name if no flow is provided.
+
+      if (override) {
+        get().deleteComponent(flow!.name);
+        const newFlow = createNewFlow(flowData!, flow!);
+        const { id } = await saveFlowToDatabase(newFlow);
+        newFlow.id = id;
+        //setTimeout  to prevent update state with wrong state
+        setTimeout(() => {
+          const { data, flows } = processFlows([newFlow, ...get().flows]);
+          get().setFlows(flows);
+          set({ isLoading: false });
+          useTypesStore.setState((state) => ({
+            data: { ...state.data, ["saved_components"]: data },
+          }));
+        }, 200);
+        // addFlowToLocalState(newFlow);
+        return;
+      }
+
+      const newFlow = createNewFlow(flowData!, flow!);
+
+      const newName = addVersionToDuplicates(newFlow, get().flows);
+
+      newFlow.name = newName;
+      try {
+        const { id } = await saveFlowToDatabase(newFlow);
+        // Change the id to the new id.
+        newFlow.id = id;
+
+        // Add the new flow to the list of flows.
+        const { data, flows } = processFlows([newFlow, ...get().flows]);
+        get().setFlows(flows);
+        set({ isLoading: false });
+        useTypesStore.setState((state) => ({
+          data: { ...state.data, ["saved_components"]: data },
+        }));
+
+        // Return the id
+        return id;
+      } catch (error) {
+        // Handle the error if needed
+        throw error; // Re-throw the error so the caller can handle it if needed
+      }
+    } else {
+      useFlowStore
+        .getState()
+        .paste(
+          { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
+          position ?? { x: 10, y: 10 }
+        );
+    }
+  },
+  removeFlow: async (id: string) => {
+    return new Promise<void>((resolve) => {
+      const index = get().flows.findIndex((flow) => flow.id === id);
+      if (index >= 0) {
+        deleteFlowFromDatabase(id).then(() => {
+          const { data, flows } = processFlows(
+            get().flows.filter((flow) => flow.id !== id)
+          );
+          get().setFlows(flows);
+          set({ isLoading: false });
+          useTypesStore.setState((state) => ({
+            data: { ...state.data, ["saved_components"]: data },
+          }));
+          resolve();
+        });
+      }
+    });
+  },
+  deleteComponent: async (key: string) => {
+    return new Promise<void>((resolve) => {
+      let componentFlow = get().flows.find(
+        (componentFlow) =>
+          componentFlow.is_component && componentFlow.name === key
+      );
+
+      if (componentFlow) {
+        get()
+          .removeFlow(componentFlow.id)
+          .then(() => {
+            resolve();
+          });
+      }
+    });
+  },
+  uploadFlow: async ({
+    newProject,
+    file,
+    isComponent = false,
+    position = { x: 10, y: 10 },
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+    position?: XYPosition;
+  }): Promise<string | never> => {
+    return new Promise(async (resolve, reject) => {
+      let id;
+      if (file) {
+        let text = await file.text();
+        let fileData = JSON.parse(text);
+        if (
+          newProject &&
+          ((!fileData.is_component && isComponent === true) ||
+            (fileData.is_component !== undefined &&
+              fileData.is_component !== isComponent))
+        ) {
+          reject("You cannot upload a component as a flow or vice versa");
+        } else {
+          if (fileData.flows) {
+            fileData.flows.forEach((flow: FlowType) => {
+              id = get().addFlow(newProject, flow, undefined, position);
+            });
+            resolve("");
+          } else {
+            id = await get().addFlow(newProject, fileData, undefined, position);
+            resolve(id);
+          }
+        }
+      } else {
+        // create a file input
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        // add a change event listener to the file input
+        input.onchange = async (e: Event) => {
+          if (
+            (e.target as HTMLInputElement).files![0].type === "application/json"
+          ) {
+            const currentfile = (e.target as HTMLInputElement).files![0];
+            let text = await currentfile.text();
+            let fileData: FlowType = await JSON.parse(text);
+
+            if (
+              (!fileData.is_component && isComponent === true) ||
+              (fileData.is_component !== undefined &&
+                fileData.is_component !== isComponent)
+            ) {
+              reject("You cannot upload a component as a flow or vice versa");
+            } else {
+              id = await get().addFlow(newProject, fileData);
+              resolve(id);
+            }
+          }
+        };
+        // trigger the file input click event to open the file dialog
+        input.click();
+      }
+    });
+  },
+  saveComponent: (component: NodeDataType, override: boolean) => {
+    component.node!.official = false;
+    return get().addFlow(true, createFlowComponent(component, useDarkStore.getState().version), override);
   },
 }));
 

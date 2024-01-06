@@ -1,5 +1,4 @@
 import { useContext, useState } from "react";
-import { FlowsContext } from "../../../../contexts/flowsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +16,7 @@ import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = (): JSX.Element => {
-  const { addFlow } = useContext(FlowsContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { undo, redo } = useContext(undoRedoContext);

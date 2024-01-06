@@ -5,7 +5,6 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { SSEProvider } from "./SSEContext";
 import { AuthProvider } from "./authContext";
-import { FlowsProvider } from "./flowsContext";
 import { LocationProvider } from "./locationContext";
 
 import { UndoRedoProvider } from "./undoRedoContext";
@@ -21,9 +20,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
               <LocationProvider>
                 <ApiInterceptor />
                 <SSEProvider>
-                  <FlowsProvider>
-                    <UndoRedoProvider>{children}</UndoRedoProvider>
-                  </FlowsProvider>
+                  <UndoRedoProvider>{children}</UndoRedoProvider>
                 </SSEProvider>
               </LocationProvider>
             </ReactFlowProvider>
