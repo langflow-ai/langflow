@@ -150,9 +150,13 @@ export default function App() {
   useEffect(() => {
     // Timer to call getHealth every 5 seconds
     const timer = setInterval(() => {
-      getHealth().catch((e) => {
-        setFetchError(true);
-      });
+      getHealth()
+        .then(() => {
+          if (fetchError) setFetchError(false);
+        })
+        .catch(() => {
+          setFetchError(true);
+        });
     }, 5000);
 
     // Clean up the timer on component unmount
