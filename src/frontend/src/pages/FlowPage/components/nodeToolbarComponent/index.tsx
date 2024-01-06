@@ -24,6 +24,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
+import { useDarkStore } from "../../../../stores/darkStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -72,7 +73,8 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
 
-  const { saveComponent, flows, version } = useContext(FlowsContext);
+  const { saveComponent, flows  } = useContext(FlowsContext);
+  const version = useDarkStore((state) => state.version);
   const { takeSnapshot } = useContext(undoRedoContext);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);

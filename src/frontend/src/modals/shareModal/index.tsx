@@ -23,6 +23,7 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import { useDarkStore } from "../../stores/darkStore";
 
 export default function ShareModal({
   component,
@@ -39,7 +40,7 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
-  const { version } = useContext(FlowsContext);
+  const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
