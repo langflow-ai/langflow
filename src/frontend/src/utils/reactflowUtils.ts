@@ -153,6 +153,19 @@ export function updateTemplate(
   return clonedObject;
 }
 
+export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
+  let data = flow?.data ? flow.data : null;
+  if (data) {
+    processFlowEdges(flow);
+    //prevent node update for now
+    // processFlowNodes(flow);
+    //add animation to text type edges
+    updateEdges(data.edges);
+    // updateNodes(data.nodes, data.edges);
+    if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
+  }
+};
+
 export function updateIds(newFlow: ReactFlowJsonObject) {
   let idsMap = {};
 
