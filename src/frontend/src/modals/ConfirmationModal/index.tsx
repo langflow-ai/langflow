@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import { ConfirmationModalType, ContentProps, TriggerProps } from "../../types/components";
+import {
+  ConfirmationModalType,
+  ContentProps,
+  TriggerProps,
+} from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
@@ -12,15 +16,14 @@ const Trigger: React.FC<TriggerProps> = ({
   children,
   tooltipContent,
   side,
-  asChild,
-}) => {
-  return asChild ? children : (tooltipContent ? (
+}: TriggerProps) => {
+  return tooltipContent ? (
     <ShadTooltip side={side} content={tooltipContent}>
       <div className="h-full w-full">{children}</div>
     </ShadTooltip>
   ) : (
     <div className="h-full w-full">{children}</div>
-  ));
+  );
 };
 function ConfirmationModal({
   title,
@@ -59,13 +62,7 @@ function ConfirmationModal({
 
   return (
     <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
-      <>
-        {triggerChild && (
-          <BaseModal.Trigger>
-            {triggerChild}
-          </BaseModal.Trigger>
-        )}
-      </>
+      <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         <Icon
