@@ -286,7 +286,7 @@ export default function Page({
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot]
+    [getNodeId, setNodes, takeSnapshot, paste]
   );
 
   useEffect(() => {
