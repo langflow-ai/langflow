@@ -1,8 +1,7 @@
-from typing import Optional, List
+from typing import List, Optional
 
-from langchain.llms import Ollama
 from langchain.llms.base import BaseLLM
-
+from langchain_community.llms.ollama import Ollama
 from langflow import CustomComponent
 
 
@@ -150,10 +149,9 @@ class OllamaLLM(CustomComponent):
             "top_k": top_k,
             "top_p": top_p,
         }
-        
-                # None Value remove
-        llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
+        # None Value remove
+        llm_params = {k: v for k, v in llm_params.items() if v is not None}
 
         try:
             llm = Ollama(**llm_params)
