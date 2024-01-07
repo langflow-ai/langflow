@@ -274,6 +274,8 @@ vectorstores:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
   Pinecone:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
+  ElasticsearchStore:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/elasticsearch"
   SupabaseVectorStore:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
   MongoDBAtlasVectorSearch:

@@ -2,7 +2,6 @@ from typing import Optional
 
 from langchain.llms.base import BaseLLM
 from langchain.llms.bedrock import Bedrock
-
 from langflow import CustomComponent
 
 
@@ -44,7 +43,7 @@ class AmazonBedrockComponent(CustomComponent):
         model_kwargs: Optional[dict] = None,
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
-        cache: bool | None = None,
+        cache: Optional[bool] = None,
     ) -> BaseLLM:
         try:
             output = Bedrock(
