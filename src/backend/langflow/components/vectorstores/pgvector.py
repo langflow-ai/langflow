@@ -56,13 +56,13 @@ class PGVectorComponent(CustomComponent):
 
         try:
             if documents is None:
-                embedding = PGVector.from_existing_index(
+                vector_store = PGVector.from_existing_index(
                     embedding=embedding,
                     collection_name=collection_name,
                     connection_string=pg_server_url,
                 )
 
-            embedding = PGVector.from_documents(
+            vector_store = PGVector.from_documents(
                 embedding=embedding,
                 documents=documents,
                 collection_name=collection_name,
@@ -70,4 +70,4 @@ class PGVectorComponent(CustomComponent):
             )
         except Exception as e:
             raise RuntimeError(f"Failed to build PGVector: {e}")
-        return embedding
+        return vector_store
