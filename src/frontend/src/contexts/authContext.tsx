@@ -1,6 +1,10 @@
 import { createContext, useEffect, useState } from "react";
 import Cookies from "universal-cookie";
-import { autoLogin as autoLoginApi, getLoggedUser } from "../controllers/API";
+import {
+  autoLogin as autoLoginApi,
+  getLoggedUser,
+  requestLogout,
+} from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
@@ -10,9 +14,8 @@ const initialValue: AuthContextType = {
   setIsAdmin: () => false,
   isAuthenticated: false,
   accessToken: null,
-  refreshToken: null,
   login: () => {},
-  logout: () => {},
+  logout: () => new Promise(() => {}),
   userData: null,
   setUserData: () => {},
   authenticationErrorCount: 0,
@@ -28,14 +31,11 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get("access_tkn_lflw")
-  );
-  const [refreshToken, setRefreshToken] = useState<string | null>(
-    cookies.get("refresh_tkn_lflw")
+    cookies.get("access_token_lf") ?? null
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!cookies.get("refresh_tkn_lflw") && !!cookies.get("access_tkn_lflw")
-    );
+    !!cookies.get("access_token_lf")
+  );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
@@ -45,7 +45,7 @@ export function AuthProvider({ children }): React.ReactElement {
   );
 
   useEffect(() => {
-    const storedAccessToken = cookies.get("access_tkn_lflw");
+    const storedAccessToken = cookies.get("access_token_lf");
     if (storedAccessToken) {
       setAccessToken(storedAccessToken);
     }
@@ -65,7 +65,7 @@ export function AuthProvider({ children }): React.ReactElement {
       .then((user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
-          login(user["access_token"], user["refresh_token"]);
+          login(user["access_token"]);
           setUserData(user);
           setAutoLogin(true);
           setLoading(false);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }): React.ReactElement {
       });
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
-  function getUser(){
+  function getUser() {
     getLoggedUser()
       .then((user) => {
         setUserData(user);
@@ -95,25 +95,26 @@ export function AuthProvider({ children }): React.ReactElement {
       });
   }
 
-  function login(newAccessToken: string, refreshToken: string) {
-    cookies.set("access_tkn_lflw", newAccessToken, { path: "/" });
-    cookies.set("refresh_tkn_lflw", refreshToken, { path: "/" });
+  function login(newAccessToken: string) {
     setAccessToken(newAccessToken);
-    setRefreshToken(refreshToken);
     setIsAuthenticated(true);
-    setTimeout(() => {getUser();}, 500)
-    
+    setTimeout(() => {
+      getUser();
+    }, 500);
   }
 
-  function logout() {
-    cookies.remove("access_tkn_lflw", { path: "/" });
-    cookies.remove("refresh_tkn_lflw", { path: "/" });
-    cookies.remove("apikey_tkn_lflw", { path: "/" });
-    setIsAdmin(false);
-    setUserData(null);
-    setAccessToken(null);
-    setRefreshToken(null);
-    setIsAuthenticated(false);
+  async function logout() {
+    try {
+      await requestLogout();
+      cookies.remove("apikey_tkn_lflw", { path: "/" });
+      setIsAdmin(false);
+      setUserData(null);
+      setAccessToken(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   function storeApiKey(apikey: string) {
@@ -129,7 +130,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setIsAdmin,
         isAuthenticated,
         accessToken,
-        refreshToken,
         login,
         logout,
         setUserData,

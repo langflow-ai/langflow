@@ -1,4 +1,4 @@
-from fastapi import Response, APIRouter, Depends, HTTPException, status
+from fastapi import Request, Response, APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -59,7 +59,8 @@ async def auto_login(db: Session = Depends(get_session), settings_service=Depend
 
 
 @router.post("/refresh")
-async def refresh_token(response: Response, token: str):
+async def refresh_token(request: Request, response: Response):
+    token = request.cookies.get("refresh_token_lf")
     if token:
         tokens = create_refresh_token(token)
         response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, secure=True, samesite="strict")

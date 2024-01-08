@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
-import { getLoggedUser, onLogin } from "../../../controllers/API";
+import { onLogin } from "../../../controllers/API";
 import useAlertStore from "../../../stores/alertStore";
 import { LoginType } from "../../../types/api";
 import {
@@ -34,7 +34,7 @@ export default function LoginAdminPage() {
     };
     onLogin(user)
       .then((user) => {
-        login(user.access_token, user.refresh_token);
+        login(user.access_token);
         navigate("/admin/");
       })
       .catch((error) => {

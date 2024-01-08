@@ -411,11 +411,9 @@ export async function autoLogin() {
   }
 }
 
-export async function renewAccessToken(token: string) {
+export async function renewAccessToken() {
   try {
-    if (token) {
-      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
-    }
+    return await api.post(`${BASE_URL_API}refresh`);
   } catch (error) {
     throw error;
   }
@@ -836,6 +834,16 @@ export async function updateFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function requestLogout() {
+  try {
+    const response = await api.post(`${BASE_URL_API}logout`);
     return response.data;
   } catch (error) {
     console.error(error);
