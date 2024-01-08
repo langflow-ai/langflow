@@ -166,10 +166,7 @@ export default function Header(): JSX.Element {
                   <button
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      (userData?.profile_image ??
-                        gradients[
-                          parseInt(userData?.id ?? "", 30) % gradients.length
-                        ])
+                      (userData?.profile_image ?? gradients[parseInt(userData?.id ?? "", 30) % gradients.length])
                     }
                   />
                 </DropdownMenuTrigger>

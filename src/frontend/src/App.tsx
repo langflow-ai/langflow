@@ -17,12 +17,12 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { locationContext } from "./contexts/locationContext";
-import { getHealth } from "./controllers/API";
+import { getHealth, getRepoStars, getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
+import { useTypesStore } from "./stores/typesStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
-import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
   let { setCurrent, setShowSideBar, setIsStackedOpen } =
@@ -147,6 +147,7 @@ export default function App() {
         refreshFlows();
       });
     }
+
   }, [isAuthenticated]);
 
   useEffect(() => {

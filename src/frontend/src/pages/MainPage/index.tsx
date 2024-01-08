@@ -1,5 +1,5 @@
 import { Group, ToyBrick } from "lucide-react";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -16,7 +16,9 @@ export default function HomePage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
-  const uploadFlows = useFlowsManagerStore((state) => state.uploadFlows);
+  const uploadFlows = useFlowsManagerStore(
+    (state) => state.uploadFlows
+  );
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const location = useLocation();

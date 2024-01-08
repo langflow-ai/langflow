@@ -28,10 +28,10 @@ import {
 } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -45,9 +45,7 @@ export default function StorePage(): JSX.Element {
   const { apiKey } = useContext(AuthContext);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
-  );
+  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
   const { id } = useParams();

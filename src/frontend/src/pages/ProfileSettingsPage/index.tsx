@@ -10,16 +10,14 @@ import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { resetPassword, updateUser } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function ProfileSettingsPage(): JSX.Element {
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
-  );
+  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE

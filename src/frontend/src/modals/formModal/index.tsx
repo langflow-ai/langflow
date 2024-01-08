@@ -26,7 +26,7 @@ import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { FlowState } from "../../types/tabs";
+import { FlowState, FlowsState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
@@ -629,12 +629,15 @@ export default function FormModal({
                       setChatValue={(value) => {
                         setChatValue(value);
                         if (currentFlowState && chatKey) {
-                          setCurrentFlowState((old: FlowState | undefined) => {
-                            let newFlowState = cloneDeep(old!);
-                            newFlowState.formKeysData.input_keys![chatKey] =
-                              value;
-                            return newFlowState;
-                          });
+                          setCurrentFlowState(
+                            (old: FlowState | undefined) => {
+                              let newFlowState = cloneDeep(old!);
+                              newFlowState.formKeysData.input_keys![
+                                chatKey
+                              ] = value;
+                              return newFlowState;
+                            }
+                          );
                         }
                       }}
                       inputRef={ref}

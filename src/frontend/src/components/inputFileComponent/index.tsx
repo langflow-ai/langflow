@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { uploadFile } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function InputFileComponent({
   value,

@@ -26,13 +26,7 @@ const Checkbox = React.forwardRef<
 ));
 Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
-const CheckBoxDiv = ({
-  className = "",
-  checked,
-}: {
-  className?: string;
-  checked?: boolean;
-}) => (
+const CheckBoxDiv = (({ className = "", checked }: {className?: string, checked?: boolean}) => (
   <div
     className={cn(
       className,
@@ -46,6 +40,6 @@ const CheckBoxDiv = ({
       </div>
     )}
   </div>
-);
+));
 
 export { CheckBoxDiv, Checkbox };
