@@ -1,7 +1,6 @@
 import {
   Edge,
   Node,
-  OnConnect,
   OnEdgesChange,
   OnNodesChange,
   ReactFlowInstance,
@@ -14,11 +13,20 @@ export type FlowStoreType = {
   sseData: object;
   isBuilding: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
-  resetFlow: (flow: {nodes: Node[], edges: Edge[], viewport: Viewport}) => void;
+  resetFlow: (flow: {
+    nodes: Node[];
+    edges: Edge[];
+    viewport: Viewport;
+  }) => void;
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (newState: ReactFlowInstance) => void;
   flowState: FlowState | undefined;
-  setFlowState: (state: FlowState | undefined | ((oldState: FlowState | undefined) => FlowState)) => void;
+  setFlowState: (
+    state:
+      | FlowState
+      | undefined
+      | ((oldState: FlowState | undefined) => FlowState)
+  ) => void;
   nodes: Node[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
@@ -39,5 +47,4 @@ export type FlowStoreType = {
   ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
-
 };

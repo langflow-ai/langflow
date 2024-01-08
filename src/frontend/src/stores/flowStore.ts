@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import {
-  Connection,
   Edge,
   EdgeChange,
   Node,
@@ -33,10 +32,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
-  isBuilt: false, 
+  isBuilt: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
-
 
   resetFlow: ({ nodes, edges, viewport }) => {
     set({
@@ -45,7 +43,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
       sseData: {},
       isBuilt: false,
-
     });
     get().reactFlowInstance!.setViewport(viewport);
   },
@@ -60,11 +57,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setFlowState: (flowState) => {
     const newFlowState =
-      typeof flowState === "function"
-        ? flowState(get().flowState)
-        : flowState;
-    
-    if(newFlowState !== get().flowState){
+      typeof flowState === "function" ? flowState(get().flowState) : flowState;
+
+    if (newFlowState !== get().flowState) {
       set(() => ({
         flowState: newFlowState,
       }));
@@ -87,30 +82,39 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
 
-    set({ edges: newEdges, nodes: newChange, flowState: undefined, isBuilt: false, sseData: {} });
+    set({
+      edges: newEdges,
+      nodes: newChange,
+      flowState: undefined,
+      isBuilt: false,
+      sseData: {},
+    });
 
-    const flowsManager = useFlowsManagerStore.getState()
+    const flowsManager = useFlowsManagerStore.getState();
 
     flowsManager.autoSaveCurrentFlow(
-        newChange,
-        newEdges,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-      );
-
+      newChange,
+      newEdges,
+      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+    );
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
 
-    set({ edges: newChange, flowState: undefined, isBuilt: false, sseData: {} });
+    set({
+      edges: newChange,
+      flowState: undefined,
+      isBuilt: false,
+      sseData: {},
+    });
 
-    const flowsManager = useFlowsManagerStore.getState()
+    const flowsManager = useFlowsManagerStore.getState();
 
     flowsManager.autoSaveCurrentFlow(
-        get().nodes,
-        newChange,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-      );
-
+      get().nodes,
+      newChange,
+      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+    );
   },
   setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
     let newChange =

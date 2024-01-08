@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
@@ -11,7 +11,9 @@ import {
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -22,8 +24,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
-import { useDarkStore } from "../../../../stores/darkStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -33,22 +33,21 @@ export default function NodeToolbarComponent({
   numberOfHandles,
   showNode,
 }: nodeToolbarPropsType): JSX.Element {
-  const nodeLength = 
-    Object.keys(data.node!.template).filter(
-      (templateField) =>
-        templateField.charAt(0) !== "_" &&
-        data.node?.template[templateField].show &&
-        (data.node.template[templateField].type === "str" ||
-          data.node.template[templateField].type === "bool" ||
-          data.node.template[templateField].type === "float" ||
-          data.node.template[templateField].type === "code" ||
-          data.node.template[templateField].type === "prompt" ||
-          data.node.template[templateField].type === "file" ||
-          data.node.template[templateField].type === "Any" ||
-          data.node.template[templateField].type === "int" ||
-          data.node.template[templateField].type === "dict" ||
-          data.node.template[templateField].type === "NestedDict")
-    ).length;
+  const nodeLength = Object.keys(data.node!.template).filter(
+    (templateField) =>
+      templateField.charAt(0) !== "_" &&
+      data.node?.template[templateField].show &&
+      (data.node.template[templateField].type === "str" ||
+        data.node.template[templateField].type === "bool" ||
+        data.node.template[templateField].type === "float" ||
+        data.node.template[templateField].type === "code" ||
+        data.node.template[templateField].type === "prompt" ||
+        data.node.template[templateField].type === "file" ||
+        data.node.template[templateField].type === "Any" ||
+        data.node.template[templateField].type === "int" ||
+        data.node.template[templateField].type === "dict" ||
+        data.node.template[templateField].type === "NestedDict")
+  ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);

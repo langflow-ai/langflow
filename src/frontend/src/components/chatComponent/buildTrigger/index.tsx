@@ -10,7 +10,6 @@ import { parsedDataType } from "../../../types/components";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import { stat } from "fs";
 
 export default function BuildTrigger({
   open,
@@ -29,9 +28,7 @@ export default function BuildTrigger({
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setFlowState = useFlowStore(
-    (state) => state.setFlowState
-  );
+  const setFlowState = useFlowStore((state) => state.setFlowState);
 
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);

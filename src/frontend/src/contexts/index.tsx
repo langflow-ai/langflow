@@ -13,8 +13,8 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
         <AuthProvider>
           <TooltipProvider>
             <ReactFlowProvider>
-                <ApiInterceptor />
-                  {children}
+              <ApiInterceptor />
+              {children}
             </ReactFlowProvider>
           </TooltipProvider>
         </AuthProvider>

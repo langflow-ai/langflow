@@ -18,7 +18,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import useFlowStore from "../../stores/flowStore";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
@@ -31,7 +31,6 @@ import {
   tabsArray,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import useFlowStore from "../../stores/flowStore";
 
 const ApiModal = forwardRef(
   (
@@ -50,9 +49,7 @@ const ApiModal = forwardRef(
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
     const [getTweak, setTweak] = useState<tweakType>([]);
-    const flowState = useFlowStore(
-      (state) => state.flowState
-    );
+    const flowState = useFlowStore((state) => state.flowState);
     const pythonApiCode = getPythonApiCode(
       flow,
       autoLogin,

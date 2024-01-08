@@ -18,6 +18,7 @@ import Loading from "../../../../components/ui/loading";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useLocationStore } from "../../../../stores/locationStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
@@ -33,7 +34,6 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { useLocationStore } from "../../../../stores/locationStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -179,7 +179,7 @@ export default function Page({
         nodes: flow?.data?.nodes ?? [],
         edges: flow?.data?.edges ?? [],
         viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
-      })
+      });
     }
 
     // Clear the previous timeout
