@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,7 +49,9 @@ export const MenuBar = (): JSX.Element => {
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{currentFlow.name}</div>
+                <div className="header-menu-flow-name">
+                  {currentFlow.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>

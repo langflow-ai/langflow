@@ -17,7 +17,9 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
             <ReactFlowProvider>
               <LocationProvider>
                 <ApiInterceptor />
-                <SSEProvider>{children}</SSEProvider>
+                <SSEProvider>
+                  {children}
+                </SSEProvider>
               </LocationProvider>
             </ReactFlowProvider>
           </TooltipProvider>

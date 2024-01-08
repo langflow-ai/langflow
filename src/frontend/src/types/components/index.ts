@@ -4,6 +4,7 @@ import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
+import { TypesStoreType } from "../zustand/types";
 export type InputComponentType = {
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
@@ -262,6 +263,7 @@ export type LoadingComponentProps = {
 
 export type ContentProps = {
   children: ReactNode;
+  
 };
 export type HeaderProps = { children: ReactNode; description: string };
 export type TriggerProps = {
@@ -303,9 +305,10 @@ export type ConfirmationModalType = {
   modalContentTitle?: string;
   cancelText: string;
   confirmationText: string;
-  children:
-    | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
-    | React.ReactElement<ContentProps>;
+  children: [
+    React.ReactElement<ContentProps>,
+    React.ReactElement<TriggerProps>
+  ] | React.ReactElement<ContentProps>;
   icon: string;
   data?: any;
   index?: number;

@@ -297,10 +297,7 @@ export function buildTweakObject(tweak: tweakType) {
  * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(
-  flow: FlowType,
-  currentFlowState?: FlowState
-) {
+export function getChatInputField(flow: FlowType, currentFlowState?: FlowState) {
   let chat_input_field = "text";
 
   if (

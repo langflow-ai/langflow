@@ -18,6 +18,8 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
+  useEdgesState,
+  useNodesState,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
@@ -222,7 +224,8 @@ export default function Page({
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+  }
+  , [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -287,16 +290,14 @@ export default function Page({
         const newNode: NodeType = {
           id: newId,
           type: "genericNode",
-          position: { x: 0, y: 0 },
+          position: {x: 0, y:0},
           data: {
             ...data,
             id: newId,
           },
         };
-        paste(
-          { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY }
-        );
+        paste({ nodes: [newNode], edges: [] }, {x: event.clientX, y: event.clientY});
+
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
@@ -382,6 +383,7 @@ export default function Page({
   const onPaneClick = useCallback((flow) => {
     setFilterEdge([]);
   }, []);
+
 
   return (
     <div className="flex h-full overflow-hidden">

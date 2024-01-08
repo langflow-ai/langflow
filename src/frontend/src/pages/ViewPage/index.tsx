@@ -1,13 +1,11 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "../FlowPage/components/PageComponent";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function ViewPage() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
-  );
+  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
   const { id } = useParams();
 
   // Set flow tab id
@@ -17,7 +15,9 @@ export default function ViewPage() {
 
   return (
     <div className="flow-page-positioning">
-      {currentFlow && <Page view flow={currentFlow} />}
+        {currentFlow && (
+          <Page view flow={currentFlow} />
+        )}
     </div>
   );
 }
