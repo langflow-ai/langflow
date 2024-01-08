@@ -26,15 +26,11 @@ import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
   const setCurrent = useLocationStore((state) => state.setCurrent);
-  const setShowSideBar = useLocationStore((state) => state.setShowSideBar);
-  const setIsStackedOpen = useLocationStore((state) => state.setIsStackedOpen);
 
   let location = useLocation();
   useEffect(() => {
     setCurrent(location.pathname.replace(/\/$/g, "").split("/"));
-    setShowSideBar(true);
-    setIsStackedOpen(true);
-  }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
+  }, [location.pathname, setCurrent]);
 
   const errorData = useAlertStore((state) => state.errorData);
   const errorOpen = useAlertStore((state) => state.errorOpen);

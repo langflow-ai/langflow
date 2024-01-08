@@ -155,12 +155,6 @@ export default function Page({
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
-  const setExtraComponent = useLocationStore(
-    (state) => state.setExtraComponent
-  );
-  const setExtraNavigation = useLocationStore(
-    (state) => state.setExtraNavigation
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const edgeUpdateSuccessful = useRef(true);
@@ -303,11 +297,6 @@ export default function Page({
     // Specify dependencies for useCallback
     [getNodeId, setNodes, takeSnapshot, paste]
   );
-
-  useEffect(() => {
-    setExtraComponent(<ExtraSidebar />);
-    setExtraNavigation({ title: "Components" });
-  }, []);
 
   const onEdgeUpdateStart = useCallback(() => {
     edgeUpdateSuccessful.current = false;
