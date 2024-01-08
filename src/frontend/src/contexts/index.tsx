@@ -3,7 +3,6 @@ import { BrowserRouter } from "react-router-dom";
 import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
-import { SSEProvider } from "./SSEContext";
 import { AuthProvider } from "./authContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
@@ -15,9 +14,7 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
           <TooltipProvider>
             <ReactFlowProvider>
                 <ApiInterceptor />
-                <SSEProvider>
                   {children}
-                </SSEProvider>
             </ReactFlowProvider>
           </TooltipProvider>
         </AuthProvider>

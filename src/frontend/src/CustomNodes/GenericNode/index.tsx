@@ -6,7 +6,6 @@ import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
-import { useSSE } from "../../contexts/SSEContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useFlowStore from "../../stores/flowStore";
 import { validationStatusType } from "../../types/components";
@@ -17,6 +16,7 @@ import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 import { useTypesStore } from "../../stores/typesStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useSSEStore } from "../../stores/sseStore";
 
 export default function GenericNode({
   data,
@@ -80,7 +80,8 @@ export default function GenericNode({
   }, [data, data.node]);
 
   // State for outline color
-  const { sseData, isBuilding } = useSSE();
+  const sseData = useSSEStore((state) => state.sseData);
+  const isBuilding = useSSEStore((state) => state.isBuilding);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);

@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { getRepoStars, getVersion } from "../controllers/API";
 import { LocationStoreType } from "../types/zustand/location";
 
 export const useLocationStore = create<LocationStoreType>((set, get) => ({
