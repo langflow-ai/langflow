@@ -98,9 +98,7 @@ export function AuthProvider({ children }): React.ReactElement {
   function login(newAccessToken: string) {
     setAccessToken(newAccessToken);
     setIsAuthenticated(true);
-    setTimeout(() => {
-      getUser();
-    }, 500);
+    getUser();
   }
 
   async function logout() {
