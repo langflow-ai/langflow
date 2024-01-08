@@ -32,10 +32,6 @@ export default function ExtraSidebar(): JSX.Element {
   const getFilterEdge = useTypesStore((state) => state.getFilterEdge);
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
-  const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
-  const nodes = useFlowStore((state) => state.nodes);
-  const edges = useFlowStore((state) => state.edges);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
