@@ -81,7 +81,7 @@ export function AuthProvider({ children }): React.ReactElement {
       });
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
-  function getUser() {
+  function getUser(){
     getLoggedUser()
       .then((user) => {
         setUserData(user);
@@ -101,9 +101,8 @@ export function AuthProvider({ children }): React.ReactElement {
     setAccessToken(newAccessToken);
     setRefreshToken(refreshToken);
     setIsAuthenticated(true);
-    setTimeout(() => {
-      getUser();
-    }, 500);
+    setTimeout(() => {getUser();}, 500)
+    
   }
 
   function logout() {
