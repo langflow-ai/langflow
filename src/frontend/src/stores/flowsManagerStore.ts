@@ -10,8 +10,7 @@ import {
 } from "../controllers/API";
 import { FlowType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
-import { UseUndoRedoOptions } from "../types/typesContext";
-import { FlowsManagerStoreType } from "../types/zustand/flowsManager";
+import { FlowsManagerStoreType, UseUndoRedoOptions } from "../types/zustand/flowsManager";
 import {
   addVersionToDuplicates,
   createFlowComponent,

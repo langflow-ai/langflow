@@ -26,3 +26,8 @@ export type FlowsManagerStoreType = {
   redo: () => void;
   takeSnapshot: () => void;
 };
+
+export type UseUndoRedoOptions = {
+  maxHistorySize: number;
+  enableShortcuts: boolean;
+};
