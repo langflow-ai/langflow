@@ -25,8 +25,7 @@ import { AuthContext } from "../../contexts/authContext";
 import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { FlowState, FlowsState } from "../../types/tabs";
+import { FlowState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
 
 export default function FormModal({
@@ -40,12 +39,8 @@ export default function FormModal({
 }): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
-  const flowState = useFlowStore(
-    (state) => state.flowState
-  );
-  const setFlowState = useFlowStore(
-    (state) => state.setFlowState
-  );
+  const flowState = useFlowStore((state) => state.flowState);
+  const setFlowState = useFlowStore((state) => state.setFlowState);
   const [chatValue, setChatValue] = useState(() => {
     try {
       if (!flowState) {
@@ -468,72 +463,63 @@ export default function FormModal({
               </div>
 
               {flowState?.input_keys
-                ? Object.keys(flowState?.input_keys!).map(
-                    (key, index) => (
-                      <div className="file-component-accordion-div" key={index}>
-                        <AccordionComponent
-                          trigger={
-                            <div className="file-component-badge-div">
-                              <Badge variant="gray" size="md">
-                                {key}
-                              </Badge>
+                ? Object.keys(flowState?.input_keys!).map((key, index) => (
+                    <div className="file-component-accordion-div" key={index}>
+                      <AccordionComponent
+                        trigger={
+                          <div className="file-component-badge-div">
+                            <Badge variant="gray" size="md">
+                              {key}
+                            </Badge>
 
-                              <div
-                                className="-mb-1"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              >
-                                <ToggleShadComponent
-                                  enabled={chatKey === key}
-                                  setEnabled={(value) =>
-                                    handleOnCheckedChange(value, key)
-                                  }
-                                  size="small"
-                                  disabled={flowState.handle_keys!.some(
-                                    (t) => t === key
-                                  )}
-                                />
-                              </div>
-                            </div>
-                          }
-                          key={index}
-                          keyValue={key}
-                        >
-                          <div className="file-component-tab-column">
-                            {flowState?.handle_keys!.some(
-                              (t) => t === key
-                            ) && (
-                              <div className="font-normal text-muted-foreground ">
-                                Source: Component
-                              </div>
-                            )}
-                            <Textarea
-                              className="custom-scroll"
-                              value={
-                                flowState?.input_keys![key]
-                              }
-                              onChange={(e) => {
-                                if (flowState) {
-                                  setFlowState(
-                                    (old: FlowState | undefined) => {
-                                      let newFlowState = cloneDeep(old!);
-                                      newFlowState.input_keys![
-                                        key
-                                      ] = e.target.value;
-                                      return newFlowState;
-                                    }
-                                  );
-                                }
+                            <div
+                              className="-mb-1"
+                              onClick={(event) => {
+                                event.stopPropagation();
                               }}
-                              disabled={chatKey === key}
-                              placeholder="Enter text..."
-                            ></Textarea>
+                            >
+                              <ToggleShadComponent
+                                enabled={chatKey === key}
+                                setEnabled={(value) =>
+                                  handleOnCheckedChange(value, key)
+                                }
+                                size="small"
+                                disabled={flowState.handle_keys!.some(
+                                  (t) => t === key
+                                )}
+                              />
+                            </div>
                           </div>
-                        </AccordionComponent>
-                      </div>
-                    )
-                  )
+                        }
+                        key={index}
+                        keyValue={key}
+                      >
+                        <div className="file-component-tab-column">
+                          {flowState?.handle_keys!.some((t) => t === key) && (
+                            <div className="font-normal text-muted-foreground ">
+                              Source: Component
+                            </div>
+                          )}
+                          <Textarea
+                            className="custom-scroll"
+                            value={flowState?.input_keys![key]}
+                            onChange={(e) => {
+                              if (flowState) {
+                                setFlowState((old: FlowState | undefined) => {
+                                  let newFlowState = cloneDeep(old!);
+                                  newFlowState.input_keys![key] =
+                                    e.target.value;
+                                  return newFlowState;
+                                });
+                              }
+                            }}
+                            disabled={chatKey === key}
+                            placeholder="Enter text..."
+                          ></Textarea>
+                        </div>
+                      </AccordionComponent>
+                    </div>
+                  ))
                 : null}
               {flowState?.memory_keys!.map((key, index) => (
                 <div className="file-component-accordion-div" key={index}>
@@ -628,15 +614,11 @@ export default function FormModal({
                       setChatValue={(value) => {
                         setChatValue(value);
                         if (flowState && chatKey) {
-                          setFlowState(
-                            (old: FlowState | undefined) => {
-                              let newFlowState = cloneDeep(old!);
-                              newFlowState.input_keys![
-                                chatKey
-                              ] = value;
-                              return newFlowState;
-                            }
-                          );
+                          setFlowState((old: FlowState | undefined) => {
+                            let newFlowState = cloneDeep(old!);
+                            newFlowState.input_keys![chatKey] = value;
+                            return newFlowState;
+                          });
                         }
                       }}
                       inputRef={ref}

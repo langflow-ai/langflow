@@ -299,13 +299,8 @@ export function buildTweakObject(tweak: tweakType) {
 export function getChatInputField(flow: FlowType, flowState?: FlowState) {
   let chat_input_field = "text";
 
-  if (
-    flowState &&
-    flowState.input_keys
-  ) {
-    chat_input_field = Object.keys(
-      flowState.input_keys!
-    )[0];
+  if (flowState && flowState.input_keys) {
+    chat_input_field = Object.keys(flowState.input_keys!)[0];
   }
   return chat_input_field;
 }
