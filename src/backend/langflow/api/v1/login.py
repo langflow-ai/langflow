@@ -45,9 +45,13 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(db: Session = Depends(get_session), settings_service=Depends(get_settings_service)):
+async def auto_login(
+    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
+):
     if settings_service.auth_settings.AUTO_LOGIN:
-        return create_user_longterm_token(db)
+        tokens = create_user_longterm_token(db)
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, secure=True, samesite="strict")
+        return tokens
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
