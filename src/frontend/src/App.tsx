@@ -1,6 +1,5 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -21,16 +20,9 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
-import { useLocationStore } from "./stores/locationStore";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
-  const setCurrent = useLocationStore((state) => state.setCurrent);
-
-  let location = useLocation();
-  useEffect(() => {
-    setCurrent(location.pathname.replace(/\/$/g, "").split("/"));
-  }, [location.pathname, setCurrent]);
 
   const errorData = useAlertStore((state) => state.errorData);
   const errorOpen = useAlertStore((state) => state.errorOpen);
