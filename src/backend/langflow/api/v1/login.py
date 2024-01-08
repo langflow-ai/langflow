@@ -71,3 +71,10 @@ async def refresh_token(response: Response, token: str):
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("refresh_token_lf")
+    response.delete_cookie("access_token_lf")
+    return {"message": "Logout successful"}
