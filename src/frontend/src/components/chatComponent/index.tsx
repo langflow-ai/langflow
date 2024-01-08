@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
 import BuildTrigger from "./buildTrigger";
@@ -8,15 +8,17 @@ import * as _ from "lodash";
 import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import useFlowStore from "../../stores/flowStore";
-import { NodeType } from "../../types/flow";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { NodeType } from "../../types/flow";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const [canOpen, setCanOpen] = useState(false);
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
-  const currentFlowState = useFlowsManagerStore((state) => state.currentFlowState);
+  const currentFlowState = useFlowsManagerStore(
+    (state) => state.currentFlowState
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -53,9 +55,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     const currentNodes = nodes.map((node: NodeType) =>
       _.cloneDeep(node.data.node?.template)
     );
-    if (
-      JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
-    ) {
+    if (JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)) {
       setIsBuilt(false);
     }
     if (

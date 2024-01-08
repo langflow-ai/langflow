@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
@@ -9,14 +9,14 @@ import { priorityFields } from "../../constants/constants";
 import { useSSE } from "../../contexts/SSEContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useTypesStore } from "../../stores/typesStore";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import { useTypesStore } from "../../stores/typesStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function GenericNode({
   data,

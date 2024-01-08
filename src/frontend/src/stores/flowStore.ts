@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import {
-  Connection,
   Edge,
   EdgeChange,
   Node,

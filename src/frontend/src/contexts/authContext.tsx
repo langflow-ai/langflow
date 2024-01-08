@@ -35,7 +35,7 @@ export function AuthProvider({ children }): React.ReactElement {
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     !!cookies.get("refresh_tkn_lflw") && !!cookies.get("access_tkn_lflw")
-    );
+  );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [userData, setUserData] = useState<Users | null>(null);
   const [autoLogin, setAutoLogin] = useState<boolean>(false);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }): React.ReactElement {
       });
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
 
-  function getUser(){
+  function getUser() {
     getLoggedUser()
       .then((user) => {
         setUserData(user);
@@ -101,8 +101,9 @@ export function AuthProvider({ children }): React.ReactElement {
     setAccessToken(newAccessToken);
     setRefreshToken(refreshToken);
     setIsAuthenticated(true);
-    setTimeout(() => {getUser();}, 500)
-    
+    setTimeout(() => {
+      getUser();
+    }, 500);
   }
 
   function logout() {
