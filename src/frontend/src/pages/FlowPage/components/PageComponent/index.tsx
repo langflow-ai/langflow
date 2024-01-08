@@ -166,14 +166,9 @@ export default function Page({
 
   const edgeUpdateSuccessful = useRef(true);
 
-  const [loading, setLoading] = useState(true);
-
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
-  const timeoutRef = useRef<NodeJS.Timeout>();
-
   useEffect(() => {
-    setLoading(true);
     if (reactFlowInstance) {
       resetFlow({
         nodes: flow?.data?.nodes ?? [],
@@ -182,20 +177,6 @@ export default function Page({
       });
     }
 
-    // Clear the previous timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // Create a new timeout
-    timeoutRef.current = setTimeout(() => {
-      setLoading(false);
-    }, 300);
-
-    // Clear the timeout when the component is unmounted
-    return () => {
-      clearTimeout(timeoutRef.current);
-    };
   }, [currentFlowId, reactFlowInstance]);
 
   const onConnectMod = useCallback(
@@ -392,14 +373,6 @@ export default function Page({
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
-                <div
-                  className={cn(
-                    "relative flex h-full w-full items-center justify-center bg-background",
-                    !loading ? "hidden" : ""
-                  )}
-                >
-                  <Loading />
-                </div>
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}

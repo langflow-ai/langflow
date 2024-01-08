@@ -351,7 +351,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     const newState = useFlowStore.getState();
     const currentFlowId = get().currentFlowId;
     const pastLength = past[currentFlowId]?.length ?? 0;
-    const pastState = past[currentFlowId][pastLength - 1] ?? null;
+    const pastState = past[currentFlowId]?.[pastLength - 1] ?? null;
 
     if (pastState) {
       past[currentFlowId] = past[currentFlowId].slice(0, pastLength - 1);
@@ -370,7 +370,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     const newState = useFlowStore.getState();
     const currentFlowId = get().currentFlowId;
     const futureLength = future[currentFlowId]?.length ?? 0;
-    const futureState = future[currentFlowId][futureLength - 1] ?? null;
+    const futureState = future[currentFlowId]?.[futureLength - 1] ?? null;
 
     if (futureState) {
       future[currentFlowId] = future[currentFlowId].slice(0, futureLength - 1);
