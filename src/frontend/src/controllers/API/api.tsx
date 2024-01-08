@@ -28,9 +28,7 @@ function ApiInterceptor() {
             authenticationErrorCount = authenticationErrorCount + 1;
             if (authenticationErrorCount > 3) {
               authenticationErrorCount = 0;
-              logout().then(() => {
-                navigate("/login");
-              });
+              logout();
             }
             try {
               const res = await renewAccessToken();
@@ -47,14 +45,10 @@ function ApiInterceptor() {
               }
             } catch (error) {
               if (axios.isAxiosError(error) && error.response?.status === 401) {
-                logout().then(() => {
-                  navigate("/login");
-                });
+                logout();
               } else {
                 console.error(error);
-                logout().then(() => {
-                  navigate("/login");
-                });
+                logout();
               }
             }
           }
@@ -62,9 +56,7 @@ function ApiInterceptor() {
           if (!accessToken && error?.config?.url?.includes("login")) {
             return Promise.reject(error);
           } else {
-            logout().then(() => {
-              navigate("/login");
-            });
+            logout();
           }
         } else {
           // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
