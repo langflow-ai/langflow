@@ -5,11 +5,20 @@ import {
   OnEdgesChange,
   OnNodesChange,
   ReactFlowInstance,
+  Viewport,
 } from "reactflow";
+import { FlowState } from "../../tabs";
 
 export type FlowStoreType = {
+  updateSSEData: (sseData: object) => void;
+  sseData: object;
+  isBuilding: boolean;
+  setIsBuilding: (isBuilding: boolean) => void;
+  resetFlow: (flow: {nodes: Node[], edges: Edge[], viewport: Viewport}) => void;
   reactFlowInstance: ReactFlowInstance | null;
   setReactFlowInstance: (newState: ReactFlowInstance) => void;
+  flowState: FlowState | undefined;
+  setFlowState: (state: FlowState | undefined | ((oldState: FlowState | undefined) => FlowState)) => void;
   nodes: Node[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
@@ -24,6 +33,11 @@ export type FlowStoreType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
+  lastCopiedSelection: { nodes: any; edges: any } | null;
+  setLastCopiedSelection: (
+    newSelection: { nodes: any; edges: any } | null
+  ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
+
 };

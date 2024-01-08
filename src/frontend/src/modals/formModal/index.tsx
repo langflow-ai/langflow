@@ -40,20 +40,19 @@ export default function FormModal({
 }): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
-  const currentFlowState = useFlowsManagerStore(
-    (state) => state.currentFlowState
+  const flowState = useFlowStore(
+    (state) => state.flowState
   );
-  const setCurrentFlowState = useFlowsManagerStore(
-    (state) => state.setCurrentFlowState
+  const setFlowState = useFlowStore(
+    (state) => state.setFlowState
   );
   const [chatValue, setChatValue] = useState(() => {
     try {
-      const formKeysData = currentFlowState?.formKeysData;
-      if (!formKeysData) {
-        throw new Error("formKeysData is undefined");
+      if (!flowState) {
+        throw new Error("flowState is undefined");
       }
-      const inputKeys = formKeysData.input_keys;
-      const handleKeys = formKeysData.handle_keys;
+      const inputKeys = flowState.input_keys;
+      const handleKeys = flowState.handle_keys;
 
       const keyToUse = Object.keys(inputKeys!).find(
         (key) => !handleKeys?.some((j) => j === key) && inputKeys![key] === ""
@@ -68,7 +67,7 @@ export default function FormModal({
   });
 
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
-  const template = useRef(currentFlowState?.formKeysData.template ?? undefined);
+  const template = useRef(flowState?.template ?? undefined);
   const { accessToken } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const ws = useRef<WebSocket | null>(null);
@@ -77,11 +76,11 @@ export default function FormModal({
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
   const [chatKey, setChatKey] = useState(() => {
-    if (currentFlowState?.formKeysData?.input_keys) {
-      return Object.keys(currentFlowState.formKeysData.input_keys!).find(
+    if (flowState?.input_keys) {
+      return Object.keys(flowState.input_keys!).find(
         (key) =>
-          !currentFlowState.formKeysData.handle_keys!.some((j) => j === key) &&
-          currentFlowState.formKeysData.input_keys![key] === ""
+          !flowState.handle_keys!.some((j) => j === key) &&
+          flowState.input_keys![key] === ""
       );
     }
     // TODO: return a sensible default
@@ -387,7 +386,7 @@ export default function FormModal({
     let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
-      let inputs = currentFlowState?.formKeysData.input_keys;
+      let inputs = flowState?.input_keys;
       setChatValue("");
       const message = inputs;
       addChatHistory(message!, true, chatKey!, template.current);
@@ -399,10 +398,10 @@ export default function FormModal({
         description: flow.description,
         chatKey: chatKey!,
       });
-      if (currentFlowState && chatKey) {
-        setCurrentFlowState((old: FlowState | undefined) => {
+      if (flowState && chatKey) {
+        setFlowState((old: FlowState | undefined) => {
           let newFlowState = cloneDeep(old!);
-          newFlowState.formKeysData.input_keys![chatKey] = "";
+          newFlowState.input_keys![chatKey] = "";
           return newFlowState;
         });
       }
@@ -415,7 +414,7 @@ export default function FormModal({
   }
   function clearChat(): void {
     setChatHistory([]);
-    template.current = currentFlowState?.formKeysData.template;
+    template.current = flowState?.template;
     ws.current?.send(JSON.stringify({ clear_history: true }));
     if (lockChat) setLockChat(false);
   }
@@ -423,7 +422,7 @@ export default function FormModal({
   function handleOnCheckedChange(checked: boolean, i: string) {
     if (checked === true) {
       setChatKey(i);
-      setChatValue(currentFlowState?.formKeysData.input_keys![i] ?? "");
+      setChatValue(flowState?.input_keys![i] ?? "");
     } else {
       setChatKey(null!);
       setChatValue("");
@@ -432,7 +431,7 @@ export default function FormModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger hidden></DialogTrigger>
-      {currentFlowState && currentFlowState.formKeysData && (
+      {flowState && flowState && (
         <DialogContent className="min-w-[80vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
@@ -468,8 +467,8 @@ export default function FormModal({
                 </div>
               </div>
 
-              {currentFlowState?.formKeysData?.input_keys
-                ? Object.keys(currentFlowState?.formKeysData.input_keys!).map(
+              {flowState?.input_keys
+                ? Object.keys(flowState?.input_keys!).map(
                     (key, index) => (
                       <div className="file-component-accordion-div" key={index}>
                         <AccordionComponent
@@ -491,7 +490,7 @@ export default function FormModal({
                                     handleOnCheckedChange(value, key)
                                   }
                                   size="small"
-                                  disabled={currentFlowState.formKeysData.handle_keys!.some(
+                                  disabled={flowState.handle_keys!.some(
                                     (t) => t === key
                                   )}
                                 />
@@ -502,7 +501,7 @@ export default function FormModal({
                           keyValue={key}
                         >
                           <div className="file-component-tab-column">
-                            {currentFlowState?.formKeysData.handle_keys!.some(
+                            {flowState?.handle_keys!.some(
                               (t) => t === key
                             ) && (
                               <div className="font-normal text-muted-foreground ">
@@ -512,14 +511,14 @@ export default function FormModal({
                             <Textarea
                               className="custom-scroll"
                               value={
-                                currentFlowState?.formKeysData.input_keys![key]
+                                flowState?.input_keys![key]
                               }
                               onChange={(e) => {
-                                if (currentFlowState) {
-                                  setCurrentFlowState(
+                                if (flowState) {
+                                  setFlowState(
                                     (old: FlowState | undefined) => {
                                       let newFlowState = cloneDeep(old!);
-                                      newFlowState.formKeysData.input_keys![
+                                      newFlowState.input_keys![
                                         key
                                       ] = e.target.value;
                                       return newFlowState;
@@ -536,7 +535,7 @@ export default function FormModal({
                     )
                   )
                 : null}
-              {currentFlowState?.formKeysData.memory_keys!.map((key, index) => (
+              {flowState?.memory_keys!.map((key, index) => (
                 <div className="file-component-accordion-div" key={index}>
                   <AccordionComponent
                     trigger={
@@ -628,11 +627,11 @@ export default function FormModal({
                       sendMessage={sendMessage}
                       setChatValue={(value) => {
                         setChatValue(value);
-                        if (currentFlowState && chatKey) {
-                          setCurrentFlowState(
+                        if (flowState && chatKey) {
+                          setFlowState(
                             (old: FlowState | undefined) => {
                               let newFlowState = cloneDeep(old!);
-                              newFlowState.formKeysData.input_keys![
+                              newFlowState.input_keys![
                                 chatKey
                               ] = value;
                               return newFlowState;

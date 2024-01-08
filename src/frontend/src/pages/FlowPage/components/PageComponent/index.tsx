@@ -1,12 +1,5 @@
 import _ from "lodash";
-import {
-  MouseEvent,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Connection,
@@ -18,13 +11,10 @@ import ReactFlow, {
   SelectionDragHandler,
   addEdge,
   updateEdge,
-  useEdgesState,
-  useNodesState,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
 import Loading from "../../../../components/ui/loading";
-import { locationContext } from "../../../../contexts/locationContext";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -43,6 +33,7 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { useLocationStore } from "../../../../stores/locationStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -64,11 +55,6 @@ export default function Page({
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
-    nodes: any;
-    edges: any;
-  } | null>(null);
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
@@ -86,6 +72,13 @@ export default function Page({
   const redo = useFlowsManagerStore((state) => state.redo);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
+  const resetFlow = useFlowStore((state) => state.resetFlow);
+  const lastCopiedSelection = useFlowStore(
+    (state) => state.lastCopiedSelection
+  );
+  const setLastCopiedSelection = useFlowStore(
+    (state) => state.setLastCopiedSelection
+  );
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -163,7 +156,12 @@ export default function Page({
 
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
 
-  const { setExtraComponent, setExtraNavigation } = useContext(locationContext);
+  const setExtraComponent = useLocationStore(
+    (state) => state.setExtraComponent
+  );
+  const setExtraNavigation = useLocationStore(
+    (state) => state.setExtraNavigation
+  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const edgeUpdateSuccessful = useRef(true);
@@ -177,13 +175,11 @@ export default function Page({
   useEffect(() => {
     setLoading(true);
     if (reactFlowInstance) {
-      useFlowStore.setState({
+      resetFlow({
         nodes: flow?.data?.nodes ?? [],
         edges: flow?.data?.edges ?? [],
-      });
-      reactFlowInstance.setViewport(
-        flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 }
-      );
+        viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
+      })
     }
 
     // Clear the previous timeout
@@ -224,8 +220,7 @@ export default function Page({
   const onMoveEnd: OnMove = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveCurrentFlow(nodes, edges, reactFlowInstance?.getViewport()!);
-  }
-  , [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
+  }, [takeSnapshot, autoSaveCurrentFlow, nodes, edges, reactFlowInstance]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
@@ -290,14 +285,16 @@ export default function Page({
         const newNode: NodeType = {
           id: newId,
           type: "genericNode",
-          position: {x: 0, y:0},
+          position: { x: 0, y: 0 },
           data: {
             ...data,
             id: newId,
           },
         };
-        paste({ nodes: [newNode], edges: [] }, {x: event.clientX, y: event.clientY});
-
+        paste(
+          { nodes: [newNode], edges: [] },
+          { x: event.clientX, y: event.clientY }
+        );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         if (event.dataTransfer.files.item(0)!.type === "application/json") {
@@ -383,7 +380,6 @@ export default function Page({
   const onPaneClick = useCallback((flow) => {
     setFilterEdge([]);
   }, []);
-
 
   return (
     <div className="flex h-full overflow-hidden">

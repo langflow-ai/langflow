@@ -13,11 +13,9 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [canOpen, setCanOpen] = useState(false);
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
-  const currentFlowState = useFlowsManagerStore((state) => state.currentFlowState);
-
+  const flowState = useFlowStore((state) => state.flowState);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -58,18 +56,8 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     ) {
       setIsBuilt(false);
     }
-    if (
-      currentFlowState &&
-      currentFlowState.formKeysData &&
-      currentFlowState.formKeysData.input_keys !== null
-    ) {
-      setCanOpen(true);
-    } else {
-      setCanOpen(false);
-    }
-
     prevNodesRef.current = currentNodes;
-  }, [currentFlowState, flow.id]);
+  }, [flowState, flow.id]);
 
   return (
     <>
@@ -81,9 +69,8 @@ export default function Chat({ flow }: ChatType): JSX.Element {
           isBuilt={isBuilt}
         />
         {isBuilt &&
-          currentFlowState &&
-          currentFlowState.formKeysData &&
-          canOpen && (
+          flowState &&
+          !!flowState?.input_keys && (
             <FormModal
               key={flow.id}
               flow={flow}
@@ -92,7 +79,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
             />
           )}
         <ChatTrigger
-          canOpen={canOpen}
+          canOpen={!!flowState?.input_keys}
           open={open}
           setOpen={setOpen}
           isBuilt={isBuilt}

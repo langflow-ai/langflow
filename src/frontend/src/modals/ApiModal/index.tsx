@@ -31,6 +31,7 @@ import {
   tabsArray,
 } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import useFlowStore from "../../stores/flowStore";
 
 const ApiModal = forwardRef(
   (
@@ -49,18 +50,18 @@ const ApiModal = forwardRef(
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);
     const [getTweak, setTweak] = useState<tweakType>([]);
-    const currentFlowState = useFlowsManagerStore(
-      (state) => state.currentFlowState
+    const flowState = useFlowStore(
+      (state) => state.flowState
     );
     const pythonApiCode = getPythonApiCode(
       flow,
       autoLogin,
       tweak.current,
-      currentFlowState
+      flowState
     );
-    const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
-    const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
-    const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
+    const curl_code = getCurlCode(flow, autoLogin, tweak.current, flowState);
+    const pythonCode = getPythonCode(flow, tweak.current, flowState);
+    const widgetCode = getWidgetCode(flow, autoLogin, flowState);
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
       curl_code,
@@ -171,11 +172,11 @@ const ApiModal = forwardRef(
         flow,
         autoLogin,
         tweak.current,
-        currentFlowState
+        flowState
       );
-      const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
-      const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
-      const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
+      const curl_code = getCurlCode(flow, autoLogin, tweak.current, flowState);
+      const pythonCode = getPythonCode(flow, tweak.current, flowState);
+      const widgetCode = getWidgetCode(flow, autoLogin, flowState);
 
       tabs![0].code = curl_code;
       tabs![1].code = pythonApiCode;
