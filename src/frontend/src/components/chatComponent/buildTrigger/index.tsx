@@ -1,7 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useContext, useState } from "react";
 import Loading from "../../../components/ui/loading";
-import { useSSE } from "../../../contexts/SSEContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
@@ -13,6 +12,7 @@ import { FlowState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
+import { useSSEStore } from "../../../stores/sseStore";
 
 export default function BuildTrigger({
   open,
@@ -24,7 +24,10 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }): JSX.Element {
-  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
+  const updateSSEData = useSSEStore((state) => state.updateSSEData);
+  const isBuilding = useSSEStore((state) => state.isBuilding);
+  const setIsBuilding = useSSEStore((state) => state.setIsBuilding);
+  const sseData = useSSEStore((state) => state.sseData);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
