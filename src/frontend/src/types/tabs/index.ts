@@ -59,12 +59,10 @@ export type FlowsState = {
 };
 
 export type FlowState = {
-  formKeysData: {
-    template?: string;
-    input_keys?: Object;
-    memory_keys?: Array<string>;
-    handle_keys?: Array<string>;
-  };
+  template?: string;
+  input_keys?: Object;
+  memory_keys?: Array<string>;
+  handle_keys?: Array<string>;
 };
 
 export type errorsVarType = {

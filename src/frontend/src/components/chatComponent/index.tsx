@@ -17,7 +17,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
   const currentFlowState = useFlowsManagerStore((state) => state.currentFlowState);
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -60,8 +59,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     }
     if (
       currentFlowState &&
-      currentFlowState.formKeysData &&
-      currentFlowState.formKeysData.input_keys !== null
+      currentFlowState.input_keys !== null
     ) {
       setCanOpen(true);
     } else {
@@ -82,7 +80,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
         />
         {isBuilt &&
           currentFlowState &&
-          currentFlowState.formKeysData &&
           canOpen && (
             <FormModal
               key={flow.id}

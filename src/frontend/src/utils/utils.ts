@@ -219,10 +219,9 @@ export function groupByFamily(
 
 export function buildInputs(currentFlowState?: FlowState): string {
   return currentFlowState &&
-    currentFlowState.formKeysData &&
-    currentFlowState.formKeysData.input_keys &&
-    Object.keys(currentFlowState.formKeysData.input_keys!).length > 0
-    ? JSON.stringify(currentFlowState.formKeysData.input_keys)
+    currentFlowState.input_keys &&
+    Object.keys(currentFlowState.input_keys!).length > 0
+    ? JSON.stringify(currentFlowState.input_keys)
     : '{"input": "message"}';
 }
 
@@ -302,11 +301,10 @@ export function getChatInputField(flow: FlowType, currentFlowState?: FlowState) 
 
   if (
     currentFlowState &&
-    currentFlowState.formKeysData &&
-    currentFlowState.formKeysData.input_keys
+    currentFlowState.input_keys
   ) {
     chat_input_field = Object.keys(
-      currentFlowState.formKeysData.input_keys!
+      currentFlowState.input_keys!
     )[0];
   }
   return chat_input_field;
@@ -454,7 +452,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    currentFlowState && currentFlowState.formKeysData
+    currentFlowState
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `
