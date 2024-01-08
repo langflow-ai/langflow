@@ -28,15 +28,50 @@ import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
-  reactFlowInstance: null,
-  setReactFlowInstance: (newState) => {
-    set({ reactFlowInstance: newState });
-  },
+  sseData: {},
+  flowState: undefined,
   nodes: [],
   edges: [],
-  isBuilt: false,
+  isBuilding: false,
+  isBuilt: false, 
+  reactFlowInstance: null,
+  lastCopiedSelection: null,
+
+
+  resetFlow: ({ nodes, edges, viewport }) => {
+    set({
+      nodes,
+      edges,
+      flowState: undefined,
+      sseData: {},
+      isBuilt: false,
+
+    });
+    get().reactFlowInstance!.setViewport(viewport);
+  },
+  updateSSEData: (sseData) => {
+    set((state) => ({ sseData: { ...state.sseData, ...sseData } }));
+  },
+  setIsBuilding: (isBuilding) => {
+    set({ isBuilding });
+  },
   setIsBuilt: (isBuilt) => {
     set({ isBuilt });
+  },
+  setFlowState: (flowState) => {
+    const newFlowState =
+      typeof flowState === "function"
+        ? flowState(get().flowState)
+        : flowState;
+    
+    if(newFlowState !== get().flowState){
+      set(() => ({
+        flowState: newFlowState,
+      }));
+    }
+  },
+  setReactFlowInstance: (newState) => {
+    set({ reactFlowInstance: newState });
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
@@ -52,29 +87,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
 
-    set({ edges: newEdges });
-    set({ nodes: newChange });
+    set({ edges: newEdges, nodes: newChange, flowState: undefined, isBuilt: false, sseData: {} });
 
-    useFlowsManagerStore
-      .getState()
-      .autoSaveCurrentFlow(
+    const flowsManager = useFlowsManagerStore.getState()
+
+    flowsManager.autoSaveCurrentFlow(
         newChange,
         newEdges,
         get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
       );
+
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
 
-    set({ edges: newChange });
+    set({ edges: newChange, flowState: undefined, isBuilt: false, sseData: {} });
 
-    useFlowsManagerStore
-      .getState()
-      .autoSaveCurrentFlow(
+    const flowsManager = useFlowsManagerStore.getState()
+
+    flowsManager.autoSaveCurrentFlow(
         get().nodes,
         newChange,
         get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
       );
+
   },
   setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
     let newChange =
@@ -203,6 +239,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     });
     set({ edges: newEdges });
+  },
+  setLastCopiedSelection: (newSelection) => {
+    set({ lastCopiedSelection: newSelection });
   },
 }));
 

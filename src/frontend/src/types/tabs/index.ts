@@ -55,16 +55,14 @@ export type FlowsContextType = {
 };
 
 export type FlowsState = {
-  [key: string]: FlowState;
+  [key: string]: FlowState | undefined;
 };
 
 export type FlowState = {
-  formKeysData: {
-    template?: string;
-    input_keys?: Object;
-    memory_keys?: Array<string>;
-    handle_keys?: Array<string>;
-  };
+  template?: string;
+  input_keys?: Object;
+  memory_keys?: Array<string>;
+  handle_keys?: Array<string>;
 };
 
 export type errorsVarType = {
