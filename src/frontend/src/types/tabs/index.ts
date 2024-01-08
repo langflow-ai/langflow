@@ -55,7 +55,7 @@ export type FlowsContextType = {
 };
 
 export type FlowsState = {
-  [key: string]: FlowState;
+  [key: string]: FlowState | undefined;
 };
 
 export type FlowState = {

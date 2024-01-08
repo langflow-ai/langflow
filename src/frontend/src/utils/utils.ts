@@ -217,11 +217,11 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(currentFlowState?: FlowState): string {
-  return currentFlowState &&
-    currentFlowState.input_keys &&
-    Object.keys(currentFlowState.input_keys!).length > 0
-    ? JSON.stringify(currentFlowState.input_keys)
+export function buildInputs(flowState?: FlowState): string {
+  return flowState &&
+    flowState.input_keys &&
+    Object.keys(flowState.input_keys!).length > 0
+    ? JSON.stringify(flowState.input_keys)
     : '{"input": "message"}';
 }
 
@@ -296,15 +296,15 @@ export function buildTweakObject(tweak: tweakType) {
  * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, currentFlowState?: FlowState) {
+export function getChatInputField(flow: FlowType, flowState?: FlowState) {
   let chat_input_field = "text";
 
   if (
-    currentFlowState &&
-    currentFlowState.input_keys
+    flowState &&
+    flowState.input_keys
   ) {
     chat_input_field = Object.keys(
-      currentFlowState.input_keys!
+      flowState.input_keys!
     )[0];
   }
   return chat_input_field;
@@ -319,7 +319,7 @@ export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  currentFlowState?: FlowState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
 
@@ -328,7 +328,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(currentFlowState);
+  const inputs = buildInputs(flowState);
   return `import requests
 from typing import Optional
 
@@ -383,11 +383,11 @@ export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  currentFlowState?: FlowState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(currentFlowState);
+  const inputs = buildInputs(flowState);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -411,11 +411,11 @@ export function getCurlCode(
 export function getPythonCode(
   flow: FlowType,
   tweak?: any[],
-  currentFlowState?: FlowState
+  flowState?: FlowState
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(currentFlowState);
+  const inputs = buildInputs(flowState);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -436,12 +436,12 @@ flow(inputs)`;
 export function getWidgetCode(
   flow: FlowType,
   isAuth: boolean,
-  currentFlowState?: FlowState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(currentFlowState);
-  let chat_input_field = getChatInputField(flow, currentFlowState);
+  const inputs = buildInputs(flowState);
+  let chat_input_field = getChatInputField(flow, flowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -452,7 +452,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    currentFlowState
+    flowState
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `
