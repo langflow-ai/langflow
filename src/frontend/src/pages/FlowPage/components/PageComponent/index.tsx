@@ -43,6 +43,7 @@ import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { stat } from "fs";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -64,11 +65,6 @@ export default function Page({
   const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  const [lastCopiedSelection, setLastCopiedSelection] = useState<{
-    nodes: any;
-    edges: any;
-  } | null>(null);
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
@@ -86,6 +82,10 @@ export default function Page({
   const redo = useFlowsManagerStore((state) => state.redo);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
+  const lastCopiedSelection = useFlowStore((state) => state.lastCopiedSelection);
+  const setLastCopiedSelection = useFlowStore(
+    (state) => state.setLastCopiedSelection
+  );
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =

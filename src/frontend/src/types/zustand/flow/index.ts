@@ -24,6 +24,11 @@ export type FlowStoreType = {
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
+  lastCopiedSelection: { nodes: any; edges: any } | null;
+  setLastCopiedSelection: (
+    newSelection: { nodes: any; edges: any } | null
+  ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
+
 };

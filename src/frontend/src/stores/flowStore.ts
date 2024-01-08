@@ -204,6 +204,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     set({ edges: newEdges });
   },
+  lastCopiedSelection: null,
+  setLastCopiedSelection: (newSelection) => {
+    set({ lastCopiedSelection: newSelection });
+  },
 }));
 
 export default useFlowStore;
