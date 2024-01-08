@@ -72,6 +72,7 @@ export default function Page({
   const redo = useFlowsManagerStore((state) => state.redo);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
+  const resetFlow = useFlowStore((state) => state.resetFlow);
   const lastCopiedSelection = useFlowStore(
     (state) => state.lastCopiedSelection
   );
@@ -174,13 +175,11 @@ export default function Page({
   useEffect(() => {
     setLoading(true);
     if (reactFlowInstance) {
-      useFlowStore.setState({
+      resetFlow({
         nodes: flow?.data?.nodes ?? [],
         edges: flow?.data?.edges ?? [],
-      });
-      reactFlowInstance.setViewport(
-        flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 }
-      );
+        viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
+      })
     }
 
     // Clear the previous timeout

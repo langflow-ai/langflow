@@ -38,7 +38,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
       currentFlowId,
-      currentFlowState: state.flowsState[state.currentFlowId],
       currentFlow: state.flows.find((flow) => flow.id === currentFlowId),
     }));
   },
@@ -52,23 +51,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   currentFlow: undefined,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
-  flowsState: {},
-  currentFlowState: undefined,
-  setCurrentFlowState: (
-    flowState: FlowState | ((oldState: FlowState | undefined) => FlowState)
-  ) => {
-    const newFlowState =
-      typeof flowState === "function"
-        ? flowState(get().currentFlowState)
-        : flowState;
-    set((state) => ({
-      flowsState: {
-        ...state.flowsState,
-        [state.currentFlowId]: newFlowState,
-      },
-      currentFlowState: newFlowState,
-    }));
-  },
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
       set({ isLoading: true });

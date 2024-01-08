@@ -16,7 +16,6 @@ import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 import { useTypesStore } from "../../stores/typesStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { useSSEStore } from "../../stores/sseStore";
 
 export default function GenericNode({
   data,
@@ -80,8 +79,8 @@ export default function GenericNode({
   }, [data, data.node]);
 
   // State for outline color
-  const sseData = useSSEStore((state) => state.sseData);
-  const isBuilding = useSSEStore((state) => state.isBuilding);
+  const sseData = useFlowStore((state) => state.sseData);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);
