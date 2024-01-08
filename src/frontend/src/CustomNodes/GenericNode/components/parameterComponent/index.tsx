@@ -1,11 +1,5 @@
 import { cloneDeep } from "lodash";
-import React, {
-  ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -29,6 +23,8 @@ import {
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
@@ -45,8 +41,6 @@ import {
   nodeNames,
 } from "../../../../utils/styleUtils";
 import { classNames, groupByFamily } from "../../../../utils/utils";
-import { useTypesStore } from "../../../../stores/typesStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 export default function ParameterComponent({
   left,
@@ -112,7 +106,7 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
-    
+
     data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
 
     setNode(data.id, (oldNode) => {
@@ -300,7 +294,7 @@ export default function ParameterComponent({
   ) : (
     <div
       ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between relative bg-muted px-5 py-2"
+      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
         <div

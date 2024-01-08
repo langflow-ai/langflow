@@ -30,9 +30,9 @@ import {
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
 import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -44,7 +44,9 @@ export default function AdminPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
-  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
 
   // set null id
   useEffect(() => {
@@ -333,9 +335,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <CheckBoxDiv
-                                    checked={user.is_active}
-                                  />
+                                  <CheckBoxDiv checked={user.is_active} />
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
@@ -367,9 +367,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <CheckBoxDiv
-                                    checked={user.is_superuser}
-                                  />
+                                  <CheckBoxDiv checked={user.is_superuser} />
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>

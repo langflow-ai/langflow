@@ -58,7 +58,12 @@ const ApiModal = forwardRef(
       tweak.current,
       currentFlowState
     );
-    const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
+    const curl_code = getCurlCode(
+      flow,
+      autoLogin,
+      tweak.current,
+      currentFlowState
+    );
     const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
     const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
     const tweaksCode = buildTweaks(flow);
@@ -173,7 +178,12 @@ const ApiModal = forwardRef(
         tweak.current,
         currentFlowState
       );
-      const curl_code = getCurlCode(flow, autoLogin, tweak.current, currentFlowState);
+      const curl_code = getCurlCode(
+        flow,
+        autoLogin,
+        tweak.current,
+        currentFlowState
+      );
       const pythonCode = getPythonCode(flow, tweak.current, currentFlowState);
       const widgetCode = getWidgetCode(flow, autoLogin, currentFlowState);
 

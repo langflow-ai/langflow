@@ -1,16 +1,9 @@
 import _ from "lodash";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, ReactNode, useState } from "react";
 import { getAll, getHealth } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import { APIKindType } from "../types/api";
 import { typesContextType } from "../types/typesContext";
-import { AuthContext } from "./authContext";
 
 //context to share types adn functions from nodes to flow
 

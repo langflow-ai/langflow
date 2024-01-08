@@ -1,7 +1,6 @@
 import {
   Edge,
   Node,
-  OnConnect,
   OnEdgesChange,
   OnNodesChange,
   ReactFlowInstance,

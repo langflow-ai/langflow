@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { IntComponentType } from "../../types/components";
-import { handleKeyDown, handleOnlyIntegerInput } from "../../utils/reactflowUtils";
+import {
+  handleKeyDown,
+  handleOnlyIntegerInput,
+} from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
 
 export default function IntComponent({

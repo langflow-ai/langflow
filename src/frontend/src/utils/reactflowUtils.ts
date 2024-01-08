@@ -415,7 +415,9 @@ export function handleKeyDown(
   }
 }
 
-export function handleOnlyIntegerInput(event: React.KeyboardEvent<HTMLInputElement>) {
+export function handleOnlyIntegerInput(
+  event: React.KeyboardEvent<HTMLInputElement>
+) {
   if (
     event.key === "." ||
     event.key === "-" ||

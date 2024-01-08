@@ -1,14 +1,14 @@
-import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
+import { ReactNode, forwardRef, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
-import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
-import BaseModal from "../baseModal";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
+import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {

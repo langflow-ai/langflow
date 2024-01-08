@@ -352,9 +352,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       JSON.stringify(past[currentFlowId][pastLength - 1]) !==
         JSON.stringify(newState)
     ) {
-      past[currentFlowId] = past[currentFlowId]
-        .slice(pastLength - defaultOptions.maxHistorySize + 1, pastLength)
-        
+      past[currentFlowId] = past[currentFlowId].slice(
+        pastLength - defaultOptions.maxHistorySize + 1,
+        pastLength
+      );
+
       past[currentFlowId].push(newState);
     } else {
       past[currentFlowId] = [newState];
@@ -371,8 +373,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (pastState) {
       past[currentFlowId] = past[currentFlowId].slice(0, pastLength - 1);
 
-      if(!future[currentFlowId]) future[currentFlowId] = [];
-      future[currentFlowId].push({ nodes: newState.nodes, edges: newState.edges });
+      if (!future[currentFlowId]) future[currentFlowId] = [];
+      future[currentFlowId].push({
+        nodes: newState.nodes,
+        edges: newState.edges,
+      });
 
       newState.setNodes(pastState.nodes);
       newState.setEdges(pastState.edges);
@@ -387,8 +392,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (futureState) {
       future[currentFlowId] = future[currentFlowId].slice(0, futureLength - 1);
 
-      if(!past[currentFlowId]) past[currentFlowId] = [];
-      past[currentFlowId].push({ nodes: newState.nodes, edges: newState.edges });
+      if (!past[currentFlowId]) past[currentFlowId] = [];
+      past[currentFlowId].push({
+        nodes: newState.nodes,
+        edges: newState.edges,
+      });
 
       newState.setNodes(futureState.nodes);
       newState.setEdges(futureState.edges);
