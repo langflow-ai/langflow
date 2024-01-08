@@ -14,7 +14,6 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
-import Loading from "../../../../components/ui/loading";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -30,7 +29,7 @@ import {
   scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
@@ -176,7 +175,6 @@ export default function Page({
         viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
       });
     }
-
   }, [currentFlowId, reactFlowInstance]);
 
   const onConnectMod = useCallback(
