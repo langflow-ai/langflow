@@ -7,14 +7,10 @@ export const ProtectedAdminRoute = ({ children }) => {
     useContext(AuthContext);
 
   if (!isAuthenticated) {
-    logout().then(() => {
-      return <Navigate to="/login" replace />;
-    });
-  }
-
-  if ((userData && !isAdmin) || autoLogin) {
+    logout();
+  } else if ((userData && !isAdmin) || autoLogin) {
     return <Navigate to="/" replace />;
+  } else {
+    return children;
   }
-
-  return children;
 };

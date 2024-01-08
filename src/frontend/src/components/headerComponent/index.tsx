@@ -193,9 +193,7 @@ export default function Header(): JSX.Element {
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={() => {
-                      logout().then(() => {
-                        navigate("/login");
-                      });
+                      logout();
                     }}
                   >
                     Sign Out

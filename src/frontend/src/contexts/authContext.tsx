@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
 import {
   autoLogin as autoLoginApi,
@@ -29,6 +30,7 @@ const initialValue: AuthContextType = {
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
+  const navigate = useNavigate();
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
     cookies.get("access_token_lf") ?? null
@@ -109,6 +111,7 @@ export function AuthProvider({ children }): React.ReactElement {
       setUserData(null);
       setAccessToken(null);
       setIsAuthenticated(false);
+      navigate("/login");
     } catch (error) {
       console.error(error);
       throw error;
