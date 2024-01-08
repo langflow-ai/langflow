@@ -16,17 +16,19 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { locationContext } from "./contexts/locationContext";
 import { getHealth, getRepoStars, getVersion } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useTypesStore } from "./stores/typesStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useLocationStore } from "./stores/locationStore";
 
 export default function App() {
-  let { setCurrent, setShowSideBar, setIsStackedOpen } =
-    useContext(locationContext);
+  const setCurrent = useLocationStore((state) => state.setCurrent);
+  const setShowSideBar = useLocationStore((state) => state.setShowSideBar);
+  const setIsStackedOpen = useLocationStore((state) => state.setIsStackedOpen);
+
   let location = useLocation();
   useEffect(() => {
     setCurrent(location.pathname.replace(/\/$/g, "").split("/"));

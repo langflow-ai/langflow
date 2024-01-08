@@ -5,7 +5,6 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { SSEProvider } from "./SSEContext";
 import { AuthProvider } from "./authContext";
-import { LocationProvider } from "./locationContext";
 
 export default function ContextWrapper({ children }: { children: ReactNode }) {
   //element to wrap all context
@@ -15,12 +14,10 @@ export default function ContextWrapper({ children }: { children: ReactNode }) {
         <AuthProvider>
           <TooltipProvider>
             <ReactFlowProvider>
-              <LocationProvider>
                 <ApiInterceptor />
                 <SSEProvider>
                   {children}
                 </SSEProvider>
-              </LocationProvider>
             </ReactFlowProvider>
           </TooltipProvider>
         </AuthProvider>
