@@ -9,25 +9,25 @@ class VertexAIEmbeddingsComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "client": {"display_name": "Client", "advanced": True},
-            "credentials": {"display_name": "Credentials", "default": '', "file_types": ['json']},
-            "location": {"display_name": "Location", "default": 'us-central1', "advanced": True},
-            "max_output_tokens": {"display_name": "Max Output Tokens", "default": 128},
-            "max_retries": {"display_name": "Max Retries", "default": 6, "advanced": True},
-            "model_name": {"display_name": "Model Name", "default": 'textembedding-gecko'},
-            "n": {"display_name": "N", "default": 1, "advanced": True},
+            "credentials": {"display_name": "Credentials", "value": '', "file_types": ['json'],"field_type": "file"},
+            "instance": {"display_name": "instance", "advanced": True, "field_type": "dict"},
+            "location": {"display_name": "Location", "value": 'us-central1', "advanced": True},
+            "max_output_tokens": {"display_name": "Max Output Tokens", "value": 128},
+            "max_retries": {"display_name": "Max Retries", "value": 6, "advanced": True},
+            "model_name": {"display_name": "Model Name", "value": 'textembedding-gecko'},
+            "n": {"display_name": "N", "value": 1, "advanced": True},
             "project": {"display_name": "Project", "advanced": True},
-            "request_parallelism": {"display_name": "Request Parallelism", "default": 5, "advanced": True},
+            "request_parallelism": {"display_name": "Request Parallelism", "value": 5, "advanced": True},
             "stop": {"display_name": "Stop", "advanced": True},
-            "streaming": {"display_name": "Streaming", "default": False, "advanced": True},
-            "temperature": {"display_name": "Temperature", "default": 0.0},
-            "top_k": {"display_name": "Top K", "default": 40, "advanced": True},
-            "top_p": {"display_name": "Top P", "default": 0.95, "advanced": True},
+            "streaming": {"display_name": "Streaming", "value": False, "advanced": True},
+            "temperature": {"display_name": "Temperature", "value": 0.0},
+            "top_k": {"display_name": "Top K", "value": 40, "advanced": True},
+            "top_p": {"display_name": "Top P", "value": 0.95, "advanced": True},
         }
 
     def build(
         self,
-        client: Optional[str] = None,
+        instance: Optional[str] = None,
         credentials: Optional[str] = None,
         location: str = 'us-central1',
         max_output_tokens: int = 128,
@@ -43,7 +43,7 @@ class VertexAIEmbeddingsComponent(CustomComponent):
         top_p: float = 0.95,
     ) -> VertexAIEmbeddings:
         return VertexAIEmbeddings(
-            client=client,
+            instance=instance,
             credentials=credentials,
             location=location,
             max_output_tokens=max_output_tokens,
