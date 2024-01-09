@@ -1,8 +1,9 @@
 
 from langflow import CustomComponent
 from langchain.agents import AgentExecutor
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo 
 from typing import Union, Callable
-from langflow.field_typing import BaseLanguageModel, VectorStore
+from langflow.field_typing import BaseLanguageModel
 
 class VectorStoreAgentComponent(CustomComponent):
     display_name = "VectorStoreAgent"
@@ -17,6 +18,6 @@ class VectorStoreAgentComponent(CustomComponent):
     def build(
         self,
         llm: BaseLanguageModel,
-        vectorstoreinfo: VectorStore,
+        vectorstoreinfo: VectorStoreInfo,
     ) -> Union[AgentExecutor, Callable]:
         return AgentExecutor(llm=llm, vectorstore=vectorstoreinfo)
