@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
-from langchain.vectorstores import Qdrant
+from langchain_community.vectorstores.qdrant import Qdrant
 from typing import Optional, List
 from langflow.field_typing import Document, Embeddings, NestedDict
+
 
 class QdrantComponent(CustomComponent):
     display_name = "Qdrant"

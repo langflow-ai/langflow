@@ -1,8 +1,7 @@
-
 from langflow import CustomComponent
 from langchain.documents import Document
 from typing import Optional, Dict
-from langchain.field_typing import TemplateField
+from langflow.field_typing import TemplateField
 
 
 class CoNLLULoaderComponent(CustomComponent):
@@ -17,7 +16,7 @@ class CoNLLULoaderComponent(CustomComponent):
                 required=True,
                 type="file",
                 file_types=["conllu"],
-                suffixes=['.conllu'],
+                suffixes=[".conllu"],
             ),
             "metadata": TemplateField(
                 display_name="Metadata",

@@ -1,12 +1,12 @@
-
 from langflow import CustomComponent
 from typing import Optional, List
 from langchain.vectorstores import Pinecone
-from langchain.field_typing import (
+from langflow.field_typing import (
     Document,
     Embeddings,
     NestedDict,
 )
+
 
 class PineconeComponent(CustomComponent):
     display_name = "Pinecone"
@@ -20,7 +20,7 @@ class PineconeComponent(CustomComponent):
             "namespace": {"display_name": "Namespace"},
             "pinecone_api_key": {"display_name": "Pinecone API Key", "default": ""},
             "pinecone_env": {"display_name": "Pinecone Environment", "default": ""},
-            "search_kwargs": {"display_name": "Search Kwargs", "default": '{}'},
+            "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
         }
 
     def build(

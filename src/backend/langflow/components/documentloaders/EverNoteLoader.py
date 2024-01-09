@@ -1,13 +1,13 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import Document
+from langflow.field_typing import Document
 from typing import Optional, Dict
+
 
 class EverNoteLoaderComponent(CustomComponent):
     display_name = "EverNoteLoader"
     description = "Load from `EverNote`."
     documentation = "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/evernote"
-    
+
     def build_config(self):
         return {
             "file_path": {
