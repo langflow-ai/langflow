@@ -1,7 +1,7 @@
 
 from langflow import CustomComponent
-from langchain.llms import BaseLanguageModel
-from langchain.vectorstores import VectorStoreRouterToolkit
+from langchain_core.language_models.base import BaseLanguageModel
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
 from langchain.agents import AgentExecutor
 from typing import Callable
 
