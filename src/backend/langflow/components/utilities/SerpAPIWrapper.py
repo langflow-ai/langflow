@@ -1,9 +1,6 @@
-
 from langflow import CustomComponent
 from typing import Callable, Union
-
-# Assuming SerpAPIWrapper is a predefined class within the langflow context.
-# If it's not, it must be defined or imported from the appropriate module.
+from langchain_community.utilities import SerpAPIWrapper
 
 class SerpAPIWrapperComponent(CustomComponent):
     display_name = "SerpAPIWrapper"
@@ -17,7 +14,7 @@ class SerpAPIWrapperComponent(CustomComponent):
     def build(
         self,
         serpapi_api_key: str,
-    ) -> Union['SerpAPIWrapper', Callable]:
+    ) -> Union[SerpAPIWrapper, Callable]:  # Removed quotes around SerpAPIWrapper
         # Default parameters as defined in the JSON template.
         default_params = {
             "engine": "google",
