@@ -35,14 +35,13 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "display_name": "Serper API Key",
                 "show": True,
                 "multiline": False,
-                "password": False,  # corrected based on error message
+                "password": True,
                 "name": "serper_api_key",
                 "advanced": False,
                 "dynamic": False,
                 "info": '',
                 "type": "str",
                 "list": False,
-                "value": ""  # assuming empty string as default, needs to be set by user
             }
         }
 
