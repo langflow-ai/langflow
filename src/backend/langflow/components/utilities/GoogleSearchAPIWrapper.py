@@ -15,7 +15,7 @@ class GoogleSearchAPIWrapperComponent(CustomComponent):
     def build_config(self):
         return {
             "google_api_key": {"display_name": "Google API Key", "password": True},
-            "google_cse_id": {"display_name": "Google CSE ID"},
+            "google_cse_id": {"display_name": "Google CSE ID","password":True},
             # Fields with "show": False are omitted based on the rules
         }
 
