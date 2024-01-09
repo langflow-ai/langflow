@@ -17,12 +17,13 @@ class BSHTMLLoaderComponent(CustomComponent):
                 "type": "file",
                 "suffixes": [".html"],
                 "file_types": ["html"],
+                "field_type": "file",
             },
             "metadata": {
                 "display_name": "Metadata",
                 "required": False,
                 "show": True,
-                "type": "dict",
+                "field_type": "dict",
             },
         }
 
