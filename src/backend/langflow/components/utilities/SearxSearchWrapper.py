@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from typing import Optional, Dict
 
@@ -9,9 +8,10 @@ class SearxSearchWrapperComponent(CustomComponent):
     def build_config(self):
         return {
             "headers": {
+                "field_type":"dict",
                 "display_name": "Headers",
                 "multiline": True,
-                "default": '{"Authorization": "Bearer <token>"}'
+                "value": '{"Authorization": "Bearer <token>"}'
             },
         }
 
