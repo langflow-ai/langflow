@@ -4,7 +4,7 @@ from langflow import CustomComponent
 # Assuming `BingSearchAPIWrapper` is a class that exists in the context
 # and has the appropriate methods and attributes.
 # We need to make sure this class is importable from the context where this code will be running.
-from your_module import BingSearchAPIWrapper
+from langchain_community.utilities.bing_search import BingSearchAPIWrapper
 
 
 class BingSearchAPIWrapperComponent(CustomComponent):
