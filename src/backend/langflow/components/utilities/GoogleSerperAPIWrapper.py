@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 # Assuming the existence of GoogleSerperAPIWrapper class in the serper module
 # If this class does not exist, you would need to create it or import the appropriate class from another module
-from serper import GoogleSerperAPIWrapper
+from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
 
 class GoogleSerperAPIWrapperComponent(CustomComponent):
@@ -22,7 +22,7 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "advanced": False,
                 "dynamic": False,
                 "info": '',
-                "type": "dict",
+                "field_type": "dict",
                 "list": False,
                 "value": {
                     "news": "news",
