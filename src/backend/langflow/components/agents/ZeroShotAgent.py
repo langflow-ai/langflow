@@ -1,10 +1,10 @@
 
 from langflow import CustomComponent
 from langchain.agents import ZeroShotAgent
+from langchain_core.tools import BaseTool
 from typing import List, Optional
 from langflow.field_typing import (
     BaseLanguageModel,
-    BaseTool,
 )
 
 class ZeroShotAgentComponent(CustomComponent):
