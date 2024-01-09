@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@preact/signals-react": "^2.0.0",
     "@radix-ui/react-popover": "^1.0.7",
     "cmdk": "^0.2.0"
   }
