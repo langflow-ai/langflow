@@ -5,7 +5,7 @@ from typing import Optional, Union, Callable
 # Assuming GoogleSearchAPIWrapper is a valid import based on JSON
 # and it exists in some module that should be imported here.
 # The import path should be replaced with the correct one once available.
-from some_module import GoogleSearchAPIWrapper
+from langchain_community.utilities.google_search import GoogleSearchAPIWrapper
 
 
 class GoogleSearchAPIWrapperComponent(CustomComponent):
