@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import Document
+from langflow.field_typing import Document
 from typing import Optional, Dict
+
 
 class IFixitLoaderComponent(CustomComponent):
     display_name = "IFixitLoader"

@@ -1,6 +1,6 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import JsonSpec, Tool
+from langflow.field_typing import JsonSpec, Tool
+
 
 class JsonToolkitComponent(CustomComponent):
     display_name = "JsonToolkit"

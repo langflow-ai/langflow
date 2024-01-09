@@ -1,12 +1,14 @@
-
 from langflow import CustomComponent
 from typing import Optional, Any, Dict
-from langchain.field_typing import Embeddings
+from langflow.field_typing import Embeddings
+
 
 class HuggingFaceEmbeddingsComponent(CustomComponent):
     display_name = "HuggingFaceEmbeddings"
     description = "HuggingFace sentence_transformers embedding models."
-    documentation = "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
+    documentation = (
+        "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
+    )
 
     def build_config(self):
         return {

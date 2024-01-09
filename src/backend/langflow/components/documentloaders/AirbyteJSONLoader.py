@@ -1,13 +1,14 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import Document
+from langflow.field_typing import Document
 from typing import Optional, Dict
 
 
 class AirbyteJSONLoaderComponent(CustomComponent):
     display_name = "AirbyteJSONLoader"
     description = "Load local `Airbyte` json files."
-    documentation = "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"
+    documentation = (
+        "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"
+    )
 
     def build_config(self):
         return {

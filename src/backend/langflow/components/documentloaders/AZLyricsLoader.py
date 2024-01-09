@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import Document
+from langflow.field_typing import Document
 from typing import Optional, Dict
+
 
 class AZLyricsLoaderComponent(CustomComponent):
     display_name = "AZLyricsLoader"
@@ -10,18 +10,8 @@ class AZLyricsLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "metadata": {
-                "display_name": "Metadata",
-                "type": "dict",
-                "default": {},
-                "show": True
-            },
-            "web_path": {
-                "display_name": "Web Page",
-                "type": "str",
-                "required": True,
-                "show": True
-            },
+            "metadata": {"display_name": "Metadata", "type": "dict", "default": {}, "show": True},
+            "web_path": {"display_name": "Web Page", "type": "str", "required": True, "show": True},
         }
 
     def build(self, metadata: Optional[Dict] = None, web_path: str = "") -> Document:

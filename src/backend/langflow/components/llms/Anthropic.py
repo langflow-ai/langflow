@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from pydantic import SecretStr
 from typing import Optional, Dict, Any
-from langchain.field_typing import BaseLanguageModel
+from langflow.field_typing import BaseLanguageModel
+
 
 class AnthropicComponent(CustomComponent):
     display_name = "Anthropic"
@@ -40,7 +40,13 @@ class AnthropicComponent(CustomComponent):
         # Here we are returning a placeholder class as the Anthropic class is not defined
         # This is to comply with the type hints required by the CustomComponent
         class Anthropic(BaseLanguageModel):
-            def __init__(self, api_key: Optional[SecretStr], api_url: Optional[str], model_kwargs: Optional[Dict[str, Any]] = None, temperature: Optional[float] = None):
+            def __init__(
+                self,
+                api_key: Optional[SecretStr],
+                api_url: Optional[str],
+                model_kwargs: Optional[Dict[str, Any]] = None,
+                temperature: Optional[float] = None,
+            ):
                 # Initialize Anthropic model with the provided arguments
                 super().__init__()
                 self.api_key = api_key

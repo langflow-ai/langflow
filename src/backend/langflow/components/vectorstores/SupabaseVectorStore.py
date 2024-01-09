@@ -1,12 +1,12 @@
-
 from langflow import CustomComponent
 from typing import Optional, List
 from langchain.vectorstores import SupabaseVectorStore
-from langchain.field_typing import (
+from langflow.field_typing import (
     Document,
     Embeddings,
     NestedDict,
 )
+
 
 class SupabaseComponent(CustomComponent):
     display_name = "Supabase"
@@ -27,11 +27,11 @@ class SupabaseComponent(CustomComponent):
         self,
         embedding: Embeddings,
         documents: Optional[List[Document]] = None,
-        query_name: str = '',
+        query_name: str = "",
         search_kwargs: NestedDict = {},
-        supabase_service_key: str = '',
-        supabase_url: str = '',
-        table_name: str = '',
+        supabase_service_key: str = "",
+        supabase_url: str = "",
+        table_name: str = "",
     ) -> SupabaseVectorStore:
         return SupabaseVectorStore(
             documents=documents,

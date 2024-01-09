@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
-from langchain.field_typing import AgentExecutor, TextRequestsWrapper
+from langflow.field_typing import AgentExecutor, TextRequestsWrapper
 from typing import Callable
+
 
 class OpenAPIToolkitComponent(CustomComponent):
     display_name = "OpenAPIToolkit"

@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from langchain.llms import BaseLLM
 from typing import Optional, Dict, Union, Any
-from langchain.field_typing import BaseLanguageModel
+from langflow.field_typing import BaseLanguageModel
+
 
 class ChatOpenAIComponent(CustomComponent):
     display_name = "ChatOpenAI"
@@ -69,7 +69,6 @@ class ChatOpenAIComponent(CustomComponent):
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
     ) -> Union[BaseLanguageModel, BaseLLM]:
-        
         # Assuming there is a class `ChatOpenAI` that takes these parameters
         # The `ChatOpenAI` class must be imported or defined elsewhere in the actual implementation
         return ChatOpenAI(
