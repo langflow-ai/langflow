@@ -17,10 +17,11 @@ class AirbyteJSONLoaderComponent(CustomComponent):
                 "type": "file",
                 "fileTypes": ["json"],
                 "required": True,
+                "field_type": "file",
             },
             "metadata": {
                 "display_name": "Metadata",
-                "type": "dict",
+                "field_type": "dict",
                 "required": False,
             },
         }
