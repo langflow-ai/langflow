@@ -1,8 +1,8 @@
 
-from langchain import CustomComponent
+from langflow import CustomComponent
 from typing import Optional, Dict, List
-from langchain.loaders import CSVLoader
-from langchain.documents import Document
+from langchain_community.document_loaders.csv_loader import CSVLoader
+from langchain.docstore.document import Document
 
 class CSVLoaderComponent(CustomComponent):
     display_name = "CSVLoader"
@@ -15,6 +15,7 @@ class CSVLoaderComponent(CustomComponent):
                 "required": True,
                 "suffixes": [".csv"],
                 "file_types": ["csv"],
+                "field_type": "file",
             },
             "metadata": {
                 "display_name": "Metadata",
@@ -25,6 +26,6 @@ class CSVLoaderComponent(CustomComponent):
     def build(
         self,
         file_path: str,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: dict
     ) -> List[Document]:
         return CSVLoader(file_path=file_path, metadata=metadata).load()
