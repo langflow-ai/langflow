@@ -1,7 +1,7 @@
 
 from langflow import CustomComponent
-from langchain.document_transformers import TextSplitter
-from langchain.documents import Document
+from langchain.text_splitter import TextSplitter
+from langchain_core.documents.base import Document
 from typing import List
 
 
