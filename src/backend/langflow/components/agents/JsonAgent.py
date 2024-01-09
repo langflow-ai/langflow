@@ -4,8 +4,8 @@ from langchain.agents import AgentExecutor
 from typing import Callable
 from langflow.field_typing import (
     BaseLanguageModel,
-    BaseToolkit,
 )
+from langchain_community.agent_toolkits.base import BaseToolkit
 
 class JsonAgentComponent(CustomComponent):
     display_name = "JsonAgent"
