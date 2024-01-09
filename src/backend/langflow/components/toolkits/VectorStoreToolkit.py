@@ -1,8 +1,8 @@
 
 from langflow import CustomComponent
-from langchain.toolkits import VectorStoreToolkit
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langflow.field_typing import (
-    VectorStore,
     Tool,
 )
 
@@ -17,6 +17,6 @@ class VectorStoreToolkitComponent(CustomComponent):
 
     def build(
         self,
-        vectorstore_info: VectorStore,
+        vectorstore_info: VectorStoreInfo,
     ) -> Tool:
         return VectorStoreToolkit(vectorstore_info=vectorstore_info)
