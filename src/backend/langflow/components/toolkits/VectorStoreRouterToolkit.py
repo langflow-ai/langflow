@@ -1,7 +1,8 @@
 
 from langflow import CustomComponent
 from typing import List
-from langchain.vectorstores import VectorStore
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 
 class VectorStoreRouterToolkitComponent(CustomComponent):
     display_name = "VectorStoreRouterToolkit"
@@ -14,7 +15,7 @@ class VectorStoreRouterToolkitComponent(CustomComponent):
 
     def build(
         self,
-        vectorstores: List[VectorStore],
+        vectorstores: List[VectorStoreInfo],
     ):
         # Assuming the class `VectorStoreRouterToolkit` exists within a module, but since there
         # is no further information provided about the module structure, I will assume it is
