@@ -1,7 +1,7 @@
-import { useContext, useEffect, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
+import { useEffect, useState } from "react";
 import { uploadFile } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 
@@ -13,14 +13,14 @@ export default function InputFileComponent({
   onFileChange,
   editNode = false,
 }: FileComponentType): JSX.Element {
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
-  const { setErrorData } = useContext(alertContext);
-  const { tabId } = useContext(FlowsContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       setMyValue("");
       onChange("");
       onFileChange("");
@@ -58,7 +58,7 @@ export default function InputFileComponent({
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
         // Upload the file
-        uploadFile(file, tabId)
+        uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
             console.log("File uploaded successfully");
