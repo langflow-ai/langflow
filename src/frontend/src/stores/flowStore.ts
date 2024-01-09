@@ -32,10 +32,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
+  isPending: false,
   isBuilt: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
-
+  setPending: (isPending) => {
+    set({ isPending });
+  },
   resetFlow: ({ nodes, edges, viewport }) => {
     set({
       nodes,
