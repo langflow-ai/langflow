@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -28,8 +28,8 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
-import { darkContext } from "../../contexts/darkContext";
-import { typesContext } from "../../contexts/typesContext";
+import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -53,8 +53,10 @@ export default function CodeTabsComponent({
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
-  const { dark } = useContext(darkContext);
-  const { reactFlowInstance } = useContext(typesContext);
+  const dark = useDarkStore((state) => state.dark);
+
+  const setNodes = useFlowStore((state) => state.setNodes);
+
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function CodeTabsComponent({
       unselectAllNodes({
         data,
         updateNodes: (nodes) => {
-          reactFlowInstance?.setNodes(nodes);
+          setNodes(nodes);
         },
       });
     }
