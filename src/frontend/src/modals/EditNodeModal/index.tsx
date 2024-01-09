@@ -61,8 +61,6 @@ const EditNodeModal = forwardRef(
     const myData = useSignal(data);
     const [render, setRender] = useState(false);
     useSignalEffect(() => {
-      console.log(myData.value);
-
       setRender(!render);
     });
 
