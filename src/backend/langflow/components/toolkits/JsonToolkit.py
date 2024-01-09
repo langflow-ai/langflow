@@ -1,5 +1,7 @@
 from langflow import CustomComponent
-from langflow.field_typing import JsonSpec, Tool
+from langflow.field_typing import Tool
+from langchain_community.tools.json.tool import JsonSpec
+from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 
 
 class JsonToolkitComponent(CustomComponent):
