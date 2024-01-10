@@ -22,4 +22,4 @@ class SQLAgentComponent(CustomComponent):
         # Assuming there is a constructor for SQLAgent that takes these parameters
         # Since the actual implementation is not provided, this is a placeholder
         # Replace SQLAgent with the actual class name if different
-        return SQLAgent(llm=llm, database_uri=database_uri)
+        return AgentExecutor(llm=llm, database_uri=database_uri)
