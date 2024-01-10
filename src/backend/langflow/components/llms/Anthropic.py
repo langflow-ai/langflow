@@ -12,7 +12,8 @@ class AnthropicComponent(CustomComponent):
         return {
             "anthropic_api_key": {
                 "display_name": "Anthropic API Key",
-                "type": SecretStr,
+                "type": str,
+                "password": True,
             },
             "anthropic_api_url": {
                 "display_name": "Anthropic API URL",
@@ -20,7 +21,7 @@ class AnthropicComponent(CustomComponent):
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "type": Dict[str, Any],
+                "field_type": 'dict',
                 "advanced": True,
             },
             "temperature": {
@@ -31,7 +32,7 @@ class AnthropicComponent(CustomComponent):
 
     def build(
         self,
-        anthropic_api_key: Optional[SecretStr],
+        anthropic_api_key: Optional[str],
         anthropic_api_url: Optional[str],
         model_kwargs: Optional[Dict[str, Any]],
         temperature: Optional[float] = None,
@@ -42,7 +43,7 @@ class AnthropicComponent(CustomComponent):
         class Anthropic(BaseLanguageModel):
             def __init__(
                 self,
-                api_key: Optional[SecretStr],
+                api_key: Optional[str],
                 api_url: Optional[str],
                 model_kwargs: Optional[Dict[str, Any]] = None,
                 temperature: Optional[float] = None,
