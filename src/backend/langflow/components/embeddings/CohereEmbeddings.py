@@ -1,7 +1,7 @@
 
 from langflow import CustomComponent
-from langchain.embeddings import CohereEmbeddings
-from typing import Optional, Any
+from langchain_community.embeddings.cohere import CohereEmbeddings
+from typing import Optional
 
 
 class CohereEmbeddingsComponent(CustomComponent):
@@ -10,24 +10,24 @@ class CohereEmbeddingsComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "async_client": {"display_name": "Async Client", "advanced": True},
-            "client": {"display_name": "Client", "advanced": True},
-            "cohere_api_key": {"display_name": "Cohere API Key"},
+            "cohere_api_key": {"display_name": "Cohere API Key","password":True},
             "model": {"display_name": "Model", "default": "embed-english-v2.0", "advanced": True},
             "truncate": {"display_name": "Truncate", "advanced": True},
+            "max_retries": {"display_name": "Max Retries", "advanced": True},
+            "user_agent": {"display_name": "User Agent", "advanced": True},
         }
 
     def build(
         self,
-        async_client: Optional[Any] = None,
-        client: Optional[Any] = None,
+        request_timeout: Optional[float] = None,
         cohere_api_key: Optional[str] = None,
         model: str = "embed-english-v2.0",
         truncate: Optional[str] = None,
+        user_agent: Optional[str] = "langchain",
     ) -> CohereEmbeddings:
         return CohereEmbeddings(
-            async_client=async_client,
-            client=client,
+            user_agent=user_agent,
+            request_timeout=request_timeout,
             cohere_api_key=cohere_api_key,
             model=model,
             truncate=truncate,
