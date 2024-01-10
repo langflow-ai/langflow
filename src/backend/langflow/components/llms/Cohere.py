@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.llms import BaseLanguageModel
+from langchain_core.language_models.base import BaseLanguageModel
 from typing import Optional
 
 class CohereComponent(CustomComponent):
@@ -13,7 +13,7 @@ class CohereComponent(CustomComponent):
             "cohere_api_key": {
                 "display_name": "Cohere API Key",
                 "type": "password",
-                "show": True
+                "password": True
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
