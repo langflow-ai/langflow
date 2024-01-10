@@ -1,7 +1,7 @@
 
 from typing import Optional, List, Dict, Any
 from langflow import CustomComponent
-from langchain.llms import BaseLanguageModel
+from langchain_community.llms.llamacpp import LlamaCpp
 
 class LlamaCppComponent(CustomComponent):
     display_name = "LlamaCpp"
@@ -84,10 +84,10 @@ class LlamaCppComponent(CustomComponent):
         use_mmap: Optional[bool] = True,
         verbose: Optional[bool] = True,
         vocab_only: Optional[bool] = False,
-    ) -> BaseLanguageModel:
+    ) -> LlamaCpp:
         # Here you would instantiate the LlamaCpp model with the provided parameters
         # Since the actual implementation of LlamaCpp is not provided, this is a placeholder
-        return BaseLanguageModel(
+        return LlamaCpp(
             model_path=model_path,
             grammar=grammar,
             cache=cache,
