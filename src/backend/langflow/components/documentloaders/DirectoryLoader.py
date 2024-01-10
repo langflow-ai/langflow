@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.data_connections import Document
+from langchain.docstore.document import Document
 from typing import Optional, Dict, Any
 
 class DirectoryLoaderComponent(CustomComponent):
@@ -9,14 +9,14 @@ class DirectoryLoaderComponent(CustomComponent):
 
     def build_config(self) -> Dict[str, Any]:
         return {
-            "glob": {"display_name": "Glob Pattern", "default": "**/*.txt"},
-            "load_hidden": {"display_name": "Load Hidden Files", "default": False, "advanced": True},
-            "max_concurrency": {"display_name": "Max Concurrency", "default": 10, "advanced": True},
-            "metadata": {"display_name": "Metadata", "default": {}},
+            "glob": {"display_name": "Glob Pattern", "value": "**/*.txt"},
+            "load_hidden": {"display_name": "Load Hidden Files", "value": False, "advanced": True},
+            "max_concurrency": {"display_name": "Max Concurrency", "value": 10, "advanced": True},
+            "metadata": {"display_name": "Metadata", "value": {}},
             "path": {"display_name": "Local Directory"},
-            "recursive": {"display_name": "Recursive", "default": True, "advanced": True},
-            "silent_errors": {"display_name": "Silent Errors", "default": False, "advanced": True},
-            "use_multithreading": {"display_name": "Use Multithreading", "default": True, "advanced": True},
+            "recursive": {"display_name": "Recursive", "value": True, "advanced": True},
+            "silent_errors": {"display_name": "Silent Errors", "value": False, "advanced": True},
+            "use_multithreading": {"display_name": "Use Multithreading", "value": True, "advanced": True},
         }
 
     def build(
@@ -25,7 +25,7 @@ class DirectoryLoaderComponent(CustomComponent):
         path: str,
         load_hidden: Optional[bool] = False,
         max_concurrency: Optional[int] = 10,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict] = {},
         recursive: Optional[bool] = True,
         silent_errors: Optional[bool] = False,
         use_multithreading: Optional[bool] = True,

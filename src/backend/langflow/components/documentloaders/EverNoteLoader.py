@@ -17,12 +17,13 @@ class EverNoteLoaderComponent(CustomComponent):
                 "show": True,
                 "type": "file",
                 "file_types": ["xml"],
+                "field_type": "file",
             },
             "metadata": {
                 "display_name": "Metadata",
                 "required": False,
                 "show": True,
-                "type": "dict",
+                "field_type": "dict",
             },
         }
 
