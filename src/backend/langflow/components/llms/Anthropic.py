@@ -1,5 +1,4 @@
 from langflow import CustomComponent
-from pydantic import SecretStr
 from typing import Optional, Dict, Any
 from langflow.field_typing import BaseLanguageModel
 
