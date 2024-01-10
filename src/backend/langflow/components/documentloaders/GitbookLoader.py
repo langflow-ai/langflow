@@ -1,6 +1,7 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
 from typing import Optional, Dict
+from langchain_community.document_loaders.gitbook import GitbookLoader
 
 
 class GitbookLoaderComponent(CustomComponent):
@@ -11,7 +12,8 @@ class GitbookLoaderComponent(CustomComponent):
         return {
             "metadata": {
                 "display_name": "Metadata",
-                "default": {},
+                "field_type":"dict",
+                "value": {},
             },
             "web_page": {
                 "display_name": "Web Page",
