@@ -1,7 +1,8 @@
 
-from langchain import CustomComponent
-from langchain.document_loaders import BaseLoader
+from langflow import CustomComponent
 from typing import Optional, Dict
+from langchain_community.document_loaders.hn import HNLoader
+
 
 class HNLoaderComponent(CustomComponent):
     display_name = "HNLoader"
@@ -11,8 +12,9 @@ class HNLoaderComponent(CustomComponent):
         return {
             "metadata": {
                 "display_name": "Metadata",
-                "default": {},
-                "required": False
+                "value": {},
+                "required": False,
+                "field_type": "dict"
             },
             "web_path": {
                 "display_name": "Web Page",
@@ -24,8 +26,8 @@ class HNLoaderComponent(CustomComponent):
         self, 
         web_path: str,
         metadata: Optional[Dict] = None, 
-    ) -> BaseLoader:
+    ) -> HNLoader:
         # Assuming that there's a specific loader for Hacker News
-        # as BaseLoader does not take a web_path argument
+        # as HNloader does not take a web_path argument
         # The HackerNewsLoader needs to be defined somewhere in the actual implementation
-        return HackerNewsLoader(metadata=metadata, web_path=web_path)
+        return HNLoader(metadata=metadata, web_path=web_path)
