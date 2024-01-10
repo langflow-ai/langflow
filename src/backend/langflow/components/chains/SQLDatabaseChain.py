@@ -1,15 +1,12 @@
 
 from langflow import CustomComponent
-from langchain.chains import Chain
 from typing import Callable, Union
 from langflow.field_typing import (
     BasePromptTemplate,
     BaseLanguageModel,
+    Chain
 )
-
-# Placeholder SQLDatabase class. In practice, replace this with the actual class or import it if available.
-class SQLDatabase:
-    pass
+from langchain_community.utilities.sql_database import SQLDatabase
 
 class SQLDatabaseChainComponent(CustomComponent):
     display_name = "SQLDatabaseChain"
@@ -28,6 +25,4 @@ class SQLDatabaseChainComponent(CustomComponent):
         llm: BaseLanguageModel,
         prompt: BasePromptTemplate,
     ) -> Union[Chain, Callable]:
-        # Assuming there's a specific chain for SQLDatabase in the langchain library:
-        # Replace `Chain` with the specific chain class that interfaces with the SQLDatabase.
         return Chain(db=db, llm=llm, prompt=prompt)
