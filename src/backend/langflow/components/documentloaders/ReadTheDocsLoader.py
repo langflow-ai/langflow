@@ -1,5 +1,6 @@
 from langflow import CustomComponent
-from typing import Dict, Optional
+from typing import Dict, Optional,List
+from langchain_core.documents import Document
 from langchain_community.document_loaders.readthedocs import ReadTheDocsLoader
 
 
@@ -17,5 +18,5 @@ class ReadTheDocsLoaderComponent(CustomComponent):
         self,
         path: str,
         metadata: Optional[Dict] = None,
-    ) -> ReadTheDocsLoader:
+    ) -> List[Document]:
         return ReadTheDocsLoader(path=path, metadata=metadata or {}).load()
