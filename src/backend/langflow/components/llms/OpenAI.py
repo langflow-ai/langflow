@@ -1,8 +1,7 @@
 
 from langflow import CustomComponent
-from langchain.llms import BaseLLM
 from typing import Optional, Dict
-
+from langchain_openai.llms.base import OpenAI
 
 class OpenAIComponent(CustomComponent):
     display_name = "OpenAI"
@@ -14,7 +13,7 @@ class OpenAIComponent(CustomComponent):
             "model_kwargs": {"display_name": "Model Kwargs", "advanced": True},
             "model_name": {
                 "display_name": "Model Name",
-                "default": "text-davinci-003",
+                "value": "text-davinci-003",
                 "options": [
                     "text-davinci-003",
                     "text-davinci-002",
@@ -32,22 +31,22 @@ class OpenAIComponent(CustomComponent):
             },
             "openai_api_key": {
                 "display_name": "OpenAI API Key",
-                "default": "",
+                "value": "",
                 "password": True,
             },
-            "temperature": {"display_name": "Temperature", "default": 0.7},
+            "temperature": {"display_name": "Temperature", "value": 0.7},
         }
 
     def build(
         self,
-        max_tokens: int = 256,
+        max_tokens: Optional[int] = 256,
         model_kwargs: Optional[Dict] = None,
-        model_name: str = "text-davinci-003",
-        openai_api_base: str = "https://api.openai.com/v1",
+        model_name: Optional[str] = "text-davinci-003",
+        openai_api_base: Optional[str] = "https://api.openai.com/v1",
         openai_api_key: str = "",
-        temperature: float = 0.7,
-    ) -> BaseLLM:
-        return BaseLLM(
+        temperature: Optional[float] = 0.7,
+    ) -> OpenAI:
+        return OpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs or {},
             model_name=model_name,
