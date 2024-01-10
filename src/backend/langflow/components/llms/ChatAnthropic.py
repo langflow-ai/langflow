@@ -1,6 +1,5 @@
 
 from langflow import CustomComponent
-from langchain.tools import SecretStr
 from typing import Optional, Dict, Union, Callable
 from langflow.field_typing import BaseLanguageModel
 
@@ -13,7 +12,8 @@ class ChatAnthropicComponent(CustomComponent):
         return {
             "anthropic_api_key": {
                 "display_name": "Anthropic API Key",
-                "type": SecretStr,
+                "type": str,
+                "password": True,
             },
             "anthropic_api_url": {
                 "display_name": "Anthropic API URL",
@@ -21,7 +21,7 @@ class ChatAnthropicComponent(CustomComponent):
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "type": Dict[str, Union[str, int, float, bool]],
+                "field_type": 'dict',
                 "advanced": True,
             },
             "temperature": {
@@ -32,9 +32,9 @@ class ChatAnthropicComponent(CustomComponent):
 
     def build(
         self,
-        anthropic_api_key: Optional[SecretStr] = None,
+        anthropic_api_key: Optional[str] = None,
         anthropic_api_url: Optional[str] = None,
-        model_kwargs: Optional[Dict[str, Union[str, int, float, bool]]] = None,
+        model_kwargs: dict = {},
         temperature: Optional[float] = None,
     ) -> Union[BaseLanguageModel, Callable]:
         from langchain.model_io.models.chat.integrations import ChatAnthropic  # Importing here due to potential local scope requirements
