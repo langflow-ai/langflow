@@ -1,7 +1,8 @@
 
 from langflow import CustomComponent
-from typing import List
-from langchain.messages import BaseMessage
+from typing import List, Optional
+from langchain_core.messages.base import BaseMessage
+from langchain_community.chat_models.vertexai import ChatVertexAI
 
 class ChatVertexAIComponent(CustomComponent):
     display_name = "ChatVertexAI"
@@ -11,7 +12,7 @@ class ChatVertexAIComponent(CustomComponent):
         return {
             "credentials": {
                 "display_name": "Credentials",
-                "type": "file",
+                "field_type": "file",
                 "fileTypes": ["json"],
                 "file_path": None,
             },
@@ -21,53 +22,53 @@ class ChatVertexAIComponent(CustomComponent):
             },
             "location": {
                 "display_name": "Location",
-                "default": "us-central1",
+                "value": "us-central1",
             },
             "max_output_tokens": {
                 "display_name": "Max Output Tokens",
-                "default": 128,
+                "value": 128,
                 "advanced": True,
             },
             "model_name": {
                 "display_name": "Model Name",
-                "default": "chat-bison",
+                "value": "chat-bison",
             },
             "project": {
                 "display_name": "Project",
             },
             "temperature": {
                 "display_name": "Temperature",
-                "default": 0.0,
+                "value": 0.0,
             },
             "top_k": {
                 "display_name": "Top K",
-                "default": 40,
+                "value": 40,
                 "advanced": True,
             },
             "top_p": {
                 "display_name": "Top P",
-                "default": 0.95,
+                "value": 0.95,
                 "advanced": True,
             },
             "verbose": {
                 "display_name": "Verbose",
-                "default": False,
+                "value": False,
                 "advanced": True,
             },
         }
 
     def build(
         self,
-        credentials: str,
-        examples: List[BaseMessage],
-        project: str,
-        location: str = "us-central1",
-        max_output_tokens: int = 128,
-        model_name: str = "chat-bison",
-        temperature: float = 0.0,
-        top_k: int = 40,
-        top_p: float = 0.95,
-        verbose: bool = False,
+        credentials: Optional[str],
+        examples: Optional[List[BaseMessage]],
+        project: Optional[str],
+        location: Optional[str] = "us-central1",
+        max_output_tokens: Optional[int] = 128,
+        model_name: Optional[str] = "chat-bison",
+        temperature: Optional[float] = 0.0,
+        top_k: Optional[int] = 40,
+        top_p: Optional[float] = 0.95,
+        verbose: Optional[bool] = False,
     ):
         # Assuming there is a ChatVertexAI class that takes these parameters
         return ChatVertexAI(
