@@ -1,6 +1,6 @@
 from langflow import CustomComponent
-from langflow.field_typing import Document
 from typing import Dict, Optional
+from langchain_community.document_loaders.readthedocs import ReadTheDocsLoader
 
 
 class ReadTheDocsLoaderComponent(CustomComponent):
@@ -9,7 +9,7 @@ class ReadTheDocsLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "metadata": {"display_name": "Metadata", "default": {}},
+            "metadata": {"display_name": "Metadata", "default": {},"field_type": "dict"},
             "path": {"display_name": "Local directory", "required": True},
         }
 
@@ -17,5 +17,5 @@ class ReadTheDocsLoaderComponent(CustomComponent):
         self,
         path: str,
         metadata: Optional[Dict] = None,
-    ) -> Document:
-        return Document(path=path, metadata=metadata or {})
+    ) -> ReadTheDocsLoader:
+        return ReadTheDocsLoader(path=path, metadata=metadata or {}).load()
