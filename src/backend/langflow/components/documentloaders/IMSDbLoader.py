@@ -1,5 +1,7 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
+from langchain_community.document_loaders.imsdb import IMSDbLoader
+
 from typing import Dict, Optional
 
 
@@ -9,8 +11,8 @@ class IMSDbLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "metadata": {"display_name": "Metadata", "type": "dict"},
-            "web_path": {"display_name": "Web Page", "type": "str"},
+            "metadata": {"display_name": "Metadata", "field_type": "dict"},
+            "web_path": {"display_name": "Web Page", "field_type": "str"},
         }
 
     def build(
@@ -18,6 +20,4 @@ class IMSDbLoaderComponent(CustomComponent):
         metadata: Optional[Dict] = None,
         web_path: str = "",
     ) -> Document:
-        # Assuming there is a class or function named `IMSDbLoader` that takes these parameters
-        # and returns a Document object. Replace `IMSDbLoader` with the actual class or function name.
         return IMSDbLoader(metadata=metadata, web_path=web_path)
