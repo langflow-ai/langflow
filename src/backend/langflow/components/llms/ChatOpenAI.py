@@ -1,6 +1,7 @@
 from langflow import CustomComponent
 from langchain.llms import BaseLLM
 from typing import Optional, Dict, Union, Any
+from langchain_community.chat_models.openai import ChatOpenAI
 from langflow.field_typing import BaseLanguageModel
 
 
@@ -12,19 +13,19 @@ class ChatOpenAIComponent(CustomComponent):
         return {
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "type": "int",
+                "field_type": "int",
                 "advanced": False,
                 "required": False,
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "type": "dict",
+                "field_type": "dict",
                 "advanced": True,
                 "required": False,
             },
             "model_name": {
                 "display_name": "Model Name",
-                "type": "str",
+                "field_type": "str",
                 "advanced": False,
                 "required": False,
                 "options": [
@@ -37,7 +38,7 @@ class ChatOpenAIComponent(CustomComponent):
             },
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
-                "type": "str",
+                "field_type": "str",
                 "advanced": False,
                 "required": False,
                 "info": (
@@ -47,16 +48,16 @@ class ChatOpenAIComponent(CustomComponent):
             },
             "openai_api_key": {
                 "display_name": "OpenAI API Key",
-                "type": "str",
+                "field_type": "str",
                 "advanced": False,
                 "required": False,
             },
             "temperature": {
                 "display_name": "Temperature",
-                "type": "float",
+                "field_type": "float",
                 "advanced": False,
                 "required": False,
-                "default": 0.7,
+                "value": 0.7,
             },
         }
 
