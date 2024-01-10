@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.llms import BaseLanguageModel
+from langchain_community.llms.ctransformers import CTransformers
 from typing import Optional, Dict
 
 class CTransformersComponent(CustomComponent):
@@ -13,7 +13,7 @@ class CTransformersComponent(CustomComponent):
             "model": {"display_name": "Model", "required": True},
             "model_file": {"display_name": "Model File", "required": False},
             "model_type": {"display_name": "Model Type", "required": False},
-            "config": {"display_name": "Config", "advanced": True, "required": False},
+            "config": {"display_name": "Config", "advanced": True, "required": False,"field_type":"dict","value":'{"top_k":40,"top_p":0.95,"temperature":0.8,"repetition_penalty":1.1,"last_n_tokens":64,"seed":-1,"max_new_tokens":256,"stop":"","stream":"False","reset":"True","batch_size":8,"threads":-1,"context_length":-1,"gpu_layers":0}'}
         }
 
     def build(
@@ -22,7 +22,7 @@ class CTransformersComponent(CustomComponent):
         model_file: Optional[str] = None,
         model_type: Optional[str] = None,
         config: Optional[Dict] = None
-    ) -> BaseLanguageModel:
+    ) -> CTransformers:
         # Default config values
         default_config = {
             "top_k": 40,
