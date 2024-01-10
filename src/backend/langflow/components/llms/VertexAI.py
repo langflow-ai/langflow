@@ -11,45 +11,49 @@ class VertexAIComponent(CustomComponent):
         return {
             "credentials": {
                 "display_name": "Credentials",
-                "type": "file",
+                "field_type": "file",
                 "file_types": ["json"],
                 "required": False,
-                "default": None,
+                "value": None,
             },
             "location": {
                 "display_name": "Location",
                 "type": "str",
-                "default": "us-central1",
+                "advanced":True,
+                "value": "us-central1",
                 "required": False,
             },
             "max_output_tokens": {
                 "display_name": "Max Output Tokens",
-                "type": "int",
-                "default": 128,
+                "field_type": "int",
+                "value": 128,
                 "required": False,
+                "advanced":True
             },
             "max_retries": {
                 "display_name": "Max Retries",
                 "type": "int",
-                "default": 6,
+                "value": 6,
                 "required": False,
+                "advanced":True
             },
             "metadata": {
                 "display_name": "Metadata",
-                "type": "dict",
+                "field_type": "dict",
                 "required": False,
                 "default": {},
             },
             "model_name": {
                 "display_name": "Model Name",
                 "type": "str",
-                "default": "text-bison",
+                "value": "text-bison",
                 "required": False,
             },
             "n": {
+                "advanced":True,
                 "display_name": "N",
-                "type": "int",
-                "default": 1,
+                "field_type": "int",
+                "value": 1,
                 "required": False,
             },
             "project": {
@@ -60,57 +64,72 @@ class VertexAIComponent(CustomComponent):
             },
             "request_parallelism": {
                 "display_name": "Request Parallelism",
-                "type": "int",
-                "default": 5,
+                "field_type": "int",
+                "value": 5,
                 "required": False,
+                "advanced":True
             },
             "streaming": {
                 "display_name": "Streaming",
-                "type": "bool",
-                "default": False,
+                "field_type": "bool",
+                "value": False,
                 "required": False,
+                "advanced":True
             },
             "temperature": {
                 "display_name": "Temperature",
-                "type": "float",
-                "default": 0.0,
+                "field_type": "float",
+                "value": 0.0,
                 "required": False,
+                "advanced":True
             },
             "top_k": {
                 "display_name": "Top K",
                 "type": "int",
                 "default": 40,
                 "required": False,
+                "advanced":True
             },
             "top_p": {
                 "display_name": "Top P",
-                "type": "float",
-                "default": 0.95,
+                "field_type": "float",
+                "value": 0.95,
                 "required": False,
+                "advanced":True
             },
             "tuned_model_name": {
                 "display_name": "Tuned Model Name",
                 "type": "str",
                 "required": False,
-                "default": None,
+                "value": None,
+                "advanced":True
             },
             "verbose": {
                 "display_name": "Verbose",
-                "type": "bool",
-                "default": False,
+                "field_type": "bool",
+                "value": False,
                 "required": False,
             },
+            "name":{
+                "display_name":"Name",
+                "field_type":"str"
+            },
+            "client_preview":{
+                "display_name":"client_preview"
+            }
         }
 
     def build(
         self,
         credentials: Optional[str] = None,
+        client_preview: Optional[any]= None,
         location: str = "us-central1",
         max_output_tokens: int = 128,
         max_retries: int = 6,
         metadata: Dict = None,
         model_name: str = "text-bison",
         n: int = 1,
+        name:Optional[str] = None,
         project: Optional[str] = None,
         request_parallelism: int = 5,
         streaming: bool = False,
@@ -127,6 +146,7 @@ class VertexAIComponent(CustomComponent):
         from langchain.llms import VertexAI
 
         return VertexAI(
+            client_preview=client_preview,
             credentials=credentials,
             location=location,
             max_output_tokens=max_output_tokens,
@@ -134,6 +154,7 @@ class VertexAIComponent(CustomComponent):
             metadata=metadata,
             model_name=model_name,
             n=n,
+            name=name,
             project=project,
             request_parallelism=request_parallelism,
             streaming=streaming,
