@@ -1,7 +1,7 @@
 
 from langflow import CustomComponent
 from langchain.docstore.document import Document
-from typing import Optional, Dict
+from typing import Optional
 
 class CollegeConfidentialLoaderComponent(CustomComponent):
     display_name = "CollegeConfidentialLoader"

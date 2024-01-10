@@ -1,6 +1,5 @@
 from langflow import CustomComponent
 from langchain.docstore.document import Document
-from typing import Optional, Dict
 from langflow.field_typing import TemplateField
 
 

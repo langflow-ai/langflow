@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from typing import Optional, Dict, List
+from typing import List
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.docstore.document import Document
 
