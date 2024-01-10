@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from typing import Optional, Dict, Union, Callable
+from typing import Optional, Union, Callable
 from langflow.field_typing import BaseLanguageModel
 
 class ChatAnthropicComponent(CustomComponent):
