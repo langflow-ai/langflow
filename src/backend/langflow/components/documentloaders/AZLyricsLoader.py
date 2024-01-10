@@ -10,7 +10,7 @@ class AZLyricsLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "metadata": {"display_name": "Metadata", "type": "dict", "default": {}, "show": True},
+            "metadata": {"display_name": "Metadata", "field_type": "dict", "value": {}, "show": True},
             "web_path": {"display_name": "Web Page", "type": "str", "required": True, "show": True},
         }
 

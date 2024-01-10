@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.document_loaders import Document
+from langchain.docstore.document import Document
 from typing import Optional, Dict
 
 class CollegeConfidentialLoaderComponent(CustomComponent):
@@ -10,14 +10,14 @@ class CollegeConfidentialLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "metadata": {"display_name": "Metadata", "default": {}},
+            "metadata": {"display_name": "Metadata", "values": {}},
             "web_path": {"display_name": "Web Page", "required": True},
         }
 
     def build(
         self,
         web_path: str,
-        metadata: Optional[Dict] = None,
+        metadata: Optional[dict] = {}
     ) -> Document:
         # Assuming there is a loader class `CollegeConfidentialLoader` that takes `metadata` and `web_path` as arguments
         # Replace `CollegeConfidentialLoader` with the actual class name if different

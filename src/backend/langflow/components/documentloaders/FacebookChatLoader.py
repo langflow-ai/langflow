@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.documents import Document
+from langchain.docstore.document import Document
 from typing import Optional, Dict
 
 class FacebookChatLoaderComponent(CustomComponent):
@@ -15,10 +15,12 @@ class FacebookChatLoaderComponent(CustomComponent):
                 "required": True,
                 "suffixes": [".json"],
                 "file_types": ["json"],
+                "field_type": "file",
             },
             "metadata": {
                 "display_name": "Metadata",
                 "required": False,
+                "field_type": "dict",
             },
         }
 
