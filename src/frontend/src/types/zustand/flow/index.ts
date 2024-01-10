@@ -12,7 +12,9 @@ export type FlowStoreType = {
   updateSSEData: (sseData: object) => void;
   sseData: object;
   isBuilding: boolean;
+  isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setPending: (isPending: boolean) => void;
   resetFlow: (flow: {
     nodes: Node[];
     edges: Edge[];
