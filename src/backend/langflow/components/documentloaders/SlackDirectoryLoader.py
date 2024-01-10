@@ -1,7 +1,8 @@
 
 from langflow import CustomComponent
-from typing import Optional, Dict
-
+from typing import Optional, Dict, List
+from langchain_core.documents import Document
+from langchain_community.document_loaders.slack_directory import SlackDirectoryLoader
 class SlackDirectoryLoaderComponent(CustomComponent):
     display_name = "SlackDirectoryLoader"
     description = "Load from a `Slack` directory dump."
@@ -9,8 +10,8 @@ class SlackDirectoryLoaderComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "zip_path": {"display_name": "Path to zip file"},
-            "metadata": {"display_name": "Metadata"},
+            "zip_path": {"display_name": "Path to zip file","field_type": "file","file_types":[".zip"]},
+            "metadata": {"display_name": "Metadata", "field_type": "dict"},
             "workspace_url": {"display_name": "Workspace URL"},
         }
 
@@ -19,8 +20,5 @@ class SlackDirectoryLoaderComponent(CustomComponent):
         zip_path: str,
         metadata: Optional[Dict] = None,
         workspace_url: Optional[str] = None,
-    ) -> 'Document':
-        # Assuming there is a SlackDirectoryLoader class that takes these parameters
-        # Since the actual implementation details are not provided, this is a placeholder
-        # Replace SlackDirectoryLoader with the actual class that should be instantiated
-        return SlackDirectoryLoader(zip_path=zip_path, metadata=metadata, workspace_url=workspace_url)
+    ) -> List[Document]:
+        return SlackDirectoryLoader(zip_path=zip_path, metadata=metadata, workspace_url=workspace_url).load()
