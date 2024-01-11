@@ -104,7 +104,7 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   async function logout() {
-    if (!isAuthenticated) {
+    if (autoLogin) {
       return;
     }
     try {
