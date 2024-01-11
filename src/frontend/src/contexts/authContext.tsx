@@ -104,6 +104,9 @@ export function AuthProvider({ children }): React.ReactElement {
   }
 
   async function logout() {
+    if (!isAuthenticated) {
+      return;
+    }
     try {
       await requestLogout();
       cookies.remove("apikey_tkn_lflw", { path: "/" });
