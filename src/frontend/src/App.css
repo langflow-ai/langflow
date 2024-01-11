@@ -2,15 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  overflow: hidden;
+}
+
 .App {
   text-align: center;
 }
 
 .react-flow__node {
-	width: auto;
-	height: auto;
-	border-radius: auto;
-	min-width: inherit;
+  width: auto;
+  height: auto;
+  border-radius: auto;
+  min-width: inherit;
 }
 
 .App-logo {
