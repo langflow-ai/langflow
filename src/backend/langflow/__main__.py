@@ -10,7 +10,7 @@ from typing import Optional
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import cpu_count  # type: ignore
+from multiprocess import Process, cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
 from rich.console import Console
@@ -211,12 +211,15 @@ def run(
         run_on_windows(host, port, log_level, options, app)
     else:
         # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
+        run_on_mac_or_linux(host, port, log_level, options, platform.system(), open_browser)
 
 
-def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    ctx = multiprocessing.get_context("spawn")
-    webapp_process = ctx.Process(target=run_langflow, args=(host, port, log_level, options))
+def run_on_mac_or_linux(host, port, log_level, options, system, open_browser=True):
+    if system == "Darwin":
+        ctx = multiprocessing.get_context("spawn")
+        webapp_process = ctx.Process(target=run_langflow, args=(host, port, log_level, options))
+    else:
+        webapp_process = Process(target=run_langflow, args=(host, port, log_level, options))
     webapp_process.start()
     status_code = 0
     while status_code != 200:
