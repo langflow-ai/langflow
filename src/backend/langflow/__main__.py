@@ -1,3 +1,4 @@
+import multiprocessing
 import platform
 import socket
 import sys
@@ -9,18 +10,16 @@ from typing import Optional
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
+from multiprocess import cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from sqlmodel import select
 
 from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, initialize_settings_service
+from langflow.services.deps import get_settings_service
+from langflow.services.utils import initialize_settings_service
 from langflow.utils.logger import configure, logger
 
 console = Console()
@@ -216,7 +215,8 @@ def run(
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
+    ctx = multiprocessing.get_context("spawn")
+    webapp_process = ctx.Process(target=run_langflow, args=(host, port, log_level, options))
     webapp_process.start()
     status_code = 0
     while status_code != 200:
@@ -229,6 +229,7 @@ def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
     print_banner(host, port)
     if open_browser:
         webbrowser.open(f"http://{host}:{port}")
+    webapp_process.join()
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -298,24 +299,33 @@ def print_banner(host, port):
     rprint(panel)
 
 
-def run_langflow(host, port, log_level, options, app):
+def run_langflow(host, port, log_level, options):
     """
     Run Langflow server on localhost
     """
     try:
-        if platform.system() in ["Windows"]:
+        if platform.system() in ["Windows", "Darwin"]:
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn
+
             import uvicorn
 
-            uvicorn.run(app, host=host, port=port, log_level=log_level)
+            uvicorn.run(
+                "langflow.main:create_app",
+                factory=True,
+                host=host,
+                port=port,
+                log_level=log_level,
+                workers=options["workers"],
+            )
         else:
             from langflow.server import LangflowApplication
 
-            LangflowApplication(app, options).run()
+            LangflowApplication(options).run()
     except KeyboardInterrupt:
-        pass
+        logger.info("Shutting down server")
+        sys.exit(0)
     except Exception as e:
         logger.exception(e)
         sys.exit(1)
