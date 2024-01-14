@@ -7,13 +7,14 @@ from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
+from loguru import logger
+from pydantic import BaseModel
+
 from langflow.graph.graph.base import Graph
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
 from langflow.services.session.service import SessionService
-from loguru import logger
-from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -223,7 +224,7 @@ async def process_graph_cached(
     if not graph:
         raise ValueError("Graph not found in the session")
 
-    result = await build_graph_and_generate_result(graph, inputs, artifacts, session_id, session_service)
+    result = await build_graph_and_generate_result(graph, session_id, inputs, artifacts, session_service)
 
     return result
 
