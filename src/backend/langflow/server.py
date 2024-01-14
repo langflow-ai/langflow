@@ -2,11 +2,12 @@ from gunicorn.app.base import BaseApplication  # type: ignore
 
 
 class LangflowApplication(BaseApplication):
-    def __init__(self, app, options=None):
+    def __init__(self, options=None):
         self.options = options or {}
+        from langflow.main import create_app
 
         self.options["worker_class"] = "uvicorn.workers.UvicornWorker"
-        self.application = app
+        self.application = create_app()
         super().__init__()
 
     def load_config(self):
