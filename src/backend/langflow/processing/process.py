@@ -223,7 +223,9 @@ async def process_graph_cached(
     if not graph:
         raise ValueError("Graph not found in the session")
 
-    result = await build_graph_and_generate_result(graph, inputs, artifacts, session_id, session_service)
+    result = await build_graph_and_generate_result(
+        graph=graph, session_id=session_id, inputs=inputs, artifacts=artifacts, session_service=session_service
+    )
 
     return result
 
