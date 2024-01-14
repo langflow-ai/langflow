@@ -1,25 +1,23 @@
-import multiprocessing
 import platform
 import socket
 import sys
-import time
-import webbrowser
 from pathlib import Path
 from typing import Optional
 
-import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
+from multiprocess import cpu_count  # type: ignore
 from rich import box
 from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from sqlmodel import select
 
 from langflow.main import setup_app
-from langflow.services.deps import get_settings_service
-from langflow.services.utils import initialize_settings_service
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.utils import initialize_services, initialize_settings_service
 from langflow.utils.logger import configure, logger
 
 console = Console()
@@ -211,28 +209,12 @@ def run(
         run_on_windows(host, port, log_level, options, app)
     else:
         # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, platform.system(), open_browser)
+        run_on_mac_or_linux(host, port, log_level, options, app)
 
 
-def run_on_mac_or_linux(host, port, log_level, options, system, open_browser=True):
-    if system == "Darwin":
-        ctx = multiprocessing.get_context("spawn")
-        webapp_process = ctx.Process(target=run_langflow, args=(host, port, log_level, options))
-    else:
-        webapp_process = Process(target=run_langflow, args=(host, port, log_level, options))
-    webapp_process.start()
-    status_code = 0
-    while status_code != 200:
-        try:
-            status_code = httpx.get(f"http://{host}:{port}/health").status_code
-
-        except Exception:
-            time.sleep(1)
-
+def run_on_mac_or_linux(host, port, log_level, options, app):
     print_banner(host, port)
-    if open_browser:
-        webbrowser.open(f"http://{host}:{port}")
-    webapp_process.join()
+    run_langflow(host, port, log_level, options, app)
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -302,7 +284,7 @@ def print_banner(host, port):
     rprint(panel)
 
 
-def run_langflow(host, port, log_level, options):
+def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
     """
@@ -315,12 +297,10 @@ def run_langflow(host, port, log_level, options):
             import uvicorn
 
             uvicorn.run(
-                "langflow.main:create_app",
-                factory=True,
+                app,
                 host=host,
                 port=port,
                 log_level=log_level,
-                workers=options["workers"],
             )
         else:
             from langflow.server import LangflowApplication
