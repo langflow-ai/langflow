@@ -64,6 +64,13 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class PreloadResponse(BaseModel):
+    """Preload response schema."""
+
+    session_id: Optional[str] = None
+    is_clear: Optional[bool] = None
+
+
 # TaskStatusResponse(
 #         status=task.status, result=task.result if task.ready() else None
 #     )
