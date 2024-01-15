@@ -64,6 +64,7 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
+  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -170,6 +171,12 @@ export default function Page({
     }
   }, [currentFlowId, reactFlowInstance]);
 
+  useEffect(() => {
+    return () => {
+      cleanFlow();
+    }
+  }, [])
+
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -210,26 +217,30 @@ export default function Page({
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      const newEdges = addEdge(
-        {
-          ...connection,
-          data: {
-            targetHandle: scapeJSONParse(connection.targetHandle!),
-            sourceHandle: scapeJSONParse(connection.sourceHandle!),
+      let newEdges:Edge[] = []
+      setEdges((oldEdges) => {
+        newEdges = addEdge(
+          {
+            ...connection,
+            data: {
+              targetHandle: scapeJSONParse(connection.targetHandle!),
+              sourceHandle: scapeJSONParse(connection.sourceHandle!),
+            },
+            style: { stroke: "#555" },
+            className:
+              ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
+                .type === "Text"
+                ? "stroke-foreground "
+                : "stroke-foreground ") + " stroke-connection",
+            animated:
+              (scapeJSONParse(connection.targetHandle!) as targetHandleType)
+                .type === "Text",
           },
-          style: { stroke: "#555" },
-          className:
-            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text"
-              ? "stroke-foreground "
-              : "stroke-foreground ") + " stroke-connection",
-          animated:
-            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text",
-        },
-        edges
-      );
-      setEdges(newEdges);
+          oldEdges
+        );
+        return newEdges;
+
+      })
       useFlowsManagerStore
         .getState()
         .autoSaveCurrentFlow(
@@ -238,7 +249,7 @@ export default function Page({
           reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
         );
     },
-    [nodes, edges, setEdges, reactFlowInstance, addEdge]
+    [nodes, setEdges, reactFlowInstance, addEdge]
   );
 
   const onDrop = useCallback(
@@ -357,7 +368,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
+              Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}

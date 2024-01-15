@@ -250,6 +250,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setLastCopiedSelection: (newSelection) => {
     set({ lastCopiedSelection: newSelection });
   },
+  cleanFlow: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      sseData: {},
+      isBuilt: false,
+    });
+  },
 }));
 
 export default useFlowStore;
