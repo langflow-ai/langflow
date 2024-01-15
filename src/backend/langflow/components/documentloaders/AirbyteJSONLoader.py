@@ -1,6 +1,7 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
 from typing import Optional, Dict
+from langchain_community.document_loaders.airbyte_json import AirbyteJSONLoader
 
 
 class AirbyteJSONLoaderComponent(CustomComponent):
@@ -14,8 +15,7 @@ class AirbyteJSONLoaderComponent(CustomComponent):
         return {
             "file_path": {
                 "display_name": "File Path",
-                "type": "file",
-                "fileTypes": ["json"],
+                "file_types": [".json"],
                 "required": True,
                 "field_type": "file",
             },
@@ -27,7 +27,11 @@ class AirbyteJSONLoaderComponent(CustomComponent):
         }
 
     def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
-        # Assuming there is a function or class named AirbyteJSONLoader that takes file_path and metadata as parameters
-        # and returns a Document object. Replace AirbyteJSONLoader with the actual class or function name.
-        # The actual implementation here is a placeholder and should be adapted to the real AirbyteJSONLoader class or function.
-        return AirbyteJSONLoader(file_path=file_path, metadata=metadata)
+        documents = AirbyteJSONLoader(file_path=file_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
