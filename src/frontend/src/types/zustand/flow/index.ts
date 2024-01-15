@@ -50,4 +50,6 @@ export type FlowStoreType = {
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
   cleanFlow: () => void;
+  setFilterEdge: (newState) => void;
+  getFilterEdge: any[];
 };
