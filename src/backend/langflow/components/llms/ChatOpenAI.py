@@ -13,13 +13,13 @@ class ChatOpenAIComponent(CustomComponent):
         return {
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "NestedDict",
+                "field_type": "int",
                 "advanced": False,
                 "required": False,
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "field_type": "dict",
+                "field_type": "NestedDict",
                 "advanced": True,
                 "required": False,
             },
@@ -63,13 +63,15 @@ class ChatOpenAIComponent(CustomComponent):
 
     def build(
         self,
-        max_tokens: Optional[int] = None,
-        model_kwargs: Optional[NestedDict] = None,
+        max_tokens: Optional[int] = 256,
+        model_kwargs: Optional[NestedDict] = {},
         model_name: Optional[str] = "gpt-4-1106-preview",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
     ) -> Union[BaseLanguageModel, BaseLLM]:
+        if(not openai_api_base):
+            openai_api_base = "https://api.openai.com/v1"
         return ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
