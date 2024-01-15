@@ -183,7 +183,7 @@ export default function Page({
       takeSnapshot();
       onConnect(params);
     },
-    [setEdges, takeSnapshot, addEdge]
+    [takeSnapshot, onConnect]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
