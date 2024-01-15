@@ -71,7 +71,7 @@ export default function ParameterComponent({
 
   const groupedEdge = useRef(null);
 
-  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
 
   let disabled =
     edges.some(

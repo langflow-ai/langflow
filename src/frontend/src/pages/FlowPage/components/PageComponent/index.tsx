@@ -50,7 +50,7 @@ export default function Page({
   );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
-  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
