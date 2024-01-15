@@ -42,10 +42,12 @@ class OpenAIComponent(CustomComponent):
         max_tokens: Optional[int] = 256,
         model_kwargs: Optional[Dict] = None,
         model_name: Optional[str] = "text-davinci-003",
-        openai_api_base: Optional[str] = "https://api.openai.com/v1",
+        openai_api_base: Optional[str] = "",
         openai_api_key: str = "",
         temperature: Optional[float] = 0.7,
     ) -> OpenAI:
+        if(not openai_api_base):
+            openai_api_base = "https://api.openai.com/v1"
         return OpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs or {},
