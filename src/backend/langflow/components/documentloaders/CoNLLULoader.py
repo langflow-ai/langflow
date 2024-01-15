@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain.docstore.document import Document
-from langflow.field_typing import TemplateField
+from langchain_community.document_loaders.conllu import CoNLLULoader
 
 
 class CoNLLULoaderComponent(CustomComponent):
@@ -17,15 +17,19 @@ class CoNLLULoaderComponent(CustomComponent):
                 "file_types": ["conllu"],
                 "field_type": "file",
             },
-            "metadata": TemplateField(
-                display_name="Metadata",
-                required=False,
-                type="dict",
-            ),
+            "metadata": {
+                "display_name": "Metadata",
+                "field_type": "dict",
+                "required": False,
+            },
         }
 
     def build(self, file_path: str, metadata: dict) -> Document:
-        # Here, you would use the actual class that loads CoNLL-U files.
-        # As I don't have the specific class, I'm returning an instance of Document.
-        # In a real scenario, you should replace the below Document with the actual loader class.
-        return Document(file_path=file_path, metadata=metadata)
+        documents = CoNLLULoader(file_path=file_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
