@@ -2,6 +2,7 @@
 from langflow import CustomComponent
 from langchain.docstore.document import Document
 from typing import Optional
+from langchain_community.document_loaders.college_confidential import CollegeConfidentialLoader
 
 class CollegeConfidentialLoaderComponent(CustomComponent):
     display_name = "CollegeConfidentialLoader"
@@ -19,6 +20,11 @@ class CollegeConfidentialLoaderComponent(CustomComponent):
         web_path: str,
         metadata: Optional[dict] = {}
     ) -> Document:
-        # Assuming there is a loader class `CollegeConfidentialLoader` that takes `metadata` and `web_path` as arguments
-        # Replace `CollegeConfidentialLoader` with the actual class name if different
-        return CollegeConfidentialLoader(web_path=web_path, metadata=metadata)
+        documents = CollegeConfidentialLoader(web_path=web_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
