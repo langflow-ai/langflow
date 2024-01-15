@@ -28,4 +28,11 @@ class CSVLoaderComponent(CustomComponent):
         file_path: str,
         metadata: dict
     ) -> List[Document]:
-        return CSVLoader(file_path=file_path, metadata=metadata).load()
+        documents = CSVLoader(file_path=file_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
