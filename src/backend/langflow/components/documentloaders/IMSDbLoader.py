@@ -20,4 +20,11 @@ class IMSDbLoaderComponent(CustomComponent):
         metadata: Optional[Dict] = None,
         web_path: str = "",
     ) -> Document:
-        return IMSDbLoader(metadata=metadata, web_path=web_path)
+        documents = IMSDbLoader(web_path=web_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
