@@ -1,6 +1,7 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
 from typing import Optional, Dict
+from langchain_community.document_loaders.azlyrics import AZLyricsLoader
 
 
 class AZLyricsLoaderComponent(CustomComponent):
