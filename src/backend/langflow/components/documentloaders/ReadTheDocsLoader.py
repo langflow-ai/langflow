@@ -19,4 +19,11 @@ class ReadTheDocsLoaderComponent(CustomComponent):
         path: str,
         metadata: Optional[Dict] = None,
     ) -> List[Document]:
-        return ReadTheDocsLoader(path=path, metadata=metadata or {}).load()
+        documents = ReadTheDocsLoader(path=path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
