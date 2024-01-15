@@ -27,7 +27,11 @@ class HNLoaderComponent(CustomComponent):
         web_path: str,
         metadata: Optional[Dict] = None, 
     ) -> HNLoader:
-        # Assuming that there's a specific loader for Hacker News
-        # as HNloader does not take a web_path argument
-        # The HackerNewsLoader needs to be defined somewhere in the actual implementation
-        return HNLoader(metadata=metadata, web_path=web_path)
+        documents = HNLoader(web_path=web_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
