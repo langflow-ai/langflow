@@ -263,7 +263,40 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFilterEdge: (newState) => {
     set({ getFilterEdge: newState });
   },
-  getFilterEdge: []
+  getFilterEdge: [],
+  onConnect: (connection) => {
+    let newEdges: Edge[] = []
+    get().setEdges((oldEdges) => {
+      newEdges = addEdge(
+        {
+          ...connection,
+          data: {
+            targetHandle: scapeJSONParse(connection.targetHandle!),
+            sourceHandle: scapeJSONParse(connection.sourceHandle!),
+          },
+          style: { stroke: "#555" },
+          className:
+            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
+              .type === "Text"
+              ? "stroke-foreground "
+              : "stroke-foreground ") + " stroke-connection",
+          animated:
+            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
+              .type === "Text",
+        },
+        oldEdges
+      );
+      return newEdges;
+
+    })
+    useFlowsManagerStore
+      .getState()
+      .autoSaveCurrentFlow(
+        get().nodes,
+        newEdges,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
+  },
 }));
 
 export default useFlowStore;
