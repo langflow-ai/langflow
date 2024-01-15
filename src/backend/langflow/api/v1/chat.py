@@ -29,7 +29,7 @@ async def chat(
         await websocket.accept()
         if not user:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
-        if not user.is_active:
+        elif not user.is_active:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
 
         if client_id in chat_service.cache_service:
