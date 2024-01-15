@@ -257,8 +257,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
       sseData: {},
       isBuilt: false,
+      getFilterEdge: [],
     });
   },
+  setFilterEdge: (newState) => {
+    set({ getFilterEdge: newState });
+  },
+  getFilterEdge: []
 }));
 
 export default useFlowStore;
