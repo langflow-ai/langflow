@@ -78,6 +78,7 @@ export default function Page({
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
   );
+  const onConnect = useFlowStore((state) => state.onConnect);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -214,43 +215,6 @@ export default function Page({
       event.dataTransfer.dropEffect = "copy";
     }
   }, []);
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      let newEdges:Edge[] = []
-      setEdges((oldEdges) => {
-        newEdges = addEdge(
-          {
-            ...connection,
-            data: {
-              targetHandle: scapeJSONParse(connection.targetHandle!),
-              sourceHandle: scapeJSONParse(connection.sourceHandle!),
-            },
-            style: { stroke: "#555" },
-            className:
-              ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-                .type === "Text"
-                ? "stroke-foreground "
-                : "stroke-foreground ") + " stroke-connection",
-            animated:
-              (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-                .type === "Text",
-          },
-          oldEdges
-        );
-        return newEdges;
-
-      })
-      useFlowsManagerStore
-        .getState()
-        .autoSaveCurrentFlow(
-          nodes,
-          newEdges,
-          reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-        );
-    },
-    [nodes, setEdges, reactFlowInstance, addEdge]
-  );
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
