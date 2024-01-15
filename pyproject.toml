@@ -55,7 +55,7 @@ tiktoken = "~0.5.0"
 wikipedia = "^1.4.0"
 qdrant-client = "^1.7.0"
 websockets = "^10.3"
-weaviate-client = "^3.26.0"
+weaviate-client = "^4.0.0"
 jina = "*"
 sentence-transformers = { version = "^2.2.2", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
