@@ -1,8 +1,8 @@
 from langflow import CustomComponent
 from langchain.llms import BaseLLM
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Union
 from langchain_community.chat_models.openai import ChatOpenAI
-from langflow.field_typing import BaseLanguageModel
+from langflow.field_typing import BaseLanguageModel, NestedDict
 
 
 class ChatOpenAIComponent(CustomComponent):
@@ -13,7 +13,7 @@ class ChatOpenAIComponent(CustomComponent):
         return {
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "int",
+                "field_type": "NestedDict",
                 "advanced": False,
                 "required": False,
             },
@@ -64,14 +64,12 @@ class ChatOpenAIComponent(CustomComponent):
     def build(
         self,
         max_tokens: Optional[int] = None,
-        model_kwargs: Optional[Dict[str, Any]] = None,
+        model_kwargs: Optional[NestedDict] = None,
         model_name: Optional[str] = "gpt-4-1106-preview",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
     ) -> Union[BaseLanguageModel, BaseLLM]:
-        # Assuming there is a class `ChatOpenAI` that takes these parameters
-        # The `ChatOpenAI` class must be imported or defined elsewhere in the actual implementation
         return ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
