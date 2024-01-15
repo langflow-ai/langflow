@@ -20,4 +20,4 @@ class JsonAgentComponent(CustomComponent):
         llm: BaseLanguageModel,
         toolkit: BaseToolkit,
     ) -> AgentExecutor:
-        return create_json_agent(llm=llm, toolkit=toolkit[0])
+        return create_json_agent(llm=llm, toolkit=toolkit)
