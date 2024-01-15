@@ -1,7 +1,7 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
 from typing import Optional, Dict
-
+from langchain_community.document_loaders.evernote import EverNoteLoader
 
 class EverNoteLoaderComponent(CustomComponent):
     display_name = "EverNoteLoader"
@@ -13,10 +13,9 @@ class EverNoteLoaderComponent(CustomComponent):
             "file_path": {
                 "display_name": "File Path",
                 "required": True,
-                "suffixes": [".xml"],
                 "show": True,
                 "type": "file",
-                "file_types": ["xml"],
+                "file_types": [".xml"],
                 "field_type": "file",
             },
             "metadata": {
@@ -28,6 +27,11 @@ class EverNoteLoaderComponent(CustomComponent):
         }
 
     def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
-        # Assuming there is a function or class named `EverNoteLoader` that takes these parameters
-        # and returns a `Document` object. Replace `EverNoteLoader` with the actual implementation.
-        return EverNoteLoader(file_path=file_path, metadata=metadata)
+        documents = EverNoteLoader(file_path=file_path).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents

@@ -22,6 +22,11 @@ class GitbookLoaderComponent(CustomComponent):
         }
 
     def build(self, metadata: Optional[Dict] = None, web_page: str = "") -> Document:
-        # Assuming there is a GitbookLoader class that takes metadata and web_page as parameters
-        # Replace 'GitbookLoader' with the actual class name if different
-        return GitbookLoader(metadata=metadata, web_page=web_page)
+        documents = GitbookLoader(web_page=web_page).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
