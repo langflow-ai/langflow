@@ -49,4 +49,5 @@ export type FlowStoreType = {
   ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
+  cleanFlow: () => void;
 };
