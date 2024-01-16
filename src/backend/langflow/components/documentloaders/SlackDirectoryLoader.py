@@ -21,4 +21,11 @@ class SlackDirectoryLoaderComponent(CustomComponent):
         metadata: Optional[Dict] = None,
         workspace_url: Optional[str] = None,
     ) -> List[Document]:
-        return SlackDirectoryLoader(zip_path=zip_path, metadata=metadata, workspace_url=workspace_url).load()
+        documents = SlackDirectoryLoader(zip_path=zip_path,workspace_url=workspace_url).load()
+        if(metadata):
+            for document in documents:
+                if not document.metadata:
+                    document.metadata = metadata
+                else:
+                    document.metadata.update(metadata)
+        return documents
