@@ -11,7 +11,7 @@ class ZeroShotAgentComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "llm": {"display_name": "LLM"},
+            "llm": {"display_name": "LLM Chain"},
             "tools": {"display_name": "Tools"},
             "prefix": {"display_name": "Prefix", "multiline": True},
             "suffix": {"display_name": "Suffix", "multiline": True},
