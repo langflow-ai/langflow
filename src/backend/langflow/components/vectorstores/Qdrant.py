@@ -1,7 +1,9 @@
 from langflow import CustomComponent
 from langchain_community.vectorstores.qdrant import Qdrant
-from typing import Optional, List
+from typing import Optional, List, Union
 from langflow.field_typing import Document, Embeddings, NestedDict
+from langchain.schema import BaseRetriever
+from langchain.vectorstores.base import VectorStore
 
 
 class QdrantComponent(CustomComponent):
@@ -14,20 +16,20 @@ class QdrantComponent(CustomComponent):
             "embedding": {"display_name": "Embedding"},
             "api_key": {"display_name": "API Key", "password": True},
             "collection_name": {"display_name": "Collection Name"},
-            "content_payload_key": {"display_name": "Content Payload Key"},
-            "distance_func": {"display_name": "Distance Function"},
-            "grpc_port": {"display_name": "gRPC Port"},
-            "host": {"display_name": "Host"},
-            "https": {"display_name": "HTTPS"},
-            "location": {"display_name": "Location"},
-            "metadata_payload_key": {"display_name": "Metadata Payload Key"},
-            "path": {"display_name": "Path"},
-            "port": {"display_name": "Port"},
-            "prefer_grpc": {"display_name": "Prefer gRPC"},
-            "prefix": {"display_name": "Prefix"},
-            "search_kwargs": {"display_name": "Search Kwargs"},
-            "timeout": {"display_name": "Timeout"},
-            "url": {"display_name": "URL"},
+            "content_payload_key": {"display_name": "Content Payload Key", "advanced": True},
+            "distance_func": {"display_name": "Distance Function", "advanced": True},
+            "grpc_port": {"display_name": "gRPC Port", "advanced": True},
+            "host": {"display_name": "Host", "advanced": True},
+            "https": {"display_name": "HTTPS", "advanced": True},
+            "location": {"display_name": "Location", "advanced": True},
+            "metadata_payload_key": {"display_name": "Metadata Payload Key", "advanced": True},
+            "path": {"display_name": "Path", "advanced": True},
+            "port": {"display_name": "Port", "advanced": True},
+            "prefer_grpc": {"display_name": "Prefer gRPC", "advanced": True},
+            "prefix": {"display_name": "Prefix", "advanced": True},
+            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
+            "timeout": {"display_name": "Timeout", "advanced": True},
+            "url": {"display_name": "URL", "advanced": True},
         }
 
     def build(
@@ -38,20 +40,20 @@ class QdrantComponent(CustomComponent):
         collection_name: Optional[str] = None,
         content_payload_key: str = "page_content",
         distance_func: str = "Cosine",
-        grpc_port: int = 6334,
+        grpc_port: Optional[int] = 6334,
         host: Optional[str] = None,
         https: bool = False,
         location: str = ":memory:",
         metadata_payload_key: str = "metadata",
         path: Optional[str] = None,
-        port: int = 6333,
+        port: Optional[int] = 6333,
         prefer_grpc: bool = False,
         prefix: Optional[str] = None,
         search_kwargs: Optional[NestedDict] = None,
         timeout: Optional[float] = None,
         url: Optional[str] = None,
-    ) -> Qdrant:
-        return Qdrant(
+    ) -> Union[VectorStore, Qdrant, BaseRetriever]:
+        return Qdrant.from_documents(
             documents=documents,
             embedding=embedding,
             api_key=api_key,
