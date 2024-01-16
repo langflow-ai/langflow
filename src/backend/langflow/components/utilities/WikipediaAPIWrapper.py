@@ -1,7 +1,7 @@
 
 from langflow import CustomComponent
 from typing import Union, Callable
-from langchain_community.utilities import WikipediaAPIWrapper
+from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 # Assuming WikipediaAPIWrapper is a class that needs to be imported.
 # The import statement is not included as it is not provided in the JSON 
