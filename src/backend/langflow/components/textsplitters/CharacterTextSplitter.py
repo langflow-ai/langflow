@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from langchain.text_splitter import TextSplitter
+from langchain.text_splitter import CharacterTextSplitter
 from langchain_core.documents.base import Document
 from typing import List
 
@@ -23,10 +23,9 @@ class CharacterTextSplitterComponent(CustomComponent):
         chunk_overlap: int = 200,
         chunk_size: int = 1000,
         separator: str = "\n",
-    ) -> TextSplitter:
-        return TextSplitter(
-            documents=documents,
+    ) -> List[Document]:
+        return CharacterTextSplitter(
             chunk_overlap=chunk_overlap,
             chunk_size=chunk_size,
             separator=separator,
-        )
+        ).split_documents(documents)
