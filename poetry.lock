@@ -974,13 +974,13 @@ testing = ["pytest (>=7.2.1)", "pytest-cov (>=4.0.0)", "tox (>=4.4.3)"]
 
 [[package]]
 name = "cohere"
-version = "4.43"
+version = "4.44"
 description = "Python SDK for the Cohere API"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "cohere-4.43-py3-none-any.whl", hash = "sha256:ddedf89f759cdf1c2addbcfa36cc3f7cf505c5b1124c0b78777b9f7d835dcab8"},
-    {file = "cohere-4.43.tar.gz", hash = "sha256:540b14e660eda547a7d1adf3f432edfad7c3f1dddc2a19975081a88888287dd1"},
+    {file = "cohere-4.44-py3-none-any.whl", hash = "sha256:a6d01d579dcd43ef98ce1886b55e00a308d40332eafc1da4bf56526c81d6ff73"},
+    {file = "cohere-4.44.tar.gz", hash = "sha256:06d9d056ed9b40f152d9551ca547a20ed08410e2e43488ba174e9025cf09746b"},
 ]
 
 [package.dependencies]
@@ -9400,4 +9400,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "64f2c09d9343730423866788339c25c3b4aa6411e6ee3c502f26729deb4ce18a"
+content-hash = "19c6501f1567e95376c7482fe4c589c3fbde90a0e3bb7eaa37181f4ca701ee98"
