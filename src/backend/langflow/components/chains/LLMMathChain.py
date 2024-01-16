@@ -1,12 +1,11 @@
-from typing import Callable, Optional, Union
+
 from langflow import CustomComponent
-from langchain.chains import LLMChain
-from typing import Optional
+from langchain.chains import LLMChain,LLMMathChain
+from typing import Callable, Optional, Union
 from langflow.field_typing import (
     BaseLanguageModel,
     BaseMemory,
-    Chain,
-    BasePromptTemplate
+    Chain
 )
 
 class LLMMathChainComponent(CustomComponent):
@@ -17,16 +16,18 @@ class LLMMathChainComponent(CustomComponent):
     def build_config(self):
         return {
             "llm": {"display_name": "LLM"},
-            "prompt": {"display_name": "Prompt"},
+            "llm_chain": {"display_name": "LLM Chain"},
             "memory": {"display_name": "Memory"},
+            "input_key": {"display_name": "Input Key"},
             "output_key": {"display_name": "Output Key"},
         }
 
     def build(
         self,
         llm: BaseLanguageModel,
-        prompt: BasePromptTemplate,
-        output_key: str="text",
+        llm_chain: LLMChain,
+        input_key: Optional[str]="question",
+        output_key: Optional[str]="answer",
         memory: Optional[BaseMemory] = None,
-    ) -> Union[Chain, Callable]:
-        return LLMChain(llm=llm, prompt=prompt, output_key=output_key, memory=memory)
+    ) -> Union[LLMMathChain, Callable,Chain]:
+        return LLMMathChain(llm=llm, llm_chain=llm_chain, input_key=input_key, output_key=output_key, memory=memory)
