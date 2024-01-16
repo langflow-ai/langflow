@@ -2,7 +2,7 @@
 from langflow import CustomComponent
 from langchain.vectorstores import VectorStore
 from typing import Union, Callable
-from langflow.field_typing import Chain
+from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 
 class VectorStoreInfoComponent(CustomComponent):
     display_name = "VectorStoreInfo"
@@ -20,14 +20,5 @@ class VectorStoreInfoComponent(CustomComponent):
         vectorstore: VectorStore,
         description: str,
         name: str,
-    ) -> Union[Chain, Callable]:
-        # Since the actual implementation of VectorStoreInfo is not provided, this is a placeholder
-        # Replace VectorStoreInfo with the actual class that should be instantiated
-        # This is a hypothetical class, actual implementation may vary
-        class VectorStoreInfo:
-            def __init__(self, vectorstore, description, name):
-                self.vectorstore = vectorstore
-                self.description = description
-                self.name = name
-
+    ) -> Union[VectorStoreInfo, Callable]:
         return VectorStoreInfo(vectorstore=vectorstore, description=description, name=name)
