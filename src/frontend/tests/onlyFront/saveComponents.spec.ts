@@ -51,9 +51,7 @@ test.describe("save component tests", () => {
     );
 
     await page
-      .locator(
-        '//*[@id="root"]/div/div[1]/div[2]/div[3]/div/div/div/div/div/div/div/div[2]/span[2]'
-      )
+      .getByTestId("edit-flow-button-e9ac1bdc-429b-475d-ac03-d26f9a2a3210-0")
       .click();
     await page.waitForTimeout(2000);
 
@@ -75,7 +73,6 @@ test.describe("save component tests", () => {
     });
 
     await page.getByRole("button", { name: "Group" }).click();
-    await page.locator("div").filter({ hasText: "Star13756" }).nth(3).click();
 
     let textArea = page.getByTestId("div-textarea-2");
     let elementCountText = await textArea.count();
