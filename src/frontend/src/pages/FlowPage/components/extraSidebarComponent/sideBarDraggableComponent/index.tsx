@@ -4,6 +4,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectTrigger
 } from "../../../../../components/ui/select-custom";
 import { useDarkStore } from "../../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -117,6 +118,7 @@ export const SidebarDraggableComponent = forwardRef(
                   name="Menu"
                   className="side-bar-components-icon "
                 />
+                <SelectTrigger></SelectTrigger>
                 <SelectContent
                   position="popper"
                   side="bottom"
