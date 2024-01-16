@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from typing import Optional, Dict
-
+from langchain_community.utilities.searx_search import SearxSearchWrapper
 class SearxSearchWrapperComponent(CustomComponent):
     display_name = "SearxSearchWrapper"
     description = "Wrapper for Searx API."
@@ -13,15 +13,17 @@ class SearxSearchWrapperComponent(CustomComponent):
                 "multiline": True,
                 "value": '{"Authorization": "Bearer <token>"}'
             },
+            "k": {
+                "display_name": "k",
+                "advanced": True,
+                "field_type": "int",
+                "value": 10
+            },
         }
 
     def build(
         self,
+        k: Optional[int] = 10,
         headers: Optional[Dict[str, str]] = None,
     ):
-        if headers is None:
-            headers = {"Authorization": "Bearer <token>"}
-        # Placeholder for actual SearxSearchWrapper instantiation
-        # Since the actual SearxSearchWrapper class is not available, 
-        # it is assumed that it would be instantiated here with headers as an argument.
-        pass
+        return SearxSearchWrapper(headers=headers,k=k)
