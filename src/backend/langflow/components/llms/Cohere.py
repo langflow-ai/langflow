@@ -2,6 +2,7 @@
 from langflow import CustomComponent
 from langchain_core.language_models.base import BaseLanguageModel
 from typing import Optional
+from langchain_community.llms.cohere import Cohere
 
 class CohereComponent(CustomComponent):
     display_name = "Cohere"
@@ -35,6 +36,4 @@ class CohereComponent(CustomComponent):
         max_tokens: Optional[int] = 256,
         temperature: Optional[float] = 0.75,
     ) -> BaseLanguageModel:
-        # Assuming there is a Cohere class that takes these parameters to initialize
-        # Please replace `Cohere` with the actual class name that should be instantiated
-        return Cohere(api_key=cohere_api_key, max_tokens=max_tokens, temperature=temperature)
+        return Cohere(cohere_api_key=cohere_api_key, max_tokens=max_tokens, temperature=temperature)
