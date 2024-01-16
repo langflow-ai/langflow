@@ -2,7 +2,7 @@
 from langflow import CustomComponent
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
-from langchain.agents import AgentExecutor
+from langchain.agents import create_vectorstore_router_agent
 from typing import Callable
 
 class VectorStoreRouterAgentComponent(CustomComponent):
@@ -20,4 +20,4 @@ class VectorStoreRouterAgentComponent(CustomComponent):
         llm: BaseLanguageModel, 
         vectorstoreroutertoolkit: VectorStoreRouterToolkit
     ) -> Callable:
-        return AgentExecutor(llm=llm, toolkit=vectorstoreroutertoolkit)
+        return create_vectorstore_router_agent(llm=llm,toolkit=vectorstoreroutertoolkit)

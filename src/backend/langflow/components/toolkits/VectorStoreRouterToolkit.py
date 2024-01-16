@@ -1,6 +1,6 @@
 
 from langflow import CustomComponent
-from typing import List
+from typing import List, Union
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langflow.field_typing import BaseLanguageModel,Tool
@@ -19,5 +19,7 @@ class VectorStoreRouterToolkitComponent(CustomComponent):
         self,
         vectorstores: List[VectorStoreInfo],
         llm: BaseLanguageModel
-    )->Tool:
+    )->Union[Tool,VectorStoreRouterToolkit]:
+        print("vectorstores",vectorstores)
+        print("llm",llm)
         return VectorStoreRouterToolkit(vectorstores=vectorstores,llm=llm)
