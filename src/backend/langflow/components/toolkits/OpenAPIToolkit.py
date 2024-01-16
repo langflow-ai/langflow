@@ -20,5 +20,4 @@ class OpenAPIToolkitComponent(CustomComponent):
         json_agent: AgentExecutor,
         requests_wrapper: TextRequestsWrapper,
     ) -> Callable:
-        # Assuming the actual toolkit class name is OpenAPIToolkit
         return OpenAPIToolkit(json_agent=json_agent, requests_wrapper=requests_wrapper)
