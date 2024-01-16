@@ -1,8 +1,10 @@
-
 from langflow import CustomComponent
-from typing import List, Optional
+from typing import List, Optional, Union
 from langchain_core.messages.base import BaseMessage
 from langchain_community.chat_models.vertexai import ChatVertexAI
+from langflow.field_typing import BaseLanguageModel
+from langchain.llms import BaseLLM
+
 
 class ChatVertexAIComponent(CustomComponent):
     display_name = "ChatVertexAI"
@@ -13,7 +15,7 @@ class ChatVertexAIComponent(CustomComponent):
             "credentials": {
                 "display_name": "Credentials",
                 "field_type": "file",
-                "fileTypes": ["json"],
+                "file_types": [".json"],
                 "file_path": None,
             },
             "examples": {
@@ -60,8 +62,8 @@ class ChatVertexAIComponent(CustomComponent):
     def build(
         self,
         credentials: Optional[str],
-        examples: Optional[List[BaseMessage]],
-        project: Optional[str],
+        project: str,
+        examples: Optional[List[BaseMessage]]=[],
         location: Optional[str] = "us-central1",
         max_output_tokens: Optional[int] = 128,
         model_name: Optional[str] = "chat-bison",
@@ -69,8 +71,7 @@ class ChatVertexAIComponent(CustomComponent):
         top_k: Optional[int] = 40,
         top_p: Optional[float] = 0.95,
         verbose: Optional[bool] = False,
-    ):
-        # Assuming there is a ChatVertexAI class that takes these parameters
+    ) -> Union[BaseLanguageModel, BaseLLM]:
         return ChatVertexAI(
             credentials=credentials,
             examples=examples,
