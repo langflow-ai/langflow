@@ -51,6 +51,7 @@ class ChatOpenAIComponent(CustomComponent):
                 "field_type": "str",
                 "advanced": False,
                 "required": False,
+                "password": True,
             },
             "temperature": {
                 "display_name": "Temperature",

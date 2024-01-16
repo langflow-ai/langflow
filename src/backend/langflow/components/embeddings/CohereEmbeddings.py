@@ -20,12 +20,14 @@ class CohereEmbeddingsComponent(CustomComponent):
     def build(
         self,
         request_timeout: Optional[float] = None,
-        cohere_api_key: Optional[str] = None,
+        cohere_api_key: str = None,
+        max_retries: Optional[int] = None,
         model: str = "embed-english-v2.0",
         truncate: Optional[str] = None,
         user_agent: Optional[str] = "langchain",
     ) -> CohereEmbeddings:
         return CohereEmbeddings(
+            max_retries=max_retries,
             user_agent=user_agent,
             request_timeout=request_timeout,
             cohere_api_key=cohere_api_key,
