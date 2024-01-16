@@ -7,6 +7,7 @@ from langflow.field_typing import (
     Chain
 )
 from langchain_community.utilities.sql_database import SQLDatabase
+from langchain_experimental.sql.base import SQLDatabaseChain
 
 class SQLDatabaseChainComponent(CustomComponent):
     display_name = "SQLDatabaseChain"
@@ -24,5 +25,5 @@ class SQLDatabaseChainComponent(CustomComponent):
         db: SQLDatabase,
         llm: BaseLanguageModel,
         prompt: BasePromptTemplate,
-    ) -> Union[Chain, Callable]:
-        return Chain(db=db, llm=llm, prompt=prompt)
+    ) -> Union[Chain, Callable,SQLDatabaseChain]:
+        return SQLDatabaseChain.from_llm(llm=llm, db=db, prompt=prompt)
