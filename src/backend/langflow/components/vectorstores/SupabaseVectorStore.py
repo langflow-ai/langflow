@@ -1,11 +1,14 @@
 from langflow import CustomComponent
-from typing import Optional, List
-from langchain.vectorstores import SupabaseVectorStore
+from typing import Optional, List,Union
+from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from langflow.field_typing import (
     Document,
     Embeddings,
     NestedDict,
 )
+from langchain.schema import BaseRetriever
+from langchain.vectorstores.base import VectorStore
+from supabase.client import Client, create_client
 
 
 class SupabaseComponent(CustomComponent):
@@ -32,13 +35,6 @@ class SupabaseComponent(CustomComponent):
         supabase_service_key: str = "",
         supabase_url: str = "",
         table_name: str = "",
-    ) -> SupabaseVectorStore:
-        return SupabaseVectorStore(
-            documents=documents,
-            embedding=embedding,
-            query_name=query_name,
-            search_kwargs=search_kwargs,
-            supabase_service_key=supabase_service_key,
-            supabase_url=supabase_url,
-            table_name=table_name,
-        )
+    ) -> Union[VectorStore,SupabaseVectorStore,BaseRetriever]:
+        supabase: Client = create_client(supabase_url, supabase_key=supabase_service_key)
+        return SupabaseVectorStore.from_documents(documents=documents,embedding=embedding,query_name=query_name,search_kwargs=search_kwargs,client=supabase,table_name=table_name)
