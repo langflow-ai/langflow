@@ -2,6 +2,7 @@
 from langflow import CustomComponent
 from langchain.llms import BaseLLM
 from typing import Optional, Union, Callable, Dict
+from langchain_community.llms.vertexai import VertexAI
 
 class VertexAIComponent(CustomComponent):
     display_name = "VertexAI"
@@ -12,7 +13,7 @@ class VertexAIComponent(CustomComponent):
             "credentials": {
                 "display_name": "Credentials",
                 "field_type": "file",
-                "file_types": ["json"],
+                "file_types": [".json"],
                 "required": False,
                 "value": None,
             },
@@ -114,15 +115,11 @@ class VertexAIComponent(CustomComponent):
                 "display_name":"Name",
                 "field_type":"str"
             },
-            "client_preview":{
-                "display_name":"client_preview"
-            }
         }
 
     def build(
         self,
         credentials: Optional[str] = None,
-        client_preview: Optional[any]= None,
         location: str = "us-central1",
         max_output_tokens: int = 128,
         max_retries: int = 6,
@@ -141,12 +138,7 @@ class VertexAIComponent(CustomComponent):
     ) -> Union[BaseLLM, Callable]:
         if metadata is None:
             metadata = {}
-
-        # Import the appropriate VertexAI class from the langchain.llms module
-        from langchain.llms import VertexAI
-
         return VertexAI(
-            client_preview=client_preview,
             credentials=credentials,
             location=location,
             max_output_tokens=max_output_tokens,
