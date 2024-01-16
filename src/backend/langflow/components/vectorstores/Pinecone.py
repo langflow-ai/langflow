@@ -1,13 +1,13 @@
 from langflow import CustomComponent
-from typing import Optional, List
-from langchain.vectorstores import Pinecone
+from typing import Optional, List, Union
+from langchain_community.vectorstores.pinecone import Pinecone
 from langflow.field_typing import (
     Document,
     Embeddings,
-    NestedDict,
 )
-
-
+from langchain.schema import BaseRetriever
+from langchain.vectorstores.base import VectorStore
+import pinecone
 class PineconeComponent(CustomComponent):
     display_name = "Pinecone"
     description = "Construct Pinecone wrapper from raw documents."
@@ -28,17 +28,8 @@ class PineconeComponent(CustomComponent):
         embedding: Embeddings,
         documents: Optional[List[Document]] = None,
         index_name: Optional[str] = None,
-        namespace: Optional[str] = None,
         pinecone_api_key: Optional[str] = None,
         pinecone_env: Optional[str] = None,
-        search_kwargs: Optional[NestedDict] = None,
-    ) -> Pinecone:
-        return Pinecone(
-            documents=documents,
-            embedding=embedding,
-            index_name=index_name,
-            namespace=namespace,
-            pinecone_api_key=pinecone_api_key,
-            pinecone_env=pinecone_env,
-            search_kwargs=search_kwargs,
-        )
+    ) -> Union[VectorStore,Pinecone,BaseRetriever]:
+        pinecone.init(api_key=pinecone_api_key,environment=pinecone_env)
+        return Pinecone.from_documents(documents=documents,embedding=embedding,index_name=index_name)
