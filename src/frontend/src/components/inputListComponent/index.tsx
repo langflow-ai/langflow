@@ -23,6 +23,8 @@ export default function InputListComponent({
     value = [value];
   }
 
+  if (!value.length) value = [""];
+
   return (
     <div
       className={classNames(
