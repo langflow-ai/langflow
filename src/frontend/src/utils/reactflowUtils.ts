@@ -474,6 +474,8 @@ export function convertArrayToObj(arrayOfObjects) {
 
 export function hasDuplicateKeys(array) {
   const keys = {};
+  // Transforms an empty object into an object array without opening the 'editNode' modal to prevent the flow build from breaking.
+  if (!Array.isArray(array)) array = [{"": ""}];
   for (const obj of array) {
     for (const key in obj) {
       if (keys[key]) {
@@ -486,6 +488,8 @@ export function hasDuplicateKeys(array) {
 }
 
 export function hasEmptyKey(objArray) {
+  // Transforms an empty object into an array without opening the 'editNode' modal to prevent the flow build from breaking.
+  if (!Array.isArray(objArray)) objArray = [];
   for (const obj of objArray) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key) && key === "") {
