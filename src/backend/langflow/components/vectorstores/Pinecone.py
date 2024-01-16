@@ -18,8 +18,8 @@ class PineconeComponent(CustomComponent):
             "embedding": {"display_name": "Embedding", "default": 1000},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
-            "pinecone_api_key": {"display_name": "Pinecone API Key", "default": ""},
-            "pinecone_env": {"display_name": "Pinecone Environment", "default": ""},
+            "pinecone_api_key": {"display_name": "Pinecone API Key", "default": "","password": True,"required": True},
+            "pinecone_env": {"display_name": "Pinecone Environment", "default": "","required": True},
             "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
         }
 
