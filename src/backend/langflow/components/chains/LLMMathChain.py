@@ -5,7 +5,8 @@ from typing import Optional
 from langflow.field_typing import (
     BaseLanguageModel,
     BaseMemory,
-    Chain
+    Chain,
+    BasePromptTemplate
 )
 
 class LLMMathChainComponent(CustomComponent):
@@ -16,18 +17,16 @@ class LLMMathChainComponent(CustomComponent):
     def build_config(self):
         return {
             "llm": {"display_name": "LLM"},
-            "llm_chain": {"display_name": "LLM Chain"},
+            "prompt": {"display_name": "Prompt"},
             "memory": {"display_name": "Memory"},
-            "input_key": {"display_name": "Input Key"},
             "output_key": {"display_name": "Output Key"},
         }
 
     def build(
         self,
         llm: BaseLanguageModel,
-        llm_chain: LLMChain,
-        input_key: str,
-        output_key: str,
+        prompt: BasePromptTemplate,
+        output_key: str="text",
         memory: Optional[BaseMemory] = None,
     ) -> Union[Chain, Callable]:
-        return LLMChain(llm=llm, prompt=llm_chain, input_key=input_key, output_key=output_key, memory=memory)
+        return LLMChain(llm=llm, prompt=prompt, output_key=output_key, memory=memory)
