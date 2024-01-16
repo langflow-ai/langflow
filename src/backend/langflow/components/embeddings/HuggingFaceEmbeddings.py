@@ -21,8 +21,8 @@ class HuggingFaceEmbeddingsComponent(CustomComponent):
     def build(
         self,
         cache_folder: Optional[str] = None,
-        encode_kwargs: Optional[Dict] = None,
-        model_kwargs: Optional[Dict] = None,
+        encode_kwargs: Optional[Dict] = {},
+        model_kwargs: Optional[Dict] = {},
         model_name: str = "sentence-transformers/all-mpnet-base-v2",
         multi_process: bool = False,
     ) -> HuggingFaceEmbeddings:
