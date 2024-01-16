@@ -9,7 +9,7 @@ class VertexAIEmbeddingsComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "credentials": {"display_name": "Credentials", "value": '', "file_types": ['json'],"field_type": "file"},
+            "credentials": {"display_name": "Credentials", "value": '', "file_types": ['.json'],"field_type": "file"},
             "instance": {"display_name": "instance", "advanced": True, "field_type": "dict"},
             "location": {"display_name": "Location", "value": 'us-central1', "advanced": True},
             "max_output_tokens": {"display_name": "Max Output Tokens", "value": 128},
