@@ -3,6 +3,9 @@ from langflow import CustomComponent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langflow.field_typing import (
+    BaseLanguageModel,
+)
+from langflow.field_typing import (
     Tool,
 )
 
@@ -13,10 +16,12 @@ class VectorStoreToolkitComponent(CustomComponent):
     def build_config(self):
         return {
             "vectorstore_info": {"display_name": "Vector Store Info"},
+            "llm": {"display_name": "LLM"},
         }
 
     def build(
         self,
         vectorstore_info: VectorStoreInfo,
+        llm: BaseLanguageModel,
     ) -> Tool:
-        return VectorStoreToolkit(vectorstore_info=vectorstore_info)
+        return VectorStoreToolkit(vectorstore_info=vectorstore_info,llm=llm)
