@@ -19,11 +19,18 @@ class SearxSearchWrapperComponent(CustomComponent):
                 "field_type": "int",
                 "value": 10
             },
+            "searx_host": {
+                "display_name": "Searx Host",
+                "field_type": "str",
+                "value": "https://searx.example.com",
+                "advanced": True,
+            },
         }
 
     def build(
         self,
         k: Optional[int] = 10,
         headers: Optional[Dict[str, str]] = None,
-    ):
-        return SearxSearchWrapper(headers=headers,k=k)
+        searx_host: Optional[str] = None,
+    )->SearxSearchWrapper:
+        return SearxSearchWrapper(headers=headers,k=k,searx_host=searx_host)
