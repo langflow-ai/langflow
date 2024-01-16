@@ -305,7 +305,7 @@ def run_langflow(host, port, log_level, options, app):
         else:
             from langflow.server import LangflowApplication
 
-            LangflowApplication(options).run()
+            LangflowApplication(app, options).run()
     except KeyboardInterrupt:
         logger.info("Shutting down server")
         sys.exit(0)
