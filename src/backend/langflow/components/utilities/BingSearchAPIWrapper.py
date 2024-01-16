@@ -1,4 +1,5 @@
 
+from typing import Optional
 from langflow import CustomComponent
 
 # Assuming `BingSearchAPIWrapper` is a class that exists in the context
@@ -18,6 +19,7 @@ class BingSearchAPIWrapperComponent(CustomComponent):
                 "display_name": "Bing Subscription Key",
                 "password": True,
             },
+            "k": {"display_name": "Number of results", "advanced": True},
             # 'k' is not included as it is not shown (show=False)
         }
 
@@ -25,10 +27,11 @@ class BingSearchAPIWrapperComponent(CustomComponent):
         self,
         bing_search_url: str,
         bing_subscription_key: str,
+        k: Optional[int] = 10,
     ) -> BingSearchAPIWrapper:
         # 'k' has a default value and is not shown (show=False), so it is hardcoded here
         return BingSearchAPIWrapper(
             bing_search_url=bing_search_url,
             bing_subscription_key=bing_subscription_key,
-            k=10
+            k=k
         )
