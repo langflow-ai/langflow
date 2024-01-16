@@ -17,7 +17,7 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "display_name": "Result Key for Type",
                 "show": True,
                 "multiline": False,
-                "password": False,  # corrected based on error message
+                "password": False,
                 "name": "result_key_for_type",
                 "advanced": False,
                 "dynamic": False,
@@ -47,8 +47,8 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
 
     def build(
         self,
+        serper_api_key: str,
         result_key_for_type: Optional[Dict[str, str]] = None,
-        serper_api_key: Optional[str] = None,
     ) -> GoogleSerperAPIWrapper:
         return GoogleSerperAPIWrapper(
             result_key_for_type=result_key_for_type,
