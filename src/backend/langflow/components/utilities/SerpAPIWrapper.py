@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from typing import Callable, Union
-from langchain_community.utilities import SerpAPIWrapper
+from langchain_community.utilities.serpapi import SerpAPIWrapper
 
 class SerpAPIWrapperComponent(CustomComponent):
     display_name = "SerpAPIWrapper"
@@ -8,22 +8,16 @@ class SerpAPIWrapperComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "serpapi_api_key": {"display_name": "SerpAPI API Key", "type": "password"},
+            "serpapi_api_key": {"display_name": "SerpAPI API Key", "type": "str", "password": True},
+            "params": {"display_name": "Parameters", "type": "dict","advanced":True, "multiline": True,"value": '{"engine": "google","google_domain": "google.com","gl": "us","hl": "en"}'},
         }
 
     def build(
         self,
         serpapi_api_key: str,
+        params: dict,
     ) -> Union[SerpAPIWrapper, Callable]:  # Removed quotes around SerpAPIWrapper
-        # Default parameters as defined in the JSON template.
-        default_params = {
-            "engine": "google",
-            "google_domain": "google.com",
-            "gl": "us",
-            "hl": "en"
-        }
-
         return SerpAPIWrapper(
             serpapi_api_key=serpapi_api_key,
-            params=default_params
+            params=params
         )
