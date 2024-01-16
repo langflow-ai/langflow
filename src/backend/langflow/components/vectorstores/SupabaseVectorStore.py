@@ -20,10 +20,10 @@ class SupabaseComponent(CustomComponent):
             "documents": {"display_name": "Documents"},
             "embedding": {"display_name": "Embedding"},
             "query_name": {"display_name": "Query Name"},
-            "search_kwargs": {"display_name": "Search Kwargs"},
+            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
             "supabase_service_key": {"display_name": "Supabase Service Key"},
             "supabase_url": {"display_name": "Supabase URL"},
-            "table_name": {"display_name": "Table Name"},
+            "table_name": {"display_name": "Table Name", "advanced": True},
         }
 
     def build(
