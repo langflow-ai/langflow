@@ -37,7 +37,6 @@ def upgrade() -> None:
     with op.batch_alter_table('flow', schema=None) as batch_op:
         batch_op.add_column(sa.Column('updated_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('folder', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
-
     # ### end Alembic commands ###
 
 
@@ -67,8 +66,8 @@ def downgrade() -> None:
         sa.Column('flow_id', sa.CHAR(length=32), nullable=True),
         sa.Column('id', sa.CHAR(length=32), nullable=False),
         sa.ForeignKeyConstraint(['flow_id'], ['flow.id'], ),
-        sa.PrimaryKeyConstraint('id', name=op.f('pk_flowstyle'))
-        sa.UniqueConstraint('id', name=op.f('uq_flowstyle_id'))
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('id')
         )
         op.create_table('component',
         sa.Column('id', sa.CHAR(length=32), nullable=False),
@@ -81,7 +80,7 @@ def downgrade() -> None:
         sa.Column('is_read_only', sa.BOOLEAN(), nullable=False),
         sa.Column('create_at', sa.DATETIME(), nullable=False),
         sa.Column('update_at', sa.DATETIME(), nullable=False),
-        sa.PrimaryKeyConstraint('id', name=op.f('pk_component'))
+        sa.PrimaryKeyConstraint('id')
         )
 
         with op.batch_alter_table('component', schema=None) as batch_op:
