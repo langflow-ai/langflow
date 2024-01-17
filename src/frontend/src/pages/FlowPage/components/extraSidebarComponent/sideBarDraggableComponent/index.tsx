@@ -1,3 +1,4 @@
+import { SelectTrigger } from "@radix-ui/react-select";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
 import {
@@ -106,50 +107,48 @@ export const SidebarDraggableComponent = forwardRef(
               );
             }}
           >
-            <div
-              data-testid={sectionName + display_name}
-              id={sectionName + display_name}
-              className="side-bar-components-div-form"
-            >
-              <span className="side-bar-components-text">{display_name}</span>
-              <div ref={popoverRef}>
-                <IconComponent
-                  name="Menu"
-                  className="side-bar-components-icon "
-                />
-                <SelectContent
-                  position="popper"
-                  side="bottom"
-                  sideOffset={-25}
-                  style={{
-                    position: "absolute",
-                    left: cursorPos.x,
-                    top: cursorPos.y,
-                  }}
-                >
-                  <SelectItem value={"download"}>
-                    <div className="flex">
-                      <IconComponent
-                        name="Download"
-                        className="relative top-0.5 mr-2 h-4 w-4"
-                      />{" "}
-                      Download{" "}
-                    </div>{" "}
-                  </SelectItem>
-                  {!official && (
-                    <SelectItem value={"delete"}>
+            <SelectTrigger className="w-full text-left">
+              <div
+                data-testid={sectionName + display_name}
+                id={sectionName + display_name}
+                className="side-bar-components-div-form"
+              >
+                <span className="side-bar-components-text">{display_name}</span>
+                <div ref={popoverRef}>
+                  <IconComponent
+                    name="Menu"
+                    className="side-bar-components-icon "
+                  />
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    sideOffset={-15}
+                    alignOffset={25}
+                  >
+                    <SelectItem value={"download"}>
                       <div className="flex">
                         <IconComponent
-                          name="Trash2"
+                          name="Download"
                           className="relative top-0.5 mr-2 h-4 w-4"
                         />{" "}
-                        Delete{" "}
+                        Download{" "}
                       </div>{" "}
                     </SelectItem>
-                  )}
-                </SelectContent>
+                    {!official && (
+                      <SelectItem value={"delete"}>
+                        <div className="flex">
+                          <IconComponent
+                            name="Trash2"
+                            className="relative top-0.5 mr-2 h-4 w-4"
+                          />{" "}
+                          Delete{" "}
+                        </div>{" "}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </div>
               </div>
-            </div>
+            </SelectTrigger>
           </div>
         </div>
       </Select>
