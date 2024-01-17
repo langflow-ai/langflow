@@ -9,7 +9,9 @@ import {
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
+  INPUT_TYPES,
   LANGFLOW_SUPPORTED_TYPES,
+  OUTPUT_TYPES,
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
@@ -1286,3 +1288,11 @@ export const createNewFlow = (
     is_component: flow?.is_component ?? false,
   };
 };
+
+export function isInputNode(nodeData: NodeDataType): boolean {
+  return INPUT_TYPES.has(nodeData.type);
+}
+
+export function isOutputNode(nodeData: NodeDataType): boolean {
+  return OUTPUT_TYPES.has(nodeData.type);
+}
