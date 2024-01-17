@@ -149,7 +149,7 @@ export default function App() {
         .catch(() => {
           setFetchError(true);
         });
-    }, 5000);
+    }, 20000);
 
     // Clean up the timer on component unmount
     return () => {
