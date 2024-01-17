@@ -102,7 +102,7 @@ export default function Header(): JSX.Element {
           >
             <FaGithub className="h-5 w-5" />
             <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars}</div>
+            <div className="header-github-display">{stars ?? 0}</div>
           </a>
           <a
             href="https://twitter.com/logspace_ai"
