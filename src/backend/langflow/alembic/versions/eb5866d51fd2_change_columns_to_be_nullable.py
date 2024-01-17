@@ -29,7 +29,8 @@ def upgrade() -> None:
     except exc.SQLAlchemyError:
         # connection.execute(text("ROLLBACK"))
         pass
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     try:
@@ -37,7 +38,8 @@ def upgrade() -> None:
     except exc.SQLAlchemyError:
         # connection.execute(text("ROLLBACK"))
         pass
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
     # ### end Alembic commands ###
 
@@ -64,7 +66,8 @@ def downgrade() -> None:
             batch_op.create_index(
                 "ix_component_frontend_node_id", ["frontend_node_id"], unique=False
             )
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     try:
@@ -81,6 +84,7 @@ def downgrade() -> None:
             sa.PrimaryKeyConstraint("id", name="pk_flowstyle"),
             sa.UniqueConstraint("id", name="uq_flowstyle_id"),
         )
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
     # ### end Alembic commands ###
