@@ -8,6 +8,4 @@ export type TypesStoreType = {
   data: APIDataType;
   setData: (newState: {}) => void;
   getTypes: () => Promise<void>;
-  setFilterEdge: (newState) => void;
-  getFilterEdge: any[];
 };

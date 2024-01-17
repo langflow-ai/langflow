@@ -50,7 +50,7 @@ export default function Page({
   );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
-  const setFilterEdge = useTypesStore((state) => state.setFilterEdge);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
@@ -64,6 +64,7 @@ export default function Page({
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
+  const cleanFlow = useFlowStore((state) => state.cleanFlow);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const deleteEdge = useFlowStore((state) => state.deleteEdge);
   const undo = useFlowsManagerStore((state) => state.undo);
@@ -77,6 +78,7 @@ export default function Page({
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
   );
+  const onConnect = useFlowStore((state) => state.onConnect);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -170,12 +172,18 @@ export default function Page({
     }
   }, [currentFlowId, reactFlowInstance]);
 
+  useEffect(() => {
+    return () => {
+      cleanFlow();
+    }
+  }, [])
+
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
       onConnect(params);
     },
-    [setEdges, takeSnapshot, addEdge]
+    [takeSnapshot, onConnect]
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -207,39 +215,6 @@ export default function Page({
       event.dataTransfer.dropEffect = "copy";
     }
   }, []);
-
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      const newEdges = addEdge(
-        {
-          ...connection,
-          data: {
-            targetHandle: scapeJSONParse(connection.targetHandle!),
-            sourceHandle: scapeJSONParse(connection.sourceHandle!),
-          },
-          style: { stroke: "#555" },
-          className:
-            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text"
-              ? "stroke-foreground "
-              : "stroke-foreground ") + " stroke-connection",
-          animated:
-            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text",
-        },
-        edges
-      );
-      setEdges(newEdges);
-      useFlowsManagerStore
-        .getState()
-        .autoSaveCurrentFlow(
-          nodes,
-          newEdges,
-          reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-        );
-    },
-    [nodes, edges, setEdges, reactFlowInstance, addEdge]
-  );
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -357,7 +332,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
+              Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}

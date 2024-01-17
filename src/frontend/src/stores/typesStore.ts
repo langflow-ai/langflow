@@ -9,7 +9,6 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
   types: {},
   templates: {},
   data: {},
-  getFilterEdge: [],
   getTypes: () => {
     return new Promise<void>(async (resolve, reject) => {
       getAll()
@@ -44,7 +43,5 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().data) : change;
     set({ data: newChange });
   },
-  setFilterEdge: (newState) => {
-    set({ getFilterEdge: newState });
-  },
+
 }));

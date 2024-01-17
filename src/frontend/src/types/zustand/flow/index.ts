@@ -1,4 +1,5 @@
 import {
+  Connection,
   Edge,
   Node,
   OnEdgesChange,
@@ -49,4 +50,8 @@ export type FlowStoreType = {
   ) => void;
   isBuilt: boolean;
   setIsBuilt: (isBuilt: boolean) => void;
+  cleanFlow: () => void;
+  setFilterEdge: (newState) => void;
+  getFilterEdge: any[];
+  onConnect: (connection: Connection) => void;
 };
