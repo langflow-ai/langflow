@@ -159,6 +159,9 @@ export default function ComponentsComponent({
                             variant="outline"
                             size="sm"
                             className="whitespace-nowrap "
+                            data-testid={
+                              "edit-flow-button-" + item.id + "-" + idx
+                            }
                           >
                             <IconComponent
                               name="ExternalLink"
