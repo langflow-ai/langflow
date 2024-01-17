@@ -67,8 +67,8 @@ def downgrade() -> None:
         sa.Column('flow_id', sa.CHAR(length=32), nullable=True),
         sa.Column('id', sa.CHAR(length=32), nullable=False),
         sa.ForeignKeyConstraint(['flow_id'], ['flow.id'], ),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('id')
+        sa.PrimaryKeyConstraint('id', name=op.f('pk_flowstyle'))
+        sa.UniqueConstraint('id', name=op.f('uq_flowstyle_id'))
         )
         op.create_table('component',
         sa.Column('id', sa.CHAR(length=32), nullable=False),
@@ -81,7 +81,7 @@ def downgrade() -> None:
         sa.Column('is_read_only', sa.BOOLEAN(), nullable=False),
         sa.Column('create_at', sa.DATETIME(), nullable=False),
         sa.Column('update_at', sa.DATETIME(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id', name=op.f('pk_component'))
         )
 
         with op.batch_alter_table('component', schema=None) as batch_op:
