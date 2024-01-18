@@ -23,63 +23,72 @@ export async function buildVertices({
     // Step 1: Get vertices order
     console.log(JSON.parse(JSON.stringify(flow)));
     let orderResponse = await getVerticesOrder(flow.id);
-    let verticesOrder = orderResponse.data.ids.flatMap((id) => id);
+    console.log(orderResponse);
+    let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
+    console.log('order', verticesOrder);
+
     // Determine the range of vertices to build
     let vertexIndex: number | null = null;
     if (nodeId) {
-      vertexIndex = verticesOrder.indexOf(nodeId);
+      vertexIndex = verticesOrder.findIndex((ids) => ids.includes(nodeId));
     }
     let buildRange =
-      vertexIndex !== null
-        ? verticesOrder.slice(0, vertexIndex + 1)
-        : verticesOrder;
+      vertexIndex !== null ? verticesOrder.slice(0, vertexIndex + 1) : verticesOrder;
+    console.log(buildRange);
 
     const buildResults: boolean[] = [];
-    for (let vertexId of buildRange) {
-      try {
-        const buildResponse = await postBuildVertex(flow, vertexId);
-        const buildData = buildResponse.data;
-        if (onProgressUpdate) {
-          const progress =
-            verticesOrder.indexOf(vertexId) / verticesOrder.length;
-          onProgressUpdate(progress);
-        }
-        if (onBuildUpdate) {
-          let data = {};
-          if (!buildData.valid) {
+    await buildRange.reduce(async (previousPromise, idArray) => {
+      await previousPromise;
+      return Promise.all(
+        idArray.map(async (vertexId) => {
+          try {
+            const buildResponse = await postBuildVertex(flow, vertexId);
+            const buildData = buildResponse.data;
+            if (onProgressUpdate) {
+              const progress =
+                verticesOrder
+                  .map((ids) => ids.indexOf(vertexId))
+                  .filter((index) => index !== -1)[0] /
+                verticesOrder.flat().length;
+              onProgressUpdate(progress);
+            }
+            if (onBuildUpdate) {
+              let data = {};
+              if (!buildData.valid) {
+                if (onBuildError) {
+                  onBuildError("Error Building Component", [buildData.params]);
+                }
+              }
+              data[buildData.id] = buildData;
+
+              onBuildUpdate({ data, id: buildData.id });
+            }
+            buildResults.push(buildData.valid);
+          } catch (error) {
             if (onBuildError) {
-              onBuildError("Error Building Component", [buildData.params]);
+              console.log(error);
+              onBuildError(
+                "Error Building Component",
+                [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"]
+              );
             }
           }
-          data[buildData.id] = buildData;
-
-          onBuildUpdate({ data, id: buildData.id });
-        }
-        buildResults.push(buildData.valid);
-      } catch (error: any) {
-        if (onBuildError) {
-          console.log(error);
-          onBuildError("Error Building Component", [
-            (error as AxiosError<any>).response?.data?.detail ??
-              "Unknown Error",
-          ]);
-        }
-      }
-    }
+        })
+      );
+    }, Promise.resolve());
 
     // Callback for when all vertices have been built
     if (onBuildComplete) {
       const allNodesValid = buildResults.every((result) => result);
       onBuildComplete(allNodesValid);
     }
-  } catch (error: any) {
+  } catch (error) {
     // Callback for handling errors
     if (onBuildError) {
-      if (onBuildError) {
-        onBuildError("Error Building Component", [
-          (error as AxiosError<any>).response?.data?.detail ?? "Unknown Error",
-        ]);
-      }
+      onBuildError(
+        "Error Building Component",
+        [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"]
+      );
     }
   }
 }
