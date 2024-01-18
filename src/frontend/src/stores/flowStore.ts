@@ -36,6 +36,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilt: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
+  flowPool: {},
+  outputTypes: [],
+  inputTypes: [],
+  inputIds: [],
+  outputIds: [],
   setPending: (isPending) => {
     set({ isPending });
   },
