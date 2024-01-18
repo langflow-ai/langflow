@@ -19,7 +19,6 @@ const useFlowIOStore = create<flowIOStoreType>((set, get) => ({
   inputTypes: [],
   inputIds: [],
   outputIds: [],
-
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },

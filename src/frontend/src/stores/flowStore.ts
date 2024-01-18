@@ -265,7 +265,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
-    let newEdges: Edge[] = []
+    let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
@@ -287,8 +287,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         oldEdges
       );
       return newEdges;
-
-    })
+    });
     useFlowsManagerStore
       .getState()
       .autoSaveCurrentFlow(
