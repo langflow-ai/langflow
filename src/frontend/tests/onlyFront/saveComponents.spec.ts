@@ -74,7 +74,7 @@ test.describe("save component tests", () => {
 
     await page.getByRole("button", { name: "Group" }).click();
 
-    let textArea = page.getByTestId("div-textarea-2");
+    let textArea = page.getByTestId("div-textarea-description");
     let elementCountText = await textArea.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
@@ -102,7 +102,7 @@ test.describe("save component tests", () => {
     await page.mouse.up();
     await page.mouse.down();
 
-    textArea = page.getByTestId("div-textarea-2");
+    textArea = page.getByTestId("div-textarea-description");
     elementCountText = await textArea.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
