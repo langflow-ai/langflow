@@ -43,5 +43,4 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
     let newChange = typeof change === "function" ? change(get().data) : change;
     set({ data: newChange });
   },
-
 }));

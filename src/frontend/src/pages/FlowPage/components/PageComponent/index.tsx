@@ -9,7 +9,6 @@ import ReactFlow, {
   OnMove,
   OnSelectionChangeParams,
   SelectionDragHandler,
-  addEdge,
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
@@ -19,13 +18,12 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { FlowType, NodeType, targetHandleType } from "../../../../types/flow";
+import { FlowType, NodeType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
-  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -175,8 +173,8 @@ export default function Page({
   useEffect(() => {
     return () => {
       cleanFlow();
-    }
-  }, [])
+    };
+  }, []);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -332,7 +330,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-              Object.keys(types).length > 0 ? (
+            Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}

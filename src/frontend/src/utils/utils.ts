@@ -593,7 +593,7 @@ export function removeCountFromString(input: string): string {
 }
 
 export function extractTypeFromLongId(id: string): string {
-  let [newId,_] = id.split("-");
+  let [newId, _] = id.split("-");
   return newId;
 }
 

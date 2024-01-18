@@ -477,7 +477,7 @@ export function convertArrayToObj(arrayOfObjects) {
 export function hasDuplicateKeys(array) {
   const keys = {};
   // Transforms an empty object into an object array without opening the 'editNode' modal to prevent the flow build from breaking.
-  if (!Array.isArray(array)) array = [{"": ""}];
+  if (!Array.isArray(array)) array = [{ "": "" }];
   for (const obj of array) {
     for (const key in obj) {
       if (keys[key]) {
