@@ -593,14 +593,7 @@ export default function CodeTabsComponent({
                                               ].type === "prompt" ? (
                                               <div className="mx-auto">
                                                 <PromptAreaComponent
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
+                                                  readonly={true}
                                                   editNode={true}
                                                   disabled={false}
                                                   value={
