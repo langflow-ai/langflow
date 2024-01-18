@@ -41,6 +41,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   inputTypes: [],
   inputIds: [],
   outputIds: [],
+  setFlowPool: (flowPool) => {
+    set({ flowPool });
+  },
+  addDataToFlowPool: (data: any, nodeId: string) => {
+    let newFlowPool = cloneDeep({ ...get().flowPool });
+    if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
+    else {
+      newFlowPool[nodeId].push(data);
+    }
+    get().setFlowPool(newFlowPool);
+  },
+  CleanFlowPool: () => {
+    get().setFlowPool({});
+  },
   setPending: (isPending) => {
     set({ isPending });
   },

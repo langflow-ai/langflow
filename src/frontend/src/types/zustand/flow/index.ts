@@ -37,6 +37,9 @@ export type FlowStoreType = {
   outputTypes: string[];
   inputIds: string[];
   outputIds: string[];
+  setFlowPool: (flowPool: FlowPoolType) => void;
+  addDataToFlowPool: (data: any, nodeId: string) => void;
+  CleanFlowPool: () => void;
   updateSSEData: (sseData: object) => void;
   sseData: object;
   isBuilding: boolean;
