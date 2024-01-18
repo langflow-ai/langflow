@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.6.4"
+version = "0.6.5a8"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -55,7 +55,7 @@ tiktoken = "~0.5.0"
 wikipedia = "^1.4.0"
 qdrant-client = "^1.7.0"
 websockets = "^10.3"
-weaviate-client = "^3.26.0"
+weaviate-client = { version = "^4.4b6", allow-prereleases = true }
 jina = "*"
 sentence-transformers = { version = "^2.2.2", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
@@ -104,7 +104,9 @@ qianfan = "0.2.0"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 langchain-google-genai = "^0.0.2"
+elasticsearch = "^8.11.1"
 pytube = "^15.0.0"
+llama-index = "^0.9.24"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"

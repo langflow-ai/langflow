@@ -17,6 +17,9 @@ qdrant_storage
 .chroma
 .ruff_cache
 
+# PyCharm
+.idea/
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
