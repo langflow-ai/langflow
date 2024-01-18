@@ -4,6 +4,7 @@ from langflow import CustomComponent
 from langchain.embeddings.base import Embeddings
 from langchain_community.embeddings import OllamaEmbeddings
 
+
 class OllamaEmbeddingsComponent(CustomComponent):
     """
     A custom component for implementing an Embeddings Model using Ollama.
@@ -23,7 +24,7 @@ class OllamaEmbeddingsComponent(CustomComponent):
             "temperature": {"display_name": "Model Temperature"},
             "code": {"show": False},
         }
-    
+
     def build(
         self,
         model: str = "llama2",
@@ -31,11 +32,7 @@ class OllamaEmbeddingsComponent(CustomComponent):
         temperature: Optional[float] = None,
     ) -> Embeddings:
         try:
-            output = OllamaEmbeddings(
-                model=model,
-                base_url=base_url,
-                temperature=temperature
-            )  # type: ignore
+            output = OllamaEmbeddings(model=model, base_url=base_url, temperature=temperature)  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to Ollama API.") from e
         return output
