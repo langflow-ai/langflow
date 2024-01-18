@@ -25,7 +25,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         "2023-06-01-preview",
         "2023-07-01-preview",
         "2023-08-01-preview",
-        "2023-12-01-preview"
+        "2023-12-01-preview",
     ]
 
     def build_config(self):
@@ -52,11 +52,7 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "required": True,
                 "advanced": True,
             },
-            "api_key": {
-                "display_name": "API Key", 
-                "required": True,
-                "password": True
-            },
+            "api_key": {"display_name": "API Key", "required": True, "password": True},
             "temperature": {
                 "display_name": "Temperature",
                 "value": 0.7,
@@ -71,10 +67,9 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "advanced": True,
                 "info": "Maximum number of tokens to generate.",
             },
-            "code": {
-                "show": False
-            },
+            "code": {"show": False},
         }
+
     def build(
         self,
         model: str,
