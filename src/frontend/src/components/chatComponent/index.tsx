@@ -32,17 +32,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     };
   }, [isBuilt]);
 
-  useEffect(() => {
-    // Define an async function within the useEffect hook
-    const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id);
-      setIsBuilt(response.data.built);
-    };
-
-    // Call the async function
-    fetchBuildStatus();
-  }, [flow]);
-
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes: NodeType[] = useNodes();
   useEffect(() => {
