@@ -631,14 +631,7 @@ export default function CodeTabsComponent({
                                                 <CodeAreaComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
+                                                  readonly={true}
                                                   value={
                                                     !node.data.node.template[
                                                       templateField
