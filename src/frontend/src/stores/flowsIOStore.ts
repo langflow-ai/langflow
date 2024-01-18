@@ -6,6 +6,7 @@ import { isInputNode, isOutputNode } from "../utils/reactflowUtils";
 import useFlowsManagerStore from "./flowsManagerStore";
 import useAlertStore from "./alertStore";
 import { flowIOStoreType } from "../types/zustand/flowIOStore";
+import { buildVertices } from "../utils/buildUtils";
 /* const { getNodeId, saveFlow } = useContext(FlowsContext);
 const { setErrorData, setNoticeData } = useContext(alertContext); */
 
@@ -22,6 +23,7 @@ const useFlowIOStore = create<flowIOStoreType>((set, get) => ({
     inputIds: [],
     outputIds: [],
     isBuilding: true,
+    actualFlow: null,
 
     setFilterEdge: (filterEdge) => { set({getFilterEdge: filterEdge}) },
     setFlowPool: (flowPool) => { set({flowPool}) },
@@ -214,29 +216,29 @@ const useFlowIOStore = create<flowIOStoreType>((set, get) => ({
         // simulate a click on the link element to trigger the download
         link.click();
       },
-    /* buildFlow: async (nodeId?: string) => {
+    buildFlow: async (nodeId?: string) => {
         function handleBuildUpdate(data: any) {
           get().addDataToFlowPool(data.data[data.id], data.id);
         }
         console.log(
           "building flow before save",
-          JSON.parse(JSON.stringify(actualFlow))
+          JSON.parse(JSON.stringify(get().actualFlow))
         );
         console.log(saveFlow);
         await saveFlow(
-          { ...actualFlow!, data: reactFlowInstance!.toObject()! },
+          { ...get().actualFlow!, data: reactFlowInstance!.toObject()! },
           true
         );
         console.log(
           "building flow AFTER save",
-          JSON.parse(JSON.stringify(actualFlow))
+          JSON.parse(JSON.stringify(get().actualFlow))
         );
         return buildVertices({
           flow: {
             data: reactFlowInstance?.toObject()!,
-            description: actualFlow!.description,
-            id: actualFlow!.id,
-            name: actualFlow!.name,
+            description: get().actualFlow!.description,
+            id: get().actualFlow!.id,
+            name: get().actualFlow!.name,
           },
           nodeId,
           onBuildComplete: () => {
@@ -249,7 +251,7 @@ const useFlowIOStore = create<flowIOStoreType>((set, get) => ({
             setErrorData({ list, title });
           },
         });
-    }, */
+    },
 }));
 
 export default useFlowIOStore;

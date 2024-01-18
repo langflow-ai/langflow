@@ -25,6 +25,7 @@ export type FlowPoolType = {
 };
 
 export type flowIOStoreType = {
+  actualFlow: null | FlowType;
   flowPool: FlowPoolType;
   getFilterEdge: any[];
   isBuilt: boolean;
@@ -56,6 +57,5 @@ export type flowIOStoreType = {
     flowName: string,
     flowDescription?: string
   ) => void;
-
-  /* buildFlow: (nodeId?:string) => Promise<void>; */
+  buildFlow: (nodeId?:string) => Promise<void>;
 };
