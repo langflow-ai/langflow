@@ -1,11 +1,13 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Embeddings
 
 <Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
+  <p>
+    We appreciate your understanding as we polish our documentation – it may
+    contain some rough edges. Share your feedback or report issues to help us
+    improve! 🛠️📝
+  </p>
 </Admonition>
 
 Embeddings are vector representations of text that capture the semantic meaning of the text. They are created using text embedding models and allow us to think about the text in a vector space, enabling us to perform tasks like semantic search, where we look for pieces of text that are most similar in the vector space.
@@ -111,3 +113,11 @@ Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). 
 - **top_p:** Tokens are selected from most probable to least until the sum of their – defaults to `0.95`.
 - **tuned_model_name:** The name of a tuned model. If provided, model_name is ignored.
 - **verbose:** This parameter is used to control the level of detail in the output of the chain. When set to True, it will print out some internal states of the chain while it is being run, which can help debug and understand the chain's behavior. If set to False, it will suppress the verbose output – defaults to `False`.
+
+### OllamaEmbeddings
+
+Used to load [Ollama’s](https://ollama.ai/) embedding models. Wrapper around LangChain's [Ollama API](https://python.langchain.com/docs/integrations/text_embedding/ollama).
+
+- **model** The name of the Ollama model to use – defaults to `llama2`.
+- **base_url** The base URL for the Ollama API – defaults to `http://localhost:11434`.
+- **temperature** Tunes the degree of randomness in text generations. Should be a non-negative value – defaults to `0`.

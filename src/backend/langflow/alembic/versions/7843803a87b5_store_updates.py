@@ -45,6 +45,7 @@ def downgrade() -> None:
 
         with op.batch_alter_table("flow", schema=None) as batch_op:
             batch_op.drop_column("is_component")
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
     # ### end Alembic commands ###

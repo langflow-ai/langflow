@@ -296,6 +296,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
       );
   },
+  unselectAll: () => {
+    let newNodes = cloneDeep(get().nodes);
+    newNodes.forEach((node) => {
+      node.selected = false;
+      let newEdges = cleanEdges(newNodes, get().edges);
+      set({
+        nodes: newNodes,
+        edges: newEdges,
+      });
+    });
+  },
 }));
 
 export default useFlowStore;
