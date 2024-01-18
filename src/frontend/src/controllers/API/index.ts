@@ -7,6 +7,8 @@ import {
   Component,
   LoginType,
   Users,
+  VertexBuildTypeAPI,
+  VerticesOrderTypeAPI,
   changeUser,
   resetPasswordType,
   sendAllProps,
@@ -849,4 +851,21 @@ export async function requestLogout() {
     console.error(error);
     throw error;
   }
+}
+
+export async function getVerticesOrder(
+  flowId: string
+): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
+  console.log;
+  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`);
+}
+
+export async function postBuildVertex(
+  flow: FlowType,
+  vertexId: string
+): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  return await api.post(
+    `${BASE_URL_API}build/${flow.id}/vertices/${vertexId}`,
+    flow
+  );
 }

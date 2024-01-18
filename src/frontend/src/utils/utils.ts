@@ -592,6 +592,11 @@ export function removeCountFromString(input: string): string {
   return result.trim(); // Trim any leading/trailing spaces
 }
 
+export function extractTypeFromLongId(id: string): string {
+  let [newId,_] = id.split("-");
+  return newId;
+}
+
 export function createRandomKey(key: string, uid: string): string {
   return removeCountFromString(key) + ` (${uid})`;
 }

@@ -128,3 +128,15 @@ export type Component = {
   data: Object;
   tags: [string];
 };
+
+export type VerticesOrderTypeAPI = {
+  ids: Array<string>;
+};
+
+export type VertexBuildTypeAPI = {
+  id: string;
+  valid: boolean;
+  params: string;
+  results: { [key: string]: { [key: string]: string } };
+  artifacts: { [key: string]: string };
+};
