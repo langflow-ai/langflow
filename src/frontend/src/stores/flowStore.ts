@@ -343,6 +343,56 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
+  getInputTypes: () => {
+    let inputType: string[] = [];
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isInputNode(nodeData)) {
+        // TODO remove count and ramdom key from type before pushing
+        inputType.push(nodeData.type);
+      }
+    });
+    set({ inputTypes: inputType });
+    return inputType;
+  },
+  getOutputTypes: () => {
+    let outputType: string[] = [];
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isOutputNode(nodeData)) {
+        outputType.push(nodeData.type);
+      }
+    });
+    set({ outputTypes: outputType });
+    return outputType;
+  },
+  getInputIds: () => {
+    let inputIds: string[] = [];
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isInputNode(nodeData)) {
+        inputIds.push(nodeData.id);
+      }
+    });
+    set({ inputIds });
+    return inputIds;
+  },
+  getOutputIds: () => {
+    let outputIds: string[] = [];
+    const nodes = get().nodes;
+
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isOutputNode(nodeData)) {
+        outputIds.push(nodeData.id);
+      }
+    });
+    set({ outputIds });
+    return outputIds;
+  },
 }));
 
 export default useFlowStore;
