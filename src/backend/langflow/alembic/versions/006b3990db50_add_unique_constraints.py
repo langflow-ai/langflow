@@ -27,7 +27,8 @@ def upgrade() -> None:
 
         with op.batch_alter_table('user', schema=None) as batch_op:
             batch_op.create_unique_constraint('uq_user_id', ['id'])
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     # ### end Alembic commands ###
@@ -44,6 +45,7 @@ def downgrade() -> None:
 
         with op.batch_alter_table('apikey', schema=None) as batch_op:
             batch_op.drop_constraint('uq_apikey_id', type_='unique')
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
     # ### end Alembic commands ###
