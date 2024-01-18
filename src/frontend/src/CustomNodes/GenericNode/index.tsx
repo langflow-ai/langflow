@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -43,6 +43,7 @@ export default function GenericNode({
   const [handles, setHandles] = useState<boolean[] | []>([]);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   let numberOfInputs: boolean[] = [];
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -107,8 +108,8 @@ export default function GenericNode({
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
   useEffect(() => {
-    console.log("isMinimized", isMinimized);
-  }, [isMinimized, setIsMinimized]);
+    updateNodeInternals(data.id);
+  }, [isMinimized]);
 
   return (
     <>
