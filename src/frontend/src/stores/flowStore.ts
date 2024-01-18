@@ -20,6 +20,8 @@ import {
   cleanEdges,
   getHandleId,
   getNodeId,
+  isInputNode,
+  isOutputNode,
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
@@ -152,6 +154,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         return node;
       })
     );
+  },
+  checkInputandOutput: () => {
+    let has_input = false;
+    let has_output = false;
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isInputNode(nodeData)) {
+        has_input = true;
+      }
+      if (isOutputNode(nodeData)) {
+        has_output = true;
+      }
+    });
+    return has_input && has_output;
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
