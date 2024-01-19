@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { FormEvent, useContext, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -8,8 +8,8 @@ import {
   CONTROL_INPUT_STATE,
   SIGN_UP_SUCCESS,
 } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { addUser } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import {
   UserInputType,
   inputHandlerEventType,
@@ -23,7 +23,8 @@ export default function SignUp(): JSX.Element {
   const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
   const { password, cnfPassword, username } = inputState;
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const navigate = useNavigate();
 
   function handleInput({

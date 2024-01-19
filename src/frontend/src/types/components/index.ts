@@ -3,7 +3,6 @@ import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { typesContextType } from "../typesContext";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   autoFocus?: boolean;
@@ -48,13 +47,13 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
   index?: string;
   onCloseModal?: (close: boolean) => void;
+  isMinimized?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -264,12 +263,12 @@ export type LoadingComponentProps = {
 
 export type ContentProps = {
   children: ReactNode;
-  tolltipContent?: ReactNode;
-  side?: "top" | "right" | "bottom" | "left";
 };
 export type HeaderProps = { children: ReactNode; description: string };
 export type TriggerProps = {
   children: ReactNode;
+  tooltipContent?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
 };
 
 export interface languageMap {
@@ -301,15 +300,13 @@ export type ConfirmationModalType = {
   onCancel?: () => void;
   title: string;
   titleHeader?: string;
-  asChild?: boolean;
   destructive?: boolean;
   modalContentTitle?: string;
   cancelText: string;
   confirmationText: string;
-  children: [
-    React.ReactElement<ContentProps>,
-    React.ReactElement<TriggerProps>
-  ];
+  children:
+    | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
+    | React.ReactElement<ContentProps>;
   icon: string;
   data?: any;
   index?: number;
@@ -441,11 +438,6 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type menuBarPropsType = {
-  flows: Array<headerFlowsType>;
-  tabId: string;
-};
-
 export type chatInputType = {
   chatValue: string;
   inputRef: {
@@ -488,6 +480,7 @@ export type nodeToolbarPropsType = {
   setShowNode: (boolean: any) => void;
   numberOfHandles: boolean[] | [];
   showNode: boolean;
+  setIsMinimized: (boolean: boolean) => void;
 };
 
 export type parsedDataType = {

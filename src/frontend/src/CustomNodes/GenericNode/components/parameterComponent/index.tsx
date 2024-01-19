@@ -1,11 +1,5 @@
 import { cloneDeep } from "lodash";
-import React, {
-  ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -26,16 +20,15 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import { alertContext } from "../../../../contexts/alertContext";
-import { FlowsContext } from "../../../../contexts/flowsContext";
-import { typesContext } from "../../../../contexts/typesContext";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
 import {
-  cleanEdges,
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
@@ -64,51 +57,32 @@ export default function ParameterComponent({
   proxy,
   showNode,
   index = "",
+  isMinimized,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const { setErrorData, modalContextOpen } = useContext(alertContext);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const [position, setPosition] = useState(0);
-  const { setTabsState, tabId, flows, tabsState, updateFlow } =
-    useContext(FlowsContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNode = useFlowStore((state) => state.setNode);
 
-  const [dataRef, setDataRef] = useState(data);
-
-  const flow = flows.find((flow) => flow.id === tabId)?.data?.nodes ?? null;
-
-  // Update component position
-  useEffect(() => {
-    if (ref.current && ref.current.offsetTop && ref.current.clientHeight) {
-      setPosition(ref.current.offsetTop + ref.current.clientHeight / 2);
-      updateNodeInternals(data.id);
-    }
-  }, [data.id, ref, ref.current, ref.current?.offsetTop, updateNodeInternals]);
-
-  useEffect(() => {
-    updateNodeInternals(data.id);
-  }, [data.id, position, updateNodeInternals]);
+  const flow = currentFlow?.data?.nodes ?? null;
 
   const groupedEdge = useRef(null);
 
-  useEffect(() => {
-    setDataRef(data);
-  }, [modalContextOpen]);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
 
-  const { reactFlowInstance, setFilterEdge } = useContext(typesContext);
   let disabled =
-    reactFlowInstance
-      ?.getEdges()
-      .some(
-        (edge) =>
-          edge.targetHandle ===
-          scapedJSONStringfy(proxy ? { ...id, proxy } : id)
-      ) ?? false;
+    edges.some(
+      (edge) =>
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+    ) ?? false;
 
-  const { data: myData } = useContext(typesContext);
+  const myData = useTypesStore((state) => state.data);
 
-  const { takeSnapshot } = useContext(undoRedoContext);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const handleUpdateValues = async (name: string, data: NodeDataType) => {
     const code = data.node?.template["code"]?.value;
@@ -133,68 +107,50 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
-    data.node!.template[name].value = newValue;
-    updateNodeInternals(data.id);
 
-    setDataRef((old) => {
-      let newData = cloneDeep(old);
-      newData.node!.template[name].value = newValue;
-      return newData;
+    data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+      };
+
+      newNode.data.node.template[name].value = newValue;
+
+      return newNode;
     });
 
-    // Set state to pending
-    //@ts-ignore
-    if (data.node!.template[name].value !== newValue) {
-      const tabs = cloneDeep(tabsState);
-      tabs[tabId].isPending = false;
-      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
-      setTabsState({
-        ...tabs,
-      });
-    }
     renderTooltips();
   };
 
+  const updateNodeInternals = useUpdateNodeInternals();
+
   const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
     if (!data.node) return;
-    if (data.node!.template[name].value !== newNodeClass.template[name].value) {
+    if (data.node!.template[name].value !== code) {
       takeSnapshot();
     }
-    data.node! = {
-      ...newNodeClass,
-      description: newNodeClass.description ?? data.node!.description,
-      display_name: newNodeClass.display_name ?? data.node!.display_name,
-    };
-    data.node!.template[name].value = code;
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+        node: newNodeClass,
+        description: newNodeClass.description ?? data.node!.description,
+        display_name: newNodeClass.display_name ?? data.node!.display_name,
+      };
+
+      newNode.data.node.template[name].value = code;
+
+      return newNode;
+    });
+
     updateNodeInternals(data.id);
-    // Set state to pending
-    //@ts-ignore
-    if (data.node!.template[name].value !== code) {
-      const tabs = cloneDeep(tabsState);
-      tabs[tabId].isPending = false;
-      tabs[tabId].formKeysData = tabsState[tabId].formKeysData;
-      setTabsState({
-        ...tabs,
-      });
-    }
+
     renderTooltips();
-    let flow = flows.find((flow) => flow.id === tabId);
-    setTimeout(() => {
-      //timeout necessary because ReactFlow updates are not async
-      if (reactFlowInstance && flow && flow.data) {
-        cleanEdges({
-          flow: {
-            edges: flow.data!.edges,
-            nodes: flow.data!.nodes,
-          },
-          updateEdge: (edge) => {
-            reactFlowInstance.setEdges(edge);
-            updateNodeInternals(data.id);
-          },
-        });
-        updateFlow(flow);
-      }
-    }, 50);
   };
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
@@ -317,21 +273,26 @@ export default function ParameterComponent({
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
+              key={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
               id={
                 proxy
                   ? scapedJSONStringfy({ ...id, proxy })
                   : scapedJSONStringfy(id)
               }
               isValidConnection={(connection) =>
-                isValidConnection(connection, reactFlowInstance!)
+                isValidConnection(connection, nodes, edges)
               }
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
+                "h-3 w-3 rounded-full border-2 bg-background",
+                isMinimized ? "mt-0" : ""
               )}
               style={{
                 borderColor: color,
-                top: position,
               }}
               onClick={() => {
                 setFilterEdge(groupedEdge.current);
@@ -344,7 +305,7 @@ export default function ParameterComponent({
   ) : (
     <div
       ref={ref}
-      className="mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
     >
       <>
         <div
@@ -390,13 +351,18 @@ export default function ParameterComponent({
                 <Handle
                   type={left ? "target" : "source"}
                   position={left ? Position.Left : Position.Right}
+                  key={
+                    proxy
+                      ? scapedJSONStringfy({ ...id, proxy })
+                      : scapedJSONStringfy(id)
+                  }
                   id={
                     proxy
                       ? scapedJSONStringfy({ ...id, proxy })
                       : scapedJSONStringfy(id)
                   }
                   isValidConnection={(connection) =>
-                    isValidConnection(connection, reactFlowInstance!)
+                    isValidConnection(connection, nodes, edges)
                   }
                   className={classNames(
                     left ? "-ml-0.5 " : "-mr-0.5 ",
@@ -404,7 +370,6 @@ export default function ParameterComponent({
                   )}
                   style={{
                     borderColor: color,
-                    top: position,
                   }}
                   onClick={() => {
                     setFilterEdge(groupedEdge.current);
@@ -435,8 +400,8 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
-                id={"textarea-" + index}
-                data-testid={"textarea-" + index}
+                id={"textarea-" + data.node.template[name].name}
+                data-testid={"textarea-" + data.node.template[name].name}
               />
             ) : (
               <InputComponent
@@ -454,9 +419,7 @@ export default function ParameterComponent({
               id={"toggle-" + index}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
-              setEnabled={(isEnabled) => {
-                handleOnNewValue(isEnabled);
-              }}
+              setEnabled={handleOnNewValue}
               size="large"
             />
           </div>
@@ -558,10 +521,7 @@ export default function ParameterComponent({
                     }
                   : data.node!.template[name].value
               }
-              onChange={(newValue) => {
-                data.node!.template[name].value = newValue;
-                handleOnNewValue(newValue);
-              }}
+              onChange={handleOnNewValue}
               id="div-dict-input"
             />
           </div>
@@ -571,15 +531,14 @@ export default function ParameterComponent({
               disabled={disabled}
               editNode={false}
               value={
-                dataRef.node!.template[name].value?.length === 0 ||
-                !dataRef.node!.template[name].value
+                data.node!.template[name].value?.length === 0 ||
+                !data.node!.template[name].value
                   ? [{ "": "" }]
-                  : convertObjToArray(dataRef.node!.template[name].value)
+                  : convertObjToArray(data.node!.template[name].value)
               }
               duplicateKey={errorDuplicateKey}
               onChange={(newValue) => {
                 const valueToNumbers = convertValuesToNumbers(newValue);
-                data.node!.template[name].value = valueToNumbers;
                 setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
                 handleOnNewValue(valueToNumbers);
               }}

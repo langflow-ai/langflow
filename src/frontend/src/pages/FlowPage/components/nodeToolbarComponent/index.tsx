@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
-import { useReactFlow, useUpdateNodeInternals } from "reactflow";
+import { useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
@@ -9,12 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { FlowsContext } from "../../../../contexts/flowsContext";
-import { StoreContext } from "../../../../contexts/storeContext";
-import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import { useDarkStore } from "../../../../stores/darkStore";
+import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
@@ -32,27 +32,27 @@ export default function NodeToolbarComponent({
   setShowNode,
   numberOfHandles,
   showNode,
+  setIsMinimized,
 }: nodeToolbarPropsType): JSX.Element {
-  const [nodeLength, setNodeLength] = useState(
-    Object.keys(data.node!.template).filter(
-      (templateField) =>
-        templateField.charAt(0) !== "_" &&
-        data.node?.template[templateField].show &&
-        (data.node.template[templateField].type === "str" ||
-          data.node.template[templateField].type === "bool" ||
-          data.node.template[templateField].type === "float" ||
-          data.node.template[templateField].type === "code" ||
-          data.node.template[templateField].type === "prompt" ||
-          data.node.template[templateField].type === "file" ||
-          data.node.template[templateField].type === "Any" ||
-          data.node.template[templateField].type === "int" ||
-          data.node.template[templateField].type === "dict" ||
-          data.node.template[templateField].type === "NestedDict")
-    ).length
-  );
-  const updateNodeInternals = useUpdateNodeInternals();
-  const { getNodeId } = useContext(FlowsContext);
-  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
+  const nodeLength = Object.keys(data.node!.template).filter(
+    (templateField) =>
+      templateField.charAt(0) !== "_" &&
+      data.node?.template[templateField].show &&
+      (data.node.template[templateField].type === "str" ||
+        data.node.template[templateField].type === "bool" ||
+        data.node.template[templateField].type === "float" ||
+        data.node.template[templateField].type === "code" ||
+        data.node.template[templateField].type === "prompt" ||
+        data.node.template[templateField].type === "file" ||
+        data.node.template[templateField].type === "Any" ||
+        data.node.template[templateField].type === "int" ||
+        data.node.template[templateField].type === "dict" ||
+        data.node.template[templateField].type === "NestedDict")
+  ).length;
+
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
 
   function canMinimize() {
     let countHandles: number = 0;
@@ -65,9 +65,16 @@ export default function NodeToolbarComponent({
   const isMinimal = canMinimize();
   const isGroup = data.node?.flow ? true : false;
 
-  const { paste, saveComponent, version, flows } = useContext(FlowsContext);
-  const { takeSnapshot } = useContext(undoRedoContext);
-  const reactFlowInstance = useReactFlow();
+  const paste = useFlowStore((state) => state.paste);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNodes = useFlowStore((state) => state.setNodes);
+  const setEdges = useFlowStore((state) => state.setEdges);
+
+  const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const version = useDarkStore((state) => state.version);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [selectedValue, setSelectedValue] = useState("");
@@ -91,6 +98,10 @@ export default function NodeToolbarComponent({
     showconfirmShare,
   ]);
 
+  useEffect(() => {
+    setIsMinimized(!showNode);
+  }, [showNode]);
+
   const handleSelectChange = (event) => {
     switch (event) {
       case "advanced":
@@ -99,7 +110,6 @@ export default function NodeToolbarComponent({
       case "show":
         takeSnapshot();
         setShowNode(data.showNode ?? true ? false : true);
-        updateNodeInternals(data.id);
         break;
       case "Download":
         downloadNode(createFlowComponent(cloneDeep(data), version));
@@ -115,7 +125,7 @@ export default function NodeToolbarComponent({
       case "ungroup":
         takeSnapshot();
         updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, reactFlowInstance, getNodeId);
+        expandGroupNode(data, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);
@@ -152,14 +162,16 @@ export default function NodeToolbarComponent({
                 event.preventDefault();
                 paste(
                   {
-                    nodes: [reactFlowInstance.getNode(data.id)],
+                    nodes: [nodes.find((node) => node.id === data.id)!],
                     edges: [],
                   },
                   {
                     x: 50,
                     y: 10,
-                    paneX: reactFlowInstance.getNode(data.id)?.position.x,
-                    paneY: reactFlowInstance.getNode(data.id)?.position.y,
+                    paneX: nodes.find((node) => node.id === data.id)?.position
+                      .x,
+                    paneY: nodes.find((node) => node.id === data.id)?.position
+                      .y,
                   }
                 );
               }}
@@ -287,7 +299,6 @@ export default function NodeToolbarComponent({
           </Select>
 
           <ConfirmationModal
-            asChild
             open={showOverrideModal}
             title={`Replace`}
             cancelText="Create New"
@@ -307,9 +318,6 @@ export default function NodeToolbarComponent({
                 to replace it with the current or create a new one?
               </span>
             </ConfirmationModal.Content>
-            <ConfirmationModal.Trigger>
-              <></>
-            </ConfirmationModal.Trigger>
           </ConfirmationModal>
           <EditNodeModal
             data={data}

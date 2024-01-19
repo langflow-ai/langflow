@@ -2,19 +2,20 @@ from langflow import CustomComponent
 from langchain.embeddings.base import Embeddings
 from langchain_community.embeddings import AzureOpenAIEmbeddings
 
+
 class AzureOpenAIEmbeddingsComponent(CustomComponent):
     display_name: str = "AzureOpenAIEmbeddings"
     description: str = "Embeddings model from Azure OpenAI."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
     beta = False
-    
+
     API_VERSION_OPTIONS = [
         "2022-12-01",
         "2023-03-15-preview",
         "2023-05-15",
         "2023-06-01-preview",
         "2023-07-01-preview",
-        "2023-08-01-preview"
+        "2023-08-01-preview",
     ]
 
     def build_config(self):
@@ -39,10 +40,9 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
                 "required": True,
                 "password": True,
             },
-            "code": {
-                "show": False
-            },
+            "code": {"show": False},
         }
+
     def build(
         self,
         azure_endpoint: str,
@@ -52,13 +52,13 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
     ) -> Embeddings:
         try:
             embeddings = AzureOpenAIEmbeddings(
-                azure_endpoint = azure_endpoint,
-                deployment = azure_deployment,
-                openai_api_version = api_version,
-                openai_api_key = api_key,
+                azure_endpoint=azure_endpoint,
+                deployment=azure_deployment,
+                openai_api_version=api_version,
+                openai_api_key=api_key,
             )
 
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAIEmbeddings API.") from e
-        
+
         return embeddings
