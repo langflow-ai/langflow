@@ -257,3 +257,52 @@ async def get_vertices(
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+@router.post("/build/{flow_id}/vertices/{vertex_id}")
+async def build_vertex(
+    flow_id: str,
+    vertex_id: str,
+    chat_service: "ChatService" = Depends(get_chat_service),
+    # current_user=Depends(get_current_active_user),
+    tweaks: dict = Body(None),
+    inputs: dict = Body(None),
+):
+    """Build a vertex instead of the entire graph."""
+    try:
+        cache = chat_service.get_cache(flow_id)
+        graph = cache.get("result")
+        result_dict = {}
+        if tweaks:
+            graph = process_tweaks_on_graph(graph, tweaks)
+        if not isinstance(graph, Graph):
+            raise ValueError("Invalid graph")
+        if not (vertex := graph.get_vertex(vertex_id)):
+            raise ValueError("Invalid vertex")
+        try:
+            if isinstance(vertex, StatelessVertex) or not vertex._built:
+                await vertex.build(user_id=None)
+            params = vertex._built_object_repr()
+            valid = True
+            result_dict = vertex.get_built_result()
+            # We need to set the artifacts to pass information
+            # to the frontend
+            vertex.set_artifacts()
+            artifacts = vertex.artifacts
+            result_dict = ResultDict(results=result_dict, artifacts=artifacts)
+        except Exception as exc:
+            params = str(exc)
+            valid = False
+            result_dict = ResultDict(results={})
+            artifacts = {}
+        chat_service.set_cache(flow_id, graph)
+
+        return VertexBuildResponse(
+            valid=valid,
+            params=params,
+            id=vertex.id,
+            data=result_dict,
+        )
+    except Exception as exc:
+        logger.error(f"Error building vertex: {exc}")
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
