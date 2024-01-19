@@ -216,8 +216,16 @@ const EditNodeModal = forwardRef(
                                     ) : myData.node.template[templateParam]
                                         .multiline ? (
                                       <TextAreaComponent
-                                        id={"textarea-edit-" + index}
-                                        data-testid={"textarea-edit-" + index}
+                                        id={
+                                          "textarea-edit-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
+                                        data-testid={
+                                          "textarea-edit-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
                                         disabled={disabled}
                                         editNode={true}
                                         value={
@@ -448,9 +456,13 @@ const EditNodeModal = forwardRef(
                                       onChange={(value: string | string[]) => {
                                         handleOnNewValue(value, templateParam);
                                       }}
-                                      id={"prompt-area-edit" + index}
+                                      id={
+                                        "prompt-area-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       data-testid={
-                                        "modal-prompt-input-" + index
+                                        "modal-prompt-input-" +
+                                        myData.node.template[templateParam].name
                                       }
                                     />
                                   </div>

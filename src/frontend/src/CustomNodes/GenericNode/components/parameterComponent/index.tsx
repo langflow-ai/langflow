@@ -400,8 +400,8 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
-                id={"textarea-" + index}
-                data-testid={"textarea-" + index}
+                id={"textarea-" + data.node.template[name].name}
+                data-testid={"textarea-" + data.node.template[name].name}
               />
             ) : (
               <InputComponent
