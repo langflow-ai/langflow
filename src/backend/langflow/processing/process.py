@@ -8,6 +8,7 @@ from langchain.vectorstores.base import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
 from langflow.graph.graph.base import Graph
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
@@ -297,5 +298,14 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
             logger.warning("Each node should be a dictionary with an 'id' key of type str")
 
     return graph_data
-    return graph_data
-    return graph_data
+
+def process_tweaks_on_graph(graph: Graph, tweaks: Dict[str, Dict[str, Any]]):
+    for vertex in graph.vertices:
+        if isinstance(vertex, Vertex) and isinstance(vertex.id, str):
+            node_id = vertex.id
+            if node_tweaks := tweaks.get(node_id):
+                apply_tweaks_on_vertex(vertex, node_tweaks)
+        else:
+            logger.warning("Each node should be a Vertex with an 'id' attribute of type str")
+
+    return graph
