@@ -233,3 +233,26 @@ async def try_running_celery_task(vertex, user_id):
         vertex.task_id = None
         await vertex.build(user_id=user_id)
     return vertex
+
+@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def get_vertices(
+    flow_id: str,
+    chat_service: "ChatService" = Depends(get_chat_service),
+    session=Depends(get_session),
+):
+    """Check the flow_id is in the flow_data_store."""
+    try:
+        flow: Flow = session.get(Flow, flow_id)
+        if not flow:
+            raise ValueError("Invalid flow ID")
+        graph = Graph.from_payload(flow.data)
+        chat_service.set_cache(flow_id, graph)
+        vertices = graph.layered_topological_sort()
+        # Now vertices is a list of lists
+        # We need to get the id of each vertex
+        # and return the same structure but only with the ids
+        return VerticesOrderResponse(ids=vertices)
+
+    except Exception as exc:
+        logger.error(f"Error checking build status: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
