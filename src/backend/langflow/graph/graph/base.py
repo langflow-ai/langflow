@@ -253,3 +253,31 @@ class Graph:
         vertex_ids = [vertex.id for vertex in self.vertices]
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
+    
+    def layered_topological_sort(self):
+        in_degree = {vertex: 0 for vertex in self.vertices}  # Initialize in-degrees
+        graph = defaultdict(list)  # Adjacency list representation
+
+        # Build graph and compute in-degrees
+        for edge in self.edges:
+            graph[edge.source].append(edge.target)
+            in_degree[edge.target] += 1
+
+        # Queue for vertices with no incoming edges
+        queue = deque(vertex for vertex in self.vertices if in_degree[vertex] == 0)
+        layers = []
+
+        current_layer = 0
+        while queue:
+            layers.append([])  # Start a new layer
+            layer_size = len(queue)
+            for _ in range(layer_size):
+                vertex = queue.popleft()
+                layers[current_layer].append(vertex.id)
+                for neighbor in graph[vertex]:
+                    in_degree[neighbor] -= 1  # 'remove' edge
+                    if in_degree[neighbor] == 0:
+                        queue.append(neighbor)
+            current_layer += 1  # Next layer
+
+        return layers
