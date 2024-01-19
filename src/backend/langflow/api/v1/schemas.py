@@ -212,3 +212,6 @@ class Token(BaseModel):
 
 class ApiKeyCreateRequest(BaseModel):
     api_key: str
+
+class VerticesOrderResponse(BaseModel):
+    ids: List[List[str]]
