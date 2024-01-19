@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
-import { forwardRef, useContext, useEffect, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
+import { forwardRef, useEffect, useState } from "react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
@@ -29,11 +28,8 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
-import { typesContext } from "../../contexts/typesContext";
+import useFlowStore from "../../stores/flowStore";
 import { NodeDataType } from "../../types/flow";
-import { FlowsState } from "../../types/tabs";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -58,13 +54,11 @@ const EditNodeModal = forwardRef(
     },
     ref
   ) => {
-    const updateNodeInternals = useUpdateNodeInternals();
-
     const [myData, setMyData] = useState(data);
 
-    const { setTabsState, tabId } = useContext(FlowsContext);
-    const { reactFlowInstance } = useContext(typesContext);
-    const { setModalContextOpen } = useContext(alertContext);
+    const setPending = useFlowStore((state) => state.setPending);
+    const edges = useFlowStore((state) => state.edges);
+    const setNode = useFlowStore((state) => state.setNode);
 
     function changeAdvanced(n) {
       setMyData((old) => {
@@ -81,14 +75,12 @@ const EditNodeModal = forwardRef(
         newData.node!.template[name].value = newValue;
         return newData;
       });
-      updateNodeInternals(data.id);
     };
 
     useEffect(() => {
       if (open) {
         setMyData(data); // reset data to what it is on node when opening modal
       }
-      setModalContextOpen(open);
     }, [open]);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
@@ -159,7 +151,7 @@ const EditNodeModal = forwardRef(
                             fieldName: templateParam,
                           };
                           let disabled =
-                            reactFlowInstance?.getEdges().some(
+                            edges.some(
                               (edge) =>
                                 edge.targetHandle ===
                                 scapedJSONStringfy(
@@ -224,8 +216,16 @@ const EditNodeModal = forwardRef(
                                     ) : myData.node.template[templateParam]
                                         .multiline ? (
                                       <TextAreaComponent
-                                        id={"textarea-edit-" + index}
-                                        data-testid={"textarea-edit-" + index}
+                                        id={
+                                          "textarea-edit-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
+                                        data-testid={
+                                          "textarea-edit-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
                                         disabled={disabled}
                                         editNode={true}
                                         value={
@@ -456,9 +456,13 @@ const EditNodeModal = forwardRef(
                                       onChange={(value: string | string[]) => {
                                         handleOnNewValue(value, templateParam);
                                       }}
-                                      id={"prompt-area-edit" + index}
+                                      id={
+                                        "prompt-area-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       data-testid={
-                                        "modal-prompt-input-" + index
+                                        "modal-prompt-input-" +
+                                        myData.node.template[templateParam].name
                                       }
                                     />
                                   </div>
@@ -535,17 +539,14 @@ const EditNodeModal = forwardRef(
             id={"saveChangesBtn"}
             className="mt-3"
             onClick={() => {
-              data.node = myData.node;
-              //@ts-ignore
-              setTabsState((prev: FlowsState) => {
-                return {
-                  ...prev,
-                  [tabId]: {
-                    ...prev[tabId],
-                    isPending: true,
-                  },
-                };
-              });
+              setNode(data.id, (old) => ({
+                ...old,
+                data: {
+                  ...old.data,
+                  node: myData.node,
+                },
+              }));
+              setPending(true);
               setOpen(false);
             }}
             type="submit"

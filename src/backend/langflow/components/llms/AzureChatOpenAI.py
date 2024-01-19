@@ -53,11 +53,7 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "required": True,
                 "advanced": True,
             },
-            "api_key": {
-                "display_name": "API Key", 
-                "required": True,
-                "password": True
-            },
+            "api_key": {"display_name": "API Key", "required": True, "password": True},
             "temperature": {
                 "display_name": "Temperature",
                 "value": 0.7,
@@ -72,10 +68,9 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "advanced": True,
                 "info": "Maximum number of tokens to generate.",
             },
-            "code": {
-                "show": False
-            },
+            "code": {"show": False},
         }
+
     def build(
         self,
         model: str,
