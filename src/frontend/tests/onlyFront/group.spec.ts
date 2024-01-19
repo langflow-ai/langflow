@@ -67,7 +67,7 @@ test.describe("group node test", () => {
 
     await page.getByRole("button", { name: "Group" }).click();
 
-    const textArea = page.getByTestId("div-textarea-2");
+    const textArea = page.getByTestId("div-textarea-description");
     const elementCountText = await textArea.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
