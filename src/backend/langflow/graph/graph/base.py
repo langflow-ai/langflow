@@ -261,8 +261,8 @@ class Graph:
 
         # Build graph and compute in-degrees
         for edge in self.edges:
-            graph[edge.source].append(edge.target)
-            in_degree[edge.target] += 1
+            graph[edge.source_id].append(edge.target_id)
+            in_degree[edge.target_id] += 1
 
         # Queue for vertices with no incoming edges
         queue = deque(vertex for vertex in self.vertices if in_degree[vertex] == 0)
