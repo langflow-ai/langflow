@@ -215,3 +215,9 @@ class ApiKeyCreateRequest(BaseModel):
 
 class VerticesOrderResponse(BaseModel):
     ids: List[List[str]]
+
+
+class ResultDict(BaseModel):
+    results: Optional[Any] = Field(default_factory=dict)
+    artifacts: Optional[Any] = Field(default_factory=dict)
+    """Outputs of the vertex build process."""
