@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, ResultDict, StreamData, VerticesOrderResponse
+from langflow.processing.process import process_tweaks_on_graph
 from langflow.services.database.models.flow.flow import Flow
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
