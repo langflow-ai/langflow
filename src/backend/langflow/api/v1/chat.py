@@ -1,9 +1,17 @@
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status,Body
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status, Body
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
-from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, ResultDict, StreamData, VertexBuildResponse, VerticesOrderResponse
+from langflow.api.v1.schemas import (
+    BuildStatus,
+    BuiltResponse,
+    InitResponse,
+    ResultDict,
+    StreamData,
+    VertexBuildResponse,
+    VerticesOrderResponse,
+)
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
 from langflow.services.database.models.flow.flow import Flow
@@ -237,6 +245,7 @@ async def try_running_celery_task(vertex, user_id):
         await vertex.build(user_id=user_id)
     return vertex
 
+
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def get_vertices(
     flow_id: str,
@@ -259,6 +268,7 @@ async def get_vertices(
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
 async def build_vertex(

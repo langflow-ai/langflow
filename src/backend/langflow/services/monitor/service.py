@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 import duckdb
 from langflow.services.base import Service
 from langflow.services.monitor.schema import MessageModel, TransactionModel
-from langflow.services.monitor.utils import (
-    add_row_to_table, drop_and_create_table_if_schema_mismatch)
+from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
 from loguru import logger
 from platformdirs import user_cache_dir
 

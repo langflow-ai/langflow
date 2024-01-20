@@ -235,7 +235,7 @@ class ChatService(Service):
             except Exception as exc:
                 logger.error(f"Error closing connection: {exc}")
             self.disconnect(client_id)
-            
+
     def get_cache(self, client_id: str) -> Any:
         """
         Get the cache for a client.

@@ -25,7 +25,7 @@ export async function buildVertices({
     let orderResponse = await getVerticesOrder(flow.id);
     console.log(orderResponse);
     let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-    console.log('order', verticesOrder);
+    console.log("order", verticesOrder);
 
     // Determine the range of vertices to build
     let vertexIndex: number | null = null;
@@ -33,7 +33,9 @@ export async function buildVertices({
       vertexIndex = verticesOrder.findIndex((ids) => ids.includes(nodeId));
     }
     let buildRange =
-      vertexIndex !== null ? verticesOrder.slice(0, vertexIndex + 1) : verticesOrder;
+      vertexIndex !== null
+        ? verticesOrder.slice(0, vertexIndex + 1)
+        : verticesOrder;
     console.log(buildRange);
 
     const buildResults: boolean[] = [];
@@ -67,10 +69,10 @@ export async function buildVertices({
           } catch (error) {
             if (onBuildError) {
               console.log(error);
-              onBuildError(
-                "Error Building Component",
-                [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"]
-              );
+              onBuildError("Error Building Component", [
+                (error as AxiosError<any>).response?.data?.detail ??
+                  "Unknown Error",
+              ]);
             }
           }
         })
@@ -85,10 +87,9 @@ export async function buildVertices({
   } catch (error) {
     // Callback for handling errors
     if (onBuildError) {
-      onBuildError(
-        "Error Building Component",
-        [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"]
-      );
+      onBuildError("Error Building Component", [
+        (error as AxiosError<any>).response?.data?.detail ?? "Unknown Error",
+      ]);
     }
   }
 }

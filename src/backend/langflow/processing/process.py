@@ -273,11 +273,11 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
             key = tweak_name if tweak_name == "file_path" else "value"
             template_data[tweak_name][key] = tweak_value
 
+
 def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name and tweak_value and tweak_name in vertex.params:
             vertex.params[tweak_name] = tweak_value
-
 
 
 def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -304,6 +304,7 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
             logger.warning("Each node should be a dictionary with an 'id' key of type str")
 
     return graph_data
+
 
 def process_tweaks_on_graph(graph: Graph, tweaks: Dict[str, Dict[str, Any]]):
     for vertex in graph.vertices:
