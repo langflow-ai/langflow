@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -104,7 +104,7 @@ class ContractEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
 
-    def honor(self, source, target) -> None:
+    def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
         Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
@@ -142,7 +142,7 @@ class ContractEdge(Edge):
                 params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
         return params
 
-    async def get_result(self, source, target):
+    async def get_result(self, source: "Vertex", target: "Vertex"):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
             self.honor(source, target)
