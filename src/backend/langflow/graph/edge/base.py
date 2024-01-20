@@ -98,6 +98,7 @@ class Edge:
     def __eq__(self, __value: object) -> bool:
         return self.__repr__() == __value.__repr__() if isinstance(__value, Edge) else False
 
+
 class ContractEdge(Edge):
     def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
         super().__init__(source, target, raw_edge)
@@ -132,9 +133,7 @@ class ContractEdge(Edge):
         """
         # Removes all keys that the values aren't python types like str, int, bool, etc.
         params = {
-            key: value
-            for key, value in target.params.items()
-            if isinstance(value, (str, int, bool, float, list, dict))
+            key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
         }
         # if it is a list we need to check if the contents are python types
         for key, value in params.items():
@@ -195,7 +194,7 @@ async def log_message(
         from langflow.graph.vertex.base import Vertex
 
         if isinstance(session_id, Vertex):
-            session_id = await session_id.build() # type: ignore
+            session_id = await session_id.build()  # type: ignore
 
         monitor_service = get_monitor_service()
         row = {

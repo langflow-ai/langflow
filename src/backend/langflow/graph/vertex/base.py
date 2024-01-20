@@ -2,8 +2,7 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
-                    Optional)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
@@ -64,7 +63,13 @@ class Vertex:
         edge_results = {}
         for edge in self.edges:
             target = self.graph.get_vertex(edge.target_id)
-            if edge.is_fulfilled and isinstance(await edge.get_result(source=self, target=target, ), str):
+            if edge.is_fulfilled and isinstance(
+                await edge.get_result(
+                    source=self,
+                    target=target,
+                ),
+                str,
+            ):
                 if edge.target_id not in edge_results:
                     edge_results[edge.target_id] = {}
                 edge_results[edge.target_id][edge.target_param] = await edge.get_result(source=self, target=target)
@@ -321,7 +326,7 @@ class Vertex:
         # Check if the Vertex was built already
         if self._built:
             return self._built_object
-        
+
         if self.is_task and self.task_id is not None:
             task = self.get_task()
 
