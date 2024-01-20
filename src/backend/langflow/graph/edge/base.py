@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from langflow.services.deps import get_monitor_service
+
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
