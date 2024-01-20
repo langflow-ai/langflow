@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -221,3 +222,17 @@ class ResultDict(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     """Outputs of the vertex build process."""
+
+class VertexBuildResponse(BaseModel):
+    id: str
+    valid: bool
+    params: Optional[str]
+    """JSON string of the params."""
+    data: ResultDict
+    """Mapping of vertex ids to result dict containing the param name and result value."""
+    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    """Timestamp of the build."""
+
+
+class VerticesBuiltResponse(BaseModel):
+    vertices: List[VertexBuildResponse]
