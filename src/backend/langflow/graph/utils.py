@@ -6,6 +6,9 @@ from langflow.interface.utils import extract_input_variables_from_prompt
 class UnbuiltObject:
     pass
 
+class UnbuiltResult:
+    pass
+
 
 def validate_prompt(prompt: str):
     """Validate prompt."""
