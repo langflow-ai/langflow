@@ -1,6 +1,7 @@
 import { AxiosError } from "axios";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import { FlowType } from "../types/flow";
+import { VertexBuildTypeAPI } from "../types/api";
 
 type BuildVerticesParams = {
   flow: FlowType; // Assuming FlowType is the type for your flow
@@ -19,77 +20,54 @@ export async function buildVertices({
   onBuildComplete,
   onBuildError,
 }: BuildVerticesParams) {
-  try {
-    // Step 1: Get vertices order
-    console.log(JSON.parse(JSON.stringify(flow)));
-    let orderResponse = await getVerticesOrder(flow.id);
-    console.log(orderResponse);
-    let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-    console.log("order", verticesOrder);
-
-    // Determine the range of vertices to build
-    let vertexIndex: number | null = null;
-    if (nodeId) {
-      vertexIndex = verticesOrder.findIndex((ids) => ids.includes(nodeId));
+  let orderResponse = await getVerticesOrder(flow.id);
+  let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
+  let vertices : Array<Array<string>> = [];
+  if (nodeId) {
+    for (let i = 0; i < verticesOrder.length; i += 1) {
+      const innerArray = verticesOrder[i];
+      const idIndex = innerArray.indexOf(nodeId);
+  
+      if (idIndex !== -1) {
+        // If the targetId is found in the inner array, cut the array before the id
+        vertices.push(innerArray.slice(0, idIndex + 1));
+        break; // Stop searching after finding the first occurrence
+      }
+      // If the targetId is not found, include the entire inner array
+        vertices.push(innerArray);
     }
-    let buildRange =
-      vertexIndex !== null
-        ? verticesOrder.slice(0, vertexIndex + 1)
-        : verticesOrder;
-    console.log(buildRange);
-
-    const buildResults: boolean[] = [];
-    await buildRange.reduce(async (previousPromise, idArray) => {
-      await previousPromise;
-      return Promise.all(
-        idArray.map(async (vertexId) => {
-          try {
-            const buildResponse = await postBuildVertex(flow, vertexId);
-            const buildData = buildResponse.data;
-            if (onProgressUpdate) {
-              const progress =
-                verticesOrder
-                  .map((ids) => ids.indexOf(vertexId))
-                  .filter((index) => index !== -1)[0] /
-                verticesOrder.flat().length;
-              onProgressUpdate(progress);
-            }
-            if (onBuildUpdate) {
-              let data = {};
-              if (!buildData.valid) {
-                if (onBuildError) {
-                  onBuildError("Error Building Component", [buildData.params]);
-                }
-              }
-              data[buildData.id] = buildData;
-
-              onBuildUpdate({ data, id: buildData.id });
-            }
-            buildResults.push(buildData.valid);
-          } catch (error) {
+  }
+  
+  const buildResults: Array<boolean> = [];
+  for (let i = 0; i < vertices.length; i += 1) {
+    await Promise.all(
+    vertices[i].map(async (id) => {
+      try {
+        const buildRes = await postBuildVertex(flow, id);
+        const buildData: VertexBuildTypeAPI = buildRes.data;
+        if (onBuildUpdate) {
+          let data = {};
+          if (!buildData.valid) {
             if (onBuildError) {
-              console.log(error);
-              onBuildError("Error Building Component", [
-                (error as AxiosError<any>).response?.data?.detail ??
-                  "Unknown Error",
-              ]);
+              onBuildError("Error Building Component", [buildData.params])
             }
-          }
-        })
-      );
-    }, Promise.resolve());
+            data[buildData.id] = buildData;
 
-    // Callback for when all vertices have been built
-    if (onBuildComplete) {
-      const allNodesValid = buildResults.every((result) => result);
-      onBuildComplete(allNodesValid);
-    }
-  } catch (error) {
-    // Callback for handling errors
-    if (onBuildError) {
-      onBuildError("Error Building Component", [
-        (error as AxiosError<any>).response?.data?.detail ?? "Unknown Error",
-      ]);
-    }
+            onBuildUpdate({ data, id: buildData.id });
+          }
+        }
+        buildResults.push(buildData.valid);
+        if (onBuildComplete) {
+          const allNodesValid = buildResults.every((result) => result);
+          onBuildComplete(allNodesValid);
+        }
+      } catch (error) {
+        if (onBuildError) {
+          console.log(error)
+          onBuildError("Error Building Component", [(error as AxiosError<any>).response?.data?.detail??"Unknown Error"]);
+        }
+      }
+    })
+    )
   }
 }

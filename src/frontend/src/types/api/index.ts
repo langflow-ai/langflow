@@ -130,7 +130,7 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<string>;
+  ids: Array<Array<string>>;
 };
 
 export type VertexBuildTypeAPI = {
