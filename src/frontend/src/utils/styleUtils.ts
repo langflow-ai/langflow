@@ -1,4 +1,5 @@
 import {
+  ArrowDownUp,
   ArrowUpToLine,
   Bell,
   BookMarked,
@@ -223,6 +224,7 @@ export const nodeNames: { [char: string]: string } = {
   utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  io: "I/O",
   unknown: "Other",
 };
 
@@ -380,4 +382,5 @@ export const nodeIconsLucide: iconsType = {
   RefreshCcw,
   Combine,
   TerminalIcon,
+  io: ArrowDownUp,
 };
