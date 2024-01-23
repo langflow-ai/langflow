@@ -36,7 +36,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   edges: [],
   isBuilding: false,
   isPending: false,
-  isBuilt: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
   flowPool: {},
@@ -66,15 +65,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes,
       edges,
       flowState: undefined,
-      isBuilt: false,
     });
     get().reactFlowInstance!.setViewport(viewport);
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
-  },
-  setIsBuilt: (isBuilt) => {
-    set({ isBuilt });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -107,7 +102,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
-      isBuilt: false,
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -124,7 +118,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({
       edges: newChange,
       flowState: undefined,
-      isBuilt: false,
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -286,7 +279,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: [],
       edges: [],
       flowState: undefined,
-      isBuilt: false,
       getFilterEdge: [],
     });
   },
