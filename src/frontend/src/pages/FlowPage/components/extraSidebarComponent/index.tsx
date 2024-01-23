@@ -37,7 +37,6 @@ export default function ExtraSidebar(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  const isBuilt = useFlowStore((state) => state.isBuilt);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -281,14 +280,13 @@ export default function ExtraSidebar(): JSX.Element {
             {currentFlow && currentFlow.data && (
               <ApiModal flow={currentFlow}>
                 <button
-                  className={"w-full " + (!isBuilt ? "button-disable" : "")}
+                  className={"w-full "}
                 >
                   <div className={classNames("extra-side-bar-buttons")}>
                     <IconComponent
                       name="Code2"
                       className={
-                        "side-bar-button-size" +
-                        (isBuilt ? " " : " extra-side-bar-save-disable")
+                        "side-bar-button-size"
                       }
                     />
                   </div>

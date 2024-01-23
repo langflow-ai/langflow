@@ -78,8 +78,6 @@ export type FlowStoreType = {
   setLastCopiedSelection: (
     newSelection: { nodes: any; edges: any } | null
   ) => void;
-  isBuilt: boolean;
-  setIsBuilt: (isBuilt: boolean) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
