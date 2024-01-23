@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import useFlowIOStore from "../../stores/flowsIOStore";
 import { sendAllProps } from "../../types/api";
 import {
   ChatMessageType,
@@ -19,16 +18,17 @@ import ChatMessage from "./chatMessage";
 export default function newChatView(): JSX.Element {
   const [chatValue, setChatValue] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
-  const { reactFlowInstance } = useFlowStore();
   const {
     flowPool,
     outputIds,
     inputIds,
     inputTypes,
-    updateNodeFlowData,
+    getNode,
+    setNode,
     buildFlow,
+    getFlow,
     CleanFlowPool,
-  } = useFlowIOStore();
+  } = useFlowStore();
   const { setErrorData } = useAlertStore();
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -75,24 +75,19 @@ export default function newChatView(): JSX.Element {
   }, []);
 
   async function sendMessage(count = 1): Promise<void> {
-    let nodeValidationErrors = validateNodes(
-      reactFlowInstance!.getNodes(),
-      reactFlowInstance!.getEdges()
-    );
+    const { nodes, edges } = getFlow();
+    let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
       setLockChat(true);
       setChatValue("");
       const chatInputId = inputIds.find((inputId) =>
         inputId.includes("ChatInput")
       );
-      const chatInput: NodeType = reactFlowInstance?.getNode(
-        chatInputId!
-      ) as NodeType;
+      const chatInput: NodeType = getNode(chatInputId!) as NodeType;
       if (chatInput) {
-        let newData = cloneDeep(chatInput.data);
-        newData.node!.template["message"].value = chatValue;
-        chatInput.data = { ...newData };
-        updateNodeFlowData(chatInputId!, newData);
+        let newNode = cloneDeep(chatInput);
+        newNode.data.node!.template["message"].value = chatValue;
+        setNode(chatInputId!, newNode);
       }
       for (let i = 0; i < count; i++) {
         await buildFlow().catch((err) => {

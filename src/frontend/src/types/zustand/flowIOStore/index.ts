@@ -1,5 +1,3 @@
-import { FlowType, NodeType } from "../../flow";
-
 export type chatInputType = {
   result: string;
 };
@@ -20,17 +18,4 @@ export type FlowPoolObjectType = {
 
 export type FlowPoolType = {
   [key: string]: Array<FlowPoolObjectType>;
-};
-
-export type flowIOStoreType = {
-  setOutputTypes: (outputTypes: string[]) => void;
-  setInputTypes: (inputTypes: string[]) => void;
-  setInputIds: (inputIds: string[]) => void;
-  setOutputIds: (outputIds: string[]) => void;
-  updateFlowPoolNodes: (nodes: NodeType[]) => void;
-  checkInputandOutput: (flow?: FlowType) => boolean;
-  getInputTypes: (flow?: FlowType) => string[];
-  getOutputTypes: (flow?: FlowType) => string[];
-  getInputIds: (flow?: FlowType) => string[];
-  getOutputIds: (flow?: FlowType) => string[];
 };

@@ -14,12 +14,9 @@ import IconComponent from "../../genericIconComponent";
 export default function BuildTrigger({
   open,
   flow,
-  setIsBuilt,
 }: {
   open: boolean;
   flow: FlowType;
-  setIsBuilt: any;
-  isBuilt: boolean;
 }): JSX.Element {
   const updateSSEData = useFlowStore((state) => state.updateSSEData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -52,7 +49,6 @@ export default function BuildTrigger({
 
       const allNodesValid = await streamNodeData(flow);
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      setIsBuilt(allNodesValid);
       if (!allNodesValid) {
         setErrorData({
           title: "Oops! Looks like you missed something",

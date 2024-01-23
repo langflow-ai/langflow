@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
-import { ChatType } from "../../types/chat";
-import BuildTrigger from "./buildTrigger";
-import ChatTrigger from "./chatTrigger";
-
-import * as _ from "lodash";
-import FormModal from "../../modals/formModal";
+import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import BaseModal from "../../modals/baseModal";
 import useFlowStore from "../../stores/flowStore";
+import { ChatType } from "../../types/chat";
 import { NodeType } from "../../types/flow";
+import IOView from "../IOview";
+import ChatTrigger from "../ViewTriggers/chat";
+import IconComponent from "../genericIconComponent";
+import BuildTrigger from "./buildTrigger";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
-  const isBuilt = useFlowStore((state) => state.isBuilt);
-  const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
   const flowState = useFlowStore((state) => state.flowState);
+  const checkInputAndOutput = useFlowStore(
+    (state) => state.checkInputAndOutput
+  );
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         (event.key === "K" || event.key === "k") &&
         (event.metaKey || event.ctrlKey) &&
-        isBuilt
+        checkInputAndOutput()
       ) {
         event.preventDefault();
         setOpen((oldState) => !oldState);
@@ -29,39 +31,36 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isBuilt]);
+  }, []);
 
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes: NodeType[] = useNodes();
-  useEffect(() => {
-    const prevNodes = prevNodesRef.current;
-    const currentNodes = nodes.map((node: NodeType) =>
-      _.cloneDeep(node.data.node?.template)
-    );
-    if (JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)) {
-      setIsBuilt(false);
-    }
-    prevNodesRef.current = currentNodes;
-  }, [flowState, flow.id]);
 
   return (
     <>
-      <div>
-        <BuildTrigger
-          open={open}
-          flow={flow}
-          setIsBuilt={setIsBuilt}
-          isBuilt={isBuilt}
-        />
-        {isBuilt && flowState && !!flowState?.input_keys && (
-          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
+      <div className="flex flex-col">
+        <BuildTrigger open={open} flow={flow} />
+        {checkInputAndOutput() && (
+          <BaseModal open={open} setOpen={setOpen}>
+            <BaseModal.Trigger asChild>
+              <ChatTrigger />
+            </BaseModal.Trigger>
+            {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
+            <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
+              <div className="flex items-center">
+                <span className="pr-2">Chat</span>
+                <IconComponent
+                  name="prompts"
+                  className="h-6 w-6 pl-1 text-foreground"
+                  aria-hidden="true"
+                />
+              </div>
+            </BaseModal.Header>
+            <BaseModal.Content>
+              <IOView />
+            </BaseModal.Content>
+          </BaseModal>
         )}
-        <ChatTrigger
-          canOpen={!!flowState?.input_keys}
-          open={open}
-          setOpen={setOpen}
-          isBuilt={isBuilt}
-        />
       </div>
     </>
   );
