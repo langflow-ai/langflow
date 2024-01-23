@@ -3,7 +3,6 @@ import { useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
-
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { parsedDataType } from "../../../types/components";
@@ -18,7 +17,6 @@ export default function BuildTrigger({
   open: boolean;
   flow: FlowType;
 }): JSX.Element {
-  const updateSSEData = useFlowStore((state) => state.updateSSEData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const nodes = useFlowStore((state) => state.nodes);
@@ -47,84 +45,16 @@ export default function BuildTrigger({
       const startTime = Date.now();
       setIsBuilding(true);
 
-      const allNodesValid = await streamNodeData(flow);
+
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      if (!allNodesValid) {
-        setErrorData({
-          title: "Oops! Looks like you missed something",
-          list: [
-            "Check components and retry. Hover over component status icon 🔴 to inspect.",
-          ],
-        });
-      }
-      if (errors.length === 0 && allNodesValid) {
-        setSuccessData({
-          title: "Flow is ready to run",
-        });
-      }
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setIsBuilding(false);
     }
   }
-  async function streamNodeData(flow: FlowType) {
-    // Step 1: Make a POST request to send the flow data and receive a unique session ID
-    const response = await postBuildInit(flow);
-    const { flowId } = response.data;
-    // Step 2: Use the session ID to establish an SSE connection using EventSource
-    let validationResults: boolean[] = [];
-    const apiUrl = `/api/v1/build/stream/${flowId}`;
-    return new Promise<boolean>((resolve, reject) => {
-      const eventSource = new EventSource(apiUrl);
 
-      eventSource.onmessage = (event) => {
-        // If the event is parseable, return
-        if (!event.data) {
-          return;
-        }
-        const parsedData = JSON.parse(event.data);
-        // if the event is the end of the stream, close the connection
-        if (parsedData.end_of_stream) {
-          eventSource.close();
-          resolve(validationResults.every((result) => result));
-        } else if (parsedData.log) {
-          // If the event is a log, log it
-          setSuccessData({ title: parsedData.log });
-        } else if (parsedData.input_keys !== undefined) {
-          setFlowState(parsedData);
-        } else {
-          // Otherwise, process the data
-          const isValid = processStreamResult(parsedData);
-          setProgress(parsedData.progress);
-          validationResults.push(isValid);
-        }
-      };
 
-      eventSource.onerror = (error: any) => {
-        console.error("EventSource failed:", error);
-
-        if (error.data) {
-          const parsedData = JSON.parse(error.data);
-          setErrorData({ title: parsedData.error });
-          setIsBuilding(false);
-        }
-        eventSource.close();
-        reject(new Error("Streaming failed"));
-      };
-    });
-  }
-
-  function processStreamResult(parsedData: parsedDataType) {
-    // Process each chunk of data here
-    // Parse the chunk and update the context
-    try {
-      updateSSEData({ [parsedData.id]: parsedData });
-    } catch (err) {
-      console.log("Error parsing stream data: ", err);
-    }
-    return parsedData.valid;
-  }
 
   async function enforceMinimumLoadingTime(
     startTime: number,

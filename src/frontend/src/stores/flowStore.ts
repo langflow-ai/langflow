@@ -31,7 +31,6 @@ import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
-  sseData: {},
   flowState: undefined,
   nodes: [],
   edges: [],
@@ -67,13 +66,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes,
       edges,
       flowState: undefined,
-      sseData: {},
       isBuilt: false,
     });
     get().reactFlowInstance!.setViewport(viewport);
-  },
-  updateSSEData: (sseData) => {
-    set((state) => ({ sseData: { ...state.sseData, ...sseData } }));
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
@@ -113,7 +108,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: newChange,
       flowState: undefined,
       isBuilt: false,
-      sseData: {},
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -131,7 +125,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: newChange,
       flowState: undefined,
       isBuilt: false,
-      sseData: {},
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -293,7 +286,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: [],
       edges: [],
       flowState: undefined,
-      sseData: {},
       isBuilt: false,
       getFilterEdge: [],
     });
