@@ -1,11 +1,9 @@
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
 import Loading from "../../../components/ui/loading";
-import { postBuildInit } from "../../../controllers/API";
-import { FlowType } from "../../../types/flow";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
-import { parsedDataType } from "../../../types/components";
+import { FlowType } from "../../../types/flow";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -45,7 +43,6 @@ export default function BuildTrigger({
       const startTime = Date.now();
       setIsBuilding(true);
 
-
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
     } catch (error) {
       console.error("Error:", error);
@@ -53,8 +50,6 @@ export default function BuildTrigger({
       setIsBuilding(false);
     }
   }
-
-
 
   async function enforceMinimumLoadingTime(
     startTime: number,
