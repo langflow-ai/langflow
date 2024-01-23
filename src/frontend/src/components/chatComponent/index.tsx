@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useNodes } from "reactflow";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useFlowStore from "../../stores/flowStore";
 import { ChatType } from "../../types/chat";
-import { NodeType } from "../../types/flow";
 import IOView from "../IOview";
 import ChatTrigger from "../ViewTriggers/chat";
 import IconComponent from "../genericIconComponent";
@@ -13,9 +11,15 @@ import BuildTrigger from "./buildTrigger";
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const flowState = useFlowStore((state) => state.flowState);
+  const nodes = useFlowStore((state) => state.nodes);
   const checkInputAndOutput = useFlowStore(
     (state) => state.checkInputAndOutput
   );
+  const [showTrigger, setShowTrigger] = useState(checkInputAndOutput());
+  useEffect(() => {
+    setShowTrigger(checkInputAndOutput());
+  }, [nodes]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -34,13 +38,12 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   }, []);
 
   const prevNodesRef = useRef<any[] | undefined>();
-  const nodes: NodeType[] = useNodes();
 
   return (
     <>
       <div className="flex flex-col">
         <BuildTrigger open={open} flow={flow} />
-        {checkInputAndOutput() && (
+        {showTrigger && (
           <BaseModal open={open} setOpen={setOpen}>
             <BaseModal.Trigger asChild>
               <ChatTrigger />
