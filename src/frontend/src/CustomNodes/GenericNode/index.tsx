@@ -83,7 +83,6 @@ export default function GenericNode({
   }, [data, data.node]);
 
   // State for outline color
-  const sseData = useFlowStore((state) => state.sseData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {

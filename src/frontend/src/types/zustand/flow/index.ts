@@ -42,8 +42,6 @@ export type FlowStoreType = {
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: any, nodeId: string) => void;
   CleanFlowPool: () => void;
-  updateSSEData: (sseData: object) => void;
-  sseData: object;
   isBuilding: boolean;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
