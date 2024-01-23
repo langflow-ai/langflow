@@ -29,6 +29,8 @@ module.exports = {
     },
     extend: {
       colors: {
+        "component-icon": "var(--component-icon)",
+        "flow-icon": "var(--flow-icon)",
         "low-indigo": "var(--low-indigo)",
         "chat-send": "var(--chat-send)",
         connection: "var(--connection)",

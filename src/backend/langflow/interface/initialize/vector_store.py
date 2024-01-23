@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Type
 from langchain.vectorstores import (
     Pinecone,
+    ElasticsearchStore,
     Qdrant,
     Chroma,
     FAISS,
@@ -17,9 +18,7 @@ import orjson
 def docs_in_params(params: dict) -> bool:
     """Check if params has documents OR texts and one of them is not an empty list,
     If any of them is not an empty list, return True, else return False"""
-    return ("documents" in params and params["documents"]) or (
-        "texts" in params and params["texts"]
-    )
+    return ("documents" in params and params["documents"]) or ("texts" in params and params["texts"])
 
 
 def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dict):
@@ -31,9 +30,7 @@ def initialize_mongodb(class_object: Type[MongoDBAtlasVectorSearch], params: dic
     from pymongo import MongoClient
     import certifi
 
-    client: MongoClient = MongoClient(
-        MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where()
-    )
+    client: MongoClient = MongoClient(MONGODB_ATLAS_CLUSTER_URI, tlsCAFile=certifi.where())
     db_name = params.pop("db_name", None)
     collection_name = params.pop("collection_name", None)
     if not db_name or not collection_name:
@@ -141,9 +138,7 @@ def initialize_pinecone(class_object: Type[Pinecone], params: dict):
             pinecone_env = os.getenv("PINECONE_ENV")
 
     if pinecone_api_key is None or pinecone_env is None:
-        raise ValueError(
-            "Pinecone API key and environment must be provided in the params"
-        )
+        raise ValueError("Pinecone API key and environment must be provided in the params")
 
     # initialize pinecone
     pinecone.init(
@@ -177,26 +172,20 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
         import chromadb  # type: ignore
 
         settings_params = {
-            key: params[key]
-            for key, value_ in params.items()
-            if key.startswith("chroma_server_") and value_
+            key: params[key] for key, value_ in params.items() if key.startswith("chroma_server_") and value_
         }
         chroma_settings = chromadb.config.Settings(**settings_params)
         params["client_settings"] = chroma_settings
     else:
         # remove all chroma_server_ keys from params
-        params = {
-            key: value
-            for key, value in params.items()
-            if not key.startswith("chroma_server_")
-        }
+        params = {key: value for key, value in params.items() if not key.startswith("chroma_server_")}
 
     persist = params.pop("persist", False)
     if not docs_in_params(params):
         params.pop("documents", None)
         params.pop("texts", None)
         params["embedding_function"] = params.pop("embedding")
-        chromadb = class_object(**params)
+        chromadb_instance = class_object(**params)
     else:
         if "texts" in params:
             params["documents"] = params.pop("texts")
@@ -211,10 +200,10 @@ def initialize_chroma(class_object: Type[Chroma], params: dict):
                 if value is None:
                     doc.metadata[key] = ""
 
-        chromadb = class_object.from_documents(**params)
+        chromadb_instance = class_object.from_documents(**params)
     if persist:
-        chromadb.persist()
-    return chromadb
+        chromadb_instance.persist()
+    return chromadb_instance
 
 
 def initialize_qdrant(class_object: Type[Qdrant], params: dict):
@@ -238,11 +227,34 @@ def initialize_qdrant(class_object: Type[Qdrant], params: dict):
     return class_object.from_documents(**params)
 
 
+def initialize_elasticsearch(class_object: Type[ElasticsearchStore], params: dict):
+    """Initialize elastic and return the class object"""
+    if "index_name" not in params:
+        raise ValueError("Elasticsearch Index must be provided in the params")
+    if "es_url" not in params:
+        raise ValueError("Elasticsearch URL must be provided in the params")
+    if not docs_in_params(params):
+        existing_index_params = {
+            "embedding": params.pop("embedding"),
+        }
+        if "index_name" in params:
+            existing_index_params["index_name"] = params.pop("index_name")
+        if "es_url" in params:
+            existing_index_params["es_url"] = params.pop("es_url")
+
+        return class_object.from_existing_index(**existing_index_params)
+    # If there are docs in the params, create a new index
+    if "texts" in params:
+        params["documents"] = params.pop("texts")
+    return class_object.from_documents(**params)
+
+
 vecstore_initializer: Dict[str, Callable[[Type[Any], dict], Any]] = {
     "Pinecone": initialize_pinecone,
     "Chroma": initialize_chroma,
     "Qdrant": initialize_qdrant,
     "Weaviate": initialize_weaviate,
+    "ElasticsearchStore": initialize_elasticsearch,
     "FAISS": initialize_faiss,
     "SupabaseVectorStore": initialize_supabase,
     "MongoDBAtlasVectorSearch": initialize_mongodb,

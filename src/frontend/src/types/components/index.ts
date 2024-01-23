@@ -3,7 +3,6 @@ import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { typesContextType } from "../typesContext";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   autoFocus?: boolean;
@@ -19,6 +18,7 @@ export type InputComponentType = {
   showPass?: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
   blurOnEnter?: boolean;
 };
 export type ToggleComponentType = {
@@ -35,10 +35,10 @@ export type DropDownComponentType = {
   editNode?: boolean;
   apiModal?: boolean;
   numberOfOptions?: number;
+  id?: string;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
-  setData: (value: NodeDataType) => void;
   title: string;
   id: sourceHandleType | targetHandleType;
   color: string;
@@ -47,11 +47,13 @@ export type ParameterComponentType = {
   required?: boolean;
   name?: string;
   tooltipTitle: string | undefined;
-  dataContext?: typesContextType;
   optionalHandle?: Array<String> | null;
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
+  index?: string;
+  onCloseModal?: (close: boolean) => void;
+  isMinimized?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -66,8 +68,7 @@ export type KeyPairListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   duplicateKey?: boolean;
-  advanced?: boolean | null;
-  dataValue?: any;
+  editNodeModal?: boolean;
 };
 
 export type DictComponentType = {
@@ -75,6 +76,7 @@ export type DictComponentType = {
   onChange: (value) => void;
   disabled: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type TextAreaComponentType = {
@@ -85,18 +87,20 @@ export type TextAreaComponentType = {
   onChange: (value: string[] | string) => void;
   value: string;
   editNode?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
 export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType) => void;
+  setNodeClass?: (value: APIClassType, code?: string) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
   readonly?: boolean;
   editNode?: boolean;
+  id?: string;
 };
 
 export type CodeAreaComponentType = {
@@ -105,8 +109,9 @@ export type CodeAreaComponentType = {
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
-  setNodeClass?: (value: APIClassType) => void;
+  setNodeClass?: (value: APIClassType, code?: string) => void;
   dynamic?: boolean;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -114,7 +119,6 @@ export type FileComponentType = {
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
-  suffixes: Array<string>;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
   editNode?: boolean;
@@ -133,11 +137,28 @@ export type DisclosureComponentType = {
     }[];
   };
 };
-export type FloatComponentType = {
+
+export type RangeSpecType = {
+  min: number;
+  max: number;
+  step: number;
+};
+
+export type IntComponentType = {
   value: string;
   disabled?: boolean;
   onChange: (value: string) => void;
   editNode?: boolean;
+  id?: string;
+};
+
+export type FloatComponentType = {
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  rangeSpec: RangeSpecType;
+  editNode?: boolean;
+  id?: string;
 };
 
 export type TooltipComponentType = {
@@ -210,18 +231,18 @@ export type IconComponentProps = {
   className?: string;
   iconColor?: string;
   onClick?: () => void;
+  stroke?: string;
+  strokeWidth?: number;
+  id?: string;
 };
 
 export type InputProps = {
   name: string | null;
   description: string | null;
   maxLength?: number;
-  flows: Array<{ id: string; name: string; description: string }>;
-  tabId: string;
-  invalidName?: boolean;
-  setName: (name: string) => void;
-  setDescription: (description: string) => void;
-  setInvalidName?: (invalidName: boolean) => void;
+  setName?: (name: string) => void;
+  setDescription?: (description: string) => void;
+  invalidNameList?: string[];
 };
 
 export type TooltipProps = {
@@ -240,8 +261,15 @@ export type LoadingComponentProps = {
   remSize: number;
 };
 
-export type ContentProps = { children: ReactNode };
+export type ContentProps = {
+  children: ReactNode;
+};
 export type HeaderProps = { children: ReactNode; description: string };
+export type TriggerProps = {
+  children: ReactNode;
+  tooltipContent?: ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+};
 
 export interface languageMap {
   [key: string]: string | undefined;
@@ -255,7 +283,7 @@ export type signUpInputStateType = {
 
 export type inputHandlerEventType = {
   target: {
-    value: string | boolean;
+    value: string;
     name: string;
   };
 };
@@ -265,21 +293,35 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
+  storeComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
+  onCancel?: () => void;
   title: string;
-  titleHeader: string;
-  asChild?: boolean;
-  modalContent: string;
-  modalContentTitle: string;
+  titleHeader?: string;
+  destructive?: boolean;
+  modalContentTitle?: string;
   cancelText: string;
   confirmationText: string;
-  children: ReactElement;
+  children:
+    | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
+    | React.ReactElement<ContentProps>;
   icon: string;
-  data: any;
-  index: number;
+  data?: any;
+  index?: number;
   onConfirm: (index, data) => void;
+  open?: boolean;
+  onClose?: (close: boolean) => void;
+  size?:
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "large"
+    | "large-h-full"
+    | "small-h-full"
+    | "medium-h-full";
 };
 
 export type UserManagementType = {
@@ -326,12 +368,18 @@ export type ApiKeyType = {
   onCloseModal: () => void;
 };
 
-export type ApiKeyInputType = {
-  apikeyname: string;
+export type StoreApiKeyType = {
+  children: ReactElement;
+  disabled?: boolean;
 };
 export type groupedObjType = {
   family: string;
   type: string;
+};
+
+export type nodeGroupedObjType = {
+  displayName: string;
+  node: string[] | string;
 };
 
 type test = {
@@ -390,11 +438,6 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type menuBarPropsType = {
-  flows: Array<headerFlowsType>;
-  tabId: string;
-};
-
 export type chatInputType = {
   chatValue: string;
   inputRef: {
@@ -433,11 +476,11 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setData: (newState: NodeDataType) => void;
   position: XYPosition;
   setShowNode: (boolean: any) => void;
   numberOfHandles: boolean[] | [];
   showNode: boolean;
+  setIsMinimized: (boolean: boolean) => void;
 };
 
 export type parsedDataType = {
@@ -467,7 +510,7 @@ export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
   value: string;
   nodeClass: APIClassType | undefined;
-  setNodeClass: (Class: APIClassType) => void | undefined;
+  setNodeClass: (Class: APIClassType, code?: string) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
@@ -493,8 +536,9 @@ export type genericModalPropsType = {
   modalTitle: string;
   type: number;
   nodeClass?: APIClassType;
-  setNodeClass?: (Class: APIClassType) => void;
+  setNodeClass?: (Class: APIClassType, code?: string) => void;
   children: ReactNode;
+  id?: string;
   readonly?: boolean;
 };
 
@@ -519,8 +563,7 @@ export type groupDataType = {
 };
 
 export type cardComponentPropsType = {
-  flow: FlowType;
-  id: string;
+  data: FlowType;
   onDelete?: () => void;
   button?: JSX.Element;
 };
@@ -581,6 +624,7 @@ export type validationStatusType = {
   params: string;
   progress: number;
   valid: boolean;
+  duration: string;
 };
 
 export type ApiKey = {

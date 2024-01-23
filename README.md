@@ -114,6 +114,10 @@ Each option is detailed below:
 - `--remove-api-keys/--no-remove-api-keys`: Toggles the option to remove API keys from the projects saved in the database. Can be set using the `LANGFLOW_REMOVE_API_KEYS` environment variable. The default is `no-remove-api-keys`.
 - `--install-completion [bash|zsh|fish|powershell|pwsh]`: Installs completion for the specified shell.
 - `--show-completion [bash|zsh|fish|powershell|pwsh]`: Shows completion for the specified shell, allowing you to copy it or customize the installation.
+- `--backend-only`: This parameter, with a default value of `False`, allows running only the backend server without the frontend. It can also be set using the `LANGFLOW_BACKEND_ONLY` environment variable.
+- `--store`: This parameter, with a default value of `True`, enables the store features, use `--no-store` to deactivate it. It can be configured using the `LANGFLOW_STORE` environment variable.
+
+These parameters are important for users who need to customize the behavior of Langflow, especially in development or specialized deployment scenarios. You may want to update the documentation to include these parameters for completeness and clarity.
 
 ### Environment Variables
 
@@ -129,7 +133,7 @@ Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) 
 
 Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial_spot.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 ## Deploy on Railway
 
@@ -143,7 +147,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://docs.langchain.com/docs/category/components) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://python.langchain.com/docs/integrations/components) to choose from, including LLMs, prompt serializers, agents, and chains.
 
 Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
 

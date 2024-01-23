@@ -17,22 +17,24 @@ export default function InputComponent({
   editNode = false,
   placeholder = "Type something...",
   className,
+  id = "",
   blurOnEnter = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className="relative w-full">
       {isForm ? (
         <Form.Control asChild>
           <Input
+            id={"form-" + id}
             ref={refInput}
             onBlur={onBlur}
             autoFocus={autoFocus}
@@ -53,6 +55,9 @@ export default function InputComponent({
             onChange={(e) => {
               onChange(e.target.value);
             }}
+            onCopy={(e) => {
+              e.preventDefault();
+            }}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
@@ -61,6 +66,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <Input
+          id={id}
           ref={refInput}
           type="text"
           onBlur={onBlur}

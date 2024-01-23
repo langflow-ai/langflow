@@ -4,6 +4,7 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
+  Component,
   LoginType,
   Users,
   changeUser,
@@ -12,6 +13,7 @@ import {
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { StoreComponentResponse } from "../../types/store";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -70,10 +72,10 @@ export async function postValidatePrompt(
   template: string,
   frontend_node: APIClassType
 ): Promise<AxiosResponse<PromptTypeAPI>> {
-  return await api.post(`${BASE_URL_API}validate/prompt`, {
-    name: name,
-    template: template,
-    frontend_node: frontend_node,
+  return api.post(`${BASE_URL_API}validate/prompt`, {
+    name,
+    template,
+    frontend_node,
   });
 }
 
@@ -112,12 +114,14 @@ export async function saveFlowToDatabase(newFlow: {
   data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
+  is_component?: boolean;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}flows/`, {
       name: newFlow.name,
       data: newFlow.data,
       description: newFlow.description,
+      is_component: newFlow.is_component,
     });
 
     if (response.status !== 201) {
@@ -293,8 +297,8 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  const respnose = await api.get(`${BASE_URL_API}version`);
-  return respnose.data;
+  const response = await api.get(`${BASE_URL_API}version`);
+  return response.data;
 }
 
 /**
@@ -353,7 +357,21 @@ export async function postCustomComponent(
   code: string,
   apiClass: APIClassType
 ): Promise<AxiosResponse<APIClassType>> {
-  return await api.post(`${BASE_URL_API}custom_component`, { code });
+  // let template = apiClass.template;
+  return await api.post(`${BASE_URL_API}custom_component`, {
+    code,
+    frontend_node: apiClass,
+  });
+}
+
+export async function postCustomComponentUpdate(
+  code: string,
+  field: string
+): Promise<AxiosResponse<APIClassType>> {
+  return await api.post(`${BASE_URL_API}custom_component/update`, {
+    code,
+    field,
+  });
 }
 
 export async function onLogin(user: LoginType) {
@@ -393,11 +411,9 @@ export async function autoLogin() {
   }
 }
 
-export async function renewAccessToken(token: string) {
+export async function renewAccessToken() {
   try {
-    if (token) {
-      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
-    }
+    return await api.post(`${BASE_URL_API}refresh`);
   } catch (error) {
     throw error;
   }
@@ -411,7 +427,6 @@ export async function getLoggedUser(): Promise<Users | null> {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return null;
@@ -425,7 +440,6 @@ export async function addUser(user: UserInputType): Promise<Array<Users>> {
     }
     return res.data;
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -442,7 +456,6 @@ export async function getUsersPage(
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return [];
@@ -455,7 +468,6 @@ export async function deleteUser(user_id: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -467,7 +479,6 @@ export async function updateUser(user_id: string, user: changeUser) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -482,7 +493,6 @@ export async function resetPassword(user_id: string, user: resetPasswordType) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -494,7 +504,6 @@ export async function getApiKey() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -506,7 +515,6 @@ export async function createApiKey(name: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -518,7 +526,327 @@ export async function deleteApiKey(api_key: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
+    throw error;
+  }
+}
+
+export async function addApiKeyStore(key: string) {
+  try {
+    const res = await api.post(`${BASE_URL_API}api_key/store`, {
+      api_key: key,
+    });
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Saves a new flow to the database.
+ *
+ * @param {FlowType} newFlow - The flow data to save.
+ * @returns {Promise<any>} The saved flow data.
+ * @throws Will throw an error if saving fails.
+ */
+export async function saveFlowStore(
+  newFlow: {
+    name?: string;
+    data: ReactFlowJsonObject | null;
+    description?: string;
+    style?: FlowStyleType;
+    is_component?: boolean;
+    parent?: string;
+    last_tested_version?: string;
+  },
+  tags: string[],
+  publicFlow = false
+): Promise<FlowType> {
+  try {
+    const response = await api.post(`${BASE_URL_API}store/components/`, {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
+      is_component: newFlow.is_component,
+      parent: newFlow.parent,
+      tags: tags,
+      private: !publicFlow,
+      status: publicFlow ? "Public" : "Private",
+      last_tested_version: newFlow.last_tested_version,
+    });
+
+    if (response.status !== 201) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+/**
+ * Fetches the flows from the store.
+ * @returns {Promise<>} A promise that resolves to an AxiosResponse containing the build status.
+ *
+ */
+export async function getFlowsStore(): Promise<AxiosResponse<FlowType[]>> {
+  return await api.get(`${BASE_URL_API}store/`);
+}
+
+export async function getStoreComponents({
+  component_id = null,
+  page = 1,
+  limit = 9999999,
+  is_component = null,
+  sort = "-count(liked_by)",
+  tags = [] || null,
+  liked = null,
+  isPrivate = null,
+  search = null,
+  filterByUser = null,
+  fields = null,
+}: {
+  component_id?: string | null;
+  page?: number;
+  limit?: number;
+  is_component?: boolean | null;
+  sort?: string;
+  tags?: string[] | null;
+  liked?: boolean | null;
+  isPrivate?: boolean | null;
+  search?: string | null;
+  filterByUser?: boolean | null;
+  fields?: Array<string> | null;
+}): Promise<StoreComponentResponse | undefined> {
+  try {
+    let url = `${BASE_URL_API}store/components/`;
+    const queryParams: any = [];
+    if (component_id !== undefined && component_id !== null) {
+      queryParams.push(`component_id=${component_id}`);
+    }
+    if (search !== undefined && search !== null) {
+      queryParams.push(`search=${search}`);
+    }
+    if (isPrivate !== undefined && isPrivate !== null) {
+      queryParams.push(`private=${isPrivate}`);
+    }
+    if (tags !== undefined && tags !== null && tags.length > 0) {
+      queryParams.push(`tags=${tags.join(encodeURIComponent(","))}`);
+    }
+    if (fields !== undefined && fields !== null && fields.length > 0) {
+      queryParams.push(`fields=${fields.join(encodeURIComponent(","))}`);
+    }
+
+    if (sort !== undefined && sort !== null) {
+      queryParams.push(`sort=${sort}`);
+    } else {
+      queryParams.push(`sort=-count(liked_by)`); // default sort
+    }
+
+    if (liked !== undefined && liked !== null) {
+      queryParams.push(`liked=${liked}`);
+    }
+
+    if (filterByUser !== undefined && filterByUser !== null) {
+      queryParams.push(`filter_by_user=${filterByUser}`);
+    }
+
+    if (page !== undefined) {
+      queryParams.push(`page=${page ?? 1}`);
+    }
+    if (limit !== undefined) {
+      queryParams.push(`limit=${limit ?? 9999999}`);
+    }
+    if (is_component !== null && is_component !== undefined) {
+      queryParams.push(`is_component=${is_component}`);
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function postStoreComponents(component: Component) {
+  try {
+    const res = await api.post(`${BASE_URL_API}store/components/`, component);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getComponent(component_id: string) {
+  try {
+    const res = await api.get(
+      `${BASE_URL_API}store/components/${component_id}`
+    );
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function searchComponent(
+  query: string | null,
+  page?: number | null,
+  limit?: number | null,
+  status?: string | null,
+  tags?: string[]
+): Promise<StoreComponentResponse | undefined> {
+  try {
+    let url = `${BASE_URL_API}store/components/`;
+    const queryParams: any = [];
+    if (query !== undefined && query !== null) {
+      queryParams.push(`search=${query}`);
+    }
+    if (page !== undefined && page !== null) {
+      queryParams.push(`page=${page}`);
+    }
+    if (limit !== undefined && limit !== null) {
+      queryParams.push(`limit=${limit}`);
+    }
+    if (status !== undefined && status !== null) {
+      queryParams.push(`status=${status}`);
+    }
+    if (tags !== undefined && tags !== null) {
+      queryParams.push(`tags=${tags}`);
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function checkHasApiKey() {
+  try {
+    const res = await api.get(`${BASE_URL_API}store/check/api_key`);
+    if (res?.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function checkHasStore() {
+  try {
+    const res = await api.get(`${BASE_URL_API}store/check/`);
+    if (res?.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getCountComponents(is_component?: boolean | null) {
+  try {
+    let url = `${BASE_URL_API}store/components/count`;
+    const queryParams: any = [];
+    if (is_component !== undefined) {
+      queryParams.push(`is_component=${is_component}`);
+    }
+
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
+    }
+
+    const res = await api.get(url);
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getStoreTags() {
+  try {
+    const res = await api.get(`${BASE_URL_API}store/tags`);
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export const postLikeComponent = (componentId: string) => {
+  return api.post(`${BASE_URL_API}store/users/likes/${componentId}`);
+};
+
+/**
+ * Updates an existing flow in the Store.
+ *
+ * @param {FlowType} updatedFlow - The updated flow data.
+ * @returns {Promise<any>} The updated flow data.
+ * @throws Will throw an error if the update fails.
+ */
+export async function updateFlowStore(
+  newFlow: {
+    name?: string;
+    data: ReactFlowJsonObject | null;
+    description?: string;
+    style?: FlowStyleType;
+    is_component?: boolean;
+    parent?: string;
+    last_tested_version?: string;
+  },
+  tags: string[],
+  publicFlow = false,
+  id: string
+): Promise<FlowType> {
+  try {
+    const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
+      name: newFlow.name,
+      data: newFlow.data,
+      description: newFlow.description,
+      is_component: newFlow.is_component,
+      parent: newFlow.parent,
+      tags: tags,
+      private: !publicFlow,
+      last_tested_version: newFlow.last_tested_version,
+    });
+
+    if (response.status !== 201) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function requestLogout() {
+  try {
+    const response = await api.post(`${BASE_URL_API}logout`);
+    return response.data;
+  } catch (error) {
+    console.error(error);
     throw error;
   }
 }

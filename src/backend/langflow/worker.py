@@ -1,15 +1,13 @@
-from langflow.core.celery_app import celery_app
-from typing import Any, Dict, Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
+from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
-from langflow.processing.process import (
-    Result,
-    generate_result,
-    process_inputs,
-)
+from langflow.core.celery_app import celery_app
+from langflow.processing.process import Result, generate_result, process_inputs
+from langflow.services.deps import get_session_service
 from langflow.services.manager import initialize_session_service
-from langflow.services.getters import get_session_service
+from loguru import logger
+from rich import print
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -27,36 +25,51 @@ def build_vertex(self, vertex: "Vertex") -> "Vertex":
     """
     try:
         vertex.task_id = self.request.id
-        vertex.build()
+        async_to_sync(vertex.build)()
         return vertex
     except SoftTimeLimitExceeded as e:
-        raise self.retry(
-            exc=SoftTimeLimitExceeded("Task took too long"), countdown=2
-        ) from e
+        raise self.retry(exc=SoftTimeLimitExceeded("Task took too long"), countdown=2) from e
 
 
 @celery_app.task(acks_late=True)
 def process_graph_cached_task(
     data_graph: Dict[str, Any],
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[dict, List[dict]]] = None,
     clear_cache=False,
     session_id=None,
 ) -> Dict[str, Any]:
-    initialize_session_service()
-    session_service = get_session_service()
-    if clear_cache:
-        session_service.clear_session(session_id)
-    if session_id is None:
-        session_id = session_service.generate_key(
-            session_id=session_id, data_graph=data_graph
-        )
-    # Load the graph using SessionService
-    graph, artifacts = session_service.load_session(session_id, data_graph)
-    built_object = graph.build()
-    processed_inputs = process_inputs(inputs, artifacts)
-    result = generate_result(built_object, processed_inputs)
-    # langchain_object is now updated with the new memory
-    # we need to update the cache with the updated langchain_object
-    session_service.update_session(session_id, (graph, artifacts))
+    try:
+        initialize_session_service()
+        session_service = get_session_service()
 
-    return Result(result=result, session_id=session_id).dict()
+        if clear_cache:
+            session_service.clear_session(session_id)
+
+        if session_id is None:
+            session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
+
+        # Use async_to_sync to handle the asynchronous part of the session service
+        session_data = async_to_sync(session_service.load_session, force_new_loop=True)(session_id, data_graph)
+        logger.warning(f"session_data: {session_data}")
+        graph, artifacts = session_data if session_data else (None, None)
+
+        if not graph:
+            raise ValueError("Graph not found in the session")
+
+        # Use async_to_sync for the asynchronous build method
+        built_object = async_to_sync(graph.build, force_new_loop=True)()
+
+        logger.debug(f"Built object: {built_object}")
+
+        processed_inputs = process_inputs(inputs, artifacts or {})
+        result = async_to_sync(generate_result, force_new_loop=True)(built_object, processed_inputs)
+
+        # Update the session with the new data
+        session_service.update_session(session_id, (graph, artifacts))
+        result_object = Result(result=result, session_id=session_id).model_dump()
+        print(f"Result object: {result_object}")
+        return result_object
+    except Exception as e:
+        logger.error(f"Error in process_graph_cached_task: {e}")
+        # Handle the exception as needed, maybe re-raise or return an error message
+        raise

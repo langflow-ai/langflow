@@ -1,9 +1,10 @@
 import json
+
 import pytest
 from langchain.chains.base import Chain
-from langflow.processing.process import load_flow_from_json
 from langflow.graph import Graph
-from langflow.utils.payload import get_root_node
+from langflow.processing.load import load_flow_from_json
+from langflow.utils.payload import get_root_vertex
 
 
 def test_load_flow_from_json():
@@ -22,14 +23,15 @@ def test_load_flow_from_json_with_tweaks():
     assert loaded.llm.model_name == "test model"
 
 
-def test_get_root_node():
+def test_get_root_vertex():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    root = get_root_node(graph)
+    root = get_root_vertex(graph)
     assert root is not None
     assert hasattr(root, "id")
+    assert hasattr(root, "data")
     assert hasattr(root, "data")

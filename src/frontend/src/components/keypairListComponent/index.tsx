@@ -12,11 +12,9 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   duplicateKey,
-  advanced = false,
-  dataValue,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
     }
   }, [disabled]);
@@ -55,7 +53,10 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-2">
               <Input
-                id={"keypair" + index}
+                data-testid={
+                  editNode ? "editNodekeypair" + index : "keypair" + index
+                }
+                id={editNode ? "editNodekeypair" + index : "keypair" + index}
                 type="text"
                 value={key.trim()}
                 className={classNames(
@@ -64,16 +65,19 @@ export default function KeypairListComponent({
                 )}
                 placeholder="Type key..."
                 onChange={(event) => handleChangeKey(event, index)}
-                onKeyDown={(e) => {
-                  if (e.ctrlKey && e.key === "Backspace") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
               />
 
               <Input
-                id={"keypair" + (index + 100).toString()}
+                data-testid={
+                  editNode
+                    ? "editNodekeypair" + (index + 100).toString()
+                    : "keypair" + (index + 100).toString()
+                }
+                id={
+                  editNode
+                    ? "editNodekeypair" + (index + 100).toString()
+                    : "keypair" + (index + 100).toString()
+                }
                 type="text"
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
@@ -90,7 +94,16 @@ export default function KeypairListComponent({
                     newInputList.push({ "": "" });
                     onChange(newInputList);
                   }}
-                  id={"plusbtn" + index.toString()}
+                  id={
+                    editNode
+                      ? "editNodeplusbtn" + index.toString()
+                      : "plusbtn" + index.toString()
+                  }
+                  data-testid={
+                    editNode
+                      ? "editNodeplusbtn" + index.toString()
+                      : "plusbtn" + index.toString()
+                  }
                 >
                   <IconComponent
                     name="Plus"
@@ -104,7 +117,16 @@ export default function KeypairListComponent({
                     newInputList.splice(index, 1);
                     onChange(newInputList);
                   }}
-                  id={"minusbtn" + index.toString()}
+                  data-testid={
+                    editNode
+                      ? "editNodeminusbtn" + index.toString()
+                      : "minusbtn" + index.toString()
+                  }
+                  id={
+                    editNode
+                      ? "editNodeminusbtn" + index.toString()
+                      : "minusbtn" + index.toString()
+                  }
                 >
                   <IconComponent
                     name="X"

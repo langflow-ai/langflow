@@ -34,6 +34,7 @@ The CustomComponent class serves as the foundation for creating custom component
   | --------------------------------------------------------- |
   | _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
   | _`langflow.field_typing.NestedDict`_                      |
+  | _`langflow.field_typing.Prompt`_                         |
   | _`langchain.chains.base.Chain`_                           |
   | _`langchain.PromptTemplate`_                              |
   | _`langchain.llms.base.BaseLLM`_                           |
@@ -48,15 +49,22 @@ The CustomComponent class serves as the foundation for creating custom component
   The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
 
   <Admonition type="info">
-    Unlike Langchain types, base Python types do not add a
+      To use the _`Prompt`_ type, you must also add _`**kwargs`_ to the _`build`_ method. This is because the _`Prompt`_ type passes new arbitrary keyword arguments to it.
+
+      If you want to add the values of the variables to the template you defined, you must format the PromptTemplate inside the CustomComponent class.
+        </Admonition>
+
+
+  <Admonition type="info">
+      Unlike Langchain types, base Python types do not add a
     [handle](../guidelines/components) to the field by default. To add handles,
     use the _`input_types`_ key in the _`build_config`_ method.
-  </Admonition>
+        </Admonition>
 
 - **build_config**: Used to define the configuration fields of the component (if applicable). It should always return a dictionary with specific keys representing the field names and corresponding configurations. This method is called when the code is processed (i.e., when you click _Check and Save_ in the code editor). It must follow the format described below:
 
   - Top-level keys are field names.
-  - Their values are also of type _`dict`_. They specify the behavior of the generated fields.
+  - Their values are can be of type _`langflow.field_typing.TemplateField`_ or _`dict`_. They specify the behavior of the generated fields.
 
   Below are the available keys used to configure component fields:
 
@@ -73,7 +81,7 @@ The CustomComponent class serves as the foundation for creating custom component
   | _`required: bool`_         | Makes the field required.                                                                                                                                                                                                                                                   |
   | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
   | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
-
+  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                                     |
 - The CustomComponent class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
 
   | Method Name    | Description                                                         |

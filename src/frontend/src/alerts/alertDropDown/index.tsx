@@ -1,23 +1,27 @@
-import { useContext, useState } from "react";
+import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
-import { alertContext } from "../../contexts/alertContext";
+import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
 export default function AlertDropdown({
   children,
 }: AlertDropdownType): JSX.Element {
-  const {
-    notificationList,
-    clearNotificationList,
-    removeFromNotificationList,
-    setNotificationCenter,
-  } = useContext(alertContext);
+  const notificationList = useAlertStore((state) => state.notificationList);
+  const clearNotificationList = useAlertStore(
+    (state) => state.clearNotificationList
+  );
+  const removeFromNotificationList = useAlertStore(
+    (state) => state.removeFromNotificationList
+  );
+  const setNotificationCenter = useAlertStore(
+    (state) => state.setNotificationCenter
+  );
 
   const [open, setOpen] = useState(false);
 
@@ -30,7 +34,7 @@ export default function AlertDropdown({
       }}
     >
       <PopoverTrigger>{children}</PopoverTrigger>
-      <PopoverContent className="flex h-[500px] w-[500px] flex-col">
+      <PopoverContent className="nocopy nopan nodelete nodrag noundo flex h-[500px] w-[500px] flex-col">
         <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
           Notifications
           <div className="flex gap-3 pr-3 ">

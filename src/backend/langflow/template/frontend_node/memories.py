@@ -1,14 +1,15 @@
 from typing import Optional
 
+from langchain_community.chat_message_histories.mongodb import (
+    DEFAULT_COLLECTION_NAME,
+    DEFAULT_DBNAME,
+)
+from langchain_community.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import INPUT_KEY_INFO, OUTPUT_KEY_INFO
 from langflow.template.template.base import Template
-from langchain.memory.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
-from langchain.memory.chat_message_histories.mongodb import (
-    DEFAULT_COLLECTION_NAME,
-    DEFAULT_DBNAME,
-)
 
 
 class MemoryFrontendNode(FrontendNode):
@@ -76,9 +77,7 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.value = ""
-            field.info = (
-                INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
-            )
+            field.info = INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
 
         if field.name == "memory_key":
             field.value = "chat_history"

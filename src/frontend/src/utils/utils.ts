@@ -1,14 +1,19 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import {
+  APIDataType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   IVarHighlightType,
   groupedObjType,
+  nodeGroupedObjType,
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { TabsState } from "../types/tabs";
+import { FlowState, FlowsState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -53,7 +58,8 @@ export function normalCaseToSnakeCase(str: string): string {
     .join("_");
 }
 
-export function toTitleCase(str: string): string {
+export function toTitleCase(str: string | undefined): string {
+  if (!str) return "";
   let result = str
     .split("_")
     .map((word, index) => {
@@ -102,13 +108,15 @@ export function groupByFamily(
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
     category: string;
-    nodes: string[];
+    nodes: nodeGroupedObjType[];
     full: boolean;
+    display_name?: string;
   }> = [];
   let arrOfPossibleOutputs: Array<{
     category: string;
-    nodes: string[];
+    nodes: nodeGroupedObjType[];
     full: boolean;
+    display_name?: string;
   }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
@@ -121,18 +129,23 @@ export function groupByFamily(
     "int",
   ]);
 
-  const checkBaseClass = (template: TemplateVariableType) =>
-    template.type &&
-    template.show &&
-    ((!excludeTypes.has(template.type) && baseClassesSet.has(template.type)) ||
-      (template.input_types &&
-        template.input_types.some((inputType) =>
-          baseClassesSet.has(inputType)
-        )));
+  const checkBaseClass = (template: TemplateVariableType) => {
+    return (
+      template.type &&
+      template.show &&
+      ((!excludeTypes.has(template.type) &&
+        baseClassesSet.has(template.type)) ||
+        (template.input_types &&
+          template.input_types.some((inputType) => {
+            baseClassesSet.has(inputType);
+          })))
+    );
+  };
 
   if (flow) {
     for (const node of flow) {
       const nodeData = node.data;
+
       const foundNode = checkedNodes.get(nodeData.type);
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
@@ -143,16 +156,18 @@ export function groupByFamily(
           nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ),
+        displayName: nodeData.node?.display_name,
       });
     }
   }
 
   for (const [d, nodes] of Object.entries(data)) {
-    let tempInputs: string[] = [],
-      tempOutputs: string[] = [];
+    let tempInputs: nodeGroupedObjType[] = [],
+      tempOutputs: nodeGroupedObjType[] = [];
 
     for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
+
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
@@ -161,15 +176,18 @@ export function groupByFamily(
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ),
+          displayName: node?.display_name,
         };
-        checkedNodes.set(n, foundNode);
       }
 
-      if (foundNode.hasBaseClassInTemplate) tempInputs.push(n);
-      if (foundNode.hasBaseClassInBaseClasses) tempOutputs.push(n);
+      if (foundNode.hasBaseClassInTemplate)
+        tempInputs.push({ node: n, displayName: foundNode.displayName });
+      if (foundNode.hasBaseClassInBaseClasses)
+        tempOutputs.push({ node: n, displayName: foundNode.displayName });
     }
 
     const totalNodes = Object.keys(nodes!).length;
+
     if (tempInputs.length)
       arrOfPossibleInputs.push({
         category: d,
@@ -187,21 +205,23 @@ export function groupByFamily(
   return left
     ? arrOfPossibleOutputs.map((output) => ({
         family: output.category,
-        type: output.full ? "" : output.nodes.join(", "),
+        type: output.full
+          ? ""
+          : output.nodes.map((item) => item.node).join(", "),
+        display_name: "",
       }))
     : arrOfPossibleInputs.map((input) => ({
         family: input.category,
-        type: input.full ? "" : input.nodes.join(", "),
+        type: input.full ? "" : input.nodes.map((item) => item.node).join(", "),
+        display_name: input.nodes.map((item) => item.displayName).join(", "),
       }));
 }
 
-export function buildInputs(tabsState: TabsState, id: string): string {
-  return tabsState &&
-    tabsState[id] &&
-    tabsState[id].formKeysData &&
-    tabsState[id].formKeysData.input_keys &&
-    Object.keys(tabsState[id].formKeysData.input_keys!).length > 0
-    ? JSON.stringify(tabsState[id].formKeysData.input_keys)
+export function buildInputs(flowState?: FlowState): string {
+  return flowState &&
+    flowState.input_keys &&
+    Object.keys(flowState.input_keys!).length > 0
+    ? JSON.stringify(flowState.input_keys)
     : '{"input": "message"}';
 }
 
@@ -273,21 +293,14 @@ export function buildTweakObject(tweak: tweakType) {
 /**
  * Function to get Chat Input Field
  * @param {FlowType} flow - The current flow.
- * @param {TabsState} tabsState - The current tabs state.
+ * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, tabsState?: TabsState) {
+export function getChatInputField(flow: FlowType, flowState?: FlowState) {
   let chat_input_field = "text";
 
-  if (
-    tabsState &&
-    tabsState[flow.id] &&
-    tabsState[flow.id].formKeysData &&
-    tabsState[flow.id].formKeysData.input_keys
-  ) {
-    chat_input_field = Object.keys(
-      tabsState[flow.id].formKeysData.input_keys!
-    )[0];
+  if (flowState && flowState.input_keys) {
+    chat_input_field = Object.keys(flowState.input_keys!)[0];
   }
   return chat_input_field;
 }
@@ -301,7 +314,7 @@ export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: TabsState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
 
@@ -310,7 +323,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(flowState);
   return `import requests
 from typing import Optional
 
@@ -365,11 +378,11 @@ export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
   tweak?: any[],
-  tabsState?: TabsState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(flowState);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -393,11 +406,11 @@ export function getCurlCode(
 export function getPythonCode(
   flow: FlowType,
   tweak?: any[],
-  tabsState?: TabsState
+  flowState?: FlowState
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(tabsState!, flow.id);
+  const inputs = buildInputs(flowState);
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -418,12 +431,12 @@ flow(inputs)`;
 export function getWidgetCode(
   flow: FlowType,
   isAuth: boolean,
-  tabsState?: TabsState
+  flowState?: FlowState
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(tabsState!, flow.id);
-  let chat_input_field = getChatInputField(flow, tabsState);
+  const inputs = buildInputs(flowState);
+  let chat_input_field = getChatInputField(flow, flowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
@@ -434,7 +447,7 @@ chat_input_field: Input key that you want the chat to send the user message with
   window_title="${flowName}"
   flow_id="${flowId}"
   ${
-    tabsState![flow.id] && tabsState![flow.id].formKeysData
+    flowState
       ? `chat_inputs='${inputs}'
   chat_input_field="${chat_input_field}"
   `
@@ -549,4 +562,86 @@ export function tabsArray(codes: string[], method: number) {
       code: codes[4],
     },
   ];
+}
+
+export function checkLocalStorageKey(key: string): boolean {
+  return localStorage.getItem(key) !== null;
+}
+
+export function IncrementObjectKey(
+  object: object,
+  key: string
+): { newKey: string; increment: number } {
+  let count = 1;
+  const type = removeCountFromString(key);
+  let newKey = type + " " + `(${count})`;
+  while (object[newKey]) {
+    count++;
+    newKey = type + " " + `(${count})`;
+  }
+  return { newKey, increment: count };
+}
+
+export function removeCountFromString(input: string): string {
+  // Define a regex pattern to match the count in parentheses
+  const pattern = /\s*\(\w+\)\s*$/;
+
+  // Use the `replace` method to remove the matched pattern
+  const result = input.replace(pattern, "");
+
+  return result.trim(); // Trim any leading/trailing spaces
+}
+
+export function createRandomKey(key: string, uid: string): string {
+  return removeCountFromString(key) + ` (${uid})`;
+}
+
+export function sensitiveSort(a: string, b: string): number {
+  // Extract the name and number from each string using regular expressions
+  const regex = /(.+) \((\w+)\)/;
+  const matchA = a.match(regex);
+  const matchB = b.match(regex);
+
+  if (matchA && matchB) {
+    // Compare the names alphabetically
+    const nameA = matchA[1];
+    const nameB = matchB[1];
+    if (nameA !== nameB) {
+      return nameA.localeCompare(nameB);
+    }
+
+    // If the names are the same, compare the numbers numerically
+    const numberA = parseInt(matchA[2]);
+    const numberB = parseInt(matchB[2]);
+    return numberA - numberB;
+  } else {
+    // Handle cases where one or both strings do not match the expected pattern
+    // Simple strings are treated as pure alphabetical comparisons
+    return a.localeCompare(b);
+  }
+}
+// this function is used to get the set of keys from an object
+export function getSetFromObject(obj: object, key?: string): Set<string> {
+  const set = new Set<string>();
+  if (key) {
+    for (const objKey in obj) {
+      set.add(obj[objKey][key]);
+    }
+  } else {
+    for (const key in obj) {
+      set.add(key);
+    }
+  }
+  return set;
+}
+
+export function getFieldTitle(
+  template: APITemplateType,
+  templateField: string
+): string {
+  return template[templateField].display_name
+    ? template[templateField].display_name!
+    : template[templateField].name
+    ? toTitleCase(template[templateField].name!)
+    : toTitleCase(templateField);
 }

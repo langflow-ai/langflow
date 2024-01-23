@@ -5,8 +5,6 @@ agents:
     documentation: "https://python.langchain.com/docs/modules/agents/toolkits/openapi"
   CSVAgent:
     documentation: "https://python.langchain.com/docs/modules/agents/toolkits/csv"
-  AgentInitializer:
-    documentation: "https://python.langchain.com/docs/modules/agents/agent_types/"
   VectorStoreAgent:
     documentation: ""
   VectorStoreRouterAgent:
@@ -14,14 +12,14 @@ agents:
   SQLAgent:
     documentation: ""
 chains:
-  LLMChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
+  # LLMChain:
+  #   documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
   LLMMathChain:
     documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_math"
   LLMCheckerChain:
     documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
-  ConversationChain:
-    documentation: ""
+  # ConversationChain:
+  #   documentation: ""
   SeriesCharacterChain:
     documentation: ""
   MidJourneyPromptChain:
@@ -106,6 +104,11 @@ embeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere"
   VertexAIEmbeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/google_vertex_ai_palm"
+  AmazonBedrockEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
+  OllamaEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/ollama"
+
 llms:
   OpenAI:
     documentation: "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai"
@@ -265,16 +268,16 @@ retrievers:
   # ZepRetriever:
   #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
 vectorstores:
-  Chroma:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
+  # Chroma:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
   Qdrant:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
-  Weaviate:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
   FAISS:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
   Pinecone:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
+  ElasticsearchStore:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/elasticsearch"
   SupabaseVectorStore:
     documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
   MongoDBAtlasVectorSearch:
@@ -294,4 +297,4 @@ output_parsers:
     documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
 custom_components:
   CustomComponent:
-    documentation: ""
+    documentation: "https://docs.langflow.org/guidelines/custom-component"

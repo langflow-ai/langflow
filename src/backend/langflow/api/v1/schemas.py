@@ -2,12 +2,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
-from langflow.services.database.models.api_key.api_key import ApiKeyRead
+
+from langflow.services.database.models.api_key.model import ApiKeyRead
+from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from langflow.services.database.models.base import orjson_dumps
-
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class BuildStatus(Enum):
@@ -58,9 +58,17 @@ class ProcessResponse(BaseModel):
     """Process response schema."""
 
     result: Any
+    status: Optional[str] = None
     task: Optional[TaskResponse] = None
     session_id: Optional[str] = None
     backend: Optional[str] = None
+
+
+class PreloadResponse(BaseModel):
+    """Preload response schema."""
+
+    session_id: Optional[str] = None
+    is_clear: Optional[bool] = None
 
 
 # TaskStatusResponse(
@@ -91,7 +99,8 @@ class ChatResponse(ChatMessage):
     is_bot: bool = True
     files: list = []
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_message_type(cls, v):
         if v not in ["start", "stream", "end", "error", "info", "file"]:
             raise ValueError("type must be start, stream, end, error, info, or file")
@@ -109,12 +118,13 @@ class PromptResponse(ChatMessage):
 class FileResponse(ChatMessage):
     """File response schema."""
 
-    data: Any
+    data: Any = None
     data_type: str
     type: str = "file"
     is_bot: bool = True
 
-    @validator("data_type")
+    @field_validator("data_type")
+    @classmethod
     def validate_data_type(cls, v):
         if v not in ["image", "csv"]:
             raise ValueError("data_type must be image or csv")
@@ -149,13 +159,13 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
 class CustomComponentCode(BaseModel):
     code: str
+    field: Optional[str] = None
+    frontend_node: Optional[dict] = None
 
 
 class CustomComponentResponseError(BaseModel):
@@ -198,3 +208,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+
+class ApiKeyCreateRequest(BaseModel):
+    api_key: str

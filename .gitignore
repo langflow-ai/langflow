@@ -17,6 +17,9 @@ qdrant_storage
 .chroma
 .ruff_cache
 
+# PyCharm
+.idea/
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
@@ -166,6 +169,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.testmondata*
 
 # Translations
 *.mo
@@ -255,3 +259,4 @@ langflow.db
 /tmp/*
 src/backend/langflow/frontend/
 .docker
+scratchpad*

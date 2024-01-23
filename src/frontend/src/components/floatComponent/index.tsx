@@ -7,18 +7,18 @@ export default function FloatComponent({
   value,
   onChange,
   disabled,
+  rangeSpec,
   editNode = false,
 }: FloatComponentType): JSX.Element {
-  const step = 0.1;
-  const min = -2;
-  const max = 2;
-
+  const step = rangeSpec?.step ?? 0.1;
+  const min = rangeSpec?.min ?? -2;
+  const max = rangeSpec?.max ?? 2;
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className="w-full">
@@ -40,13 +40,15 @@ export default function FloatComponent({
         disabled={disabled}
         className={editNode ? "input-edit-node" : ""}
         placeholder={
-          editNode ? "Number -2 to 2" : "Type a number from minus two to two"
+          editNode
+            ? `Enter a value between ${min} and ${max}`
+            : `Enter a value between ${min} and ${max}`
         }
         onChange={(event) => {
           onChange(event.target.value);
         }}
         onKeyDown={(e) => {
-          handleKeyDown(e, value, "0");
+          handleKeyDown(e, value, "");
         }}
       />
     </div>

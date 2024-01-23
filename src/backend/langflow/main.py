@@ -1,20 +1,27 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
-from fastapi import FastAPI
+from urllib.parse import urlencode
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
-
-
 from langflow.interface.utils import setup_llm_caching
-from langflow.services.utils import initialize_services
-from langflow.services.plugins.langfuse import LangfuseInstance
-from langflow.services.utils import (
-    teardown_services,
-)
+from langflow.services.plugins.langfuse_plugin import LangfuseInstance
+from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_services()
+    setup_llm_caching()
+    LangfuseInstance.update()
+    yield
+    teardown_services()
 
 
 def create_app():
@@ -22,8 +29,7 @@ def create_app():
 
     configure()
 
-    app = FastAPI()
-
+    app = FastAPI(lifespan=lifespan)
     origins = ["*"]
 
     app.add_middleware(
@@ -34,18 +40,21 @@ def create_app():
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def flatten_query_string_lists(request: Request, call_next):
+        flattened: list[tuple[str, str]] = []
+        for key, value in request.query_params.multi_items():
+            flattened.extend((key, entry) for entry in value.split(","))
+
+        request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
+
+        return await call_next(request)
+
     @app.get("/health")
     def health():
         return {"status": "ok"}
 
     app.include_router(router)
-
-    app.on_event("startup")(initialize_services)
-    app.on_event("startup")(setup_llm_caching)
-    app.on_event("startup")(LangfuseInstance.update)
-
-    app.on_event("shutdown")(teardown_services)
-    app.on_event("shutdown")(LangfuseInstance.teardown)
 
     return app
 
@@ -78,9 +87,7 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(
-    static_files_dir: Optional[Path] = None, backend_only: bool = False
-) -> FastAPI:
+def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:
@@ -96,11 +103,12 @@ def setup_app(
 
 if __name__ == "__main__":
     import uvicorn
+
     from langflow.__main__ import get_number_of_workers
 
     configure()
     uvicorn.run(
-        create_app,
+        "langflow.main:create_app",
         host="127.0.0.1",
         port=7860,
         workers=get_number_of_workers(),

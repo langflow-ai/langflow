@@ -3,7 +3,6 @@ from typing import List, Optional
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 
-
 BASIC_FIELDS = [
     "work_dir",
     "collection_name",
@@ -12,6 +11,7 @@ BASIC_FIELDS = [
     "persist_directory",
     "persist",
     "weaviate_url",
+    "es_url",
     "index_name",
     "namespace",
     "folder_path",
@@ -171,6 +171,33 @@ class VectorStoreFrontendNode(FrontendNode):
                 value="",
             )
             extra_fields.extend((extra_field, extra_field2))
+
+        elif self.template.type_name == "ElasticsearchStore":
+            # add elastic and elastic credentials
+            extra_field = TemplateField(
+                name="es_url",
+                field_type="str",
+                required=True,
+                placeholder="http://localhost:9200",
+                show=True,
+                advanced=False,
+                multiline=False,
+                value="http://localhost:9200",
+                display_name="Elasticsearch URL",
+            )
+            extra_field2 = TemplateField(
+                name="index_name",
+                field_type="str",
+                required=True,
+                placeholder="test-index",
+                show=True,
+                advanced=False,
+                multiline=False,
+                value="test-index",
+                display_name="Index Name",
+            )
+            extra_fields.extend((extra_field, extra_field2))
+
         elif self.template.type_name == "FAISS":
             extra_field = TemplateField(
                 name="folder_path",
@@ -313,7 +340,7 @@ class VectorStoreFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.is_list = True
-        elif "embedding" in field.name:
+        elif field.name and "embedding" in field.name:
             # for backwards compatibility
             field.name = "embedding"
             field.required = True

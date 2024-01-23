@@ -28,6 +28,7 @@ const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
     <DialogTrigger
       className={asChild ? "" : "w-full"}
       hidden={children ? false : true}
+      disabled={disable}
       asChild={asChild}
     >
       {children}
@@ -67,7 +68,8 @@ interface BaseModalProps {
     | "large"
     | "large-h-full"
     | "small-h-full"
-    | "medium-h-full";
+    | "medium-h-full"
+    | "smaller-h-full";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -98,11 +100,15 @@ function BaseModal({
   switch (size) {
     case "x-small":
       minWidth = "min-w-[20vw]";
-      height = "h-[10vh]";
+      height = " ";
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
-      height = "h-[27vh]";
+      height = "h-[11rem]";
+      break;
+    case "smaller-h-full":
+      minWidth = "min-w-[40vw]";
+      height = "h-full";
       break;
     case "small":
       minWidth = "min-w-[40vw]";
@@ -145,9 +151,7 @@ function BaseModal({
         <div className="truncate-doubleline word-break-break-word">
           {headerChild}
         </div>
-        <div className={`mt-2 flex flex-col ${height!} w-full `}>
-          {ContentChild}
-        </div>
+        <div className={`flex flex-col ${height!} w-full `}>{ContentChild}</div>
         {ContentFooter && (
           <div className="flex flex-row-reverse">{ContentFooter}</div>
         )}

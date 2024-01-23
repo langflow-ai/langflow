@@ -1,15 +1,12 @@
 import { Transition } from "@headlessui/react";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import Loading from "../../../components/ui/loading";
-import { useSSE } from "../../../contexts/SSEContext";
-import { alertContext } from "../../../contexts/alertContext";
-import { typesContext } from "../../../contexts/typesContext";
 import { postBuildInit } from "../../../controllers/API";
 import { FlowType } from "../../../types/flow";
 
-import { TabsContext } from "../../../contexts/tabsContext";
+import useAlertStore from "../../../stores/alertStore";
+import useFlowStore from "../../../stores/flowStore";
 import { parsedDataType } from "../../../types/components";
-import { TabsState } from "../../../types/tabs";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -24,11 +21,15 @@ export default function BuildTrigger({
   setIsBuilt: any;
   isBuilt: boolean;
 }): JSX.Element {
-  const { updateSSEData, isBuilding, setIsBuilding, sseData } = useSSE();
-  const { reactFlowInstance } = useContext(typesContext);
-  const { setTabsState } = useContext(TabsContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const [isIconTouched, setIsIconTouched] = useState(false);
+  const updateSSEData = useFlowStore((state) => state.updateSSEData);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setFlowState = useFlowStore((state) => state.setFlowState);
+
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
 
@@ -37,10 +38,7 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(
-        reactFlowInstance!.getNodes(),
-        reactFlowInstance!.getEdges()
-      );
+      const errors = validateNodes(nodes, edges);
       if (errors.length > 0) {
         setErrorData({
           title: "Oops! Looks like you missed something",
@@ -98,16 +96,7 @@ export default function BuildTrigger({
           // If the event is a log, log it
           setSuccessData({ title: parsedData.log });
         } else if (parsedData.input_keys !== undefined) {
-          //@ts-ignore
-          setTabsState((old: TabsState) => {
-            return {
-              ...old,
-              [flowId]: {
-                ...old[flowId],
-                formKeysData: parsedData,
-              },
-            };
-          });
+          setFlowState(parsedData);
         } else {
           // Otherwise, process the data
           const isValid = processStreamResult(parsedData);
@@ -153,14 +142,6 @@ export default function BuildTrigger({
     }
   }
 
-  const handleMouseEnter = () => {
-    setIsIconTouched(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsIconTouched(false);
-  };
-
   return (
     <Transition
       show={!open}
@@ -178,8 +159,6 @@ export default function BuildTrigger({
           onClick={() => {
             handleBuild(flow);
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >
           <button>
             <div className="round-button-div">

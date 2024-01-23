@@ -1,31 +1,32 @@
-import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
+import { ReactNode, forwardRef, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
-import { removeApiKeys } from "../../utils/reactflowUtils";
+import useAlertStore from "../../stores/alertStore";
+import { useDarkStore } from "../../stores/darkStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const { flows, tabId, downloadFlow } = useContext(TabsContext);
-    const { setNoticeData } = useContext(alertContext);
+    const version = useDarkStore((state) => state.version);
+    const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(true);
-    const flow = flows.find((f) => f.id === tabId);
+    const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     useEffect(() => {
-      setName(flow!.name);
-      setDescription(flow!.description);
-    }, [flow!.name, flow!.description]);
-    const [name, setName] = useState(flow!.name);
-    const [description, setDescription] = useState(flow!.description);
+      setName(currentFlow!.name);
+      setDescription(currentFlow!.description);
+    }, [currentFlow!.name, currentFlow!.description]);
+    const [name, setName] = useState(currentFlow!.name);
+    const [description, setDescription] = useState(currentFlow!.description);
     const [open, setOpen] = useState(false);
 
     return (
-      <BaseModal size="smaller" open={open} setOpen={setOpen}>
-        <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
+      <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
+        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent
@@ -38,8 +39,6 @@ const ExportModal = forwardRef(
           <EditFlowSettings
             name={name}
             description={description}
-            flows={flows}
-            tabId={tabId}
             setName={setName}
             setDescription={setDescription}
           />
@@ -55,7 +54,7 @@ const ExportModal = forwardRef(
               Save with my API keys
             </label>
           </div>
-          <span className="text-xs text-destructive">
+          <span className=" text-xs text-destructive ">
             Caution: Uncheck this box only removes API keys from fields
             specifically designated for API keys.
           </span>
@@ -66,7 +65,14 @@ const ExportModal = forwardRef(
             onClick={() => {
               if (checked) {
                 downloadFlow(
-                  flows.find((flow) => flow.id === tabId)!,
+                  {
+                    id: currentFlow!.id,
+                    data: currentFlow!.data!,
+                    description,
+                    name,
+                    last_tested_version: version,
+                    is_component: false,
+                  },
                   name!,
                   description
                 );
@@ -76,7 +82,14 @@ const ExportModal = forwardRef(
                 });
               } else
                 downloadFlow(
-                  removeApiKeys(flows.find((flow) => flow.id === tabId)!),
+                  removeApiKeys({
+                    id: currentFlow!.id,
+                    data: currentFlow!.data!,
+                    description,
+                    name,
+                    last_tested_version: version,
+                    is_component: false,
+                  }),
                   name!,
                   description
                 );

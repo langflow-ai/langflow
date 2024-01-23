@@ -1,21 +1,31 @@
-import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
+import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
-import CommunityPage from "./pages/CommunityPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
+import ComponentsComponent from "./pages/MainPage/components/components";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
 
 const Router = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    // Redirect from root to /flows
+    if (window.location.pathname === "/") {
+      navigate("/flows");
+    }
+  }, [navigate]);
   return (
     <Routes>
       <Route
@@ -25,15 +35,37 @@ const Router = () => {
             <HomePage />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route
+          path="flows"
+          element={<ComponentsComponent key="flows" is_component={false} />}
+        />
+        <Route
+          path="components"
+          element={<ComponentsComponent key="components" />}
+        />
+      </Route>
       <Route
-        path="/community"
+        path="/store"
         element={
           <ProtectedRoute>
-            <CommunityPage />
+            <StoreGuard>
+              <StorePage />
+            </StoreGuard>
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/store/:id/"
+        element={
+          <ProtectedRoute>
+            <StoreGuard>
+              <StorePage />
+            </StoreGuard>
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="/flow/:id/">
         <Route
           path=""
