@@ -36,6 +36,8 @@ export async function buildVertices({
       // If the targetId is not found, include the entire inner array
       vertices.push(innerArray);
     }
+  } else {
+    vertices = verticesOrder;
   }
 
   const buildResults: Array<boolean> = [];
@@ -57,10 +59,6 @@ export async function buildVertices({
             }
           }
           buildResults.push(buildData.valid);
-          if (onBuildComplete) {
-            const allNodesValid = buildResults.every((result) => result);
-            onBuildComplete(allNodesValid);
-          }
         } catch (error) {
           if (onBuildError) {
             console.log(error);
@@ -72,5 +70,9 @@ export async function buildVertices({
         }
       })
     );
+  }
+  if (onBuildComplete) {
+    const allNodesValid = buildResults.every((result) => result);
+    onBuildComplete(allNodesValid);
   }
 }
