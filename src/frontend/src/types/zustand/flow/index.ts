@@ -24,6 +24,8 @@ export type FlowPoolObjectType = {
   valid: boolean;
   params: any;
   data: { artifacts: any; results: any | ChatOutputType | chatInputType };
+  duration: string;
+  progress: number;
   id: string;
 };
 
@@ -85,4 +87,5 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  buildFlow: (nodeId?: string) => void;
 };

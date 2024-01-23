@@ -30,6 +30,8 @@ export default function GenericNode({
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
   const deleteNode = useFlowStore((state) => state.deleteNode);
+  const flowPool = useFlowStore((state) => state.flowPool);
+  const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
@@ -92,16 +94,18 @@ export default function GenericNode({
     setNodeName(data.node!.display_name);
   }, [data.node!.display_name]);
 
-  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = sseData[data.id];
+    const relevantData =
+      flowPool[data.id] && flowPool[data.id]?.length > 0
+        ? flowPool[data.id][flowPool[data.id].length - 1]
+        : null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
       setValidationStatus(null);
     }
-  }, [sseData, data.id]);
+  }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
 
@@ -317,7 +321,10 @@ export default function GenericNode({
             </div>
 
             {showNode && (
-              <div className="round-button-div">
+              <div
+                className="round-button-div"
+                onClick={() => buildFlow(data.id)}
+              >
                 <div>
                   <Tooltip
                     title={
