@@ -1,9 +1,12 @@
 import { Transition } from "@headlessui/react";
 import { useState } from "react";
 import Loading from "../../../components/ui/loading";
+import { postBuildInit } from "../../../controllers/API";
+import { FlowType } from "../../../types/flow";
+
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
-import { FlowType } from "../../../types/flow";
+import { parsedDataType } from "../../../types/components";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
@@ -43,6 +46,7 @@ export default function BuildTrigger({
       const startTime = Date.now();
       setIsBuilding(true);
 
+
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
     } catch (error) {
       console.error("Error:", error);
@@ -50,6 +54,11 @@ export default function BuildTrigger({
       setIsBuilding(false);
     }
   }
+
+
+  const checkInputAndOutput = useFlowStore(
+    (state) => state.checkInputAndOutput
+  );
 
   async function enforceMinimumLoadingTime(
     startTime: number,
@@ -74,7 +83,7 @@ export default function BuildTrigger({
       leaveFrom="translate-y-0"
       leaveTo="translate-y-96"
     >
-      <div className="fixed bottom-20 right-4">
+      <div className={checkInputAndOutput() ? "fixed bottom-20 right-4" : "fixed bottom-4 right-4"}>
         <div
           className={`${eventClick} round-button-form`}
           onClick={() => {

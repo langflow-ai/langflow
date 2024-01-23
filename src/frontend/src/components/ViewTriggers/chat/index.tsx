@@ -5,7 +5,7 @@ import IconComponent from "../../genericIconComponent";
 export default function ChatTrigger({}): JSX.Element {
   return (
     <Transition
-      show={!open}
+      show={true}
       appear={true}
       enter="transition ease-out duration-300"
       enterFrom="translate-y-96"
