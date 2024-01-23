@@ -157,7 +157,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       })
     );
   },
-  checkInputandOutput: () => {
+  checkInputAndOutput: () => {
     let has_input = false;
     let has_output = false;
     const nodes = get().nodes;
@@ -426,6 +426,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         setErrorData({ list, title });
       },
     });
+  },
+  getFlow: () => {
+    return {
+      nodes: get().nodes,
+      edges: get().edges,
+      viewport: get().reactFlowInstance?.getViewport()!,
+    };
   },
 }));
 

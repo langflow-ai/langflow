@@ -87,5 +87,7 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
-  buildFlow: (nodeId?: string) => void;
+  buildFlow: (nodeId?: string) => Promise<void>;
+  checkInputAndOutput: () => boolean;
+  getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
 };
