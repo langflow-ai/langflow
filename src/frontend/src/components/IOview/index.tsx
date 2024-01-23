@@ -1,7 +1,7 @@
+import { cloneDeep } from "lodash";
 import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
-import useFlowIOStore from "../../stores/flowsIOStore";
-import { NodeDataType } from "../../types/flow";
+import { NodeType } from "../../types/flow";
 import { extractTypeFromLongId } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IconComponent from "../genericIconComponent";
@@ -10,8 +10,9 @@ import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 
 export default function IOView(): JSX.Element {
-  const { inputIds, outputIds, updateNodeFlowData } = useFlowIOStore();
-  const { reactFlowInstance } = useFlowStore();
+  const { inputIds, outputIds } = useFlowStore();
+  const nodes = useFlowStore((state) => state.nodes);
+  const setNode = useFlowStore((state) => state.setNode);
   const options = inputIds.concat(outputIds);
   const [selectedView, setSelectedView] = useState<ReactNode>(
     handleSelectChange(options[0])
@@ -39,9 +40,7 @@ export default function IOView(): JSX.Element {
         {inputIds
           .filter((input) => extractTypeFromLongId(input) !== "ChatInput")
           .map((inputId, index) => {
-            const nodeData: NodeDataType = reactFlowInstance
-              ?.getNodes()
-              .find((node) => node.id === inputId)?.data;
+            const node: NodeType = nodes.find((node) => node.id === inputId)!;
             return (
               <div className="file-component-accordion-div" key={index}>
                 <AccordionComponent
@@ -61,21 +60,21 @@ export default function IOView(): JSX.Element {
                   key={index}
                   keyValue={inputId}
                 >
+                  {/* TODO: EXTEND AND IMPROVE VIEW MODE AND ADD OTHER TYPES OF VIEWS */}
                   <div className="file-component-tab-column">
                     <Textarea
                       value={
-                        reactFlowInstance
-                          ?.getNodes()
-                          .find((node) => node.id === inputId)?.data?.node
+                        nodes.find((node) => node.id === inputId)?.data?.node
                           ?.template?.value.value
                       }
                       className="custom-scroll"
                       onChange={(e) => {
                         e.target.value;
-                        if (nodeData) {
-                          nodeData.node!.template["value"].value =
+                        if (node) {
+                          let newNode = cloneDeep(node);
+                          newNode.data.node!.template["value"].value =
                             e.target.value;
-                          updateNodeFlowData(inputId, nodeData);
+                          setNode(node.id, newNode);
                         }
                       }}
                       placeholder="Enter text..."
