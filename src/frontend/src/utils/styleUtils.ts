@@ -202,6 +202,7 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  io: "#e6b25a",
 };
 
 export const nodeNames: { [char: string]: string } = {
