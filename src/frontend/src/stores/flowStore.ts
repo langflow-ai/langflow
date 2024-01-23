@@ -16,6 +16,7 @@ import {
   targetHandleType,
 } from "../types/flow";
 import { FlowStoreType } from "../types/zustand/flow";
+import { buildVertices } from "../utils/buildUtils";
 import {
   cleanEdges,
   getHandleId,
@@ -25,6 +26,7 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
+import useAlertStore from "./alertStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -392,6 +394,38 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     set({ outputIds });
     return outputIds;
+  },
+  buildFlow: async (nodeId?: string) => {
+    function handleBuildUpdate(data: any) {
+      get().addDataToFlowPool(data.data[data.id], data.id);
+    }
+    const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+    const setSuccessData = useAlertStore((state) => state.setSuccessData);
+    const setErrorData = useAlertStore((state) => state.setErrorData);
+    return buildVertices({
+      flow: {
+        data: {
+          edges: get().edges,
+          nodes: get().nodes,
+          viewport: get().reactFlowInstance?.getViewport()!,
+        },
+        description: currentFlow?.description!,
+        id: currentFlow?.id!,
+        name: currentFlow?.name!,
+      },
+      nodeId,
+      onBuildComplete: () => {
+        if (nodeId) {
+          setSuccessData({ title: `${nodeId} built successfully` });
+        } else {
+          setSuccessData({ title: `Flow built successfully` });
+        }
+      },
+      onBuildUpdate: handleBuildUpdate,
+      onBuildError: (title, list) => {
+        setErrorData({ list, title });
+      },
+    });
   },
 }));
 
