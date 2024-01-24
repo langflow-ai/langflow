@@ -107,7 +107,7 @@ export default function GenericNode({
   }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
-  const pinned = data.node?.pinned ?? true;
+  const pinned = data.node?.pinned ?? false;
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
@@ -335,15 +335,17 @@ export default function GenericNode({
                   }));
                 }}
               >
-                <div className="generic-node-status-position flex items-center">
-                  <IconComponent
-                    name={"Pin"}
-                    className={cn(
-                      "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                      pinned ?? false ? "animate-wiggle fill-chat-trigger" : ""
-                    )}
-                  />
-                </div>
+                <Tooltip title={<span>{pinned ? "Pinned" : "Unpinned"}</span>}>
+                  <div className="generic-node-status-position flex items-center">
+                    <IconComponent
+                      name={"Pin"}
+                      className={cn(
+                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
+                        pinned ? "animate-wiggle fill-chat-trigger" : ""
+                      )}
+                    />
+                  </div>
+                </Tooltip>
               </div>
             )}
             {showNode && (
