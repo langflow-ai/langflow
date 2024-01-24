@@ -42,9 +42,9 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             "max_retries": {"display_name": "Max Retries", "advanced": True},
             "model": {"display_name": "Model", "advanced": True},
             "model_kwargs": {"display_name": "Model Kwargs", "advanced": True},
-            "openai_api_base": {"display_name": "OpenAI API Base","password":True, "advanced": True},
-            "openai_api_key": {"display_name": "OpenAI API Key","password":True},
-            "openai_api_type": {"display_name": "OpenAI API Type", "advanced": True,"password":True},
+            "openai_api_base": {"display_name": "OpenAI API Base", "password": True, "advanced": True},
+            "openai_api_key": {"display_name": "OpenAI API Key", "password": True},
+            "openai_api_type": {"display_name": "OpenAI API Type", "advanced": True, "password": True},
             "openai_api_version": {
                 "display_name": "OpenAI API Version",
                 "advanced": True,

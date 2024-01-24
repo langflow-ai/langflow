@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from langchain.vectorstores import MongoDBAtlasVectorSearch
 from typing import Optional, List
@@ -7,6 +6,7 @@ from langflow.field_typing import (
     Embeddings,
     NestedDict,
 )
+
 
 class MongoDBAtlasComponent(CustomComponent):
     display_name = "MongoDB Atlas"

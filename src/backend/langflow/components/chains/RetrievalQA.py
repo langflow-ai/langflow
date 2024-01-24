@@ -1,11 +1,11 @@
+from typing import Callable, Optional, Union
 
-from langflow import CustomComponent
-from typing import Optional, Union, Callable
-from langflow.field_typing import (
-    BaseMemory,
-    BaseRetriever)
-from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
+from langchain.chains.retrieval_qa.base import BaseRetrievalQA, RetrievalQA
+from langflow import CustomComponent
+from langflow.field_typing import BaseMemory, BaseRetriever
+
+
 class RetrievalQAComponent(CustomComponent):
     display_name = "RetrievalQA"
     description = "Chain for question-answering against an index."
@@ -15,8 +15,8 @@ class RetrievalQAComponent(CustomComponent):
             "combine_documents_chain": {"display_name": "Combine Documents Chain"},
             "retriever": {"display_name": "Retriever"},
             "memory": {"display_name": "Memory", "required": False},
-            "input_key": {"display_name": "Input Key","advanced":True},
-            "output_key": {"display_name": "Output Key","advanced":True},
+            "input_key": {"display_name": "Input Key", "advanced": True},
+            "output_key": {"display_name": "Output Key", "advanced": True},
             "return_source_documents": {"display_name": "Return Source Documents"},
         }
 
@@ -25,11 +25,11 @@ class RetrievalQAComponent(CustomComponent):
         combine_documents_chain: BaseCombineDocumentsChain,
         retriever: BaseRetriever,
         memory: Optional[BaseMemory] = None,
-        input_key: Optional[str] = "query",
-        output_key: Optional[str] = "result",
-        return_source_documents: Optional[bool] = True,
+        input_key: str = "query",
+        output_key: str = "result",
+        return_source_documents: bool = True,
     ) -> Union[BaseRetrievalQA, Callable]:
-        return BaseRetrievalQA(
+        return RetrievalQA(
             combine_documents_chain=combine_documents_chain,
             retriever=retriever,
             memory=memory,

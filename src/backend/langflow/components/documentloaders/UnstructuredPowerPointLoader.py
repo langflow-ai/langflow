@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from langchain.document_loaders import Document
 from typing import Optional, Dict

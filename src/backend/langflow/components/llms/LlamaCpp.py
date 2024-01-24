@@ -1,7 +1,7 @@
-
 from typing import Optional, List, Dict, Any
 from langflow import CustomComponent
 from langchain_community.llms.llamacpp import LlamaCpp
+
 
 class LlamaCppComponent(CustomComponent):
     display_name = "LlamaCpp"
@@ -24,7 +24,12 @@ class LlamaCppComponent(CustomComponent):
             "max_tokens": {"display_name": "Max Tokens", "advanced": True},
             "metadata": {"display_name": "Metadata", "advanced": True},
             "model_kwargs": {"display_name": "Model Kwargs", "advanced": True},
-            "model_path": {"display_name": "Model Path","field_type":"file", "file_types":[".bin"],"required":True},
+            "model_path": {
+                "display_name": "Model Path",
+                "field_type": "file",
+                "file_types": [".bin"],
+                "required": True,
+            },
             "n_batch": {"display_name": "N Batch", "advanced": True},
             "n_ctx": {"display_name": "N Ctx", "advanced": True},
             "n_gpu_layers": {"display_name": "N GPU Layers", "advanced": True},

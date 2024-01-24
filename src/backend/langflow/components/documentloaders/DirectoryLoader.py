@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
 from langchain.docstore.document import Document
 from typing import Optional, Dict, Any
+
 
 class DirectoryLoaderComponent(CustomComponent):
     display_name = "DirectoryLoader"

@@ -2,6 +2,7 @@ from langflow import CustomComponent
 from typing import Optional, Dict
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 
+
 class HuggingFaceEmbeddingsComponent(CustomComponent):
     display_name = "HuggingFaceEmbeddings"
     description = "HuggingFace sentence_transformers embedding models."
@@ -12,8 +13,8 @@ class HuggingFaceEmbeddingsComponent(CustomComponent):
     def build_config(self):
         return {
             "cache_folder": {"display_name": "Cache Folder", "advanced": True},
-            "encode_kwargs": {"display_name": "Encode Kwargs", "advanced": True,"field_type":"dict"},
-            "model_kwargs": {"display_name": "Model Kwargs","field_type":"dict", "advanced": True},
+            "encode_kwargs": {"display_name": "Encode Kwargs", "advanced": True, "field_type": "dict"},
+            "model_kwargs": {"display_name": "Model Kwargs", "field_type": "dict", "advanced": True},
             "model_name": {"display_name": "Model Name"},
             "multi_process": {"display_name": "Multi Process", "advanced": True},
         }

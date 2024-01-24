@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from typing import Dict, Optional
 
@@ -21,15 +20,10 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "name": "result_key_for_type",
                 "advanced": False,
                 "dynamic": False,
-                "info": '',
+                "info": "",
                 "field_type": "dict",
                 "list": False,
-                "value": {
-                    "news": "news",
-                    "places": "places",
-                    "images": "images",
-                    "search": "organic"
-                }
+                "value": {"news": "news", "places": "places", "images": "images", "search": "organic"},
             },
             "serper_api_key": {
                 "display_name": "Serper API Key",
@@ -39,10 +33,10 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "name": "serper_api_key",
                 "advanced": False,
                 "dynamic": False,
-                "info": '',
+                "info": "",
                 "type": "str",
                 "list": False,
-            }
+            },
         }
 
     def build(
@@ -50,7 +44,4 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
         serper_api_key: str,
         result_key_for_type: Optional[Dict[str, str]] = None,
     ) -> GoogleSerperAPIWrapper:
-        return GoogleSerperAPIWrapper(
-            result_key_for_type=result_key_for_type,
-            serper_api_key=serper_api_key
-        )
+        return GoogleSerperAPIWrapper(result_key_for_type=result_key_for_type, serper_api_key=serper_api_key)

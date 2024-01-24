@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from langchain.llms import BaseLLM
 from typing import Optional, Union, Callable, Dict
 from langchain_community.llms.vertexai import VertexAI
+
 
 class VertexAIComponent(CustomComponent):
     display_name = "VertexAI"
@@ -20,7 +20,7 @@ class VertexAIComponent(CustomComponent):
             "location": {
                 "display_name": "Location",
                 "type": "str",
-                "advanced":True,
+                "advanced": True,
                 "value": "us-central1",
                 "required": False,
             },
@@ -29,14 +29,14 @@ class VertexAIComponent(CustomComponent):
                 "field_type": "int",
                 "value": 128,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
             "max_retries": {
                 "display_name": "Max Retries",
                 "type": "int",
                 "value": 6,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
             "metadata": {
                 "display_name": "Metadata",
@@ -51,7 +51,7 @@ class VertexAIComponent(CustomComponent):
                 "required": False,
             },
             "n": {
-                "advanced":True,
+                "advanced": True,
                 "display_name": "N",
                 "field_type": "int",
                 "value": 1,
@@ -68,42 +68,36 @@ class VertexAIComponent(CustomComponent):
                 "field_type": "int",
                 "value": 5,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
             "streaming": {
                 "display_name": "Streaming",
                 "field_type": "bool",
                 "value": False,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
                 "value": 0.0,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
-            "top_k": {
-                "display_name": "Top K",
-                "type": "int",
-                "default": 40,
-                "required": False,
-                "advanced":True
-            },
+            "top_k": {"display_name": "Top K", "type": "int", "default": 40, "required": False, "advanced": True},
             "top_p": {
                 "display_name": "Top P",
                 "field_type": "float",
                 "value": 0.95,
                 "required": False,
-                "advanced":True
+                "advanced": True,
             },
             "tuned_model_name": {
                 "display_name": "Tuned Model Name",
                 "type": "str",
                 "required": False,
                 "value": None,
-                "advanced":True
+                "advanced": True,
             },
             "verbose": {
                 "display_name": "Verbose",
@@ -111,10 +105,7 @@ class VertexAIComponent(CustomComponent):
                 "value": False,
                 "required": False,
             },
-            "name":{
-                "display_name":"Name",
-                "field_type":"str"
-            },
+            "name": {"display_name": "Name", "field_type": "str"},
         }
 
     def build(
@@ -126,7 +117,7 @@ class VertexAIComponent(CustomComponent):
         metadata: Dict = None,
         model_name: str = "text-bison",
         n: int = 1,
-        name:Optional[str] = None,
+        name: Optional[str] = None,
         project: Optional[str] = None,
         request_parallelism: int = 5,
         streaming: bool = False,

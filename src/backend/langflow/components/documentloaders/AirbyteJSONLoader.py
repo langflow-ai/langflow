@@ -28,7 +28,7 @@ class AirbyteJSONLoaderComponent(CustomComponent):
 
     def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
         documents = AirbyteJSONLoader(file_path=file_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

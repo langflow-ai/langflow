@@ -3,6 +3,7 @@ from langflow.field_typing import Document
 from typing import Optional, Dict
 from langchain_community.document_loaders.evernote import EverNoteLoader
 
+
 class EverNoteLoaderComponent(CustomComponent):
     display_name = "EverNoteLoader"
     description = "Load from `EverNote`."
@@ -28,7 +29,7 @@ class EverNoteLoaderComponent(CustomComponent):
 
     def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
         documents = EverNoteLoader(file_path=file_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

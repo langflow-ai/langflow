@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from langchain.vectorstores import VectorStore
 from typing import Union, Callable
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
+
 
 class VectorStoreInfoComponent(CustomComponent):
     display_name = "VectorStoreInfo"

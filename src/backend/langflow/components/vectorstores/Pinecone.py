@@ -8,6 +8,8 @@ from langflow.field_typing import (
 from langchain.schema import BaseRetriever
 from langchain.vectorstores.base import VectorStore
 import pinecone
+
+
 class PineconeComponent(CustomComponent):
     display_name = "Pinecone"
     description = "Construct Pinecone wrapper from raw documents."
@@ -18,8 +20,8 @@ class PineconeComponent(CustomComponent):
             "embedding": {"display_name": "Embedding", "default": 1000},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
-            "pinecone_api_key": {"display_name": "Pinecone API Key", "default": "","password": True,"required": True},
-            "pinecone_env": {"display_name": "Pinecone Environment", "default": "","required": True},
+            "pinecone_api_key": {"display_name": "Pinecone API Key", "default": "", "password": True, "required": True},
+            "pinecone_env": {"display_name": "Pinecone Environment", "default": "", "required": True},
             "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
         }
 
@@ -30,6 +32,6 @@ class PineconeComponent(CustomComponent):
         index_name: Optional[str] = None,
         pinecone_api_key: Optional[str] = None,
         pinecone_env: Optional[str] = None,
-    ) -> Union[VectorStore,Pinecone,BaseRetriever]:
-        pinecone.init(api_key=pinecone_api_key,environment=pinecone_env)
-        return Pinecone.from_documents(documents=documents,embedding=embedding,index_name=index_name)
+    ) -> Union[VectorStore, Pinecone, BaseRetriever]:
+        pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)
+        return Pinecone.from_documents(documents=documents, embedding=embedding, index_name=index_name)

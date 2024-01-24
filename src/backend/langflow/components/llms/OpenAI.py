@@ -1,7 +1,9 @@
+from typing import Dict, Optional
+
+from langchain_openai.llms.base import OpenAI
 
 from langflow import CustomComponent
-from typing import Optional, Dict
-from langchain_openai.llms.base import OpenAI
+
 
 class OpenAIComponent(CustomComponent):
     display_name = "OpenAI"
@@ -41,12 +43,12 @@ class OpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 256,
         model_kwargs: Optional[Dict] = None,
-        model_name: Optional[str] = "text-davinci-003",
+        model_name: str = "text-davinci-003",
         openai_api_base: Optional[str] = "",
         openai_api_key: str = "",
         temperature: Optional[float] = 0.7,
     ) -> OpenAI:
-        if(not openai_api_base):
+        if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
         return OpenAI(
             max_tokens=max_tokens,

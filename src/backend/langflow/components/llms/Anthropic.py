@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from typing import Optional
-from langflow.field_typing import BaseLanguageModel,NestedDict
+from langflow.field_typing import BaseLanguageModel, NestedDict
 from langchain_community.llms.anthropic import Anthropic
 
 
@@ -21,7 +21,7 @@ class AnthropicComponent(CustomComponent):
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "field_type": 'NestedDict',
+                "field_type": "NestedDict",
                 "advanced": True,
             },
             "temperature": {

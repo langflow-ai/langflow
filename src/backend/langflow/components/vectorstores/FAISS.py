@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from langchain_community.vectorstores.faiss import FAISS
 from typing import Optional, List, Union
@@ -8,6 +7,7 @@ from langflow.field_typing import (
     Document,
     Embeddings,
 )
+
 
 class FAISSComponent(CustomComponent):
     display_name = "FAISS"
@@ -24,5 +24,5 @@ class FAISSComponent(CustomComponent):
         self,
         embedding: Embeddings,
         documents: Optional[List[Document]] = None,
-    ) -> Union[VectorStore,FAISS,BaseRetriever]:
-        return FAISS.from_documents(documents=documents,embedding=embedding)
+    ) -> Union[VectorStore, FAISS, BaseRetriever]:
+        return FAISS.from_documents(documents=documents, embedding=embedding)
