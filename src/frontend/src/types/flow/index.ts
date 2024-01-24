@@ -21,7 +21,6 @@ export type NodeType = {
 
 export type NodeDataType = {
   showNode?: boolean;
-  pinned?: boolean;
   type: string;
   node?: APIClassType;
   id: string;

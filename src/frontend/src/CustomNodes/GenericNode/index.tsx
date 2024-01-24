@@ -107,7 +107,7 @@ export default function GenericNode({
   }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
-  const pinned = data.pinned ?? true;
+  const pinned = data.node?.pinned ?? true;
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
@@ -327,7 +327,10 @@ export default function GenericNode({
                     ...old,
                     data: {
                       ...old.data,
-                      pinned: old?.data?.pinned ? false : true,
+                      node: {
+                        ...old.data.node,
+                        pinned: old.data?.node?.pinned ? false : true,
+                      }
                     },
                   }));
                 }}
