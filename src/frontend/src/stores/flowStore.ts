@@ -134,6 +134,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
+    console.log(newChange);
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
