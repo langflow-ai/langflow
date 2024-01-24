@@ -15,9 +15,16 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const checkInputAndOutput = useFlowStore(
     (state) => state.checkInputAndOutput
   );
+  const getOutputs = useFlowStore((state) => state.getOutputs);
+  const getInputs = useFlowStore((state) => state.getInputs);
   const [showTrigger, setShowTrigger] = useState(checkInputAndOutput());
   useEffect(() => {
-    setShowTrigger(checkInputAndOutput());
+    const haveIO = checkInputAndOutput();
+    setShowTrigger(haveIO);
+    if (haveIO) {
+      getOutputs();
+      getInputs();
+    }
   }, [nodes]);
 
   useEffect(() => {
@@ -46,7 +53,9 @@ export default function Chat({ flow }: ChatType): JSX.Element {
         {showTrigger && (
           <BaseModal open={open} setOpen={setOpen}>
             <BaseModal.Trigger asChild>
-              <ChatTrigger />
+              <div onClick={() => setOpen(true)}>
+                <ChatTrigger />
+              </div>
             </BaseModal.Trigger>
             {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
             <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
