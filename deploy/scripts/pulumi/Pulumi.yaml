@@ -1,6 +1,6 @@
 name: langflow
-runtime: python
-
-config:
-  aws:region:
-    value: us-east-1
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: 'version: "3.8" services: proxy: ports: - "80:80" - "8090:8090" command: # Enable Docker in Traefik, so that it reads labels from Docker services - --providers.docker # Add a constraint to only use services with the label for this stack # from the env'

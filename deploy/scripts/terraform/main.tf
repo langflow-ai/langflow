@@ -7,18 +7,19 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region # Choose the region as needed
+  region = "us-east-1" # Choose the region as needed
 }
 
 module "docker-swarm" {
-  source          = "./modules/docker-swarm"
-  key_name        = aws_key_pair.swarm-key.key_name
-  vpc_id          = aws_vpc.swarm-vpc.id
-  subnet_id       = aws_subnet.swarm-public-subnet.id
-  security_group  = aws_security_group.swarm-sg.id
-  instance_type   = var.instance_type # Choose the instance type as needed
-  manager_count   = var.manager_count
-  worker_count    = var.worker_count # This is the number of services in the docker-compose.yml file
+  source         = "./modules/docker-swarm"
+  key_name       = aws_key_pair.swarm-key.key_name
+  vpc_id         = aws_vpc.swarm-vpc.id
+  subnet_id      = aws_subnet.swarm-public-subnet.id
+  security_group = aws_security_group.swarm-sg.id
+  instance_type  = var.instance_type # Choose the instance type as needed
+  manager_count  = var.manager_count
+  worker_count   = var.worker_count # This is the number of services in the docker-compose.yml file
+  project_name   = var.project_name
 }
 
 resource "aws_key_pair" "swarm-key" {
@@ -27,8 +28,8 @@ resource "aws_key_pair" "swarm-key" {
 }
 
 resource "aws_vpc" "swarm-vpc" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_support = true
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
   enable_dns_hostnames = true
 }
 
@@ -43,21 +44,21 @@ resource "aws_subnet" "swarm-public-subnet" {
 }
 
 resource "aws_internet_gateway" "igw" {
- vpc_id = aws_vpc.swarm-vpc.id
+  vpc_id = aws_vpc.swarm-vpc.id
 }
 
 resource "aws_route_table" "public_rt" {
- vpc_id = aws_vpc.swarm-vpc.id
- 
- route {
-   cidr_block = "0.0.0.0/0"
-   gateway_id = aws_internet_gateway.igw.id
- }
+  vpc_id = aws_vpc.swarm-vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
 }
 
 resource "aws_route_table_association" "public_subnet_asso" {
- subnet_id      = aws_subnet.swarm-public-subnet.id
- route_table_id = aws_route_table.public_rt.id
+  subnet_id      = aws_subnet.swarm-public-subnet.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
 resource "aws_security_group" "swarm-sg" {
@@ -116,7 +117,7 @@ resource "aws_security_group" "swarm-sg" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = [aws_subnet.swarm-public-subnet.cidr_block] 
+    cidr_blocks = [aws_subnet.swarm-public-subnet.cidr_block]
   }
 
   egress {

@@ -24,7 +24,7 @@ class DockerSwarm(pulumi.ComponentResource):
         for i in range(0, args["managerCount"]):
             manager.append(
                 aws.ec2.Instance(
-                    f"{name}-manager-{i}",
+                    resource_name=f"{name}-manager-{i}",
                     ami="ami-08a52ddb321b32a8c",
                     instance_type=args["instanceType"],
                     key_name=args["keyName"],
@@ -72,7 +72,7 @@ env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-
 
 """,
                     tags={
-                        "name": f"{args['projectName']}-manager-{i}",
+                        "Name": f"{args['projectName']}-manager-{i}",
                     },
                     opts=pulumi.ResourceOptions(parent=self),
                 )
@@ -82,7 +82,7 @@ env $(cat .env | grep ^[A-Z] | xargs) docker stack deploy --compose-file docker-
         for i in range(0, args["workerCount"]):
             worker.append(
                 aws.ec2.Instance(
-                    f"{name}-worker-{i}",
+                    resource_name=f"{name}-worker-{i}",
                     ami="ami-08a52ddb321b32a8c",
                     instance_type=args["instanceType"],
                     key_name=args["keyName"],
@@ -103,7 +103,7 @@ docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) --advertise-a
 """
                     ),
                     tags={
-                        "name": f"{args['projectName']}-worker-{i}",
+                        "Name": f"{args['projectName']}-worker-{i}",
                     },
                     opts=pulumi.ResourceOptions(parent=self),
                 )

@@ -1,88 +1,125 @@
-from pathlib import Path
+#! ./venv/bin/python
+import json
+import os
 
 import pulumi
 import pulumi_aws as aws
-import pulumi_std as std
-from docker_swarm import DockerSwarm
+from dotenv import load_dotenv
 
-config = pulumi.Config()
-# The AWS region
-region = config.get("region")
-if region is None:
-    region = "us-east-1"
-# EC2 instance type
-instance_type = config.get("instanceType")
-if instance_type is None:
-    instance_type = "t2.small"
-# Number of manager nodes
-manager_count = config.get_float("managerCount")
-if manager_count is None:
-    manager_count = 1
-# Number of worker nodes
-worker_count = config.get_float("workerCount")
-if worker_count is None:
-    worker_count = 3
-# The name of the project
-project_name = config.require("projectName")
+# Load environment variables
+load_dotenv()
 
+# Define AWS resources
+aws_region = "us-west-2"
+vpc_cidr_block = "10.0.0.0/16"
+subnet_cidr_block = "10.0.1.0/24"
 
-# as string
-ssh_key_path = Path("~/.ssh/id_rsa.pub").expanduser().as_posix()
+# AWS Provider
+aws_provider = aws.Provider("aws_provider", region=aws_region)
+# Create a VPC
+vpc = aws.ec2.Vpc("app_vpc", cidr_block=vpc_cidr_block)
 
-swarm_key = aws.ec2.KeyPair(
-    "swarm-key",
-    key_name="swarm-key",
-    public_key=std.file_output(input=ssh_key_path).apply(lambda invoke: invoke.result),
+task_exec_role = aws.iam.Role(
+    "task_exec_role",
+    assume_role_policy=json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "sts:AssumeRole",
+                    "Principal": {"Service": "ecs-tasks.amazonaws.com"},
+                    "Effect": "Allow",
+                    "Sid": "",
+                }
+            ],
+        }
+    ),
 )
-swarm_vpc = aws.ec2.Vpc("swarm-vpc", cidr_block="10.0.0.0/16", enable_dns_support=True, enable_dns_hostnames=True)
-swarm_public_subnet = aws.ec2.Subnet("swarm-public-subnet", vpc_id=swarm_vpc.id, cidr_block="10.0.2.0/24")
-swarm_sg = aws.ec2.SecurityGroup(
-    "swarm-sg",
-    vpc_id=swarm_vpc.id,
+
+# Create a Subnet
+subnet = aws.ec2.Subnet(
+    "app_subnet",
+    vpc_id=vpc.id,
+    cidr_block=subnet_cidr_block,
+    map_public_ip_on_launch=True,
+    availability_zone=f"{aws_region}a",
+)
+
+subnet_group = aws.rds.SubnetGroup(
+    "subnet_group",
+    subnet_ids=[subnet.id],
+    tags={"Name": "subnet_group"},
+)
+
+# ECS Cluster
+cluster = aws.ecs.Cluster("app_cluster")
+
+# Backend Service
+backend_repository = aws.ecr.Repository("backend_repository")
+# ECS Task Definition for Backend
+backend_task_definition = aws.ecs.TaskDefinition(
+    "backend_task_definition",
+    family="backend",
+    cpu="512",
+    memory="1024",
+    network_mode="awsvpc",
+    requires_compatibilities=["FARGATE"],
+    execution_role_arn=task_exec_role.arn,
+    container_definitions=pulumi.Output.all(backend_repository.repository_url).apply(
+        lambda url: json.dumps(
+            [
+                {
+                    "name": "backend",
+                    "image": f"{url}:latest",
+                    "portMappings": [{"containerPort": 7860}],
+                    # Include other necessary settings from .env file
+                }
+            ]
+        )
+    ),
+)
+
+# ECS Service for Backend
+backend_service = aws.ecs.Service(
+    "backend_service",
+    cluster=cluster.arn,
+    desired_count=1,
+    launch_type="FARGATE",
+    task_definition=backend_task_definition.arn,
+    network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
+        subnets=[subnet.id],
+        # Assign security groups as needed
+    ),
+)
+
+
+# RDS Instance for PostgreSQL
+db_instance = aws.rds.Instance(
+    "db_instance",
+    allocated_storage=20,
+    engine="postgres",
+    engine_version="13",
+    instance_class="db.t2.micro",
+    name="mydatabase",
+    username=os.getenv("POSTGRES_USER"),
+    password=os.getenv("POSTGRES_PASSWORD"),
+    parameter_group_name="default.postgres13",
+    db_subnet_group_name=subnet_group.name,
+    skip_final_snapshot=True,
+    # Include other configurations as necessary
+)
+
+# ElastiCache Redis
+redis_security_group = aws.ec2.SecurityGroup(
+    "redis_security_group",
+    vpc_id=vpc.id,
     ingress=[
         aws.ec2.SecurityGroupIngressArgs(
-            from_port=22,
-            to_port=22,
+            from_port=6379,
+            to_port=6379,
             protocol="tcp",
             cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=2376,
-            to_port=2377,
-            protocol="tcp",
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=7946,
-            to_port=7946,
-            protocol="tcp",
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=7946,
-            to_port=7946,
-            protocol="udp",
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=4789,
-            to_port=4789,
-            protocol="udp",
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=80,
-            to_port=80,
-            protocol="tcp",
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupIngressArgs(
-            from_port=8080,
-            to_port=8080,
-            protocol="tcp",
-            # cidr_blocks=[swarm_public_subnet.cidr_block],
-            cidr_blocks=["0.0.0.0/0"],
-        ),
+        )
     ],
     egress=[
         aws.ec2.SecurityGroupEgressArgs(
@@ -90,42 +127,54 @@ swarm_sg = aws.ec2.SecurityGroup(
             to_port=0,
             protocol="-1",
             cidr_blocks=["0.0.0.0/0"],
-        ),
-        aws.ec2.SecurityGroupEgressArgs(
-            from_port=8080,
-            to_port=8080,
-            protocol="tcp",
-            # cidr_blocks=[swarm_public_subnet.cidr_block],
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-    ],
-)
-docker_swarm = DockerSwarm(
-    project_name,
-    {
-        "keyName": swarm_key.key_name,
-        "vpcId": swarm_vpc.id,
-        "subnetId": swarm_public_subnet.id,
-        "securityGroup": swarm_sg.id,
-        "instanceType": instance_type,
-        "managerCount": manager_count,
-        "workerCount": worker_count,
-        "projectName": project_name,
-    },
-)
-swarm_private_subnet = aws.ec2.Subnet("swarm-private-subnet", vpc_id=swarm_vpc.id, cidr_block="10.0.1.0/24")
-igw = aws.ec2.InternetGateway("igw", vpc_id=swarm_vpc.id)
-public_rt = aws.ec2.RouteTable(
-    "public_rt",
-    vpc_id=swarm_vpc.id,
-    routes=[
-        aws.ec2.RouteTableRouteArgs(
-            cidr_block="0.0.0.0/0",
-            gateway_id=igw.id,
         )
     ],
 )
-public_subnet_asso = aws.ec2.RouteTableAssociation(
-    "public_subnet_asso", subnet_id=swarm_public_subnet.id, route_table_id=public_rt.id
+
+
+redis_cluster = aws.elasticache.Cluster(
+    "redis_cluster",
+    engine="redis",
+    node_type="cache.t2.micro",
+    num_cache_nodes=1,
+    parameter_group_name="default.redis6.x",
+    engine_version="6.x",
+    subnet_group_name=subnet_group.name,
+    security_group_ids=[redis_security_group.id],
+    # Include other configurations as necessary
 )
-pulumi.export("managerPublicIps", docker_swarm.managerPublicIps)
+
+
+# Amazon MQ for RabbitMQ
+rabbitmq_broker = aws.mq.Broker(
+    "rabbitmq_broker",
+    broker_name="myrabbitmq",
+    engine_type="rabbitmq",
+    engine_version="3.8.6",
+    host_instance_type="mq.t3.micro",
+    user=[
+        {
+            "username": os.getenv("RABBITMQ_DEFAULT_USER"),
+            "password": os.getenv("RABBITMQ_DEFAULT_PASS"),
+        }
+    ],
+    # Include other configurations as necessary
+)
+
+
+# ECS Task Definition for Frontend
+frontend_task_definition = aws.ecs.TaskDefinition(
+    "frontend_task_definition",
+    # Task Definition Configurations
+)
+
+frontend_service = aws.ecs.Service(
+    "frontend_service",
+    # Service Configurations
+)
+
+
+# Output relevant information
+pulumi.export("vpc_id", vpc.id)
+pulumi.export("subnet_id", subnet.id)
+# Other outputs as needed

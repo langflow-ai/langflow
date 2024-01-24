@@ -1,0 +1,3 @@
+pulumi>=3.0.0,<4.0.0
+pulumi-aws==6.18.2
+pulumi-std==1.6.2

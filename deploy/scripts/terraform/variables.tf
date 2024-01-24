@@ -17,3 +17,9 @@ variable "worker_count" {
   description = "Number of worker nodes"
   default     = 3
 }
+
+
+variable "project_name" {
+  description = "The name of the project"
+  type        = string
+}

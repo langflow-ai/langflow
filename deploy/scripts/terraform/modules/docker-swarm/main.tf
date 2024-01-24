@@ -5,15 +5,16 @@ variable "security_group" {}
 variable "instance_type" {}
 variable "manager_count" {}
 variable "worker_count" {}
+variable "project_name" {}
 
 
 resource "aws_instance" "manager" {
-  count                  = var.manager_count
-  ami                    = "ami-08a52ddb321b32a8c" # Amazon Linux 2 LTS
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [var.security_group]
-  subnet_id              = var.subnet_id
+  count                       = var.manager_count
+  ami                         = "ami-08a52ddb321b32a8c" # Amazon Linux 2 LTS
+  instance_type               = var.instance_type
+  key_name                    = var.key_name
+  vpc_security_group_ids      = [var.security_group]
+  subnet_id                   = var.subnet_id
   associate_public_ip_address = true
 
   user_data = <<-EOT
@@ -47,9 +48,9 @@ resource "aws_instance" "manager" {
                 cd /langflow/deploy
 
                 sudo cp .env.example .env
-                
+
                 sleep 20
-                # Add the label to random worker node to ensure that the data volume is created on the same node            
+                # Add the label to random worker node to ensure that the data volume is created on the same node
                 docker node update --label-add app-db-data=true $(docker node ls --format '{{.Hostname}}' --filter role=worker | head -n 1)
 
                 docker network create --driver=overlay traefik-public --attachable
@@ -59,17 +60,17 @@ resource "aws_instance" "manager" {
                 EOT
 
   tags = {
-    Name = "manager-${count.index}"
+    Name = "${var.project_name}-manager-${count.index}"
   }
 }
 
 resource "aws_instance" "worker" {
-  count                  = var.worker_count
-  ami                    = "ami-08a52ddb321b32a8c" # Amazon Linux 2 LTS
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  vpc_security_group_ids = [var.security_group]
-  subnet_id              = var.subnet_id
+  count                       = var.worker_count
+  ami                         = "ami-08a52ddb321b32a8c" # Amazon Linux 2 LTS
+  instance_type               = var.instance_type
+  key_name                    = var.key_name
+  vpc_security_group_ids      = [var.security_group]
+  subnet_id                   = var.subnet_id
   associate_public_ip_address = true
 
   user_data = <<-EOT
@@ -82,11 +83,11 @@ resource "aws_instance" "worker" {
             sudo chkconfig docker on
             TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
             IP_ADDR=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/local-ipv4)
-            docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) --advertise-addr $IP_ADDR $MANAGER_IP:2377 
+            docker swarm join --token $(curl -s http://$MANAGER_IP:8080/token) --advertise-addr $IP_ADDR $MANAGER_IP:2377
             EOT
 
   tags = {
-    Name = "worker-${count.index}"
+    Name = "${var.project_name}-worker-${count.index}"
   }
 }
 
