@@ -330,23 +330,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async (nodeId?: string) => {
-    function handleBuildUpdate(data: any) {
-      get().addDataToFlowPool(data.data[data.id], data.id);
-    }
     const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setErrorData = useAlertStore((state) => state.setErrorData);
+    function handleBuildUpdate(data: any) {
+      get().addDataToFlowPool(data.data[data.id], data.id);
+    }
     return buildVertices({
-      flow: {
-        data: {
-          edges: get().edges,
-          nodes: get().nodes,
-          viewport: get().reactFlowInstance?.getViewport()!,
-        },
-        description: currentFlow?.description!,
-        id: currentFlow?.id!,
-        name: currentFlow?.name!,
-      },
+      flowId: currentFlow!.id,
       nodeId,
       onBuildComplete: () => {
         if (nodeId) {
