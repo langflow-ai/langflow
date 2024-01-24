@@ -107,6 +107,7 @@ export default function GenericNode({
   }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
+  const pinned = data.pinned ?? true;
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
@@ -204,7 +205,7 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div
-                        className="flex"
+                        className="flex items-center gap-2"
                         onDoubleClick={() => {
                           setInputName(true);
                           takeSnapshot();
@@ -212,7 +213,7 @@ export default function GenericNode({
                       >
                         <div
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div pr-2 text-primary"
+                          className="generic-node-tooltip-div text-primary"
                         >
                           {data.node?.display_name}
                         </div>
@@ -318,7 +319,32 @@ export default function GenericNode({
                 </>
               )}
             </div>
-
+            {showNode && (
+              <div
+                className="round-button-div"
+                onClick={() => {
+                  setNode(data.id, (old) => ({
+                    ...old,
+                    data: {
+                      ...old.data,
+                      pinned: old?.data?.pinned ? false : true,
+                    },
+                  }));
+                }}
+              >
+                <div className="generic-node-status-position flex items-center">
+                  <IconComponent
+                    name={"Pin"}
+                    className={cn(
+                      "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
+                      pinned ?? false
+                        ? "animate-wiggle fill-chat-trigger"
+                        : ""
+                    )}
+                  />
+                </div>
+              </div>
+            )}
             {showNode && (
               <div
                 className="round-button-div"
@@ -351,7 +377,7 @@ export default function GenericNode({
                       )
                     }
                   >
-                    <div className="generic-node-status-position">
+                    <div className="generic-node-status-position flex items-center">
                       <div
                         className={classNames(
                           validationStatus && validationStatus.valid
