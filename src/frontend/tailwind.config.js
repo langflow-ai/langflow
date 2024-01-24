@@ -28,6 +28,15 @@ module.exports = {
       },
     },
     extend: {
+      keyframes: {
+        wiggle: {
+          '0%, 100%': { transform: 'scale(100%)' },
+          '50%': { transform: 'scale(120%)' },
+        }
+      },
+      animation: {
+        wiggle: 'wiggle 150ms ease-in-out 1',
+      },
       colors: {
         "component-icon": "var(--component-icon)",
         "flow-icon": "var(--flow-icon)",
