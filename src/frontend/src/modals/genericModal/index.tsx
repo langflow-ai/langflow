@@ -126,7 +126,8 @@ export default function GenericModal({
           if (
             JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
           ) {
-            setNodeClass!(apiReturn.data?.frontend_node, inputValue);
+            if (setNodeClass)
+              setNodeClass(apiReturn.data?.frontend_node, inputValue);
             setModalOpen(closeModal);
             setIsEdit(false);
           }

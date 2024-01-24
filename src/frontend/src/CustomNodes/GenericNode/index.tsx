@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -41,7 +41,9 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<boolean[] | []>([]);
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
   let numberOfInputs: boolean[] = [];
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -105,6 +107,10 @@ export default function GenericNode({
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
+  useEffect(() => {
+    updateNodeInternals(data.id);
+  }, [isMinimized]);
+
   return (
     <>
       <NodeToolbar>
@@ -123,6 +129,7 @@ export default function GenericNode({
           }}
           numberOfHandles={handles}
           showNode={showNode}
+          setIsMinimized={setIsMinimized}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -276,6 +283,7 @@ export default function GenericNode({
                             }
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
+                            isMinimized={isMinimized}
                           />
                         )
                     )}
@@ -302,6 +310,7 @@ export default function GenericNode({
                     type={data.node?.base_classes.join("|")}
                     left={false}
                     showNode={showNode}
+                    isMinimized={isMinimized}
                   />
                 </>
               )}
@@ -506,6 +515,7 @@ export default function GenericNode({
                         }
                         proxy={data.node?.template[templateField].proxy}
                         showNode={showNode}
+                        isMinimized={isMinimized}
                       />
                     ) : (
                       <></>
@@ -549,6 +559,7 @@ export default function GenericNode({
                   type={data.node?.base_classes.join("|")}
                   left={false}
                   showNode={showNode}
+                  isMinimized={isMinimized}
                 />
               )}
             </>

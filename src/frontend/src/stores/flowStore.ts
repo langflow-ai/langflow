@@ -201,7 +201,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    set({ nodes: newNodes });
+    get().setNodes(newNodes);
 
     selection.edges.forEach((edge: Edge) => {
       let source = idsMap[edge.source];
@@ -245,7 +245,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges.map((edge) => ({ ...edge, selected: false }))
       );
     });
-    set({ edges: newEdges });
+    get().setEdges(newEdges);
   },
   setLastCopiedSelection: (newSelection) => {
     set({ lastCopiedSelection: newSelection });
@@ -265,7 +265,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
-    let newEdges: Edge[] = []
+    let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
@@ -287,8 +287,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         oldEdges
       );
       return newEdges;
-
-    })
+    });
     useFlowsManagerStore
       .getState()
       .autoSaveCurrentFlow(
@@ -296,6 +295,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges,
         get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
       );
+  },
+  unselectAll: () => {
+    let newNodes = cloneDeep(get().nodes);
+    newNodes.forEach((node) => {
+      node.selected = false;
+      let newEdges = cleanEdges(newNodes, get().edges);
+      set({
+        nodes: newNodes,
+        edges: newEdges,
+      });
+    });
   },
 }));
 

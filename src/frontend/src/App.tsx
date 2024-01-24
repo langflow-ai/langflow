@@ -23,7 +23,6 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
-
   const errorData = useAlertStore((state) => state.errorData);
   const errorOpen = useAlertStore((state) => state.errorOpen);
   const setErrorOpen = useAlertStore((state) => state.setErrorOpen);

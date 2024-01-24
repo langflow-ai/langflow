@@ -57,6 +57,7 @@ export default function ParameterComponent({
   proxy,
   showNode,
   index = "",
+  isMinimized,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -131,25 +132,24 @@ export default function ParameterComponent({
     if (data.node!.template[name].value !== code) {
       takeSnapshot();
     }
-    
-    
+
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
-      
+
       newNode.data = {
         ...newNode.data,
         node: newNodeClass,
         description: newNodeClass.description ?? data.node!.description,
         display_name: newNodeClass.display_name ?? data.node!.display_name,
       };
-      
+
       newNode.data.node.template[name].value = code;
-      
+
       return newNode;
     });
-    
+
     updateNodeInternals(data.id);
-    
+
     renderTooltips();
   };
 
@@ -273,9 +273,11 @@ export default function ParameterComponent({
             <Handle
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
-              key={proxy
-                ? scapedJSONStringfy({ ...id, proxy })
-                : scapedJSONStringfy(id)}
+              key={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
               id={
                 proxy
                   ? scapedJSONStringfy({ ...id, proxy })
@@ -286,7 +288,8 @@ export default function ParameterComponent({
               }
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background"
+                "h-3 w-3 rounded-full border-2 bg-background",
+                isMinimized ? "mt-0" : ""
               )}
               style={{
                 borderColor: color,
@@ -348,9 +351,11 @@ export default function ParameterComponent({
                 <Handle
                   type={left ? "target" : "source"}
                   position={left ? Position.Left : Position.Right}
-                  key={proxy
-                    ? scapedJSONStringfy({ ...id, proxy })
-                    : scapedJSONStringfy(id)}
+                  key={
+                    proxy
+                      ? scapedJSONStringfy({ ...id, proxy })
+                      : scapedJSONStringfy(id)
+                  }
                   id={
                     proxy
                       ? scapedJSONStringfy({ ...id, proxy })
@@ -395,8 +400,8 @@ export default function ParameterComponent({
                 disabled={disabled}
                 value={data.node.template[name].value ?? ""}
                 onChange={handleOnNewValue}
-                id={"textarea-" + index}
-                data-testid={"textarea-" + index}
+                id={"textarea-" + data.node.template[name].name}
+                data-testid={"textarea-" + data.node.template[name].name}
               />
             ) : (
               <InputComponent
