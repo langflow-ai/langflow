@@ -1,0 +1,6 @@
+name: betterup
+runtime: python
+
+config:
+  aws:region:
+    value: us-east-1
