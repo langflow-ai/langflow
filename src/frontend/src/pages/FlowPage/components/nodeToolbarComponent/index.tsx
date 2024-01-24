@@ -32,6 +32,7 @@ export default function NodeToolbarComponent({
   setShowNode,
   numberOfHandles,
   showNode,
+  setIsMinimized,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -96,6 +97,10 @@ export default function NodeToolbarComponent({
     showModalAdvanced,
     showconfirmShare,
   ]);
+
+  useEffect(() => {
+    setIsMinimized(!showNode);
+  }, [showNode]);
 
   const handleSelectChange = (event) => {
     switch (event) {

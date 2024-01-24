@@ -5,7 +5,6 @@ import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
-import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
@@ -31,17 +30,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isBuilt]);
-
-  useEffect(() => {
-    // Define an async function within the useEffect hook
-    const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id);
-      setIsBuilt(response.data.built);
-    };
-
-    // Call the async function
-    fetchBuildStatus();
-  }, [flow]);
 
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes: NodeType[] = useNodes();

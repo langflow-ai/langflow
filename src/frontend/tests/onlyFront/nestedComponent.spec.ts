@@ -26,8 +26,7 @@ test("NestedComponent", async ({ page }) => {
     .getByTestId("vectorstoresPinecone")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await page.click('//*[@id="react-flow-id"]');
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();

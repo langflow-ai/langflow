@@ -35,7 +35,6 @@ import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
-  unselectAllNodes,
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
@@ -54,6 +53,7 @@ export default function CodeTabsComponent({
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
 
   const setNodes = useFlowStore((state) => state.setNodes);
 
@@ -67,12 +67,7 @@ export default function CodeTabsComponent({
 
   useEffect(() => {
     if (tweaks && data) {
-      unselectAllNodes({
-        data,
-        updateNodes: (nodes) => {
-          setNodes(nodes);
-        },
-      });
+      unselectAll();
     }
   }, []);
 
@@ -593,14 +588,7 @@ export default function CodeTabsComponent({
                                               ].type === "prompt" ? (
                                               <div className="mx-auto">
                                                 <PromptAreaComponent
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
+                                                  readonly={true}
                                                   editNode={true}
                                                   disabled={false}
                                                   value={
@@ -643,14 +631,7 @@ export default function CodeTabsComponent({
                                                 <CodeAreaComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  readonly={
-                                                    node.data.node?.flow &&
-                                                    node.data.node.template[
-                                                      templateField
-                                                    ].dynamic
-                                                      ? true
-                                                      : false
-                                                  }
+                                                  readonly={true}
                                                   value={
                                                     !node.data.node.template[
                                                       templateField
