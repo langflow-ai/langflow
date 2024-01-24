@@ -279,15 +279,11 @@ export default function ExtraSidebar(): JSX.Element {
           <div className="side-bar-button">
             {currentFlow && currentFlow.data && (
               <ApiModal flow={currentFlow}>
-                <button
-                  className={"w-full "}
-                >
+                <button className={"w-full "}>
                   <div className={classNames("extra-side-bar-buttons")}>
                     <IconComponent
                       name="Code2"
-                      className={
-                        "side-bar-button-size"
-                      }
+                      className={"side-bar-button-size"}
                     />
                   </div>
                 </button>

@@ -330,7 +330,7 @@ export default function GenericNode({
                       node: {
                         ...old.data.node,
                         pinned: old.data?.node?.pinned ? false : true,
-                      }
+                      },
                     },
                   }));
                 }}
@@ -340,9 +340,7 @@ export default function GenericNode({
                     name={"Pin"}
                     className={cn(
                       "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                      pinned ?? false
-                        ? "animate-wiggle fill-chat-trigger"
-                        : ""
+                      pinned ?? false ? "animate-wiggle fill-chat-trigger" : ""
                     )}
                   />
                 </div>
