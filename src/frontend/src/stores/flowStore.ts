@@ -330,56 +330,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
-  getInputTypes: () => {
-    let inputType: string[] = [];
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isInputNode(nodeData)) {
-        // TODO remove count and ramdom key from type before pushing
-        inputType.push(nodeData.type);
-      }
-    });
-    set({ inputTypes: inputType });
-    return inputType;
-  },
-  getOutputTypes: () => {
-    let outputType: string[] = [];
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isOutputNode(nodeData)) {
-        outputType.push(nodeData.type);
-      }
-    });
-    set({ outputTypes: outputType });
-    return outputType;
-  },
-  getInputIds: () => {
-    let inputIds: string[] = [];
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isInputNode(nodeData)) {
-        inputIds.push(nodeData.id);
-      }
-    });
-    set({ inputIds });
-    return inputIds;
-  },
-  getOutputIds: () => {
-    let outputIds: string[] = [];
-    const nodes = get().nodes;
-
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isOutputNode(nodeData)) {
-        outputIds.push(nodeData.id);
-      }
-    });
-    set({ outputIds });
-    return outputIds;
-  },
   buildFlow: async (nodeId?: string) => {
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
@@ -418,6 +368,36 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges,
       viewport: get().reactFlowInstance?.getViewport()!,
     };
+  },
+  getOutputs(): { type: string; id: string }[] {
+    let outputs: { type: string; id: string }[] = [];
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isOutputNode(nodeData)) {
+        outputs.push({ type: nodeData.type, id: nodeData.id });
+      }
+    });
+    set({
+      outputIds: outputs.map((output) => output.id),
+      outputTypes: outputs.map((output) => output.type),
+    });
+    return outputs;
+  },
+  getInputs(): { type: string; id: string }[] {
+    let inputs: { type: string; id: string }[] = [];
+    const nodes = get().nodes;
+    nodes.forEach((node) => {
+      const nodeData: NodeDataType = node.data as NodeDataType;
+      if (isOutputNode(nodeData)) {
+        inputs.push({ type: nodeData.type, id: nodeData.id });
+      }
+    });
+    set({
+      inputIds: inputs.map((input) => input.id),
+      inputTypes: inputs.map((input) => input.type),
+    });
+    return inputs;
   },
 }));
 

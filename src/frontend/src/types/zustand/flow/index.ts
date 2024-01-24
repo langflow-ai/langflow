@@ -86,4 +86,6 @@ export type FlowStoreType = {
   buildFlow: (nodeId?: string) => Promise<void>;
   checkInputAndOutput: () => boolean;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
+  getOutputs: () => { type: string; id: string }[];
+  getInputs: () => { type: string; id: string }[];
 };

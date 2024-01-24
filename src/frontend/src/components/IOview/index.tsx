@@ -10,10 +10,12 @@ import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 
 export default function IOView(): JSX.Element {
-  const { inputIds, outputIds } = useFlowStore();
+  const inputIds = useFlowStore((state) => state.inputIds);
+  const outputIds = useFlowStore((state) => state.outputIds);
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const options = inputIds.concat(outputIds);
+  console.log(options);
   const [selectedView, setSelectedView] = useState<ReactNode>(
     handleSelectChange(options[0])
   );
