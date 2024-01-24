@@ -20,7 +20,7 @@ import {
   scapedJSONStringfy,
 } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -319,10 +319,11 @@ export default function GenericNode({
                 className="round-button-div"
                 onClick={() => setIsPinned(!isPinned)}
               >
+                <div className="generic-node-status-position">
                 <IconComponent
-                  name={isPinned ? "Pin" : "PinOff"}
-                  className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                />
+                  name={"Pin"}
+                  className={cn("transition-all mx-0.5 h-5 stroke-2 stroke-chat-trigger fill-transparent", isPinned ? "fill-chat-trigger animate-wiggle" : "")}
+                /></div>
               </div>
             )}
             {showNode && (
