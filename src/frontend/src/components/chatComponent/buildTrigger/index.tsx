@@ -18,6 +18,7 @@ export default function BuildTrigger({
 }): JSX.Element {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const buildFlow = useFlowStore((state) => state.buildFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -45,6 +46,7 @@ export default function BuildTrigger({
       setIsBuilding(true);
 
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
+      await buildFlow();
     } catch (error) {
       console.error("Error:", error);
     } finally {
