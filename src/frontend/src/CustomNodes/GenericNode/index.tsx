@@ -349,7 +349,7 @@ export default function GenericNode({
               </div>
             )}
             {showNode && (
-              <div
+              <div 
                 className="round-button-div"
                 onClick={() => buildFlow(data.id)}
               >
