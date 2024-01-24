@@ -1,10 +1,9 @@
 import { AxiosError } from "axios";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
-import { FlowType } from "../types/flow";
 
 type BuildVerticesParams = {
-  flow: FlowType; // Assuming FlowType is the type for your flow
+  flowId: string; // Assuming FlowType is the type for your flow
   nodeId?: string | null; // Assuming nodeId is of type string, and it's optional
   onProgressUpdate?: (progress: number) => void; // Replace number with the actual type if it's not a number
   onBuildUpdate?: (data: any) => void; // Replace any with the actual type of data
@@ -13,14 +12,14 @@ type BuildVerticesParams = {
 };
 
 export async function buildVertices({
-  flow,
+  flowId,
   nodeId = null,
   onProgressUpdate,
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
 }: BuildVerticesParams) {
-  let orderResponse = await getVerticesOrder(flow.id);
+  let orderResponse = await getVerticesOrder(flowId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices: Array<Array<string>> = [];
   if (nodeId) {
@@ -45,7 +44,7 @@ export async function buildVertices({
     await Promise.all(
       vertices[i].map(async (id) => {
         try {
-          const buildRes = await postBuildVertex(flow, id);
+          const buildRes = await postBuildVertex(flowId, id);
           const buildData: VertexBuildTypeAPI = buildRes.data;
           if (onBuildUpdate) {
             let data = {};

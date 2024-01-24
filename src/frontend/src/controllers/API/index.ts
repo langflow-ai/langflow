@@ -861,11 +861,8 @@ export async function getVerticesOrder(
 }
 
 export async function postBuildVertex(
-  flow: FlowType,
+  flowId: string,
   vertexId: string
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
-  return await api.post(
-    `${BASE_URL_API}build/${flow.id}/vertices/${vertexId}`,
-    flow
-  );
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`);
 }
