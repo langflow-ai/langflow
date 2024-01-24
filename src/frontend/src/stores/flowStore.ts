@@ -330,9 +330,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async (nodeId?: string) => {
-    const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-    const setSuccessData = useAlertStore((state) => state.setSuccessData);
-    const setErrorData = useAlertStore((state) => state.setErrorData);
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    const setSuccessData = useAlertStore.getState().setSuccessData;
+    const setErrorData = useAlertStore.getState().setErrorData;
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
     }
