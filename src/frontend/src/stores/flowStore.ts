@@ -21,11 +21,10 @@ import {
   cleanEdges,
   getHandleId,
   getNodeId,
-  isInputNode,
-  isOutputNode,
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
+import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
@@ -36,6 +35,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   edges: [],
   isBuilding: false,
   isPending: false,
+  hasIO: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
   flowPool: {},
@@ -61,10 +61,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isPending });
   },
   resetFlow: ({ nodes, edges, viewport }) => {
+    let newEdges = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
+
     set({
       nodes,
-      edges,
+      edges: newEdges,
       flowState: undefined,
+      inputIds: inputs.map((input) => input.id),
+      outputIds: outputs.map((output) => output.id),
+      inputTypes: inputs.map((input) => input.type),
+      outputTypes: outputs.map((output) => output.type),
+      hasIO: inputs.length > 0 && outputs.length > 0,
     });
     get().reactFlowInstance!.setViewport(viewport);
   },
@@ -97,11 +105,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
+    const { inputs, outputs } = getInputsAndOutputs(newChange);
 
     set({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
+      inputIds: inputs.map((input) => input.id),
+      outputIds: outputs.map((output) => output.id),
+      inputTypes: inputs.map((input) => input.type),
+      outputTypes: outputs.map((output) => output.type),
+      hasIO: inputs.length > 0 && outputs.length > 0,
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -143,21 +157,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         return node;
       })
     );
-  },
-  checkInputAndOutput: () => {
-    let has_input = false;
-    let has_output = false;
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isInputNode(nodeData)) {
-        has_input = true;
-      }
-      if (isOutputNode(nodeData)) {
-        has_output = true;
-      }
-    });
-    return has_input && has_output;
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
@@ -368,36 +367,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges,
       viewport: get().reactFlowInstance?.getViewport()!,
     };
-  },
-  getOutputs(): { type: string; id: string }[] {
-    let outputs: { type: string; id: string }[] = [];
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isOutputNode(nodeData)) {
-        outputs.push({ type: nodeData.type, id: nodeData.id });
-      }
-    });
-    set({
-      outputIds: outputs.map((output) => output.id),
-      outputTypes: outputs.map((output) => output.type),
-    });
-    return outputs;
-  },
-  getInputs(): { type: string; id: string }[] {
-    let inputs: { type: string; id: string }[] = [];
-    const nodes = get().nodes;
-    nodes.forEach((node) => {
-      const nodeData: NodeDataType = node.data as NodeDataType;
-      if (isOutputNode(nodeData)) {
-        inputs.push({ type: nodeData.type, id: nodeData.id });
-      }
-    });
-    set({
-      inputIds: inputs.map((input) => input.id),
-      inputTypes: inputs.map((input) => input.type),
-    });
-    return inputs;
   },
 }));
 

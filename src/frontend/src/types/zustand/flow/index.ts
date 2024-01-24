@@ -38,6 +38,7 @@ export type FlowStoreType = {
   inputTypes: string[];
   outputTypes: string[];
   inputIds: string[];
+  hasIO: boolean;
   outputIds: string[];
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: any, nodeId: string) => void;
@@ -84,8 +85,5 @@ export type FlowStoreType = {
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   buildFlow: (nodeId?: string) => Promise<void>;
-  checkInputAndOutput: () => boolean;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
-  getOutputs: () => { type: string; id: string }[];
-  getInputs: () => { type: string; id: string }[];
 };

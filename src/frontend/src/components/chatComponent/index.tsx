@@ -12,27 +12,14 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const flowState = useFlowStore((state) => state.flowState);
   const nodes = useFlowStore((state) => state.nodes);
-  const checkInputAndOutput = useFlowStore(
-    (state) => state.checkInputAndOutput
-  );
-  const getOutputs = useFlowStore((state) => state.getOutputs);
-  const getInputs = useFlowStore((state) => state.getInputs);
-  const [showTrigger, setShowTrigger] = useState(checkInputAndOutput());
-  useEffect(() => {
-    const haveIO = checkInputAndOutput();
-    setShowTrigger(haveIO);
-    if (haveIO) {
-      getOutputs();
-      getInputs();
-    }
-  }, [nodes]);
+  const hasIO = useFlowStore((state) => state.hasIO);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         (event.key === "K" || event.key === "k") &&
         (event.metaKey || event.ctrlKey) &&
-        checkInputAndOutput()
+        useFlowStore.getState().hasIO
       ) {
         event.preventDefault();
         setOpen((oldState) => !oldState);
@@ -50,7 +37,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     <>
       <div className="flex flex-col">
         <BuildTrigger open={open} flow={flow} />
-        {showTrigger && (
+        {hasIO && (
           <BaseModal open={open} setOpen={setOpen}>
             <BaseModal.Trigger asChild>
               <div onClick={() => setOpen(true)}>
