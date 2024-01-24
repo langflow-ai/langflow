@@ -52,9 +52,7 @@ export default function BuildTrigger({
     }
   }
 
-  const checkInputAndOutput = useFlowStore(
-    (state) => state.checkInputAndOutput
-  );
+  const hasIO = useFlowStore((state) => state.hasIO);
 
   async function enforceMinimumLoadingTime(
     startTime: number,
@@ -80,11 +78,7 @@ export default function BuildTrigger({
       leaveTo="translate-y-96"
     >
       <div
-        className={
-          checkInputAndOutput()
-            ? "fixed bottom-20 right-4"
-            : "fixed bottom-4 right-4"
-        }
+        className={hasIO ? "fixed bottom-20 right-4" : "fixed bottom-4 right-4"}
       >
         <div
           className={`${eventClick} round-button-form`}
