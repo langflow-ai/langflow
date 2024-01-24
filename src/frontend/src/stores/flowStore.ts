@@ -226,7 +226,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         .map((node) => ({ ...node, selected: false }))
         .concat({ ...newNode, selected: false });
     });
-    set({ nodes: newNodes });
+    get().setNodes(newNodes);
 
     selection.edges.forEach((edge: Edge) => {
       let source = idsMap[edge.source];
@@ -270,7 +270,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges.map((edge) => ({ ...edge, selected: false }))
       );
     });
-    set({ edges: newEdges });
+    get().setEdges(newEdges);
   },
   setLastCopiedSelection: (newSelection) => {
     set({ lastCopiedSelection: newSelection });
