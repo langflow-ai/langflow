@@ -133,6 +133,10 @@ pytest-sugar = "^0.9.7"
 pytest-instafail = "^0.5.0"
 
 
+
+[tool.poetry.group.deploy.dependencies]
+eventlet = "^0.35.0"
+
 [tool.poetry.extras]
 deploy = ["langchain-serve", "celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]

@@ -1505,6 +1505,24 @@ files = [
 dev = ["coverage", "coveralls", "pytest"]
 
 [[package]]
+name = "eventlet"
+version = "0.35.0"
+description = "Highly concurrent networking library"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "eventlet-0.35.0-py3-none-any.whl", hash = "sha256:0cd273321ba26a4f717cc2ddbbf36c37cabee1fe7949de635a506c8bf9c06ce5"},
+    {file = "eventlet-0.35.0.tar.gz", hash = "sha256:5b8160016af202d74296f86b6e4143c86c377ae6e188fafbe567dd1a0b39123b"},
+]
+
+[package.dependencies]
+dnspython = ">=1.15.0"
+greenlet = ">=1.0"
+
+[package.extras]
+dev = ["black", "build", "commitizen", "isort", "pip-tools", "pre-commit", "twine"]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -9400,4 +9418,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "19c6501f1567e95376c7482fe4c589c3fbde90a0e3bb7eaa37181f4ca701ee98"
+content-hash = "89feefc8d148e47a2fc019f461116b2ef6c672264e546c560b6266d0c233c192"
