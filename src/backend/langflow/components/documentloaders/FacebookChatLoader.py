@@ -1,12 +1,15 @@
-
 from langflow import CustomComponent
 from langchain.docstore.document import Document
 from typing import Optional, Dict
 from langchain_community.document_loaders.facebook_chat import FacebookChatLoader
+
+
 class FacebookChatLoaderComponent(CustomComponent):
     display_name = "FacebookChatLoader"
     description = "Load `Facebook Chat` messages directory dump."
-    documentation = "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/facebook_chat"
+    documentation = (
+        "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/facebook_chat"
+    )
 
     def build_config(self):
         return {
@@ -25,7 +28,7 @@ class FacebookChatLoaderComponent(CustomComponent):
 
     def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
         documents = FacebookChatLoader(file_path=file_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

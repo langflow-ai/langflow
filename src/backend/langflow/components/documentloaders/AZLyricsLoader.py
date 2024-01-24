@@ -17,7 +17,7 @@ class AZLyricsLoaderComponent(CustomComponent):
 
     def build(self, metadata: Optional[Dict] = None, web_path: str = "") -> Document:
         documents = AZLyricsLoader(web_path=web_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

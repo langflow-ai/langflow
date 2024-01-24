@@ -1,6 +1,8 @@
+from typing import Dict, List, Optional
+
+from langchain_community.document_loaders.ifixit import IFixitLoader
 from langflow import CustomComponent
 from langflow.field_typing import Document
-from typing import Optional, Dict
 
 
 class IFixitLoaderComponent(CustomComponent):
@@ -14,7 +16,17 @@ class IFixitLoaderComponent(CustomComponent):
             "web_path": {"display_name": "Web Page", "type": "str"},
         }
 
-    def build(self, web_path: str, metadata: Optional[Dict] = None) -> Document:
+    def build(self, web_path: str, metadata: Optional[Dict] = None) -> List[Document]:
         # Assuming IFixitLoader is the correct class name from the langchain library,
         # and it has a load method that returns a Document object.
-        return IFixitLoader(web_path=web_path, metadata=metadata).load()
+        if metadata is None:
+            metadata = {}
+
+        docs = IFixitLoader(web_path=web_path).load()
+
+        if metadata:
+            for doc in docs:
+                if doc.metadata is None:
+                    doc.metadata = {}
+                doc.metadata.update(metadata)
+        return docs

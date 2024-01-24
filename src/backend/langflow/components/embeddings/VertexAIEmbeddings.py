@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
 from langchain.embeddings import VertexAIEmbeddings
 from typing import Optional, List
+
 
 class VertexAIEmbeddingsComponent(CustomComponent):
     display_name = "VertexAIEmbeddings"
@@ -9,12 +9,12 @@ class VertexAIEmbeddingsComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "credentials": {"display_name": "Credentials", "value": '', "file_types": ['.json'],"field_type": "file"},
+            "credentials": {"display_name": "Credentials", "value": "", "file_types": [".json"], "field_type": "file"},
             "instance": {"display_name": "instance", "advanced": True, "field_type": "dict"},
-            "location": {"display_name": "Location", "value": 'us-central1', "advanced": True},
+            "location": {"display_name": "Location", "value": "us-central1", "advanced": True},
             "max_output_tokens": {"display_name": "Max Output Tokens", "value": 128},
             "max_retries": {"display_name": "Max Retries", "value": 6, "advanced": True},
-            "model_name": {"display_name": "Model Name", "value": 'textembedding-gecko'},
+            "model_name": {"display_name": "Model Name", "value": "textembedding-gecko"},
             "n": {"display_name": "N", "value": 1, "advanced": True},
             "project": {"display_name": "Project", "advanced": True},
             "request_parallelism": {"display_name": "Request Parallelism", "value": 5, "advanced": True},
@@ -29,10 +29,10 @@ class VertexAIEmbeddingsComponent(CustomComponent):
         self,
         instance: Optional[str] = None,
         credentials: Optional[str] = None,
-        location: str = 'us-central1',
+        location: str = "us-central1",
         max_output_tokens: int = 128,
         max_retries: int = 6,
-        model_name: str = 'textembedding-gecko',
+        model_name: str = "textembedding-gecko",
         n: int = 1,
         project: Optional[str] = None,
         request_parallelism: int = 5,

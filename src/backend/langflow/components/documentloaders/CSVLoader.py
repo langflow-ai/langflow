@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from typing import List
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.docstore.document import Document
+
 
 class CSVLoaderComponent(CustomComponent):
     display_name = "CSVLoader"
@@ -23,13 +23,9 @@ class CSVLoaderComponent(CustomComponent):
             },
         }
 
-    def build(
-        self,
-        file_path: str,
-        metadata: dict
-    ) -> List[Document]:
+    def build(self, file_path: str, metadata: dict) -> List[Document]:
         documents = CSVLoader(file_path=file_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

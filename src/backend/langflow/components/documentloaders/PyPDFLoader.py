@@ -1,7 +1,10 @@
+from typing import Dict, List, Optional
+
+from langchain_community.document_loaders.pdf import PyPDFLoader
+from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langchain.document_loaders import BaseLoader
-from typing import Optional, Dict
+
 
 class PyPDFLoaderComponent(CustomComponent):
     display_name = "PyPDFLoader"
@@ -22,10 +25,17 @@ class PyPDFLoaderComponent(CustomComponent):
                 "required": False,
                 "type": "dict",
                 "show": True,
-            }
+            },
         }
 
-    def build(self, file_path: str, metadata: Optional[Dict] = None) -> BaseLoader:
+    def build(self, file_path: str, metadata: Optional[Dict] = None) -> List[Document]:
         # Assuming there is a PyPDFLoader class that takes file_path and metadata as parameters
         # and inherits from BaseLoader
-        return PyPDFLoader(file_path=file_path, metadata=metadata)
+        docs = PyPDFLoader(file_path=file_path).load()
+
+        if metadata:
+            for doc in docs:
+                if doc.metadata is None:
+                    doc.metadata = {}
+                doc.metadata.update(metadata)
+        return docs

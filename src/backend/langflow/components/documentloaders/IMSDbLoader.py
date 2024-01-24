@@ -21,7 +21,7 @@ class IMSDbLoaderComponent(CustomComponent):
         web_path: str = "",
     ) -> Document:
         documents = IMSDbLoader(web_path=web_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

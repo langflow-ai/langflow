@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from typing import Union, Callable
 from langchain_community.utilities.google_search import GoogleSearchAPIWrapper
@@ -11,7 +10,7 @@ class GoogleSearchAPIWrapperComponent(CustomComponent):
     def build_config(self):
         return {
             "google_api_key": {"display_name": "Google API Key", "password": True},
-            "google_cse_id": {"display_name": "Google CSE ID","password":True},
+            "google_cse_id": {"display_name": "Google CSE ID", "password": True},
         }
 
     def build(

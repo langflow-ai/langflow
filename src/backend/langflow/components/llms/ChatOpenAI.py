@@ -1,7 +1,9 @@
-from langflow import CustomComponent
-from langchain.llms import BaseLLM
 from typing import Optional, Union
+
+from langchain.llms import BaseLLM
 from langchain_community.chat_models.openai import ChatOpenAI
+
+from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, NestedDict
 
 
@@ -66,12 +68,12 @@ class ChatOpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 256,
         model_kwargs: Optional[NestedDict] = {},
-        model_name: Optional[str] = "gpt-4-1106-preview",
+        model_name: str = "gpt-4-1106-preview",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
     ) -> Union[BaseLanguageModel, BaseLLM]:
-        if(not openai_api_base):
+        if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
         return ChatOpenAI(
             max_tokens=max_tokens,

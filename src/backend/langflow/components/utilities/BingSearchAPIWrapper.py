@@ -1,4 +1,3 @@
-
 from typing import Optional
 from langflow import CustomComponent
 
@@ -30,8 +29,4 @@ class BingSearchAPIWrapperComponent(CustomComponent):
         k: Optional[int] = 10,
     ) -> BingSearchAPIWrapper:
         # 'k' has a default value and is not shown (show=False), so it is hardcoded here
-        return BingSearchAPIWrapper(
-            bing_search_url=bing_search_url,
-            bing_subscription_key=bing_subscription_key,
-            k=k
-        )
+        return BingSearchAPIWrapper(bing_search_url=bing_search_url, bing_subscription_key=bing_subscription_key, k=k)

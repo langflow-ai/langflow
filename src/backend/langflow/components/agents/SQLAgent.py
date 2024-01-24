@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from typing import Union, Callable
 from langchain.agents import AgentExecutor
@@ -6,7 +5,8 @@ from langflow.field_typing import BaseLanguageModel
 from langchain_community.agent_toolkits.sql.base import create_sql_agent
 from langchain.sql_database import SQLDatabase
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
- 
+
+
 class SQLAgentComponent(CustomComponent):
     display_name = "SQLAgent"
     description = "Construct an SQL agent from an LLM and tools."
@@ -15,7 +15,7 @@ class SQLAgentComponent(CustomComponent):
         return {
             "llm": {"display_name": "LLM"},
             "database_uri": {"display_name": "Database URI"},
-            "verbose": {"display_name": "Verbose", "value": False,"advanced": True},
+            "verbose": {"display_name": "Verbose", "value": False, "advanced": True},
         }
 
     def build(

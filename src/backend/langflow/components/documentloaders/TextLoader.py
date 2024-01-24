@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
 from langchain.data_connections import Document
 from typing import Optional, Dict
+
 
 class TextLoaderComponent(CustomComponent):
     display_name = "TextLoader"

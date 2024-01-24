@@ -1,8 +1,8 @@
-
 from langflow import CustomComponent
 from langchain_core.language_models.base import BaseLanguageModel
 from typing import Optional
 from langchain_community.llms.cohere import Cohere
+
 
 class CohereComponent(CustomComponent):
     display_name = "Cohere"
@@ -11,23 +11,9 @@ class CohereComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "cohere_api_key": {
-                "display_name": "Cohere API Key",
-                "type": "password",
-                "password": True
-            },
-            "max_tokens": {
-                "display_name": "Max Tokens",
-                "default": 256,
-                "type": "int",
-                "show": True
-            },
-            "temperature": {
-                "display_name": "Temperature",
-                "default": 0.75,
-                "type": "float",
-                "show": True
-            },
+            "cohere_api_key": {"display_name": "Cohere API Key", "type": "password", "password": True},
+            "max_tokens": {"display_name": "Max Tokens", "default": 256, "type": "int", "show": True},
+            "temperature": {"display_name": "Temperature", "default": 0.75, "type": "float", "show": True},
         }
 
     def build(

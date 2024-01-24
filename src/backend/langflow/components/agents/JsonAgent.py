@@ -1,10 +1,11 @@
-
 from langflow import CustomComponent
-from langchain.agents import AgentExecutor,create_json_agent
+from langchain.agents import AgentExecutor, create_json_agent
 from langflow.field_typing import (
     BaseLanguageModel,
 )
 from langchain_community.agent_toolkits.base import BaseToolkit
+
+
 class JsonAgentComponent(CustomComponent):
     display_name = "JsonAgent"
     description = "Construct a json agent from an LLM and tools."

@@ -12,7 +12,7 @@ class GitbookLoaderComponent(CustomComponent):
         return {
             "metadata": {
                 "display_name": "Metadata",
-                "field_type":"dict",
+                "field_type": "dict",
                 "value": {},
             },
             "web_page": {
@@ -23,7 +23,7 @@ class GitbookLoaderComponent(CustomComponent):
 
     def build(self, metadata: Optional[Dict] = None, web_page: str = "") -> Document:
         documents = GitbookLoader(web_page=web_page).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_core.documents.base import Document

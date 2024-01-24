@@ -1,7 +1,7 @@
-
 from langflow import CustomComponent
 from langchain.documents import Document
 from typing import Optional, Dict
+
 
 class SRTLoaderComponent(CustomComponent):
     display_name = "SRTLoader"

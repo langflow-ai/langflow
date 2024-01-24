@@ -1,8 +1,9 @@
-
 from langflow import CustomComponent
 from typing import Optional, Union, Callable
 from langflow.field_typing import BaseLanguageModel
 from langchain_community.chat_models.anthropic import ChatAnthropic
+
+
 class ChatAnthropicComponent(CustomComponent):
     display_name = "ChatAnthropic"
     description = "`Anthropic` chat large language models."
@@ -21,7 +22,7 @@ class ChatAnthropicComponent(CustomComponent):
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "field_type": 'dict',
+                "field_type": "dict",
                 "advanced": True,
             },
             "temperature": {
@@ -37,7 +38,6 @@ class ChatAnthropicComponent(CustomComponent):
         model_kwargs: dict = {},
         temperature: Optional[float] = None,
     ) -> Union[BaseLanguageModel, Callable]:
-
         return ChatAnthropic(
             anthropic_api_key=anthropic_api_key,
             anthropic_api_url=anthropic_api_url,

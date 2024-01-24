@@ -26,7 +26,7 @@ class CoNLLULoaderComponent(CustomComponent):
 
     def build(self, file_path: str, metadata: dict) -> Document:
         documents = CoNLLULoader(file_path=file_path).load()
-        if(metadata):
+        if metadata:
             for document in documents:
                 if not document.metadata:
                     document.metadata = metadata

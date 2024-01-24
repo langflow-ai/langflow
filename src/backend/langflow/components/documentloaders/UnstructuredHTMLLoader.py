@@ -1,6 +1,8 @@
+from typing import Dict, List, Optional
+
 from langchain import CustomComponent
-from langflow.field_typing import Document
-from typing import Optional, Dict
+from langchain_community.document_loaders import UnstructuredHTMLLoader
+from langchain_core.documents import Document
 
 
 class UnstructuredHTMLLoaderComponent(CustomComponent):
@@ -14,7 +16,14 @@ class UnstructuredHTMLLoaderComponent(CustomComponent):
             "metadata": {"display_name": "Metadata"},
         }
 
-    def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
+    def build(self, file_path: str, metadata: Optional[Dict] = None) -> List[Document]:
         # Assuming the existence of a function or class named UnstructuredHTMLLoader that
         # loads HTML and creates a Document object; Replace with actual implementation.
-        return UnstructuredHTMLLoader(file_path=file_path, metadata=metadata)
+        docs = UnstructuredHTMLLoader(file_path=file_path).load()
+
+        if metadata:
+            for doc in docs:
+                if doc.metadata is None:
+                    doc.metadata = {}
+                doc.metadata.update(metadata)
+        return docs

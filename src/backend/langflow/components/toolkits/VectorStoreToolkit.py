@@ -1,4 +1,3 @@
-
 from langflow import CustomComponent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
@@ -9,6 +8,7 @@ from langflow.field_typing import (
     Tool,
 )
 from typing import Union
+
 
 class VectorStoreToolkitComponent(CustomComponent):
     display_name = "VectorStoreToolkit"
@@ -24,5 +24,5 @@ class VectorStoreToolkitComponent(CustomComponent):
         self,
         vectorstore_info: VectorStoreInfo,
         llm: BaseLanguageModel,
-    ) -> Union[Tool,VectorStoreToolkit]:
-        return VectorStoreToolkit(vectorstore_info=vectorstore_info,llm=llm)
+    ) -> Union[Tool, VectorStoreToolkit]:
+        return VectorStoreToolkit(vectorstore_info=vectorstore_info, llm=llm)
