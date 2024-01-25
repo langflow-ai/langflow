@@ -12,7 +12,7 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "ZeroShotAgent",
         "BaseSingleActionAgent",
         "Agent",
-        "Callable",
+        "function",
     }
     template = zero_shot_agent["template"]
 
@@ -28,7 +28,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
 
     # Additional assertions for other template variables
@@ -44,7 +43,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
     assert template["llm"] == {
         "required": True,
@@ -58,7 +56,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
     assert template["output_parser"] == {
         "required": False,
@@ -72,7 +69,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
     assert template["input_variables"] == {
         "required": False,
@@ -86,7 +82,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
     assert template["prefix"] == {
         "required": False,
@@ -101,7 +96,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
     assert template["suffix"] == {
         "required": False,
@@ -116,7 +110,6 @@ def test_zero_shot_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "fileTypes": [],
     }
 
 
@@ -142,9 +135,6 @@ def test_json_agent(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-        "file_path": "",
-        "fileTypes": [],
-        "value": "",
     }
     assert template["llm"] == {
         "required": True,
@@ -159,9 +149,6 @@ def test_json_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "display_name": "LLM",
         "info": "",
-        "file_path": "",
-        "fileTypes": [],
-        "value": "",
     }
 
 
@@ -182,12 +169,13 @@ def test_csv_agent(client: TestClient, logged_in_headers):
         "show": True,
         "multiline": False,
         "value": "",
-        "fileTypes": [".csv"],
+        "suffixes": [".csv"],
+        "fileTypes": ["csv"],
         "password": False,
         "name": "path",
         "type": "file",
         "list": False,
-        "file_path": "",
+        "file_path": None,
         "advanced": False,
         "info": "",
     }
@@ -204,7 +192,78 @@ def test_csv_agent(client: TestClient, logged_in_headers):
         "advanced": False,
         "display_name": "LLM",
         "info": "",
-        "file_path": "",
-        "fileTypes": [],
-        "value": "",
+    }
+
+
+def test_initialize_agent(client: TestClient, logged_in_headers):
+    response = client.get("api/v1/all", headers=logged_in_headers)
+    assert response.status_code == 200
+    json_response = response.json()
+    agents = json_response["agents"]
+
+    initialize_agent = agents["AgentInitializer"]
+    assert initialize_agent["base_classes"] == ["AgentExecutor", "function"]
+    template = initialize_agent["template"]
+
+    assert template["agent"] == {
+        "required": True,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "value": "zero-shot-react-description",
+        "password": False,
+        "options": [
+            "zero-shot-react-description",
+            "react-docstore",
+            "self-ask-with-search",
+            "conversational-react-description",
+            "openai-functions",
+            "openai-multi-functions",
+        ],
+        "name": "agent",
+        "type": "str",
+        "list": True,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["memory"] == {
+        "required": False,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "password": False,
+        "name": "memory",
+        "type": "BaseChatMemory",
+        "list": False,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["tools"] == {
+        "required": True,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "password": False,
+        "name": "tools",
+        "type": "Tool",
+        "list": True,
+        "advanced": False,
+        "info": "",
+    }
+    assert template["llm"] == {
+        "required": True,
+        "dynamic": False,
+        "placeholder": "",
+        "show": True,
+        "multiline": False,
+        "password": False,
+        "name": "llm",
+        "type": "BaseLanguageModel",
+        "list": False,
+        "advanced": False,
+        "display_name": "LLM",
+        "info": "",
     }

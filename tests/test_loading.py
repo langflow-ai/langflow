@@ -1,10 +1,9 @@
 import json
-
 import pytest
 from langchain.chains.base import Chain
+from langflow.processing.process import load_flow_from_json
 from langflow.graph import Graph
-from langflow.processing.load import load_flow_from_json
-from langflow.utils.payload import get_root_vertex
+from langflow.utils.payload import get_root_node
 
 
 def test_load_flow_from_json():
@@ -16,22 +15,21 @@ def test_load_flow_from_json():
 
 def test_load_flow_from_json_with_tweaks():
     """Test loading a flow from a json file and applying tweaks"""
-    tweaks = {"dndnode_82": {"model_name": "test model"}}
+    tweaks = {"dndnode_82": {"model_name": "gpt-3.5-turbo-16k-0613"}}
     loaded = load_flow_from_json(pytest.BASIC_EXAMPLE_PATH, tweaks=tweaks)
     assert loaded is not None
     assert isinstance(loaded, Chain)
-    assert loaded.llm.model_name == "test model"
+    assert loaded.llm.model_name == "gpt-3.5-turbo-16k-0613"
 
 
-def test_get_root_vertex():
+def test_get_root_node():
     with open(pytest.BASIC_EXAMPLE_PATH, "r") as f:
         flow_graph = json.load(f)
     data_graph = flow_graph["data"]
     nodes = data_graph["nodes"]
     edges = data_graph["edges"]
     graph = Graph(nodes, edges)
-    root = get_root_vertex(graph)
+    root = get_root_node(graph)
     assert root is not None
     assert hasattr(root, "id")
-    assert hasattr(root, "data")
     assert hasattr(root, "data")
