@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 def test_prompts_settings(client: TestClient, logged_in_headers):
@@ -31,34 +31,7 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": True,
         "advanced": False,
         "info": "",
-    }
-
-    assert template["output_parser"] == {
-        "required": False,
-        "dynamic": True,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "password": False,
-        "name": "output_parser",
-        "type": "BaseOutputParser",
-        "list": False,
-        "advanced": False,
-        "info": "",
-    }
-
-    assert template["partial_variables"] == {
-        "required": False,
-        "dynamic": True,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "password": False,
-        "name": "partial_variables",
-        "type": "dict",
-        "list": False,
-        "advanced": False,
-        "info": "",
+        "fileTypes": [],
     }
 
     assert template["template"] == {
@@ -73,34 +46,5 @@ def test_prompt_template(client: TestClient, logged_in_headers):
         "list": False,
         "advanced": False,
         "info": "",
-    }
-
-    assert template["template_format"] == {
-        "required": False,
-        "dynamic": True,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "value": "f-string",
-        "password": False,
-        "name": "template_format",
-        "type": "str",
-        "list": False,
-        "advanced": False,
-        "info": "",
-    }
-
-    assert template["validate_template"] == {
-        "required": False,
-        "dynamic": True,
-        "placeholder": "",
-        "show": False,
-        "multiline": False,
-        "value": True,
-        "password": False,
-        "name": "validate_template",
-        "type": "bool",
-        "list": False,
-        "advanced": False,
-        "info": "",
+        "fileTypes": [],
     }
