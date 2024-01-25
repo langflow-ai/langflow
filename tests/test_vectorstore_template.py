@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from langflow.services.getters import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 # check that all agents are in settings.agents
