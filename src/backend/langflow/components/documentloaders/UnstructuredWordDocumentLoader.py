@@ -1,4 +1,4 @@
-from langchain import CustomComponent
+from langflow import CustomComponent
 from langflow.field_typing import Document
 from typing import Optional, Dict
 

@@ -35,7 +35,7 @@ class QdrantComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: Optional[List[Document]] = None,
+        documents: List[Document] = None,
         api_key: Optional[str] = None,
         collection_name: Optional[str] = None,
         content_payload_key: str = "page_content",

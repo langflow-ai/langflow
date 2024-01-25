@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain_community.vectorstores.faiss import FAISS
-from typing import Optional, List, Union
+from typing import List, Union
 from langchain.schema import BaseRetriever
 from langchain.vectorstores.base import VectorStore
 from langflow.field_typing import (
@@ -23,6 +23,6 @@ class FAISSComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: Optional[List[Document]] = None,
+        documents: List[Document] = None,
     ) -> Union[VectorStore, FAISS, BaseRetriever]:
         return FAISS.from_documents(documents=documents, embedding=embedding)
