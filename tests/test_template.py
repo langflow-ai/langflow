@@ -65,11 +65,9 @@ def test_build_template_from_function():
     assert "base_classes" in result
 
     # Test with add_function=True
-    result_with_function = build_template_from_function(
-        "ExampleClass1", type_to_loader_dict, add_function=True
-    )
+    result_with_function = build_template_from_function("ExampleClass1", type_to_loader_dict, add_function=True)
     assert result_with_function is not None
-    assert "function" in result_with_function["base_classes"]
+    assert "Callable" in result_with_function["base_classes"]
 
     # Test with invalid name
     with pytest.raises(ValueError, match=r".* not found"):
@@ -237,7 +235,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": CHAT_OPENAI_MODELS,
-            "value": "gpt-4-1106-preview"",
+            "value": "gpt-4-1106-preview",
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai
