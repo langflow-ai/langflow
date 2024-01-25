@@ -5,15 +5,14 @@ from typing import Any, Dict, List
 
 import orjson
 from fastapi import WebSocket, status
-from loguru import logger
-from starlette.websockets import WebSocketState
-
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
-from langflow.services import ServiceType, service_manager
 from langflow.services.base import Service
 from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
+from langflow.services.deps import get_cache_service
+from loguru import logger
+from starlette.websockets import WebSocketState
 
 from .cache import cache_service
 
@@ -54,7 +53,7 @@ class ChatService(Service):
         self.chat_history = ChatHistory()
         self.chat_cache = cache_service
         self.chat_cache.attach(self.update)
-        self.cache_service = service_manager.get(ServiceType.CACHE_SERVICE)
+        self.cache_service = get_cache_service()
 
     def on_chat_history_update(self):
         """Send the last chat message to the client."""
@@ -240,7 +239,7 @@ class ChatService(Service):
         """
         Get the cache for a client.
         """
-        return self.chat_cache.get(client_id)
+        return self.cache_service.get(client_id)
 
 
 def dict_to_markdown_table(my_dict):
