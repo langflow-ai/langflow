@@ -20,9 +20,8 @@ export default function newChatView(): JSX.Element {
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const {
     flowPool,
-    outputIds,
-    inputIds,
-    inputTypes,
+    outputs,
+    inputs,
     getNode,
     setNode,
     buildFlow,
@@ -32,6 +31,10 @@ export default function newChatView(): JSX.Element {
   const { setErrorData } = useAlertStore();
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
+
+  const inputTypes = inputs.map((obj) => obj.type);
+  const inputIds = inputs.map((obj) => obj.id);
+  const outputIds = outputs.map((obj) => obj.id)
 
   //build chat history
   useEffect(() => {

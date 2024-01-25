@@ -10,8 +10,10 @@ import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 
 export default function IOView(): JSX.Element {
-  const inputIds = useFlowStore((state) => state.inputIds);
-  const outputIds = useFlowStore((state) => state.outputIds);
+  const inputs = useFlowStore((state) => state.inputs);
+  const outputs = useFlowStore((state) => state.outputs);
+  const inputIds = inputs.map((obj) => obj.id);
+  const outputIds = outputs.map((obj) => obj.id);
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const options = inputIds.concat(outputIds);
