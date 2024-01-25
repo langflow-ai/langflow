@@ -373,7 +373,7 @@ def test_custom_component_class_template_validation_no_code():
     """
     custom_component = CustomComponent(code=None, function_entrypoint_name="build")
     with pytest.raises(HTTPException):
-        custom_component._class_template_validation(custom_component.code)
+        custom_component.get_function()
 
 
 def test_custom_component_get_code_tree_syntax_error():
