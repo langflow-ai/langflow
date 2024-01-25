@@ -1,4 +1,5 @@
 import orjson
+from pydantic import ConfigDict
 from sqlmodel import SQLModel
 
 
@@ -19,7 +20,4 @@ def orjson_dumps(v, *, default=None, sort_keys=False, indent_2=True):
 
 
 class SQLModelSerializable(SQLModel):
-    class Config:
-        orm_mode = True
-        json_loads = orjson.loads
-        json_dumps = orjson_dumps
+    model_config = ConfigDict(from_attributes=True)
