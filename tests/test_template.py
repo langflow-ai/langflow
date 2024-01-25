@@ -2,8 +2,6 @@ import importlib
 from typing import Dict, List, Optional
 
 import pytest
-from pydantic import BaseModel
-
 from langflow.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
 from langflow.utils.util import (
     build_template_from_class,
@@ -12,6 +10,7 @@ from langflow.utils.util import (
     get_base_classes,
     get_default_factory,
 )
+from pydantic import BaseModel
 
 
 # Dummy classes for testing purposes
@@ -66,9 +65,11 @@ def test_build_template_from_function():
     assert "base_classes" in result
 
     # Test with add_function=True
-    result_with_function = build_template_from_function("ExampleClass1", type_to_loader_dict, add_function=True)
+    result_with_function = build_template_from_function(
+        "ExampleClass1", type_to_loader_dict, add_function=True
+    )
     assert result_with_function is not None
-    assert "Callable" in result_with_function["base_classes"]
+    assert "function" in result_with_function["base_classes"]
 
     # Test with invalid name
     with pytest.raises(ValueError, match=r".* not found"):
@@ -236,7 +237,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": CHAT_OPENAI_MODELS,
-            "value": "gpt-4-1106-preview",
+            "value": "gpt-4-1106-preview"",
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai

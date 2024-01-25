@@ -1,10 +1,9 @@
 from pathlib import Path
 from tempfile import tempdir
-
+from langflow.__main__ import app
 import pytest
 
-from langflow.__main__ import app
-from langflow.services import deps
+from langflow.services import getters
 
 
 @pytest.fixture(scope="module")
@@ -27,12 +26,11 @@ def test_components_path(runner, client, default_settings):
         ["run", "--components-path", str(temp_dir), *default_settings],
     )
     assert result.exit_code == 0, result.stdout
-    settings_service = deps.get_settings_service()
+    settings_service = getters.get_settings_service()
     assert str(temp_dir) in settings_service.settings.COMPONENTS_PATH
 
 
 def test_superuser(runner, client, session):
     result = runner.invoke(app, ["superuser"], input="admin\nadmin\n")
     assert result.exit_code == 0, result.stdout
-    assert "Superuser creation failed." not in result.output, result.output
-    assert "Superuser created successfully." in result.output, result.output
+    assert "Superuser created successfully." in result.stdout
