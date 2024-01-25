@@ -265,6 +265,7 @@ class PromptVertex(Vertex):
         # Remove the handle_keys from the artifacts
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
+        template = ""
         try:
             if (
                 not hasattr(self._built_object, "template")
