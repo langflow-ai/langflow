@@ -1,5 +1,5 @@
-from typing import Dict, Generator, List, Type, Union
 from collections import defaultdict, deque
+from typing import Dict, Generator, List, Type, Union
 
 from langchain.chains.base import Chain
 from loguru import logger
@@ -256,7 +256,7 @@ class Graph:
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
     def layered_topological_sort(self):
-        in_degree = {vertex: 0 for vertex in self.vertices}  # Initialize in-degrees
+        in_degree = {vertex.id: 0 for vertex in self.vertices}  # Initialize in-degrees
         graph = defaultdict(list)  # Adjacency list representation
 
         # Build graph and compute in-degrees
@@ -265,7 +265,7 @@ class Graph:
             in_degree[edge.target_id] += 1
 
         # Queue for vertices with no incoming edges
-        queue = deque(vertex for vertex in self.vertices if in_degree[vertex] == 0)
+        queue = deque(vertex.id for vertex in self.vertices if in_degree[vertex.id] == 0)
         layers = []
 
         current_layer = 0
@@ -273,9 +273,9 @@ class Graph:
             layers.append([])  # Start a new layer
             layer_size = len(queue)
             for _ in range(layer_size):
-                vertex = queue.popleft()
-                layers[current_layer].append(vertex.id)
-                for neighbor in graph[vertex]:
+                vertex_id = queue.popleft()
+                layers[current_layer].append(vertex_id)
+                for neighbor in graph[vertex_id]:
                     in_degree[neighbor] -= 1  # 'remove' edge
                     if in_degree[neighbor] == 0:
                         queue.append(neighbor)
