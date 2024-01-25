@@ -1,9 +1,9 @@
 from pathlib import Path
 from tempfile import tempdir
-from langflow.__main__ import app
-import pytest
 
-from langflow.services import getters
+import pytest
+from langflow.__main__ import app
+from langflow.services import deps
 
 
 @pytest.fixture(scope="module")
@@ -16,6 +16,7 @@ def default_settings():
 
 def test_components_path(runner, client, default_settings):
     # Create a foldr in the tmp directory
+
     temp_dir = Path(tempdir)
     # create a "components" folder
     temp_dir = temp_dir / "components"
@@ -26,7 +27,7 @@ def test_components_path(runner, client, default_settings):
         ["run", "--components-path", str(temp_dir), *default_settings],
     )
     assert result.exit_code == 0, result.stdout
-    settings_service = getters.get_settings_service()
+    settings_service = deps.get_settings_service()
     assert str(temp_dir) in settings_service.settings.COMPONENTS_PATH
 
 
