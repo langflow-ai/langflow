@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from langflow import CustomComponent
 from typing import Optional
 from langflow.field_typing import BaseLanguageModel, NestedDict
@@ -34,11 +35,11 @@ class AnthropicComponent(CustomComponent):
         self,
         anthropic_api_key: str,
         anthropic_api_url: str,
-        model_kwargs: Optional[NestedDict],
+        model_kwargs: NestedDict = {},
         temperature: Optional[float] = None,
     ) -> BaseLanguageModel:
         return Anthropic(
-            anthropic_api_key=anthropic_api_key,
+            anthropic_api_key=SecretStr(anthropic_api_key),
             anthropic_api_url=anthropic_api_url,
             model_kwargs=model_kwargs,
             temperature=temperature,

@@ -67,7 +67,7 @@ class ChatOpenAIComponent(CustomComponent):
     def build(
         self,
         max_tokens: Optional[int] = 256,
-        model_kwargs: Optional[NestedDict] = {},
+        model_kwargs: NestedDict = {},
         model_name: str = "gpt-4-1106-preview",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,

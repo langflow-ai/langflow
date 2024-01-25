@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from langflow import CustomComponent
 from typing import Optional, Union, Callable
 from langflow.field_typing import BaseLanguageModel
@@ -33,13 +34,13 @@ class ChatAnthropicComponent(CustomComponent):
 
     def build(
         self,
-        anthropic_api_key: Optional[str] = None,
+        anthropic_api_key: str,
         anthropic_api_url: Optional[str] = None,
         model_kwargs: dict = {},
         temperature: Optional[float] = None,
     ) -> Union[BaseLanguageModel, Callable]:
         return ChatAnthropic(
-            anthropic_api_key=anthropic_api_key,
+            anthropic_api_key=SecretStr(anthropic_api_key),
             anthropic_api_url=anthropic_api_url,
             model_kwargs=model_kwargs,
             temperature=temperature,

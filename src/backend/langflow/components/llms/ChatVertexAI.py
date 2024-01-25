@@ -66,12 +66,12 @@ class ChatVertexAIComponent(CustomComponent):
         project: str,
         examples: Optional[List[BaseMessage]] = [],
         location: str = "us-central1",
-        max_output_tokens: Optional[int] = 128,
+        max_output_tokens: int = 128,
         model_name: str = "chat-bison",
-        temperature: Optional[float] = 0.0,
-        top_k: Optional[int] = 40,
-        top_p: Optional[float] = 0.95,
-        verbose: Optional[bool] = False,
+        temperature: float = 0.0,
+        top_k: int = 40,
+        top_p: float = 0.95,
+        verbose: bool = False,
     ) -> Union[BaseLanguageModel, BaseLLM]:
         return ChatVertexAI(
             credentials=credentials,

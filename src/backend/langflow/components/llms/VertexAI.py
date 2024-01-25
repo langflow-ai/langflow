@@ -114,7 +114,7 @@ class VertexAIComponent(CustomComponent):
         location: str = "us-central1",
         max_output_tokens: int = 128,
         max_retries: int = 6,
-        metadata: Dict = None,
+        metadata: Dict = {},
         model_name: str = "text-bison",
         n: int = 1,
         name: Optional[str] = None,
@@ -127,8 +127,6 @@ class VertexAIComponent(CustomComponent):
         tuned_model_name: Optional[str] = None,
         verbose: bool = False,
     ) -> Union[BaseLLM, Callable]:
-        if metadata is None:
-            metadata = {}
         return VertexAI(
             credentials=credentials,
             location=location,
