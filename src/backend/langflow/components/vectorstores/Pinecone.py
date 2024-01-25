@@ -28,7 +28,7 @@ class PineconeComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: List[Document] = None,
+        documents: List[Document],
         index_name: Optional[str] = None,
         pinecone_api_key: Optional[str] = None,
         pinecone_env: Optional[str] = None,

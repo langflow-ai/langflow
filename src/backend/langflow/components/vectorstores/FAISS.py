@@ -23,6 +23,6 @@ class FAISSComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: List[Document] = None,
+        documents: List[Document],
     ) -> Union[VectorStore, FAISS, BaseRetriever]:
         return FAISS.from_documents(documents=documents, embedding=embedding)
