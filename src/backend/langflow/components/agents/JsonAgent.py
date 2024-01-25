@@ -3,7 +3,7 @@ from langchain.agents import AgentExecutor, create_json_agent
 from langflow.field_typing import (
     BaseLanguageModel,
 )
-from langchain_community.agent_toolkits.base import BaseToolkit
+from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 
 
 class JsonAgentComponent(CustomComponent):
@@ -19,6 +19,6 @@ class JsonAgentComponent(CustomComponent):
     def build(
         self,
         llm: BaseLanguageModel,
-        toolkit: BaseToolkit,
+        toolkit: JsonToolkit,
     ) -> AgentExecutor:
         return create_json_agent(llm=llm, toolkit=toolkit)
