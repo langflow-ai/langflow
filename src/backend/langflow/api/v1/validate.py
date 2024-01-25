@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException
+from loguru import logger
+
 from langflow.api.v1.base import (
     Code,
     CodeValidationResponse,
@@ -8,7 +10,6 @@ from langflow.api.v1.base import (
 )
 from langflow.template.field.base import TemplateField
 from langflow.utils.validate import validate_code
-from loguru import logger
 
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])
@@ -81,7 +82,7 @@ def add_new_variables_to_template(input_variables, prompt_request):
                 show=True,
                 advanced=False,
                 multiline=True,
-                input_types=["Document", "BaseOutputParser"],
+                input_types=["Document", "BaseOutputParser", "Text"],
                 value="",  # Set the value to empty string
             )
             if variable in prompt_request.frontend_node.template:
