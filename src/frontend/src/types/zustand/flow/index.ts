@@ -35,11 +35,9 @@ export type FlowPoolType = {
 
 export type FlowStoreType = {
   flowPool: FlowPoolType;
-  inputTypes: string[];
-  outputTypes: string[];
-  inputIds: string[];
+  inputs: Array<{ type: string; id: string; }>;
+  outputs: Array<{ type: string; id: string; }>;
   hasIO: boolean;
-  outputIds: string[];
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: any, nodeId: string) => void;
   CleanFlowPool: () => void;

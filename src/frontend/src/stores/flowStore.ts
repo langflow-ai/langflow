@@ -39,10 +39,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   reactFlowInstance: null,
   lastCopiedSelection: null,
   flowPool: {},
-  outputTypes: [],
-  inputTypes: [],
-  inputIds: [],
-  outputIds: [],
+  inputs: [],
+  outputs: [],
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
@@ -68,10 +66,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes,
       edges: newEdges,
       flowState: undefined,
-      inputIds: inputs.map((input) => input.id),
-      outputIds: outputs.map((output) => output.id),
-      inputTypes: inputs.map((input) => input.type),
-      outputTypes: outputs.map((output) => output.type),
+      inputs,
+      outputs,
       hasIO: inputs.length > 0 && outputs.length > 0,
     });
     get().reactFlowInstance!.setViewport(viewport);
@@ -111,10 +107,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
-      inputIds: inputs.map((input) => input.id),
-      outputIds: outputs.map((output) => output.id),
-      inputTypes: inputs.map((input) => input.type),
-      outputTypes: outputs.map((output) => output.type),
+      inputs,
+      outputs,
       hasIO: inputs.length > 0 && outputs.length > 0,
     });
 
