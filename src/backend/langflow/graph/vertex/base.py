@@ -4,12 +4,13 @@ import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
+from loguru import logger
+
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
@@ -125,8 +126,8 @@ class Vertex:
         self.task_id: Optional[str] = None
         self.parent_node_id = state["parent_node_id"]
         self.parent_is_top_level = state["parent_is_top_level"]
-        self.layer = state["layer"]
-        self.steps = state["steps"]
+        self.layer = state.get("layer")
+        self.steps = state.get("steps", [self._build])
 
     def set_top_level(self, top_level_vertices: List[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
