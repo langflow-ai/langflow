@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from langchain.agents import ZeroShotAgent
+from langchain.agents.mrkl.base import ZeroShotAgent
 from langchain_core.tools import BaseTool
 from langflow import CustomComponent
 from langflow.components.chains.LLMChain import LLMChain
@@ -21,8 +21,8 @@ class ZeroShotAgentComponent(CustomComponent):
     def build(
         self,
         llm: LLMChain,
-        tools: List[BaseTool],
+        tools: Optional[List[BaseTool]] = None,
         prefix: str = "Answer the following questions as best you can. You have access to the following tools:",
         suffix: str = "Begin!\n\nQuestion: {input}\nThought:{agent_scratchpad}",
     ) -> ZeroShotAgent:
-        return ZeroShotAgent(llm_chain=llm, tools=tools, prefix=prefix, suffix=suffix)
+        return ZeroShotAgent(llm_chain=llm, allowed_tools=tools, prefix=prefix, suffix=suffix)
