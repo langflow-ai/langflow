@@ -26,8 +26,8 @@ class SearxSearchWrapperComponent(CustomComponent):
 
     def build(
         self,
-        k: Optional[int] = 10,
+        k: int = 10,
         headers: Optional[Dict[str, str]] = None,
-        searx_host: Optional[str] = None,
+        searx_host: str = "https://searx.example.com",
     ) -> SearxSearchWrapper:
         return SearxSearchWrapper(headers=headers, k=k, searx_host=searx_host)

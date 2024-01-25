@@ -24,4 +24,7 @@ class SerpAPIWrapperComponent(CustomComponent):
         serpapi_api_key: str,
         params: dict,
     ) -> Union[SerpAPIWrapper, Callable]:  # Removed quotes around SerpAPIWrapper
-        return SerpAPIWrapper(serpapi_api_key=serpapi_api_key, params=params)
+        return SerpAPIWrapper(
+            serpapi_api_key=serpapi_api_key,
+            params=params,
+        )
