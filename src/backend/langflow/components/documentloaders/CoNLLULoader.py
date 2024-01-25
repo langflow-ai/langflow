@@ -1,3 +1,4 @@
+from typing import List
 from langflow import CustomComponent
 from langchain.docstore.document import Document
 from langchain_community.document_loaders.conllu import CoNLLULoader
@@ -24,7 +25,7 @@ class CoNLLULoaderComponent(CustomComponent):
             },
         }
 
-    def build(self, file_path: str, metadata: dict) -> Document:
+    def build(self, file_path: str, metadata: dict) -> List[Document]:
         documents = CoNLLULoader(file_path=file_path).load()
         if metadata:
             for document in documents:

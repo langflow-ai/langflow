@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 from langchain_community.document_loaders.gitbook import GitbookLoader
 
 
@@ -21,7 +21,7 @@ class GitbookLoaderComponent(CustomComponent):
             },
         }
 
-    def build(self, metadata: Optional[Dict] = None, web_page: str = "") -> Document:
+    def build(self, metadata: Optional[Dict] = None, web_page: str = "") -> List[Document]:
         documents = GitbookLoader(web_page=web_page).load()
         if metadata:
             for document in documents:
