@@ -1,5 +1,5 @@
 from langflow import CustomComponent
-from typing import Optional, List, Union
+from typing import List, Union
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from langflow.field_typing import (
     Document,
@@ -29,7 +29,7 @@ class SupabaseComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: Optional[List[Document]] = None,
+        documents: List[Document],
         query_name: str = "",
         search_kwargs: NestedDict = {},
         supabase_service_key: str = "",
