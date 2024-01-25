@@ -21,7 +21,7 @@ class CohereEmbeddingsComponent(CustomComponent):
     def build(
         self,
         request_timeout: Optional[float] = None,
-        cohere_api_key: str = None,
+        cohere_api_key: str = "",
         max_retries: Optional[int] = None,
         model: str = "embed-english-v2.0",
         truncate: Optional[str] = None,

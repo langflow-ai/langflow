@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 from langchain_community.document_loaders.azlyrics import AZLyricsLoader
 
 
@@ -15,7 +15,7 @@ class AZLyricsLoaderComponent(CustomComponent):
             "web_path": {"display_name": "Web Page", "type": "str", "required": True, "show": True},
         }
 
-    def build(self, metadata: Optional[Dict] = None, web_path: str = "") -> Document:
+    def build(self, metadata: Optional[Dict] = None, web_path: str = "") -> List[Document]:
         documents = AZLyricsLoader(web_path=web_path).load()
         if metadata:
             for document in documents:

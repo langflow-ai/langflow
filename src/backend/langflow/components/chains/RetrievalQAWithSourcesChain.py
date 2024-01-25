@@ -1,6 +1,7 @@
 from typing import Optional
 
-from langchain.chains import BaseQAWithSourcesChain, RetrievalQAWithSourcesChain
+from langchain.chains import RetrievalQAWithSourcesChain
+from langchain.chains.qa_with_sources.base import BaseQAWithSourcesChain
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 
 from langflow import CustomComponent

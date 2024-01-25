@@ -1,5 +1,5 @@
 from langflow import CustomComponent
-from langchain.data_connections import Document
+from langflow.field_typing import Document
 from typing import Optional, Dict
 
 

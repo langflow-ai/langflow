@@ -2,7 +2,7 @@ from langflow import CustomComponent
 from langflow.field_typing import Document
 from langchain_community.document_loaders.imsdb import IMSDbLoader
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 class IMSDbLoaderComponent(CustomComponent):
@@ -19,7 +19,7 @@ class IMSDbLoaderComponent(CustomComponent):
         self,
         metadata: Optional[Dict] = None,
         web_path: str = "",
-    ) -> Document:
+    ) -> List[Document]:
         documents = IMSDbLoader(web_path=web_path).load()
         if metadata:
             for document in documents:

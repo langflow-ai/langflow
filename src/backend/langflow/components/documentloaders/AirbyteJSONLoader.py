@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langflow.field_typing import Document
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 from langchain_community.document_loaders.airbyte_json import AirbyteJSONLoader
 
 
@@ -26,7 +26,7 @@ class AirbyteJSONLoaderComponent(CustomComponent):
             },
         }
 
-    def build(self, file_path: str, metadata: Optional[Dict] = None) -> Document:
+    def build(self, file_path: str, metadata: Optional[Dict] = None) -> List[Document]:
         documents = AirbyteJSONLoader(file_path=file_path).load()
         if metadata:
             for document in documents:

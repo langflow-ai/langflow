@@ -1,6 +1,7 @@
 from langflow import CustomComponent
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 from langchain_community.document_loaders.hn import HNLoader
+from langflow.field_typing import Document
 
 
 class HNLoaderComponent(CustomComponent):
@@ -17,7 +18,7 @@ class HNLoaderComponent(CustomComponent):
         self,
         web_path: str,
         metadata: Optional[Dict] = None,
-    ) -> HNLoader:
+    ) -> List[Document]:
         documents = HNLoader(web_path=web_path).load()
         if metadata:
             for document in documents:
