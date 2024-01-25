@@ -1,6 +1,6 @@
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status, Body
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import (
@@ -12,14 +12,14 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
     VerticesOrderResponse,
 )
+from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
-from langflow.services.database.models.flow import Flow
-from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
+from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
 from loguru import logger
 from sqlmodel import Session
@@ -255,7 +255,7 @@ async def get_vertices(
     """Check the flow_id is in the flow_data_store."""
     try:
         flow: Flow = session.get(Flow, flow_id)
-        if not flow:
+        if not flow or not flow.data:
             raise ValueError("Invalid flow ID")
         graph = Graph.from_payload(flow.data)
         chat_service.set_cache(flow_id, graph)
@@ -267,6 +267,7 @@ async def get_vertices(
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
+        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
