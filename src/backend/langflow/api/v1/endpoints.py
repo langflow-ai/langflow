@@ -331,8 +331,10 @@ async def get_task_status(task_id: str):
     response_model=UploadFileResponse,
     status_code=HTTPStatus.CREATED,
 )
-async def create_upload_file(file: UploadFile, flow_id: str):
-    # Cache file
+async def create_upload_file(
+    file: UploadFile,
+    flow_id: str,
+):
     try:
         file_path = save_uploaded_file(file, folder_name=flow_id)
 
