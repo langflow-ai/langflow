@@ -52,10 +52,9 @@ export async function buildVertices({
               if (onBuildError) {
                 onBuildError("Error Building Component", [buildData.params]);
               }
-              data[buildData.id] = buildData;
-
-              onBuildUpdate({ data, id: buildData.id });
             }
+            data[buildData.id] = buildData;
+            onBuildUpdate({ data, id: buildData.id });
           }
           buildResults.push(buildData.valid);
         } catch (error) {
