@@ -1,4 +1,5 @@
 import { IOInputProps } from "../../types/components";
+import IOFileInput from "../IOInputs/FileInput";
 import { Textarea } from "../ui/textarea";
 
 export default function IOInputField({
@@ -18,7 +19,7 @@ export default function IOInputField({
           />
         );
       case "fileInput":
-        return <div></div>;
+        return <IOFileInput field={field} updateValue={updateValue} />;
 
       default:
         return (

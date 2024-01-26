@@ -116,6 +116,7 @@ export type CodeAreaComponentType = {
 };
 
 export type FileComponentType = {
+  IOInputProps;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -648,6 +649,11 @@ export type dropdownButtonPropsType = {
 
 export type IOInputProps = {
   inputType: string;
+  field: TemplateVariableType;
+  updateValue: (e: any) => void;
+};
+
+export type IOFileInputProps = {
   field: TemplateVariableType;
   updateValue: (e: any) => void;
 };
