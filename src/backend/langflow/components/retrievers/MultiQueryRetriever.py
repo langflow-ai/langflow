@@ -1,11 +1,8 @@
-from langflow import CustomComponent
+from typing import Callable, Optional, Union
+
 from langchain.retrievers import MultiQueryRetriever
-from typing import Optional, Union, Callable
-from langflow.field_typing import (
-    PromptTemplate,
-    BaseLLM,
-    BaseRetriever,
-)
+from langflow import CustomComponent
+from langflow.field_typing import BaseLLM, BaseRetriever, PromptTemplate
 
 
 class MultiQueryRetrieverComponent(CustomComponent):
@@ -46,4 +43,7 @@ class MultiQueryRetrieverComponent(CustomComponent):
         prompt: Optional[PromptTemplate] = None,
         parser_key: str = "lines",
     ) -> Union[Callable, MultiQueryRetriever]:
-        return MultiQueryRetriever(llm=llm, retriever=retriever, prompt=prompt, parser_key=parser_key)
+        if not prompt:
+            return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, parser_key=parser_key)
+        else:
+            return MultiQueryRetriever.from_llm(llm=llm, retriever=retriever, prompt=prompt, parser_key=parser_key)

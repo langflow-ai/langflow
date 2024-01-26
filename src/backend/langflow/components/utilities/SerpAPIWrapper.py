@@ -1,6 +1,7 @@
-from langflow import CustomComponent
 from typing import Callable, Union
+
 from langchain_community.utilities.serpapi import SerpAPIWrapper
+from langflow import CustomComponent
 
 
 class SerpAPIWrapperComponent(CustomComponent):
@@ -24,7 +25,7 @@ class SerpAPIWrapperComponent(CustomComponent):
         serpapi_api_key: str,
         params: dict,
     ) -> Union[SerpAPIWrapper, Callable]:  # Removed quotes around SerpAPIWrapper
-        return SerpAPIWrapper(
+        return SerpAPIWrapper(  # type: ignore
             serpapi_api_key=serpapi_api_key,
             params=params,
         )

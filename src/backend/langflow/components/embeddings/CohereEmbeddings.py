@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langchain_community.embeddings.cohere import CohereEmbeddings
-
 from langflow import CustomComponent
 
 
@@ -27,7 +26,7 @@ class CohereEmbeddingsComponent(CustomComponent):
         truncate: Optional[str] = None,
         user_agent: str = "langchain",
     ) -> CohereEmbeddings:
-        return CohereEmbeddings(
+        return CohereEmbeddings(  # type: ignore
             max_retries=max_retries,
             user_agent=user_agent,
             request_timeout=request_timeout,
