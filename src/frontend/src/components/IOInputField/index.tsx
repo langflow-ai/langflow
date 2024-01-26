@@ -17,6 +17,9 @@ export default function IOInputField({
             onChange={updateValue}
           />
         );
+      case "fileInput":
+        return <div></div>;
+
       default:
         return (
           <Textarea

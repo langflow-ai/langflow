@@ -41,17 +41,17 @@ export default function IOView(): JSX.Element {
           <IconComponent name="Variable" className=" file-component-variable" />
           <span className="file-component-variables-span text-md">Inputs</span>
         </div>
-        {inputIds
-          .filter((input) => extractTypeFromLongId(input) !== "ChatInput")
-          .map((inputId, index) => {
-            const node: NodeType = nodes.find((node) => node.id === inputId)!;
+        {inputs
+          .filter((input) => input.type !== "ChatInput")
+          .map((input, index) => {
+            const node: NodeType = nodes.find((node) => node.id === input.id)!;
             return (
               <div className="file-component-accordion-div" key={index}>
                 <AccordionComponent
                   trigger={
                     <div className="file-component-badge-div">
                       <Badge variant="gray" size="md">
-                        {inputId}
+                        {input.id}
                       </Badge>
                       <div
                         className="-mb-1"
@@ -62,27 +62,24 @@ export default function IOView(): JSX.Element {
                     </div>
                   }
                   key={index}
-                  keyValue={inputId}
+                  keyValue={input.id}
                 >
                   <div className="file-component-tab-column">
-                    <IOInputField
-                      value={
-                        nodes.find((node) => node.id === inputId)?.data.node
-                          .template.value.value
-                      }
-                      inputType={
-                        inputs.find((input) => input.id === inputId)?.type!
-                      }
-                      updateValue={(e) => {
-                        e.target.value;
-                        if (node) {
-                          let newNode = cloneDeep(node);
-                          newNode.data.node!.template["value"].value =
-                            e.target.value;
-                          setNode(node.id, newNode);
-                        }
-                      }}
-                    />
+                    {node && (
+                      <IOInputField
+                        value={node.data.node!.template.value.value}
+                        inputType={input.type}
+                        updateValue={(e) => {
+                          e.target.value;
+                          if (node) {
+                            let newNode = cloneDeep(node);
+                            newNode.data.node!.template["value"].value =
+                              e.target.value;
+                            setNode(node.id, newNode);
+                          }
+                        }}
+                      />
+                    )}
                   </div>
                 </AccordionComponent>
               </div>
