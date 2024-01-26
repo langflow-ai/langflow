@@ -72,6 +72,7 @@ import {
   Plus,
   Redo,
   RefreshCcw,
+  Repeat,
   Rocket,
   Save,
   SaveAll,
@@ -385,5 +386,6 @@ export const nodeIconsLucide: iconsType = {
   RefreshCcw,
   Combine,
   TerminalIcon,
+  Repeat,
   io: ArrowDownUp,
 };
