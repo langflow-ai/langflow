@@ -1,6 +1,8 @@
 import ast
 from typing import Callable, Dict, List, Optional, Union
 
+from langchain_core.messages import AIMessage
+
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -318,17 +320,28 @@ class ChatVertex(StatelessVertex):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
 
-    def _run(self, *args, **kwargs):
+    async def _run(self, *args, **kwargs):
         if self.is_power_component:
             if self.vertex_type == "ChatOutput":
+                artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                self.artifacts = ChatOutputResponse(
-                    message=str(self._built_object),
-                    sender=sender,
-                    sender_name=sender_name,
-                ).model_dump()
+                message = ""
+                if isinstance(self._built_object, AIMessage):
+                    artifacts = ChatOutputResponse.from_message(
+                        self._built_object,
+                        sender=sender,
+                        sender_name=sender_name,
+                    )
+                elif not isinstance(self._built_object, UnbuiltObject):
+                    artifacts = ChatOutputResponse(
+                        message=message,
+                        sender=sender,
+                        sender_name=sender_name,
+                    )
+                if artifacts:
+                    self.artifacts = artifacts.model_dump()
             self._built_result = self._built_object
 
         else:
-            super()._run(*args, **kwargs)
+            await super()._run(*args, **kwargs)
