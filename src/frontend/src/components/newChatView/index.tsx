@@ -57,17 +57,17 @@ export default function newChatView(): JSX.Element {
         return { isSend: !is_ai, message, sender_name };
       });
     setChatHistory(chatMessages);
-  }, [flowPool, outputIds]);
+  }, [flowPool]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
-  }, [chatHistory]);
+  }, []);
 
   async function sendAll(data: sendAllProps): Promise<void> {}
   useEffect(() => {
     if (ref.current) ref.current.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
+  }, []);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
