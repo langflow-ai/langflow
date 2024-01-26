@@ -6,15 +6,27 @@ export default function IOInputField({
   value,
   updateValue,
 }: IOInputProps): JSX.Element | undefined {
-  switch (inputType) {
-    case "TextInput":
-      return (
-        <Textarea
-          className="custom-scroll"
-          placeholder={"Enter text..."}
-          value={value}
-          onChange={updateValue}
-        />
-      );
+  function handleInputType() {
+    switch (inputType) {
+      case "TextInput":
+        return (
+          <Textarea
+            className="custom-scroll"
+            placeholder={"Enter text..."}
+            value={value}
+            onChange={updateValue}
+          />
+        );
+      default:
+        return (
+          <Textarea
+            className="custom-scroll"
+            placeholder={"Enter text..."}
+            value={value}
+            onChange={updateValue}
+          />
+        );
+    }
   }
+  return <div className="h-full">{handleInputType()}</div>;
 }
