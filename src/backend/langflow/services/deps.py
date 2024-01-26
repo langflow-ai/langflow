@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Generator
 from langflow.services import ServiceType, service_manager
 
 if TYPE_CHECKING:
+    from sqlmodel import Session
+
     from langflow.services.cache.service import BaseCacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.credentials.service import CredentialService
@@ -11,9 +13,13 @@ if TYPE_CHECKING:
     from langflow.services.plugins.service import PluginService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
+    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
-    from sqlmodel import Session
+
+
+def get_storage_service() -> "StorageService":
+    return service_manager.get(ServiceType.STORAGE_SERVICE)  # type: ignore
 
 
 def get_credential_service() -> "CredentialService":
