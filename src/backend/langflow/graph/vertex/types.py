@@ -2,7 +2,6 @@ import ast
 from typing import Callable, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage
-
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -326,7 +325,6 @@ class ChatVertex(StatelessVertex):
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                message = ""
                 if isinstance(self._built_object, AIMessage):
                     artifacts = ChatOutputResponse.from_message(
                         self._built_object,
@@ -334,8 +332,10 @@ class ChatVertex(StatelessVertex):
                         sender_name=sender_name,
                     )
                 elif not isinstance(self._built_object, UnbuiltObject):
+                    if not isinstance(self._built_object, str):
+                        self._built_object = str(self._built_object)
                     artifacts = ChatOutputResponse(
-                        message=message,
+                        message=self._built_object,
                         sender=sender,
                         sender_name=sender_name,
                     )
