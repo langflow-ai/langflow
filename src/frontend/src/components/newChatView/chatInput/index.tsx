@@ -4,8 +4,8 @@ import { Textarea } from "../../../components/ui/textarea";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import { Button } from "../../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Input } from "../../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 
 export default function ChatInput({
   lockChat,
@@ -120,17 +120,19 @@ export default function ChatInput({
             <IconComponent name="Repeat" className="" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-fit"><div className="flex flex-col gap-2 items-center justify-center">
-        <span className="text-sm">Repetitions: </span>
-        <Input
-          onChange={(e) => {
-            handleChange(parseInt(e.target.value));
-          }}
-          className="w-16"
-          type="number"
-          min={0}
-        />
-      </div></PopoverContent>
+        <PopoverContent className="w-fit">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <span className="text-sm">Repetitions: </span>
+            <Input
+              onChange={(e) => {
+                handleChange(parseInt(e.target.value));
+              }}
+              className="w-16"
+              type="number"
+              min={0}
+            />
+          </div>
+        </PopoverContent>
       </Popover>
     </div>
   );
