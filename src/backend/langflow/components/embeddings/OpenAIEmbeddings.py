@@ -1,7 +1,9 @@
+from typing import Any, Callable, Dict, List, Optional, Union
+
+from langchain_openai.embeddings.base import OpenAIEmbeddings
+
 from langflow import CustomComponent
 from langflow.field_typing import NestedDict
-from typing import List, Optional, Dict, Any, Union, Callable
-from langchain_openai.embeddings.base import OpenAIEmbeddings
 
 
 class OpenAIEmbeddingsComponent(CustomComponent):
@@ -102,13 +104,13 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             max_retries=max_retries,
             model=model,
             model_kwargs=model_kwargs,
-            openai_api_base=openai_api_base,
-            openai_api_key=openai_api_key,
+            base_url=openai_api_base,
+            api_key=openai_api_key,
             openai_api_type=openai_api_type,
-            openai_api_version=openai_api_version,
-            openai_organization=openai_organization,
+            api_version=openai_api_version,
+            organization=openai_organization,
             openai_proxy=openai_proxy,
-            request_timeout=request_timeout,
+            timeout=request_timeout,
             show_progress_bar=show_progress_bar,
             skip_empty=skip_empty,
             tiktoken_model_name=tiktoken_model_name,

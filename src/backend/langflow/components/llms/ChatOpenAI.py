@@ -2,7 +2,6 @@ from typing import Optional, Union
 
 from langchain.llms import BaseLLM
 from langchain_community.chat_models.openai import ChatOpenAI
-
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, NestedDict
 
@@ -78,8 +77,8 @@ class ChatOpenAIComponent(CustomComponent):
         return ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
-            model_name=model_name,
-            openai_api_base=openai_api_base,
-            openai_api_key=openai_api_key,
+            model=model_name,
+            base_url=openai_api_base,
+            api_key=openai_api_key,
             temperature=temperature,
         )

@@ -1,6 +1,8 @@
-from langflow import CustomComponent
+from typing import Dict, Optional
+
 from langchain_community.llms.ctransformers import CTransformers
-from typing import Optional, Dict
+
+from langflow import CustomComponent
 
 
 class CTransformersComponent(CustomComponent):
@@ -28,4 +30,4 @@ class CTransformersComponent(CustomComponent):
         }
 
     def build(self, model: str, model_file: str, model_type: str, config: Optional[Dict] = None) -> CTransformers:
-        return CTransformers(model=model, model_file=model_file, model_type=model_type, config=config)
+        return CTransformers(model=model, model_file=model_file, model_type=model_type, config=config)  # type: ignore

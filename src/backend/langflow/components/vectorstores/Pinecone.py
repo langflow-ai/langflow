@@ -7,7 +7,7 @@ from langflow.field_typing import (
 )
 from langchain.schema import BaseRetriever
 from langchain.vectorstores.base import VectorStore
-import pinecone
+import pinecone  # type: ignore
 
 
 class PineconeComponent(CustomComponent):

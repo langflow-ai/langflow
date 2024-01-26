@@ -1,6 +1,7 @@
-from langflow import CustomComponent
 from langchain.embeddings.base import Embeddings
 from langchain_community.embeddings import AzureOpenAIEmbeddings
+
+from langflow import CustomComponent
 
 
 class AzureOpenAIEmbeddingsComponent(CustomComponent):
@@ -53,9 +54,9 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
         try:
             embeddings = AzureOpenAIEmbeddings(
                 azure_endpoint=azure_endpoint,
-                deployment=azure_deployment,
-                openai_api_version=api_version,
-                openai_api_key=api_key,
+                azure_deployment=azure_deployment,
+                api_version=api_version,
+                api_key=api_key,
             )
 
         except Exception as e:
