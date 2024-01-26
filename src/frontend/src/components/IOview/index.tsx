@@ -67,7 +67,7 @@ export default function IOView(): JSX.Element {
                   <div className="file-component-tab-column">
                     {node && (
                       <IOInputField
-                        value={node.data.node!.template.value.value}
+                        field={node.data.node!.template["value"]}
                         inputType={input.type}
                         updateValue={(e) => {
                           e.target.value;

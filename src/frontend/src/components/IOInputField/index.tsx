@@ -3,7 +3,7 @@ import { Textarea } from "../ui/textarea";
 
 export default function IOInputField({
   inputType,
-  value,
+  field,
   updateValue,
 }: IOInputProps): JSX.Element | undefined {
   function handleInputType() {
@@ -13,7 +13,7 @@ export default function IOInputField({
           <Textarea
             className="custom-scroll"
             placeholder={"Enter text..."}
-            value={value}
+            value={field.value}
             onChange={updateValue}
           />
         );
@@ -25,7 +25,7 @@ export default function IOInputField({
           <Textarea
             className="custom-scroll"
             placeholder={"Enter text..."}
-            value={value}
+            value={field.value}
             onChange={updateValue}
           />
         );
