@@ -80,6 +80,14 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
+        if self.is_power_component and not isinstance(self._built_object, UnbuiltObject):
+            result = self._built_object
+            # if it is not a dict or a string and hasattr model_dump then
+            # return the model_dump
+            if not isinstance(result, (dict, str)) and hasattr(result, "content"):
+                return result.content
+            return result
+
         if isinstance(self._built_result, UnbuiltResult):
             return {}
         return self._built_result if isinstance(self._built_result, dict) else {"result": self._built_result}

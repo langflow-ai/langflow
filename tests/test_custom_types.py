@@ -18,9 +18,7 @@ def test_python_function_tool():
     with pytest.raises(SyntaxError):
         code = pytest.CODE_WITH_SYNTAX_ERROR
         func = get_function(code)
-        func = PythonFunctionTool(
-            name="Test", description="Testing", code=code, func=func
-        )
+        func = PythonFunctionTool(name="Test", description="Testing", code=code, func=func)
 
 
 def test_python_function():
