@@ -8,6 +8,7 @@ import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
+import IOInputField from "../IOInputField";
 
 export default function IOView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
@@ -17,7 +18,6 @@ export default function IOView(): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const options = inputIds.concat(outputIds);
-  console.log(options);
   const [selectedView, setSelectedView] = useState<ReactNode>(
     handleSelectChange(options[0])
   );
@@ -33,7 +33,7 @@ export default function IOView(): JSX.Element {
         break;
     }
   }
-
+  console.log(inputs)
   return (
     <div className="form-modal-iv-box">
       <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
@@ -66,23 +66,21 @@ export default function IOView(): JSX.Element {
                 >
                   {/* TODO: EXTEND AND IMPROVE VIEW MODE AND ADD OTHER TYPES OF VIEWS */}
                   <div className="file-component-tab-column">
-                    <Textarea
-                      value={
-                        nodes.find((node) => node.id === inputId)?.data?.node
-                          ?.template?.value.value
-                      }
-                      className="custom-scroll"
+                    <IOInputField
+                      value={nodes.find((node) => node.id === inputId)?.data.node.template.value.value}
+                      styleClasses="custom-scroll"
+                      placeholder="Enter text..."
+                      inputType={inputs.find((input) => input.id === inputId)?.type!}
                       onChange={(e) => {
                         e.target.value;
                         if (node) {
-                          let newNode = cloneDeep(node);
-                          newNode.data.node!.template["value"].value =
+                            let newNode = cloneDeep(node);
+                            newNode.data.node!.template["value"].value =
                             e.target.value;
-                          setNode(node.id, newNode);
+                            setNode(node.id, newNode);
                         }
-                      }}
-                      placeholder="Enter text..."
-                    ></Textarea>
+                        }}
+                    />
                   </div>
                 </AccordionComponent>
               </div>

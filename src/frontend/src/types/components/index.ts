@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ChangeEvent, ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
@@ -645,3 +645,11 @@ export type dropdownButtonPropsType = {
   onFirstBtnClick: () => void;
   options: Array<{ name: string; onBtnClick: () => void }>;
 };
+
+export type IOInputProps = {
+  inputType: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  styleClasses: string;
+  placeholder: string;
+}
