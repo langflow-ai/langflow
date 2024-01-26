@@ -327,7 +327,7 @@ class ChatVertex(StatelessVertex):
                     message=str(self._built_object),
                     sender=sender,
                     sender_name=sender_name,
-                ).dict()
+                ).model_dump()
             self._built_result = self._built_object
 
         else:

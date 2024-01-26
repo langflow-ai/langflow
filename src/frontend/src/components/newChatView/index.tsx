@@ -34,7 +34,7 @@ export default function newChatView(): JSX.Element {
 
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
-  const outputIds = outputs.map((obj) => obj.id)
+  const outputIds = outputs.map((obj) => obj.id);
 
   //build chat history
   useEffect(() => {
