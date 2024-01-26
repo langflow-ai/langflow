@@ -18,7 +18,7 @@ export default function IOInputField({
             onChange={updateValue}
           />
         );
-      case "fileInput":
+      case "fileLoader":
         return <IOFileInput field={field} updateValue={updateValue} />;
 
       default:
