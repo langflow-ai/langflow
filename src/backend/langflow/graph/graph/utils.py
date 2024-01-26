@@ -28,23 +28,14 @@ def ungroup_node(group_node_data, base_flow):
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
-    updated_edges = get_updated_edges(
-        base_flow, g_nodes, g_edges, group_node_data["id"]
-    )
+    updated_edges = get_updated_edges(base_flow, g_nodes, g_edges, group_node_data["id"])
 
     # Update template values
     update_template(template, g_nodes)
 
-    nodes = [
-        n for n in base_flow["nodes"] if n["id"] != group_node_data["id"]
-    ] + g_nodes
+    nodes = [n for n in base_flow["nodes"] if n["id"] != group_node_data["id"]] + g_nodes
     edges = (
-        [
-            e
-            for e in base_flow["edges"]
-            if e["target"] != group_node_data["id"]
-            and e["source"] != group_node_data["id"]
-        ]
+        [e for e in base_flow["edges"] if e["target"] != group_node_data["id"] and e["source"] != group_node_data["id"]]
         + g_edges
         + updated_edges
     )
@@ -66,11 +57,7 @@ def process_flow(flow_object):
         if node_id in processed_nodes:
             return
 
-        if (
-            node.get("data")
-            and node["data"].get("node")
-            and node["data"]["node"].get("flow")
-        ):
+        if node.get("data") and node["data"].get("node") and node["data"]["node"].get("flow"):
             process_flow(node["data"]["node"]["flow"]["data"])
             new_nodes = ungroup_node(node["data"], cloned_flow)
             # Add new nodes to the queue for future processing
@@ -108,26 +95,16 @@ def update_template(template, g_nodes):
         if node_index != -1:
             display_name = None
             show = g_nodes[node_index]["data"]["node"]["template"][field]["show"]
-            advanced = g_nodes[node_index]["data"]["node"]["template"][field][
-                "advanced"
-            ]
+            advanced = g_nodes[node_index]["data"]["node"]["template"][field]["advanced"]
             if "display_name" in g_nodes[node_index]["data"]["node"]["template"][field]:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field][
-                    "display_name"
-                ]
+                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["display_name"]
             else:
-                display_name = g_nodes[node_index]["data"]["node"]["template"][field][
-                    "name"
-                ]
+                display_name = g_nodes[node_index]["data"]["node"]["template"][field]["name"]
 
             g_nodes[node_index]["data"]["node"]["template"][field] = value
             g_nodes[node_index]["data"]["node"]["template"][field]["show"] = show
-            g_nodes[node_index]["data"]["node"]["template"][field][
-                "advanced"
-            ] = advanced
-            g_nodes[node_index]["data"]["node"]["template"][field][
-                "display_name"
-            ] = display_name
+            g_nodes[node_index]["data"]["node"]["template"][field]["advanced"] = advanced
+            g_nodes[node_index]["data"]["node"]["template"][field]["display_name"] = display_name
 
 
 def update_target_handle(new_edge, g_nodes, group_node_id):
