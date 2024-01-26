@@ -80,6 +80,7 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
+
         if isinstance(self._built_result, UnbuiltResult):
             return {}
         return self._built_result if isinstance(self._built_result, dict) else {"result": self._built_result}

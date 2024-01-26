@@ -141,7 +141,9 @@ class SeriesCharacterChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    description: str = (
+        "SeriesCharacterChain is a chain you can use to have a conversation with a character from a series."  # noqa
+    )
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",
