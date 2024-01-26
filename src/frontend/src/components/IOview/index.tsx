@@ -4,11 +4,10 @@ import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
 import { extractTypeFromLongId } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
+import IOInputField from "../IOInputField";
 import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
-import { Textarea } from "../ui/textarea";
-import IOInputField from "../IOInputField";
 
 export default function IOView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
@@ -18,6 +17,7 @@ export default function IOView(): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const options = inputIds.concat(outputIds);
+  //TODO: show output options for view
   const [selectedView, setSelectedView] = useState<ReactNode>(
     handleSelectChange(options[0])
   );
@@ -33,7 +33,7 @@ export default function IOView(): JSX.Element {
         break;
     }
   }
-  console.log(inputs)
+  console.log(inputs);
   return (
     <div className="form-modal-iv-box">
       <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
@@ -64,22 +64,24 @@ export default function IOView(): JSX.Element {
                   key={index}
                   keyValue={inputId}
                 >
-                  {/* TODO: EXTEND AND IMPROVE VIEW MODE AND ADD OTHER TYPES OF VIEWS */}
                   <div className="file-component-tab-column">
                     <IOInputField
-                      value={nodes.find((node) => node.id === inputId)?.data.node.template.value.value}
-                      styleClasses="custom-scroll"
-                      placeholder="Enter text..."
-                      inputType={inputs.find((input) => input.id === inputId)?.type!}
-                      onChange={(e) => {
+                      value={
+                        nodes.find((node) => node.id === inputId)?.data.node
+                          .template.value.value
+                      }
+                      inputType={
+                        inputs.find((input) => input.id === inputId)?.type!
+                      }
+                      updateValue={(e) => {
                         e.target.value;
                         if (node) {
-                            let newNode = cloneDeep(node);
-                            newNode.data.node!.template["value"].value =
+                          let newNode = cloneDeep(node);
+                          newNode.data.node!.template["value"].value =
                             e.target.value;
-                            setNode(node.id, newNode);
+                          setNode(node.id, newNode);
                         }
-                        }}
+                      }}
                     />
                   </div>
                 </AccordionComponent>

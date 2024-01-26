@@ -1,23 +1,20 @@
-import { Textarea } from "../ui/textarea";
-import InputFileComponent from "../inputFileComponent";
 import { IOInputProps } from "../../types/components";
+import { Textarea } from "../ui/textarea";
 
 export default function IOInputField({
   inputType,
   value,
-  onChange,
-  styleClasses,
-  placeholder,
+  updateValue,
 }: IOInputProps): JSX.Element | undefined {
-   switch (inputType) {
+  switch (inputType) {
     case "TextInput":
-        return (
-            <Textarea
-              className={styleClasses}
-              placeholder={placeholder}
-              value={value}
-              onChange={onChange}
-            />
-        );
+      return (
+        <Textarea
+          className="custom-scroll"
+          placeholder={"Enter text..."}
+          value={value}
+          onChange={updateValue}
+        />
+      );
   }
 }
