@@ -856,7 +856,6 @@ export async function requestLogout() {
 export async function getVerticesOrder(
   flowId: string
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
-  console.log;
   return await api.get(`${BASE_URL_API}build/${flowId}/vertices`);
 }
 
