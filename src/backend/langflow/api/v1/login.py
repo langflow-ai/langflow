@@ -1,4 +1,4 @@
-from fastapi import Request, Response, APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -33,8 +33,8 @@ async def login_to_get_access_token(
 
     if user:
         tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, secure=True, samesite="strict")
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, secure=True, samesite="strict")
+        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, secure=True)
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, secure=True)
         return tokens
     else:
         raise HTTPException(
