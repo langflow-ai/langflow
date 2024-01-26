@@ -105,7 +105,7 @@ class ContractEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
 
-    def honor(self, source: "Vertex", target: "Vertex") -> None:
+    async def honor(self, source: "Vertex", target: "Vertex") -> None:
         """
         Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
@@ -117,7 +117,7 @@ class ContractEdge(Edge):
             return
 
         if not source._built:
-            source.build()
+            await source.build()
 
         if self.matched_type == "Text":
             self.result = source._built_result
@@ -144,7 +144,7 @@ class ContractEdge(Edge):
     async def get_result(self, source: "Vertex", target: "Vertex"):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
-            self.honor(source, target)
+            await self.honor(source, target)
 
         log_transaction(self, source, target, "success")
         # If the target vertex is a power component we log messages

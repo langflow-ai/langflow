@@ -4,7 +4,7 @@ from typing import Dict, Generator, List, Type, Union
 from langchain.chains.base import Chain
 from loguru import logger
 
-from langflow.graph.edge.base import ContractEdge, Edge
+from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
@@ -33,6 +33,7 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+
         self._build_graph()
 
     def __getstate__(self):
@@ -111,7 +112,7 @@ class Graph:
         """Returns a vertex by id."""
         return self.vertex_map.get(vertex_id)
 
-    def get_vertex_edges(self, vertex_id: str) -> List[Union[Edge, ContractEdge]]:
+    def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
         return [edge for edge in self.edges if edge.source_id == vertex_id or edge.target_id == vertex_id]
 
@@ -210,18 +211,19 @@ class Graph:
             edges.append(ContractEdge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, vertex_type: str, vertex_base_type: str) -> Type[Vertex]:
-        """Returns the vertex class based on the vertex type."""
-        if vertex_type in FILE_TOOLS:
-            return FileToolVertex
-        if vertex_base_type == "CustomComponent":
-            return lazy_load_vertex_dict.get_custom_component_vertex_type()
+    def _get_vertex_class(self, node_type: str, node_lc_type: str, node_id: str) -> Type[Vertex]:
+        """Returns the node class based on the node type."""
+        node_name = node_id.split("-")[0]
+        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
 
-        if vertex_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_base_type]
+        if node_type in FILE_TOOLS:
+            return FileToolVertex
+        if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (
-            lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_type]
-            if vertex_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
+            lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_lc_type]
+            if node_lc_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
             else Vertex
         )
 
@@ -233,7 +235,7 @@ class Graph:
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type)
+            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
