@@ -4,13 +4,12 @@ import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
-from loguru import logger
-
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
@@ -284,7 +283,7 @@ class Vertex:
 
         self._built = True
 
-    def _run(self, user_id: str, inputs: Optional[dict] = None):
+    async def _run(self, user_id: str, inputs: Optional[dict] = None):
         # user_id is just for compatibility with the other build methods
         inputs = inputs or {}
         # inputs = {key: value or "" for key, value in inputs.items()}
