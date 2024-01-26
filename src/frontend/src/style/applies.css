@@ -267,7 +267,7 @@
     @apply relative flex flex-col justify-center bg-background;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-4 border-b bg-muted p-4;
+    @apply flex w-full items-center gap-2 border-b bg-muted p-4;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
@@ -283,26 +283,26 @@
   }
 
   .generic-node-status-position {
-    @apply relative top-[3px] h-5 w-5;
+    @apply h-5 w-5;
   }
 
   .generic-node-status-animation {
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply h-4 w-4 rounded-full opacity-100;
+    @apply opacity-100;
   }
   .green-status {
-    @apply generic-node-status bg-status-green;
+    @apply generic-node-status text-status-green fill-status-green;
   }
   .red-status {
-    @apply generic-node-status bg-status-red;
+    @apply generic-node-status text-status-red fill-status-red;
   }
   .yellow-status {
-    @apply generic-node-status bg-status-yellow;
+    @apply generic-node-status text-status-yellow fill-status-yellow;
   }
   .status-build-animation {
-    @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
+    @apply hidden animate-spin text-ring opacity-0;
   }
   .status-div {
     @apply absolute w-4 duration-200 ease-in-out;

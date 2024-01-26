@@ -4,6 +4,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
+import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -320,8 +321,9 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <div
-                className="round-button-div"
+              <Button
+                variant="outline"
+                className="h-9 px-1.5"
                 onClick={() => {
                   setNode(data.id, (old) => ({
                     ...old,
@@ -346,11 +348,12 @@ export default function GenericNode({
                     />
                   </div>
                 </Tooltip>
-              </div>
+              </Button>
             )}
             {showNode && (
-              <div
-                className="round-button-div"
+              <Button
+                variant="outline"
+                className="h-9 px-1.5"
                 onClick={() => buildFlow(data.id)}
               >
                 <div>
@@ -363,7 +366,7 @@ export default function GenericNode({
                           Build{" "}
                           <IconComponent
                             name="Zap"
-                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                            className=" h-5 fill-build-trigger stroke-build-trigger stroke-1"
                           />{" "}
                           flow to validate status.
                         </span>
@@ -381,34 +384,37 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center">
-                      <div
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "status-div"
+                          "h-5 stroke-1"
                         )}
-                      ></div>
-                      <div
+                      />
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "status-div"
+                          "h-5 stroke-1"
                         )}
-                      ></div>
-                      <div
+                      />
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "status-div"
+                          "h-5 stroke-1"
                         )}
-                      ></div>
+                      />
                     </div>
                   </Tooltip>
                 </div>
-              </div>
+              </Button>
             )}
           </div>
         </div>
