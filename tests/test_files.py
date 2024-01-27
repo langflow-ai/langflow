@@ -17,8 +17,7 @@ def mock_storage_service():
     return service
 
 
-@pytest.mark.asyncio
-async def test_upload_file(client, mock_storage_service):
+def test_upload_file(client, mock_storage_service):
     # Replace the actual storage service with the mock
     client.app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
 
@@ -27,8 +26,7 @@ async def test_upload_file(client, mock_storage_service):
     assert response.json() == {"message": "File uploaded successfully", "file_path": "test_flow/test.txt"}
 
 
-@pytest.mark.asyncio
-async def test_download_file(client, mock_storage_service):
+def test_download_file(client, mock_storage_service):
     client.app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
 
     response = client.get("api/v1/files/download/test_flow/test.txt")
@@ -36,8 +34,7 @@ async def test_download_file(client, mock_storage_service):
     assert response.content == b"file content"
 
 
-@pytest.mark.asyncio
-async def test_list_files(client, mock_storage_service):
+def test_list_files(client, mock_storage_service):
     client.app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
 
     response = client.get("api/v1/files/list/test_flow")
@@ -45,10 +42,39 @@ async def test_list_files(client, mock_storage_service):
     assert response.json() == {"files": ["file1.txt", "file2.jpg"]}
 
 
-@pytest.mark.asyncio
-async def test_delete_file(client, mock_storage_service):
+def test_delete_file(client, mock_storage_service):
     client.app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
 
     response = client.delete("api/v1/files/delete/test_flow/test.txt")
     assert response.status_code == 200
     assert response.json() == {"message": "File test.txt deleted successfully"}
+
+
+def test_file_operations(client):
+    flow_id = "test_flow"
+    file_name = "test.txt"
+    file_content = b"Hello, world!"
+
+    # Step 1: Upload the file
+    response = client.post(f"api/v1/files/upload/{flow_id}", files={"file": (file_name, file_content)})
+    assert response.status_code == 201
+    assert response.json() == {"message": "File uploaded successfully", "file_path": f"{flow_id}/{file_name}"}
+
+    # Step 2: List files in the folder
+    response = client.get(f"api/v1/files/list/{flow_id}")
+    assert response.status_code == 200
+    assert file_name in response.json()["files"]
+
+    # Step 3: Download the file and verify its content
+    response = client.get(f"api/v1/files/download/{flow_id}/{file_name}")
+    assert response.status_code == 200
+    assert response.content == file_content
+
+    # Step 4: Delete the file
+    response = client.delete(f"api/v1/files/delete/{flow_id}/{file_name}")
+    assert response.status_code == 200
+    assert response.json() == {"message": f"File {file_name} deleted successfully"}
+
+    # Optional: Verify that the file is indeed deleted
+    response = client.get(f"api/v1/files/list/{flow_id}")
+    assert file_name not in response.json()["files"]
