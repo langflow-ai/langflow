@@ -12,14 +12,14 @@ class LocalStorageService(StorageService):
 
         self.set_ready()
 
-    def save_file(self, folder: str, file_name: str, data):
+    def save_file(self, folder: str, file_name: str, data: bytes):
         folder_path = Path(f"{self.data_dir}/{folder}")
         folder_path.mkdir(parents=True, exist_ok=True)
-        with open(f"{self.data_dir}/{folder}/{file_name}", "w") as f:
+        with open(f"{self.data_dir}/{folder}/{file_name}", "wb") as f:
             f.write(data)
 
-    def get_file(self, folder: str, file_name: str):
-        with open(f"{self.data_dir}/{folder}/{file_name}", "r") as f:
+    def get_file(self, folder: str, file_name: str) -> bytes:
+        with open(f"{self.data_dir}/{folder}/{file_name}", "rb") as f:
             return f.read()
 
     def list_files(self, folder: str):
