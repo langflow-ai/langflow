@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
+from langflow.services.storage.utils import build_content_type_from_extension
 
 
 @pytest.fixture
@@ -66,9 +67,11 @@ def test_file_operations(client):
     assert file_name in response.json()["files"]
 
     # Step 3: Download the file and verify its content
+    mime_type = build_content_type_from_extension(file_name.split(".")[-1])
     response = client.get(f"api/v1/files/download/{flow_id}/{file_name}")
     assert response.status_code == 200
     assert response.content == file_content
+    assert mime_type in response.headers["content-type"]
 
     # Step 4: Delete the file
     response = client.delete(f"api/v1/files/delete/{flow_id}/{file_name}")
