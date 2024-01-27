@@ -75,6 +75,6 @@ def test_file_operations(client):
     assert response.status_code == 200
     assert response.json() == {"message": f"File {file_name} deleted successfully"}
 
-    # Optional: Verify that the file is indeed deleted
+    # Verify that the file is indeed deleted
     response = client.get(f"api/v1/files/list/{flow_id}")
     assert file_name not in response.json()["files"]
