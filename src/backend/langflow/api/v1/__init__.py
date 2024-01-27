@@ -2,6 +2,7 @@ from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.credential import router as credentials_router
 from langflow.api.v1.endpoints import router as endpoints_router
+from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.store import router as store_router
@@ -18,4 +19,5 @@ __all__ = [
     "api_key_router",
     "login_router",
     "credentials_router",
+    "files_router",
 ]
