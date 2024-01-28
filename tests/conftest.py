@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
@@ -341,3 +342,22 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
     return response.json()
+
+
+@pytest.fixture
+def created_api_key(active_user):
+    hashed = get_password_hash("random_key")
+    api_key = ApiKey(
+        name="test_api_key",
+        user_id=active_user.id,
+        api_key="random_key",
+        hashed_api_key=hashed,
+    )
+    db_manager = get_db_service()
+    with session_getter(db_manager) as session:
+        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+            return existing_api_key
+        session.add(api_key)
+        session.commit()
+        session.refresh(api_key)
+    return api_key
