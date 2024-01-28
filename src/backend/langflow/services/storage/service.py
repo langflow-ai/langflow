@@ -5,12 +5,14 @@ from langflow.services.base import Service
 
 if TYPE_CHECKING:
     from langflow.services.session.service import SessionService
+    from langflow.services.settings.service import SettingsService
 
 
 class StorageService(Service):
     name = "storage_service"
 
-    def __init__(self, session_service: "SessionService"):
+    def __init__(self, session_service: "SessionService", settings_service: "SettingsService"):
+        self.settings_service = settings_service
         self.session_service = session_service
         self.set_ready()
 

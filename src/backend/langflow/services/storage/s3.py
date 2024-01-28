@@ -5,8 +5,8 @@ from .service import StorageService
 
 
 class S3StorageService(StorageService):
-    def __init__(self, session_service):
-        super().__init__(session_service)
+    def __init__(self, session_service, settings_service):
+        super().__init__(session_service, settings_service)
         self.bucket = "langflow"
         self.s3_client = boto3.client("s3")
         self.set_ready()
