@@ -4,6 +4,7 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
@@ -18,7 +19,7 @@ async def upload_file(flow_id: str, file: UploadFile, storage_service: StorageSe
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         folder = flow_id
         storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
-        return {"message": "File uploaded successfully", "file_path": f"{folder}/{file.filename}"}
+        return UploadFileResponse(flowId=flow_id, file_path=f"{folder}/{file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
