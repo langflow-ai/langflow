@@ -5,15 +5,38 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from langflow.api.v1.schemas import UploadFileResponse
-from langflow.services.deps import get_storage_service
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.flow import Flow
+from langflow.services.deps import get_session, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
 router = APIRouter(tags=["Files"], prefix="/files")
 
 
+# Create dep that gets the flow_id from the request
+# then finds it in the database and returns it while
+# using the current user as the owner
+def get_flow_id(
+    flow_id: str,
+    current_user=Depends(get_current_active_user),
+    session=Depends(get_session),
+):
+    # AttributeError: 'SelectOfScalar' object has no attribute 'first'
+    flow = session.get(Flow, flow_id)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+    return flow_id
+
+
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
-async def upload_file(flow_id: str, file: UploadFile, storage_service: StorageService = Depends(get_storage_service)):
+async def upload_file(
+    file: UploadFile,
+    flow_id: str = Depends(get_flow_id),
+    storage_service: StorageService = Depends(get_storage_service),
+):
     try:
         file_content = await file.read()
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
@@ -25,7 +48,9 @@ async def upload_file(flow_id: str, file: UploadFile, storage_service: StorageSe
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(flow_id: str, file_name: str, storage_service: StorageService = Depends(get_storage_service)):
+async def download_file(
+    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+):
     try:
         extension = file_name.split(".")[-1]
 
@@ -44,7 +69,9 @@ async def download_file(flow_id: str, file_name: str, storage_service: StorageSe
 
 
 @router.get("/list/{flow_id}")
-async def list_files(flow_id: str, storage_service: StorageService = Depends(get_storage_service)):
+async def list_files(
+    flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+):
     try:
         files = storage_service.list_files(flow_id=flow_id)
         return {"files": files}
@@ -53,7 +80,9 @@ async def list_files(flow_id: str, storage_service: StorageService = Depends(get
 
 
 @router.delete("/delete/{flow_id}/{file_name}")
-async def delete_file(flow_id: str, file_name: str, storage_service: StorageService = Depends(get_storage_service)):
+async def delete_file(
+    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+):
     try:
         storage_service.delete_file(flow_id=flow_id, file_name=file_name)
         return {"message": f"File {file_name} deleted successfully"}
