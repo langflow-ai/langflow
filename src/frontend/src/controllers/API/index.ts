@@ -352,7 +352,7 @@ export async function uploadFile(
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
-  return await api.post(`${BASE_URL_API}upload/${id}`, formData);
+  return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
 export async function postCustomComponent(
