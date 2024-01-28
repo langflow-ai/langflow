@@ -20,19 +20,19 @@ class StorageService(Service):
         self.ready = True
 
     @abstractmethod
-    def save_file(self, folder: str, file_name: str, data) -> None:
+    def save_file(self, flow_id: str, file_name: str, data) -> None:
         pass
 
     @abstractmethod
-    def get_file(self, folder: str, file_name: str) -> bytes:
+    def get_file(self, flow_id: str, file_name: str) -> bytes:
         pass
 
     @abstractmethod
-    def list_files(self, folder: str) -> list[str]:
+    def list_files(self, flow_id: str) -> list[str]:
         pass
 
     @abstractmethod
-    def delete_file(self, folder: str, file_name: str) -> bool:
+    def delete_file(self, flow_id: str, file_name: str) -> bool:
         pass
 
     def teardown(self):
