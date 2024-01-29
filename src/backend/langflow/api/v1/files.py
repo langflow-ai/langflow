@@ -49,9 +49,7 @@ async def upload_file(
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(
-    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
-):
+async def download_file(file_name: str, flow_id: str, storage_service: StorageService = Depends(get_storage_service)):
     try:
         extension = file_name.split(".")[-1]
 
@@ -75,9 +73,7 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(
-    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
-):
+async def download_image(file_name: str, flow_id: str, storage_service: StorageService = Depends(get_storage_service)):
     try:
         extension = file_name.split(".")[-1]
 
