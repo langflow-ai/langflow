@@ -69,7 +69,13 @@ export class Network extends Construct {
       port: back_service_port,
       protocol: elb.ApplicationProtocol.HTTP,
       healthCheck: {
-        enabled: false,
+        enabled: true,
+        path: '/health',
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 4,
+        interval: Duration.seconds(100),
+        timeout: Duration.seconds(30),
+        healthyHttpCodes: '200',
       },
     });
 
