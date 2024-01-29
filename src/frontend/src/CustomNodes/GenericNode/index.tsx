@@ -80,6 +80,13 @@ export default function GenericNode({
     countHandles();
   }, [data, data.node]);
 
+  useEffect(() => {
+    if (!selected) {
+      setInputName(false);
+      setInputDescription(false);
+    }
+  }, [selected]);
+
   // State for outline color
   const sseData = useFlowStore((state) => state.sseData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
