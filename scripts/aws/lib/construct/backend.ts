@@ -23,16 +23,17 @@ interface BackEndProps {
   backendLogGroup: logs.LogGroup;
   cloudmapNamespace: servicediscovery.PrivateDnsNamespace;
   rdsCluster:rds.DatabaseCluster
-  alb:elb.IApplicationLoadBalancer
   arch:ecs.CpuArchitecture
+  albTG: elb.ApplicationTargetGroup;
 }
 
 export class BackEndCluster extends Construct {
-  readonly backendServiceName: string 
+  readonly backendServiceName: string
+  readonly backendServicePort: number
   
   constructor(scope: Construct, id: string, props:BackEndProps) {
     super(scope, id)
-    const containerPort = 7860
+    this.backendServicePort = 7860
     // Secrets ManagerからDB認証情報を取ってくる
     const secretsDB = props.rdsCluster.secret!;
 
@@ -72,7 +73,7 @@ export class BackEndCluster extends Construct {
       },
       portMappings: [
           {
-              containerPort: containerPort,
+              containerPort: this.backendServicePort,
               protocol: ecs.Protocol.TCP,
           },
       ],
@@ -93,13 +94,13 @@ export class BackEndCluster extends Construct {
       securityGroups: [props.ecsBackSG],
       cloudMapOptions: {
         cloudMapNamespace: props.cloudmapNamespace,
-        containerPort: containerPort,
+        containerPort: this.backendServicePort,
         dnsRecordType: servicediscovery.DnsRecordType.A,
         dnsTtl: Duration.seconds(10),
         name: this.backendServiceName
       },
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
     });
-
+    props.albTG.addTarget(backendService);
   }
 }

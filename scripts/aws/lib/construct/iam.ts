@@ -10,8 +10,6 @@ interface IAMProps {
 }
 
 export class EcsIAM extends Construct {
-  readonly frontendTaskRole: iam.Role;
-  readonly frontendTaskExecutionRole: iam.Role;
   readonly backendTaskRole: iam.Role;
   readonly backendTaskExecutionRole: iam.Role;
 
@@ -58,12 +56,6 @@ export class EcsIAM extends Construct {
       })],
     })
 
-    // FrontEnd Task Role
-    this.frontendTaskRole = new iam.Role(this, 'FrontendTaskRole', {
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-    });
-    this.frontendTaskRole.addToPolicy(ECSExecPolicyStatement);
-
     // BackEnd Task Role
     this.backendTaskRole = new iam.Role(this, 'BackendTaskRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -72,17 +64,6 @@ export class EcsIAM extends Construct {
     this.backendTaskRole.addToPolicy(ECSExecPolicyStatement);
     // KendraとBedrockのアクセス権付与
     this.backendTaskRole.attachInlinePolicy(RagAccessPolicy);
-
-    // FrontEnd Task ExecutionRole 
-    this.frontendTaskExecutionRole = new iam.Role(this, 'frontendTaskExecutionRole', {
-      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      managedPolicies: [
-        {
-          managedPolicyArn:
-            'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
-        },
-      ],
-    });
 
     // BackEnd Task ExecutionRole 
     this.backendTaskExecutionRole = new iam.Role(this, 'backendTaskExecutionRole', {
