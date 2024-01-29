@@ -4,6 +4,7 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow
@@ -69,6 +70,29 @@ async def download_file(
             "Content-Length": str(len(file_content)),
         }
         return StreamingResponse(BytesIO(file_content), media_type=content_type, headers=headers)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router("/images/{flow_id}/{file_name}")
+async def download_image(
+    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+):
+    try:
+        extension = file_name.split(".")[-1]
+
+        if not extension:
+            raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
+
+        content_type = build_content_type_from_extension(extension)
+
+        if not content_type:
+            raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
+        elif not content_type.startswith("image"):
+            raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
+
+        file_content = storage_service.get_file(flow_id=flow_id, file_name=file_name)
+        return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
