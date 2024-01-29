@@ -68,6 +68,9 @@ export class Network extends Construct {
     this.albTG = listener.addTargets('targetGroup', {
       port: back_service_port,
       protocol: elb.ApplicationProtocol.HTTP,
+      healthCheck: {
+        enabled: false,
+      },
     });
 
     // Cluster
