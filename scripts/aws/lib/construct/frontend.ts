@@ -36,8 +36,8 @@ export class FrontEndCluster extends Construct {
   const commonBucketProps: s3.BucketProps = {
     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     encryption: s3.BucketEncryption.S3_MANAGED,
-    autoDeleteObjects: true,
-    removalPolicy: RemovalPolicy.DESTROY,
+    // autoDeleteObjects: true,
+    removalPolicy: RemovalPolicy.RETAIN,
     objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
     enforceSSL: true,
   };
@@ -85,7 +85,7 @@ export class FrontEndCluster extends Construct {
     destinationBucket: s3BucketInterface,
     distribution: cloudFrontWebDistribution,
     outputSourceDirectory: 'dist',
-    buildCommands: ['npm ci', 'npm run build'],
+    buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
       BACKEND_SERVICE_NAME: props.backendServiceName,
       BACKEND_URL: `http://${props.alb.loadBalancerDnsName}`,
