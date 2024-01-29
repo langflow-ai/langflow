@@ -63,7 +63,12 @@ async def download_file(
             raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
 
         file_content = storage_service.get_file(flow_id=flow_id, file_name=file_name)
-        return StreamingResponse(BytesIO(file_content), media_type=content_type)
+        headers = {
+            "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
+            "Content-Type": "application/octet-stream",
+            "Content-Length": str(len(file_content)),
+        }
+        return StreamingResponse(BytesIO(file_content), media_type=content_type, headers=headers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
