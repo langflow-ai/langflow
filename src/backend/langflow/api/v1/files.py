@@ -74,7 +74,7 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router("/images/{flow_id}/{file_name}")
+@router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
 ):
