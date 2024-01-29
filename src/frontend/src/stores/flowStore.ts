@@ -9,6 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
   NodeType,
@@ -344,6 +345,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
     }
+    await updateFlowInDatabase({
+      data: {
+        nodes: get().nodes,
+        edges: get().edges,
+        viewport: get().reactFlowInstance?.getViewport()!,
+      },
+      id: currentFlow!.id,
+      name: currentFlow!.name,
+      description: currentFlow!.description,
+    });
     return buildVertices({
       flowId: currentFlow!.id,
       nodeId,
