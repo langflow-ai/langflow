@@ -45,12 +45,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ flowPool });
   },
   addDataToFlowPool: (data: any, nodeId: string) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
       newFlowPool[nodeId].push(data);
     }
     get().setFlowPool(newFlowPool);
+    if (currentFlow) {
+      window.sessionStorage.setItem(
+        `${currentFlow!.id}`,
+        JSON.stringify(newFlowPool)
+      );
+    }
   },
   CleanFlowPool: () => {
     get().setFlowPool({});
@@ -59,9 +66,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isPending });
   },
   resetFlow: ({ nodes, edges, viewport }) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    let flowPool = {};
+    if (currentFlow) {
+      flowPool = JSON.parse(
+        window.sessionStorage.getItem(`${currentFlow!.id}`) ?? "{}"
+      );
+    }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-
     set({
       nodes,
       edges: newEdges,
@@ -69,6 +82,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       inputs,
       outputs,
       hasIO: inputs.length > 0 && outputs.length > 0,
+      flowPool,
     });
     get().reactFlowInstance!.setViewport(viewport);
   },
