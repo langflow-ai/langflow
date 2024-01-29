@@ -677,6 +677,7 @@ export function validateSelection(
   if (selection.edges.length === 0) {
     selection.edges = edges;
   }
+
   // get only edges that are connected to the nodes in the selection
   // first creates a set of all the nodes ids
   let nodesSet = new Set(selection.nodes.map((n) => n.id));
@@ -692,7 +693,17 @@ export function validateSelection(
   if (selection.nodes.length < 2) {
     errorsArray.push("Please select more than one node");
   }
-
+  if (
+    selection.nodes.some(
+      (node) =>
+        isInputNode(node.data as NodeDataType) ||
+        isOutputNode(node.data as NodeDataType)
+    )
+  ) {
+    errorsArray.push(
+      "Please select only nodes that are not input or output nodes"
+    );
+  }
   //check if there are two or more nodes with free outputs
   if (
     selection.nodes.filter(
