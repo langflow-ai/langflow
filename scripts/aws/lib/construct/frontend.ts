@@ -82,6 +82,7 @@ export class FrontEndCluster extends Construct {
         ],
       },
     ],
+    nodejsVersion:20,
     destinationBucket: s3BucketInterface,
     distribution: cloudFrontWebDistribution,
     outputSourceDirectory: 'dist',
