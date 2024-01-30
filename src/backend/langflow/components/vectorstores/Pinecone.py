@@ -5,6 +5,7 @@ import pinecone  # type: ignore
 from langchain.schema import BaseRetriever
 from langchain.vectorstores.base import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
+
 from langflow import CustomComponent
 from langflow.field_typing import Document, Embeddings
 
@@ -16,7 +17,7 @@ class PineconeComponent(CustomComponent):
     def build_config(self):
         return {
             "documents": {"display_name": "Documents"},
-            "embedding": {"display_name": "Embedding", "default": 1000},
+            "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
             "pinecone_api_key": {"display_name": "Pinecone API Key", "default": "", "password": True, "required": True},
