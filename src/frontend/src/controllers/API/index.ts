@@ -865,3 +865,7 @@ export async function postBuildVertex(
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`);
 }
+
+export async function downloadImage({ flowId, fileName }): Promise<any> {
+  return await api.get(`${BASE_URL_API}files/images/${flowId}/${fileName}`);
+}
