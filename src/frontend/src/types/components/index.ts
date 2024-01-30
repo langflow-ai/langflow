@@ -651,6 +651,10 @@ export type IOInputProps = {
   inputType: string;
   inputId: string;
 };
+export type IOOutputProps = {
+  outputType: string;
+  outputId: string;
+};
 
 export type IOFileInputProps = {
   field: TemplateVariableType;
