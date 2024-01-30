@@ -37,6 +37,7 @@ typer = "^0.9.0"
 gunicorn = "^21.2.0"
 langchain = "~0.0.345"
 openai = "^1.6.1"
+duckdb = "*"
 pandas = "2.0.3"
 chromadb = "^0.4.0"
 huggingface-hub = { version = "^0.19.0", extras = ["inference"] }
