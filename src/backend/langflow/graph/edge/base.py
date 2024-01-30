@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from langflow.graph.edge.utils import build_clean_params
 from langflow.services.deps import get_monitor_service
+from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -127,20 +129,6 @@ class ContractEdge(Edge):
         target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    def build_clean_params(self, target: "Vertex") -> dict:
-        """
-        Cleans the parameters of the target vertex.
-        """
-        # Removes all keys that the values aren't python types like str, int, bool, etc.
-        params = {
-            key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
-        }
-        # if it is a list we need to check if the contents are python types
-        for key, value in params.items():
-            if isinstance(value, list):
-                params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
-        return params
-
     async def get_result(self, source: "Vertex", target: "Vertex"):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
@@ -169,7 +157,7 @@ class ContractEdge(Edge):
 def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", status, error=None):
     try:
         monitor_service = get_monitor_service()
-        clean_params = edge.build_clean_params(target)
+        clean_params = build_clean_params(target)
         data = {
             "source": source.vertex_type,
             "target": target.vertex_type,
@@ -181,30 +169,3 @@ def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", stat
         monitor_service.add_row(table_name="transactions", data=data)
     except Exception as e:
         logger.error(f"Error logging transaction: {e}")
-
-
-async def log_message(
-    sender_type: str,
-    sender_name: str,
-    message: str,
-    session_id: str,
-    artifacts: Optional[dict] = None,
-):
-    try:
-        from langflow.graph.vertex.base import Vertex
-
-        if isinstance(session_id, Vertex):
-            session_id = await session_id.build()  # type: ignore
-
-        monitor_service = get_monitor_service()
-        row = {
-            "sender_type": sender_type,
-            "sender_name": sender_name,
-            "message": message,
-            "artifacts": artifacts or {},
-            "session_id": session_id,
-            "timestamp": monitor_service.get_timestamp(),
-        }
-        monitor_service.add_row(table_name="messages", data=row)
-    except Exception as e:
-        logger.error(f"Error logging message: {e}")
