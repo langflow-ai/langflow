@@ -290,7 +290,7 @@
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply opacity-100;
+    @apply opacity-100 animate-wiggle;
   }
   .green-status {
     @apply generic-node-status text-status-green fill-status-green;
@@ -302,7 +302,7 @@
     @apply generic-node-status text-status-yellow fill-status-yellow;
   }
   .status-build-animation {
-    @apply hidden animate-spin text-ring opacity-0;
+    @apply opacity-0;
   }
   .status-div {
     @apply absolute w-4 duration-200 ease-in-out;

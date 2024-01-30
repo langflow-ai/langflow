@@ -383,14 +383,14 @@ export default function GenericNode({
                       )
                     }
                   >
-                    <div className="generic-node-status-position flex items-center">
+                    <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
                         name="Zap"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "h-5 stroke-1 absolute"
                         )}
                       />
                       <IconComponent
@@ -399,7 +399,7 @@ export default function GenericNode({
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "h-5 stroke-1 absolute"
                         )}
                       />
                       <IconComponent
@@ -408,7 +408,7 @@ export default function GenericNode({
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "h-5 stroke-1 absolute"
                         )}
                       />
                     </div>
