@@ -1,6 +1,8 @@
+from typing import Dict, Optional
+
+from langchain_core.documents import Document
+
 from langflow import CustomComponent
-from langchain.documents import Document
-from typing import Optional, Dict
 
 
 class SRTLoaderComponent(CustomComponent):
