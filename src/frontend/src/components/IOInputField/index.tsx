@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOInputProps } from "../../types/components";
+import IOFileInput from "../IOInputs/FileInput";
 import { Textarea } from "../ui/textarea";
 
 export default function IOInputField({
@@ -30,7 +31,18 @@ export default function IOInputField({
           />
         );
       case "fileLoader":
-      // return <IOFileInput />;
+        return (
+          <IOFileInput
+            field={node.data.node!.template["file_path"]["value"]}
+            updateValue={(e) => {
+              if (node) {
+                let newNode = cloneDeep(node);
+                newNode.data.node!.template["file_path"].value = e;
+                setNode(node.id, newNode);
+              }
+            }}
+          />
+        );
 
       default:
         return (
