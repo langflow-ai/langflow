@@ -1,10 +1,11 @@
-import { cloneDeep } from "lodash";
 import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
-import { extractTypeFromLongId } from "../../utils/utils";
+import { isInputType, isOutputType } from "../../utils/reactflowUtils";
+import { classNames } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
+import IOOutputView from "../IOOutputView";
 import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
@@ -16,32 +17,91 @@ export default function IOView(): JSX.Element {
   const outputIds = outputs.map((obj) => obj.id);
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
-  const options = inputIds.concat(outputIds);
-  //TODO: show output options for view
-  const [selectedView, setSelectedView] = useState<ReactNode>(
-    handleSelectChange(options[0])
+  const categories = getCategories();
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    categories[0]
   );
-  // if (outputTypes.includes("ChatOutput")) {
-  //   return <NewChatView />;
-  // }
-  function handleSelectChange(selected: string) {
-    const type = extractTypeFromLongId(selected);
-    return <NewChatView />;
-    switch (type) {
-      case "ChatOutput":
-        return <NewChatView />;
-        break;
+  const [showChat, setShowChat] = useState<boolean>(false);
+  const [selectedView, setSelectedView] = useState<{
+    type: string;
+    id?: string;
+  }>(handleInitialView());
+
+  function handleInitialView() {
+    if (outputs.map((output) => output.type).includes("ChatOutput")) {
+      return { type: "ChatOutput" };
     }
+    return { type: "" };
   }
-  console.log(inputs);
+
+  function getCategories() {
+    const categories: string[] = [];
+    if (inputs.length > 0) categories.push("Inputs");
+    if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
+      categories.push("Outputs");
+    return categories;
+  }
+
+  function handleSelectChange(): ReactNode {
+    const { type, id } = selectedView;
+    if (type === "ChatOutput") return <NewChatView />;
+    if (isInputType(type))
+      return <IOInputField inputId={id!} inputType={type} />;
+    if (isOutputType(type))
+      return <IOOutputView outputId={id!} outputType={type} />;
+    else return <div>no view selected</div>;
+  }
+
+  function UpdateAccordion() {
+    return selectedCategory === "Inputs" ? inputs : outputs;
+  }
+
   return (
     <div className="form-modal-iv-box">
       <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
-        <div className="file-component-arrangement">
-          <IconComponent name="Variable" className=" file-component-variable" />
-          <span className="file-component-variables-span text-md">Inputs</span>
+        <div className="flex items-start gap-4 py-2">
+          {categories.map((category, index) => {
+            return (
+              //hide chat button if chat is alredy on the view
+              <button
+                onClick={() => setSelectedCategory(category)}
+                className={classNames(
+                  "cursor flex items-center rounded-md rounded-b-none px-1",
+                  category == selectedCategory
+                    ? "border border-b-0 border-muted-foreground"
+                    : "hover:bg-muted-foreground"
+                )}
+                key={index}
+              >
+                <IconComponent
+                  name="Variable"
+                  className=" file-component-variable"
+                />
+                <span className="file-component-variables-span text-md">
+                  {category}
+                </span>
+              </button>
+            );
+          })}
+          {selectedView.type !== "ChatOutput" && (
+            <button
+              onClick={() => setSelectedView({ type: "ChatOutput" })}
+              className={
+                "cursor flex items-center rounded-md rounded-b-none px-1 hover:bg-muted-foreground"
+              }
+              key={"chat"}
+            >
+              <IconComponent
+                name="Variable"
+                className=" file-component-variable"
+              />
+              <span className="file-component-variables-span text-md">
+                Chat
+              </span>
+            </button>
+          )}
         </div>
-        {inputs
+        {UpdateAccordion()
           .filter((input) => input.type !== "ChatInput")
           .map((input, index) => {
             const node: NodeType = nodes.find((node) => node.id === input.id)!;
@@ -54,11 +114,17 @@ export default function IOView(): JSX.Element {
                         {input.id}
                       </Badge>
                       <div
-                        className="-mb-1"
+                        className="-mb-1 pr-4"
                         onClick={(event) => {
                           event.stopPropagation();
+                          setSelectedView({ type: input.type, id: input.id });
                         }}
-                      ></div>
+                      >
+                        <IconComponent
+                          className="h-4 w-4"
+                          name="ScreenShare"
+                        ></IconComponent>
+                      </div>
                     </div>
                   }
                   key={index}
@@ -66,30 +132,7 @@ export default function IOView(): JSX.Element {
                 >
                   <div className="file-component-tab-column">
                     {node && (
-                      <IOInputField
-                        field={
-                          node.data.node!.template["value"] ||
-                          node.data.node!.template["file_path"]["value"]
-                        }
-                        inputType={input.type}
-                        updateValue={(e, type) => {
-                          if (type === "file") {
-                            if (node) {
-                              let newNode = cloneDeep(node);
-                              newNode.data.node!.template["file_path"].value =
-                                e;
-                              setNode(node.id, newNode);
-                            }
-                          } else {
-                            if (node) {
-                              let newNode = cloneDeep(node);
-                              newNode.data.node!.template["value"].value =
-                                e.target.value;
-                              setNode(node.id, newNode);
-                            }
-                          }
-                        }}
-                      />
+                      <IOInputField inputType={input.type} inputId={input.id} />
                     )}
                   </div>
                 </AccordionComponent>
@@ -97,7 +140,7 @@ export default function IOView(): JSX.Element {
             );
           })}
       </div>
-      {selectedView}
+      {handleSelectChange()}
     </div>
   );
 }

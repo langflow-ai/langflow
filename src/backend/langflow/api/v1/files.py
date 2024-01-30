@@ -4,7 +4,6 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow
@@ -42,7 +41,7 @@ async def upload_file(
         file_content = await file.read()
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         folder = flow_id
-        storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
+        await storage_service.save_file(flow_id=folder, file_name=file_name, data=file_content)
         return UploadFileResponse(flowId=flow_id, file_path=f"{folder}/{file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -61,7 +60,7 @@ async def download_file(file_name: str, flow_id: str, storage_service: StorageSe
         if not content_type:
             raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
 
-        file_content = storage_service.get_file(flow_id=flow_id, file_name=file_name)
+        file_content = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
         headers = {
             "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
             "Content-Type": "application/octet-stream",
@@ -87,7 +86,7 @@ async def download_image(file_name: str, flow_id: str, storage_service: StorageS
         elif not content_type.startswith("image"):
             raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
-        file_content = storage_service.get_file(flow_id=flow_id, file_name=file_name)
+        file_content = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -98,7 +97,7 @@ async def list_files(
     flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
 ):
     try:
-        files = storage_service.list_files(flow_id=flow_id)
+        files = await storage_service.list_files(flow_id=flow_id)
         return {"files": files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -109,7 +108,7 @@ async def delete_file(
     file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
 ):
     try:
-        storage_service.delete_file(flow_id=flow_id, file_name=file_name)
+        await storage_service.delete_file(flow_id=flow_id, file_name=file_name)
         return {"message": f"File {file_name} deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
