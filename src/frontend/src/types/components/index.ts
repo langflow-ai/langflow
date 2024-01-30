@@ -650,10 +650,10 @@ export type dropdownButtonPropsType = {
 export type IOInputProps = {
   inputType: string;
   field: TemplateVariableType;
-  updateValue: (e: any) => void;
+  updateValue: (e: any, type: string) => void;
 };
 
 export type IOFileInputProps = {
   field: TemplateVariableType;
-  updateValue: (e: any) => void;
+  updateValue: (e: any, type: string) => void;
 };

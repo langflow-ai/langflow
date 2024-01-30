@@ -8,17 +8,23 @@ export default function IOInputField({
   updateValue,
 }: IOInputProps): JSX.Element | undefined {
   function handleInputType() {
+    console.log(inputType);
+
+    const handleUpdateValue = (e) => {
+      updateValue(e, "text");
+    };
+
     switch (inputType) {
       case "TextInput":
         return (
           <Textarea
             className="custom-scroll"
             placeholder={"Enter text..."}
-            value={field.value}
-            onChange={updateValue}
+            value={field?.value}
+            onChange={handleUpdateValue}
           />
         );
-      case "fileLoader":
+      case "FileLoader":
         return <IOFileInput field={field} updateValue={updateValue} />;
 
       default:
@@ -26,8 +32,8 @@ export default function IOInputField({
           <Textarea
             className="custom-scroll"
             placeholder={"Enter text..."}
-            value={field.value}
-            onChange={updateValue}
+            value={field?.value}
+            onChange={handleUpdateValue}
           />
         );
     }

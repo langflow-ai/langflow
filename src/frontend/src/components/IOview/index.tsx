@@ -67,15 +67,26 @@ export default function IOView(): JSX.Element {
                   <div className="file-component-tab-column">
                     {node && (
                       <IOInputField
-                        field={node.data.node!.template["value"]}
+                        field={
+                          node.data.node!.template["value"] ||
+                          node.data.node!.template["file_path"]["value"]
+                        }
                         inputType={input.type}
-                        updateValue={(e) => {
-                          e.target.value;
-                          if (node) {
-                            let newNode = cloneDeep(node);
-                            newNode.data.node!.template["value"].value =
-                              e.target.value;
-                            setNode(node.id, newNode);
+                        updateValue={(e, type) => {
+                          if (type === "file") {
+                            if (node) {
+                              let newNode = cloneDeep(node);
+                              newNode.data.node!.template["file_path"].value =
+                                e;
+                              setNode(node.id, newNode);
+                            }
+                          } else {
+                            if (node) {
+                              let newNode = cloneDeep(node);
+                              newNode.data.node!.template["value"].value =
+                                e.target.value;
+                              setNode(node.id, newNode);
+                            }
                           }
                         }}
                       />
