@@ -36,8 +36,8 @@ export class FrontEndCluster extends Construct {
   const commonBucketProps: s3.BucketProps = {
     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     encryption: s3.BucketEncryption.S3_MANAGED,
-    // autoDeleteObjects: true,
-    removalPolicy: RemovalPolicy.RETAIN,
+    autoDeleteObjects: true,
+    removalPolicy: RemovalPolicy.DESTROY,
     objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
     enforceSSL: true,
   };
@@ -66,7 +66,10 @@ export class FrontEndCluster extends Construct {
       },
     }
   );
-
+  
+  // const endpoint = "http://langflow-alb-1779019476.us-east-1.elb.amazonaws.com"
+  const endpoint = `http://${props.alb.loadBalancerDnsName}`
+  
   new NodejsBuild(this, 'BuildFrontEnd', {
     assets: [
       {
@@ -76,8 +79,7 @@ export class FrontEndCluster extends Construct {
           '.github',
           '.gitignore',
           '.prettierignore',
-          '.prettierrc.json',
-          'dist',
+          'build',
           'node_modules'
         ],
       },
@@ -85,14 +87,17 @@ export class FrontEndCluster extends Construct {
     nodejsVersion:20,
     destinationBucket: s3BucketInterface,
     distribution: cloudFrontWebDistribution,
-    outputSourceDirectory: 'dist',
+    outputSourceDirectory: 'build',
     buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
       BACKEND_SERVICE_NAME: props.backendServiceName,
-      BACKEND_URL: `http://${props.alb.loadBalancerDnsName}`,
-      VITE_PROXY_TARGET: `http://${props.alb.loadBalancerDnsName}`,
+      BACKEND_URL: endpoint,
+      VITE_PROXY_TARGET: endpoint,
+      VITE_PORT:'443',
     },
+    // workingDirectory:"../../src/frontend"
   });
+  console.log(`VITE_PROXY_TARGET: ${endpoint}`)
 
   this.distribution = cloudFrontWebDistribution;
   // distribution から backendへのinbound 許可
@@ -103,4 +108,4 @@ export class FrontEndCluster extends Construct {
   });
 }
 
-  }
+}
