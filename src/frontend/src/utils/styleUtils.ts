@@ -77,6 +77,7 @@ import {
   Save,
   SaveAll,
   Scissors,
+  ScreenShare,
   Search,
   Settings2,
   Share,
@@ -388,4 +389,5 @@ export const nodeIconsLucide: iconsType = {
   TerminalIcon,
   Repeat,
   io: ArrowDownUp,
+  ScreenShare,
 };
