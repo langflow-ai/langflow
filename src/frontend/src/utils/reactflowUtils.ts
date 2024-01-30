@@ -1307,3 +1307,11 @@ export function isInputNode(nodeData: NodeDataType): boolean {
 export function isOutputNode(nodeData: NodeDataType): boolean {
   return OUTPUT_TYPES.has(nodeData.type);
 }
+
+export function isInputType(type: string): boolean {
+  return INPUT_TYPES.has(type);
+}
+
+export function isOutputType(type: string): boolean {
+  return OUTPUT_TYPES.has(type);
+}

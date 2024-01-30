@@ -1,9 +1,11 @@
 import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
+import { isInputType, isOutputType } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
+import IOOutputView from "../IOOutputView";
 import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
@@ -43,16 +45,12 @@ export default function IOView(): JSX.Element {
 
   function handleSelectChange(): ReactNode {
     const { type, id } = selectedView;
-    switch (type) {
-      case "ChatOutput":
-        return <NewChatView />;
-        break;
-      case "TextInput":
-        return <IOInputField inputId={id!} inputType={type} />;
-      default:
-        //create empty view output screen
-        return <div>no view selected</div>;
-    }
+    if (type === "ChatOutput") return <NewChatView />;
+    if (isInputType(type))
+      return <IOInputField inputId={id!} inputType={type} />;
+    if (isOutputType(type))
+      return <IOOutputView outputId={id!} outputType={type} />;
+    else return <div>no view selected</div>;
   }
 
   function UpdateAccordion() {
