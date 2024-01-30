@@ -83,23 +83,24 @@ export default function IOView(): JSX.Element {
               </button>
             );
           })}
-          {selectedView.type !== "ChatOutput" && (
-            <button
-              onClick={() => setSelectedView({ type: "ChatOutput" })}
-              className={
-                "cursor flex items-center rounded-md rounded-b-none px-1 hover:bg-muted-foreground"
-              }
-              key={"chat"}
-            >
-              <IconComponent
-                name="Variable"
-                className=" file-component-variable"
-              />
-              <span className="file-component-variables-span text-md">
-                Chat
-              </span>
-            </button>
-          )}
+          {outputs.map((output) => output.type).includes("ChatOutput") &&
+            selectedView.type !== "ChatOutput" && (
+              <button
+                onClick={() => setSelectedView({ type: "ChatOutput" })}
+                className={
+                  "cursor flex items-center rounded-md rounded-b-none px-1 hover:bg-muted-foreground"
+                }
+                key={"chat"}
+              >
+                <IconComponent
+                  name="Variable"
+                  className=" file-component-variable"
+                />
+                <span className="file-component-variables-span text-md">
+                  Chat
+                </span>
+              </button>
+            )}
         </div>
         {UpdateAccordion()
           .filter((input) => input.type !== "ChatInput")
@@ -131,9 +132,18 @@ export default function IOView(): JSX.Element {
                   keyValue={input.id}
                 >
                   <div className="file-component-tab-column">
-                    {node && (
-                      <IOInputField inputType={input.type} inputId={input.id} />
-                    )}
+                    {node &&
+                      (selectedCategory === "Inputs" ? (
+                        <IOInputField
+                          inputType={input.type}
+                          inputId={input.id}
+                        />
+                      ) : (
+                        <IOOutputView
+                          outputType={input.type}
+                          outputId={input.id}
+                        />
+                      ))}
                   </div>
                 </AccordionComponent>
               </div>
