@@ -4,7 +4,7 @@ from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
 from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
 from langflow.graph.graph.base import Graph

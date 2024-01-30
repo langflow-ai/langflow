@@ -1,13 +1,10 @@
-from langflow import CustomComponent
 from typing import List, Union
-from langchain_community.vectorstores.supabase import SupabaseVectorStore
-from langflow.field_typing import (
-    Document,
-    Embeddings,
-    NestedDict,
-)
+
 from langchain.schema import BaseRetriever
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.supabase import SupabaseVectorStore
+from langflow import CustomComponent
+from langflow.field_typing import Document, Embeddings, NestedDict
 from supabase.client import Client, create_client
 
 
