@@ -83,6 +83,13 @@ export default function GenericNode({
     countHandles();
   }, [data, data.node]);
 
+  useEffect(() => {
+    if (!selected) {
+      setInputName(false);
+      setInputDescription(false);
+    }
+  }, [selected]);
+
   // State for outline color
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
@@ -383,14 +390,14 @@ export default function GenericNode({
                       )
                     }
                   >
-                    <div className="generic-node-status-position flex items-center">
+                    <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
                         name="Zap"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
@@ -399,7 +406,7 @@ export default function GenericNode({
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
@@ -408,7 +415,7 @@ export default function GenericNode({
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "h-5 stroke-1"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                     </div>

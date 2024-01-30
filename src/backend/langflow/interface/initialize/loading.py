@@ -119,8 +119,8 @@ async def instantiate_based_on_type(class_object, base_type, node_type, params, 
 
 async def instantiate_custom_component(node_type, class_object, params, user_id):
     params_copy = params.copy()
-    class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
-    custom_component = class_object(user_id=user_id)
+    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
+    custom_component: "CustomComponent" = class_object(user_id=user_id)
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()

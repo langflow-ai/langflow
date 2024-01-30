@@ -9,6 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
   NodeType,
@@ -45,12 +46,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ flowPool });
   },
   addDataToFlowPool: (data: any, nodeId: string) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
       newFlowPool[nodeId].push(data);
     }
     get().setFlowPool(newFlowPool);
+    if (currentFlow) {
+      window.sessionStorage.setItem(
+        `${currentFlow!.id}`,
+        JSON.stringify(newFlowPool)
+      );
+    }
   },
   CleanFlowPool: () => {
     get().setFlowPool({});
@@ -59,16 +67,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isPending });
   },
   resetFlow: ({ nodes, edges, viewport }) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    let flowPool = {};
+    if (currentFlow) {
+      flowPool = JSON.parse(
+        window.sessionStorage.getItem(`${currentFlow!.id}`) ?? "{}"
+      );
+    }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-
     set({
       nodes,
       edges: newEdges,
       flowState: undefined,
       inputs,
       outputs,
-      hasIO: inputs.length > 0 && outputs.length > 0,
+      hasIO: inputs.length > 0 || outputs.length > 0,
+      flowPool,
     });
     get().reactFlowInstance!.setViewport(viewport);
   },
@@ -109,7 +124,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
       inputs,
       outputs,
-      hasIO: inputs.length > 0 && outputs.length > 0,
+      hasIO: inputs.length > 0 || outputs.length > 0,
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -330,6 +345,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
     }
+    await updateFlowInDatabase({
+      data: {
+        nodes: get().nodes,
+        edges: get().edges,
+        viewport: get().reactFlowInstance?.getViewport()!,
+      },
+      id: currentFlow!.id,
+      name: currentFlow!.name,
+      description: currentFlow!.description,
+    });
     return buildVertices({
       flowId: currentFlow!.id,
       nodeId,

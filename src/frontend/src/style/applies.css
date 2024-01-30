@@ -290,7 +290,7 @@
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply opacity-100;
+    @apply opacity-100 animate-wiggle;
   }
   .green-status {
     @apply generic-node-status text-status-green fill-status-green;
@@ -302,7 +302,7 @@
     @apply generic-node-status text-status-yellow fill-status-yellow;
   }
   .status-build-animation {
-    @apply hidden animate-spin text-ring opacity-0;
+    @apply opacity-0;
   }
   .status-div {
     @apply absolute w-4 duration-200 ease-in-out;
@@ -1012,7 +1012,7 @@
   }
 
   .beta-badge-wrapper {
-    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
+    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg pointer-events-none;
   }
   .beta-badge-content {
     @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;
