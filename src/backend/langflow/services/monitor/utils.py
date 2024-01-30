@@ -1,10 +1,10 @@
 from typing import Any, Dict, Optional, Type
 
-from langflow.services.deps import get_monitor_service
-from loguru import logger
-
 import duckdb
+from loguru import logger
 from pydantic import BaseModel
+
+from langflow.services.deps import get_monitor_service
 
 
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
@@ -68,7 +68,7 @@ def add_row_to_table(
     validated_data = model(**monitor_data)
 
     # Extract data for the insert statement
-    validated_dict = validated_data.dict(exclude_unset=True)
+    validated_dict = validated_data.model_dump(exclude_unset=True)
     keys = [key for key in validated_dict.keys() if key != "id"]
     columns = ", ".join(keys)
 
