@@ -8,14 +8,14 @@ from .service import StorageService
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    def __init__(self, session_service, settings_service):
+    async def __init__(self, session_service, settings_service):
         """Initialize the S3 storage service with session and settings services."""
         super().__init__(session_service, settings_service)
         self.bucket = "langflow"
         self.s3_client = boto3.client("s3")
         self.set_ready()
 
-    def save_file(self, folder: str, file_name: str, data):
+    async def save_file(self, folder: str, file_name: str, data):
         """
         Save a file to the S3 bucket.
 
@@ -34,7 +34,7 @@ class S3StorageService(StorageService):
             logger.error(f"Error saving file {file_name} in folder {folder}: {e}")
             raise
 
-    def get_file(self, folder: str, file_name: str):
+    async def get_file(self, folder: str, file_name: str):
         """
         Retrieve a file from the S3 bucket.
 
@@ -51,7 +51,7 @@ class S3StorageService(StorageService):
             logger.error(f"Error retrieving file {file_name} from folder {folder}: {e}")
             raise
 
-    def list_files(self, folder: str):
+    async def list_files(self, folder: str):
         """
         List all files in a specified folder of the S3 bucket.
 
@@ -68,7 +68,7 @@ class S3StorageService(StorageService):
             logger.error(f"Error listing files in folder {folder}: {e}")
             raise
 
-    def delete_file(self, folder: str, file_name: str):
+    async def delete_file(self, folder: str, file_name: str):
         """
         Delete a file from the S3 bucket.
 
@@ -83,7 +83,7 @@ class S3StorageService(StorageService):
             logger.error(f"Error deleting file {file_name} from folder {folder}: {e}")
             raise
 
-    def teardown(self):
+    async def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.
         pass
