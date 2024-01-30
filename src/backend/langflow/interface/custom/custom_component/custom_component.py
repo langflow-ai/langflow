@@ -5,13 +5,15 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_credential_service, get_db_service
+from langflow.services.deps import get_credential_service, get_db_service, get_storage_service
+from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 
 from .component import Component
@@ -33,6 +35,13 @@ class CustomComponent(Component):
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
+
+    def get_full_path(self, path: str) -> str:
+        storage_svc: "StorageService" = get_storage_service()
+
+        flow_id = path.split("/")[0]
+        file_name = path.split("/")[1]
+        return storage_svc.build_full_path(flow_id, file_name)
 
     def custom_repr(self):
         if self.repr_value == "":
