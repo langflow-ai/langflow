@@ -48,7 +48,6 @@ export default function IOView(): JSX.Element {
         return <NewChatView />;
         break;
       case "TextInput":
-        console.log("rodoussss");
         return <IOInputField inputId={id!} inputType={type} />;
       default:
         //create empty view output screen
@@ -105,7 +104,7 @@ export default function IOView(): JSX.Element {
             </button>
           )}
         </div>
-        {inputs
+        {UpdateAccordion()
           .filter((input) => input.type !== "ChatInput")
           .map((input, index) => {
             const node: NodeType = nodes.find((node) => node.id === input.id)!;
