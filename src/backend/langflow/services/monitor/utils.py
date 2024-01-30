@@ -1,4 +1,7 @@
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
+
+from langflow.services.deps import get_monitor_service
+from loguru import logger
 
 import duckdb
 from pydantic import BaseModel
@@ -77,3 +80,30 @@ def add_row_to_table(
 
     # Execute the insert statement
     conn.execute(insert_sql, values)
+
+
+async def log_message(
+    sender_type: str,
+    sender_name: str,
+    message: str,
+    session_id: str,
+    artifacts: Optional[dict] = None,
+):
+    try:
+        from langflow.graph.vertex.base import Vertex
+
+        if isinstance(session_id, Vertex):
+            session_id = await session_id.build()  # type: ignore
+
+        monitor_service = get_monitor_service()
+        row = {
+            "sender_type": sender_type,
+            "sender_name": sender_name,
+            "message": message,
+            "artifacts": artifacts or {},
+            "session_id": session_id,
+            "timestamp": monitor_service.get_timestamp(),
+        }
+        monitor_service.add_row(table_name="messages", data=row)
+    except Exception as e:
+        logger.error(f"Error logging message: {e}")
