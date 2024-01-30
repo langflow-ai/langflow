@@ -16,6 +16,9 @@ class StorageService(Service):
         self.session_service = session_service
         self.set_ready()
 
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        pass
+
     def set_ready(self):
         self.ready = True
 
