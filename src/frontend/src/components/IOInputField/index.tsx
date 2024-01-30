@@ -1,36 +1,54 @@
+import { cloneDeep } from "lodash";
+import useFlowStore from "../../stores/flowStore";
 import { IOInputProps } from "../../types/components";
-import IOFileInput from "../IOInputs/FileInput";
 import { Textarea } from "../ui/textarea";
 
 export default function IOInputField({
   inputType,
-  field,
-  updateValue,
+  inputId,
 }: IOInputProps): JSX.Element | undefined {
+  const nodes = useFlowStore((state) => state.nodes);
+  const setNode = useFlowStore((state) => state.setNode);
+  const node = nodes.find((node) => node.id === inputId);
   function handleInputType() {
+    if (!node) return "no node found";
     switch (inputType) {
       case "TextInput":
         return (
           <Textarea
-            className="custom-scroll"
+            className="h-full w-full custom-scroll"
             placeholder={"Enter text..."}
-            value={field.value}
-            onChange={updateValue}
+            value={node.data.node!.template["value"].value}
+            onChange={(e) => {
+              e.target.value;
+              if (node) {
+                let newNode = cloneDeep(node);
+                newNode.data.node!.template["value"].value = e.target.value;
+                setNode(node.id, newNode);
+              }
+            }}
           />
         );
       case "fileLoader":
-        return <IOFileInput field={field} updateValue={updateValue} />;
+      // return <IOFileInput />;
 
       default:
         return (
           <Textarea
-            className="custom-scroll"
+            className="h-full w-full custom-scroll"
             placeholder={"Enter text..."}
-            value={field.value}
-            onChange={updateValue}
+            value={node.data.node!.template["value"]}
+            onChange={(e) => {
+              e.target.value;
+              if (node) {
+                let newNode = cloneDeep(node);
+                newNode.data.node!.template["value"].value = e.target.value;
+                setNode(node.id, newNode);
+              }
+            }}
           />
         );
     }
   }
-  return <div className="h-full">{handleInputType()}</div>;
+  return <div className="h-full w-full">{handleInputType()}</div>;
 }

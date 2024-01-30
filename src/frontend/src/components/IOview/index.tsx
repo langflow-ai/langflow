@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
@@ -20,32 +19,47 @@ export default function IOView(): JSX.Element {
   const [selectedCategory, setSelectedCategory] = useState<string>(
     categories[0]
   );
+  const [showChat, setShowChat] = useState<boolean>(false);
   //TODO: show output options for view
-  const [selectedView, setSelectedView] = useState<string>("Chat");
+  const [selectedView, setSelectedView] = useState<{
+    type: string;
+    id?: string;
+  }>(handleInitialView());
+
+  function handleInitialView() {
+    if (outputs.map((output) => output.type).includes("ChatOutput")) {
+      return { type: "ChatOutput" };
+    }
+    return { type: "" };
+  }
 
   function getCategories() {
     const categories: string[] = [];
     if (inputs.length > 0) categories.push("Inputs");
     if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
       categories.push("Outputs");
-    if (outputs.map((output) => output.type).includes("ChatOutput"))
-      categories.push("Chat");
     return categories;
   }
 
-  function handleSelectChange(type?: string): ReactNode {
-    if (selectedCategory === "Chat") return <NewChatView />;
+  function handleSelectChange(): ReactNode {
+    const { type, id } = selectedView;
     switch (type) {
-      case "Chat":
+      case "ChatOutput":
         return <NewChatView />;
         break;
-      // case "TextInput":
-      //   break;
+      case "TextInput":
+        console.log("rodoussss");
+        return <IOInputField inputId={id!} inputType={type} />;
       default:
         //create empty view output screen
         return <div>no view selected</div>;
     }
   }
+
+  function UpdateAccordion() {
+    return selectedCategory === "Inputs" ? inputs : outputs;
+  }
+
   return (
     <div className="form-modal-iv-box">
       <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
@@ -53,28 +67,43 @@ export default function IOView(): JSX.Element {
           {categories.map((category, index) => {
             return (
               //hide chat button if chat is alredy on the view
-              !(selectedView === category && category === "Chat") && (
-                <button
-                  onClick={() => setSelectedCategory(category)}
-                  className={classNames(
-                    "cursor flex items-center rounded-md rounded-b-none px-1",
-                    category == selectedCategory
-                      ? "border border-b-0 border-muted-foreground"
-                      : "hover:bg-muted-foreground"
-                  )}
-                  key={index}
-                >
-                  <IconComponent
-                    name="Variable"
-                    className=" file-component-variable"
-                  />
-                  <span className="file-component-variables-span text-md">
-                    {category}
-                  </span>
-                </button>
-              )
+              <button
+                onClick={() => setSelectedCategory(category)}
+                className={classNames(
+                  "cursor flex items-center rounded-md rounded-b-none px-1",
+                  category == selectedCategory
+                    ? "border border-b-0 border-muted-foreground"
+                    : "hover:bg-muted-foreground"
+                )}
+                key={index}
+              >
+                <IconComponent
+                  name="Variable"
+                  className=" file-component-variable"
+                />
+                <span className="file-component-variables-span text-md">
+                  {category}
+                </span>
+              </button>
             );
           })}
+          {selectedView.type !== "ChatOutput" && (
+            <button
+              onClick={() => setSelectedView({ type: "ChatOutput" })}
+              className={
+                "cursor flex items-center rounded-md rounded-b-none px-1 hover:bg-muted-foreground"
+              }
+              key={"chat"}
+            >
+              <IconComponent
+                name="Variable"
+                className=" file-component-variable"
+              />
+              <span className="file-component-variables-span text-md">
+                Chat
+              </span>
+            </button>
+          )}
         </div>
         {inputs
           .filter((input) => input.type !== "ChatInput")
@@ -89,11 +118,17 @@ export default function IOView(): JSX.Element {
                         {input.id}
                       </Badge>
                       <div
-                        className="-mb-1"
+                        className="-mb-1 pr-4"
                         onClick={(event) => {
                           event.stopPropagation();
+                          setSelectedView({ type: input.type, id: input.id });
                         }}
-                      ></div>
+                      >
+                        <IconComponent
+                          className="h-4 w-4"
+                          name="ScreenShare"
+                        ></IconComponent>
+                      </div>
                     </div>
                   }
                   key={index}
@@ -101,19 +136,7 @@ export default function IOView(): JSX.Element {
                 >
                   <div className="file-component-tab-column">
                     {node && (
-                      <IOInputField
-                        field={node.data.node!.template["value"]}
-                        inputType={input.type}
-                        updateValue={(e) => {
-                          e.target.value;
-                          if (node) {
-                            let newNode = cloneDeep(node);
-                            newNode.data.node!.template["value"].value =
-                              e.target.value;
-                            setNode(node.id, newNode);
-                          }
-                        }}
-                      />
+                      <IOInputField inputType={input.type} inputId={input.id} />
                     )}
                   </div>
                 </AccordionComponent>
@@ -121,7 +144,7 @@ export default function IOView(): JSX.Element {
             );
           })}
       </div>
-      {handleSelectChange(selectedView)}
+      {handleSelectChange()}
     </div>
   );
 }
