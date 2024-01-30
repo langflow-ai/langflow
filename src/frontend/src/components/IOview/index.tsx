@@ -22,7 +22,6 @@ export default function IOView(): JSX.Element {
     categories[0]
   );
   const [showChat, setShowChat] = useState<boolean>(false);
-  //TODO: show output options for view
   const [selectedView, setSelectedView] = useState<{
     type: string;
     id?: string;
