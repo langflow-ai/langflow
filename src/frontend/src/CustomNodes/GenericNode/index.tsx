@@ -397,7 +397,7 @@ export default function GenericNode({
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "h-5 stroke-1 absolute"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
@@ -406,7 +406,7 @@ export default function GenericNode({
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "h-5 stroke-1 absolute"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
@@ -415,7 +415,7 @@ export default function GenericNode({
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "h-5 stroke-1 absolute"
+                          "absolute h-5 stroke-1"
                         )}
                       />
                     </div>
