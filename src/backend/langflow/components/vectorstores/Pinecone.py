@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import pinecone  # type: ignore
 from langchain.schema import BaseRetriever
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
 
 from langflow import CustomComponent

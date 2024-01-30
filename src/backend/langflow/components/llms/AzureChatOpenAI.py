@@ -1,7 +1,7 @@
 from typing import Optional
 from langflow import CustomComponent
 from langchain.llms.base import BaseLanguageModel
-from langchain.chat_models.azure_openai import AzureChatOpenAI
+from langchain_community.chat_models.azure_openai import AzureChatOpenAI
 
 
 class AzureChatOpenAIComponent(CustomComponent):

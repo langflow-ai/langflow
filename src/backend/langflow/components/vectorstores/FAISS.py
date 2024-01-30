@@ -1,12 +1,10 @@
-from langflow import CustomComponent
-from langchain_community.vectorstores.faiss import FAISS
 from typing import List, Union
+
 from langchain.schema import BaseRetriever
-from langchain.vectorstores.base import VectorStore
-from langflow.field_typing import (
-    Document,
-    Embeddings,
-)
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.faiss import FAISS
+from langflow import CustomComponent
+from langflow.field_typing import Document, Embeddings
 
 
 class FAISSComponent(CustomComponent):

@@ -1,9 +1,10 @@
-from langflow import CustomComponent
-from langchain_community.vectorstores.qdrant import Qdrant
-from typing import Optional, List, Union
-from langflow.field_typing import Document, Embeddings, NestedDict
+from typing import List, Optional, Union
+
 from langchain.schema import BaseRetriever
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.qdrant import Qdrant
+from langflow import CustomComponent
+from langflow.field_typing import Document, Embeddings, NestedDict
 
 
 class QdrantComponent(CustomComponent):

@@ -1,6 +1,8 @@
+from typing import List, Optional
+
+from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+
 from langflow import CustomComponent
-from langchain.vectorstores import MongoDBAtlasVectorSearch
-from typing import Optional, List
 from langflow.field_typing import (
     Document,
     Embeddings,

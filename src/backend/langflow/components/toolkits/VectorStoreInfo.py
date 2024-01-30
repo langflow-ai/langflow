@@ -1,7 +1,9 @@
-from langflow import CustomComponent
-from langchain.vectorstores import VectorStore
-from typing import Union, Callable
+from typing import Callable, Union
+
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
+from langchain_community.vectorstores import VectorStore
+
+from langflow import CustomComponent
 
 
 class VectorStoreInfoComponent(CustomComponent):
