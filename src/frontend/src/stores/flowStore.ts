@@ -82,7 +82,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
       inputs,
       outputs,
-      hasIO: inputs.length > 0 && outputs.length > 0,
+      hasIO: inputs.length > 0 || outputs.length > 0,
       flowPool,
     });
     get().reactFlowInstance!.setViewport(viewport);
@@ -124,7 +124,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
       inputs,
       outputs,
-      hasIO: inputs.length > 0 && outputs.length > 0,
+      hasIO: inputs.length > 0 || outputs.length > 0,
     });
 
     const flowsManager = useFlowsManagerStore.getState();

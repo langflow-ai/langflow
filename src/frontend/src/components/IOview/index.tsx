@@ -2,7 +2,7 @@ import { cloneDeep } from "lodash";
 import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
-import { extractTypeFromLongId } from "../../utils/utils";
+import { classNames } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
 import IconComponent from "../genericIconComponent";
@@ -16,30 +16,65 @@ export default function IOView(): JSX.Element {
   const outputIds = outputs.map((obj) => obj.id);
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
-  const options = inputIds.concat(outputIds);
-  //TODO: show output options for view
-  const [selectedView, setSelectedView] = useState<ReactNode>(
-    handleSelectChange(options[0])
+  const categories = getCategories();
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    categories[0]
   );
-  // if (outputTypes.includes("ChatOutput")) {
-  //   return <NewChatView />;
-  // }
-  function handleSelectChange(selected: string) {
-    const type = extractTypeFromLongId(selected);
-    return <NewChatView />;
+  //TODO: show output options for view
+  const [selectedView, setSelectedView] = useState<string>("Chat");
+
+  function getCategories() {
+    const categories: string[] = [];
+    if (inputs.length > 0) categories.push("Inputs");
+    if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
+      categories.push("Outputs");
+    if (outputs.map((output) => output.type).includes("ChatOutput"))
+      categories.push("Chat");
+    return categories;
+  }
+
+  function handleSelectChange(type?: string): ReactNode {
+    if (selectedCategory === "Chat") return <NewChatView />;
     switch (type) {
-      case "ChatOutput":
+      case "Chat":
         return <NewChatView />;
         break;
+      // case "TextInput":
+      //   break;
+      default:
+        //create empty view output screen
+        return <div>no view selected</div>;
     }
   }
-  console.log(inputs);
   return (
     <div className="form-modal-iv-box">
       <div className="mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide">
-        <div className="file-component-arrangement">
-          <IconComponent name="Variable" className=" file-component-variable" />
-          <span className="file-component-variables-span text-md">Inputs</span>
+        <div className="flex items-start gap-4 py-2">
+          {categories.map((category, index) => {
+            return (
+              //hide chat button if chat is alredy on the view
+              !(selectedView === category && category === "Chat") && (
+                <button
+                  onClick={() => setSelectedCategory(category)}
+                  className={classNames(
+                    "cursor flex items-center rounded-md rounded-b-none px-1",
+                    category == selectedCategory
+                      ? "border border-b-0 border-muted-foreground"
+                      : "hover:bg-muted-foreground"
+                  )}
+                  key={index}
+                >
+                  <IconComponent
+                    name="Variable"
+                    className=" file-component-variable"
+                  />
+                  <span className="file-component-variables-span text-md">
+                    {category}
+                  </span>
+                </button>
+              )
+            );
+          })}
         </div>
         {inputs
           .filter((input) => input.type !== "ChatInput")
@@ -86,7 +121,7 @@ export default function IOView(): JSX.Element {
             );
           })}
       </div>
-      {selectedView}
+      {handleSelectChange(selectedView)}
     </div>
   );
 }
