@@ -316,10 +316,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         (node) => node.id === connection.source || node.id === connection.target
       );
     const sourceType = findNode?.data?.type;
-    let isIo = false;
+    let isIoIn = false;
+    let isIoOut = false;
     if (sourceType) {
-      isIo = inputTypes.has(sourceType);
-      isIo = outputTypes.has(sourceType);
+      isIoIn = inputTypes.has(sourceType);
+      isIoOut = outputTypes.has(sourceType);
     }
 
     let newEdges: Edge[] = [];
@@ -340,8 +341,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           animated:
             (scapeJSONParse(connection.targetHandle!) as targetHandleType)
               .type === "Text",
-          markerEnd: isIo ? { ...commonMarkerProps } : undefined,
-          markerStart: isIo ? { ...commonMarkerProps } : undefined,
+          markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
+          markerStart: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
         },
         oldEdges
       );
