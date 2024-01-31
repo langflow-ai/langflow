@@ -192,13 +192,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.12.0"
+version = "0.13.0"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.12.0-py3-none-any.whl", hash = "sha256:d2f706c8dc95c7974e71c901c55245eeda5f129e78c3e3e6752411d4aecfe416"},
-    {file = "anthropic-0.12.0.tar.gz", hash = "sha256:f61bc5f83d195a0b1b5d92d4e5d9a131cab196bfdf9c8f69b73a815a40665e12"},
+    {file = "anthropic-0.13.0-py3-none-any.whl", hash = "sha256:2d4b6a69bf5b31a596669d68820f40f5ed9a9a3333ddaa727166a11ed29275e8"},
+    {file = "anthropic-0.13.0.tar.gz", hash = "sha256:b935d2fee12f7dbfcc80398b3da5f20103ece42aecb97d8ce24459e3c4f8ec8a"},
 ]
 
 [package.dependencies]
@@ -9068,4 +9068,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "1809b0d53078f3da65b939b33d655473a81d3bfcd92b229bd1364613bf65cf58"
+content-hash = "4a8a0961e571a06db892d45bf1ccc76a348a419878b7a68ca4014707075cf220"
