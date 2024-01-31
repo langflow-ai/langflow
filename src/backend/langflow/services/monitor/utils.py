@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 import duckdb
-from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
+
+from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDict
@@ -137,7 +138,7 @@ async def log_vertex_build(
             "params": params,
             "data": data.model_dump(),
             "artifacts": artifacts or {},
-            # "timestamp": monitor_service.get_timestamp(),
+            "timestamp": monitor_service.get_timestamp(),
         }
         monitor_service.add_row(table_name="vertex_builds", data=row)
     except Exception as e:

@@ -55,7 +55,6 @@ export default function Page({
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
   );
-
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
@@ -70,6 +69,7 @@ export default function Page({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
   const resetFlow = useFlowStore((state) => state.resetFlow);
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const lastCopiedSelection = useFlowStore(
     (state) => state.lastCopiedSelection
   );
@@ -77,6 +77,11 @@ export default function Page({
     (state) => state.setLastCopiedSelection
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -152,23 +157,19 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot]);
 
-  const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
-
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  const edgeUpdateSuccessful = useRef(true);
-
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-
   useEffect(() => {
-    if (reactFlowInstance) {
+    if (reactFlowInstance && currentFlowId) {
       resetFlow({
         nodes: flow?.data?.nodes ?? [],
         edges: flow?.data?.edges ?? [],
         viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
       });
+      //   getFlowPool({flowId: currentFlowId}).then((flowPool) => {
+      //     setFlowPool(flowPool.data)
+      //     setLoading(false)
+      //   })
     }
-  }, [currentFlowId, reactFlowInstance]);
+  }, [currentFlowId, reactFlowInstance, setLoading, setFlowPool]);
 
   useEffect(() => {
     return () => {
