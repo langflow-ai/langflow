@@ -1,13 +1,12 @@
 from typing import Any, ClassVar, Dict, List, Optional, Type
 
-from langchain import retrievers
-from loguru import logger
-
+from langchain_community import retrievers
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
 from langflow.utils.util import build_template_from_class, build_template_from_method
+from loguru import logger
 
 
 class RetrieverCreator(LangChainTypeCreator):
