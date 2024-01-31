@@ -155,6 +155,7 @@ export default function CodeAreaModal({
               readOnly={readonly}
               value={code}
               mode="python"
+              setOptions={{ fontFamily: "monospace"}}
               height={height ?? "100%"}
               highlightActiveLine={true}
               showPrintMargin={false}
