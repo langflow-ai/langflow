@@ -56,7 +56,6 @@ const EditNodeModal = forwardRef(
   ) => {
     const [myData, setMyData] = useState(data);
 
-    const setPending = useFlowStore((state) => state.setPending);
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
 
@@ -546,7 +545,6 @@ const EditNodeModal = forwardRef(
                   node: myData.node,
                 },
               }));
-              setPending(true);
               setOpen(false);
             }}
             type="submit"

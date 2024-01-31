@@ -287,6 +287,8 @@ async def build_vertex(
         cache = chat_service.get_cache(flow_id)
         graph = cache.get("result")
         result_dict = {}
+        duration = ""
+        start_time = time.perf_counter()
         if tweaks:
             graph = process_tweaks_on_graph(graph, tweaks)
         if not isinstance(graph, Graph):
@@ -303,7 +305,8 @@ async def build_vertex(
             # to the frontend
             vertex.set_artifacts()
             artifacts = vertex.artifacts
-            result_dict = ResultDict(results=result_dict, artifacts=artifacts)
+            duration = format_elapsed_time(time.perf_counter() - start_time)
+            result_dict = ResultDict(results=result_dict, artifacts=artifacts, duration=duration)
         except Exception as exc:
             params = str(exc)
             valid = False

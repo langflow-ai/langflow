@@ -877,7 +877,7 @@ export async function getFlowPool({
 }: {
   flowId: string;
   nodeId?: string;
-}): Promise<AxiosResponse<FlowPoolType>> {
+}): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
   const config = {};
   config["params"] = { flow_id: flowId };
   if (nodeId) {

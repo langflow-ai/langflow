@@ -171,19 +171,23 @@ async def check_langflow_version(component: StoreComponentCreate):
         )
 
 
-def format_elapsed_time(elapsed_time) -> str:
-    # Format elapsed time to human readable format coming from
-    # perf_counter()
-    # If the elapsed time is less than 1 second, return ms
-    # If the elapsed time is less than 1 minute, return seconds rounded to 2 decimals
-    time_str = ""
+def format_elapsed_time(elapsed_time: float) -> str:
+    """Format elapsed time to a human-readable format coming from perf_counter().
+
+    - Less than 1 second: returns milliseconds
+    - Less than 1 minute: returns seconds rounded to 2 decimals
+    - 1 minute or more: returns minutes and seconds
+    """
     if elapsed_time < 1:
-        elapsed_time = int(round(elapsed_time * 1000))
-        time_str = f"{elapsed_time} ms"
+        milliseconds = int(round(elapsed_time * 1000))
+        return f"{milliseconds} ms"
     elif elapsed_time < 60:
-        elapsed_time = round(elapsed_time, 2)
-        time_str = f"{elapsed_time} seconds"
+        seconds = round(elapsed_time, 2)
+        unit = "second" if seconds == 1 else "seconds"
+        return f"{seconds} {unit}"
     else:
-        elapsed_time = round(elapsed_time / 60, 2)
-        time_str = f"{elapsed_time} minutes"
-    return time_str
+        minutes = int(elapsed_time // 60)
+        seconds = round(elapsed_time % 60, 2)
+        minutes_unit = "minute" if minutes == 1 else "minutes"
+        seconds_unit = "second" if seconds == 1 else "seconds"
+        return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"

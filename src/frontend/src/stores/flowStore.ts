@@ -11,7 +11,7 @@ import {
 } from "reactflow";
 import { create } from "zustand";
 import { INPUT_TYPES, OUTPUT_TYPES } from "../constants/constants";
-import { updateFlowInDatabase } from "../controllers/API";
+import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
   NodeType,
@@ -38,7 +38,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
-  isPending: false,
+  isPending: true,
   hasIO: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
@@ -49,19 +49,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ flowPool });
   },
   addDataToFlowPool: (data: any, nodeId: string) => {
-    const currentFlow = useFlowsManagerStore.getState().currentFlow;
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
       newFlowPool[nodeId].push(data);
     }
     get().setFlowPool(newFlowPool);
-    if (currentFlow) {
-      window.sessionStorage.setItem(
-        `${currentFlow!.id}`,
-        JSON.stringify(newFlowPool)
-      );
-    }
   },
   CleanFlowPool: () => {
     get().setFlowPool({});
@@ -71,12 +64,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   resetFlow: ({ nodes, edges, viewport }) => {
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
-    let flowPool = {};
-    if (currentFlow) {
-      flowPool = JSON.parse(
-        window.sessionStorage.getItem(`${currentFlow!.id}`) ?? "{}"
-      );
-    }
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     set({
@@ -86,9 +73,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
-      flowPool,
     });
     get().reactFlowInstance!.setViewport(viewport);
+    if (currentFlow) {
+      getFlowPool({ flowId: currentFlow.id }).then((flowPool) => {
+        set({ flowPool: flowPool.data.vertex_builds });
+      });
+    }
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
