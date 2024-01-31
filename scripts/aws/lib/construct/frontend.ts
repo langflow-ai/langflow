@@ -95,7 +95,6 @@ export class FrontEndCluster extends Construct {
     },
     // workingDirectory:"../../src/frontend"
   });
-  console.log(`VITE_PROXY_TARGET: ${endpoint}`)
 
   this.distribution = cloudFrontWebDistribution;
   // distribution から backendへのinbound 許可
