@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -40,15 +40,12 @@ export default function GenericNode({
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
-  const [handles, setHandles] = useState<boolean[] | []>([]);
-  const [isMinimized, setIsMinimized] = useState<boolean>(false);
-  let numberOfInputs: boolean[] = [];
-  const updateNodeInternals = useUpdateNodeInternals();
+  const [handles, setHandles] = useState<number>(0);
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   function countHandles(): void {
-    numberOfInputs = Object.keys(data.node!.template)
+    let count = Object.keys(data.node!.template)
       .filter((templateField) => templateField.charAt(0) !== "_")
       .map((templateCamp) => {
         const { template } = data.node!;
@@ -56,24 +53,20 @@ export default function GenericNode({
         if (!template[templateCamp].show) return false;
         switch (template[templateCamp].type) {
           case "str":
-            return false;
           case "bool":
-            return false;
           case "float":
-            return false;
           case "code":
-            return false;
           case "prompt":
-            return false;
           case "file":
-            return false;
           case "int":
             return false;
           default:
             return true;
         }
-      });
-    setHandles(numberOfInputs);
+      })
+      .reduce((total, value) => total + (value ? 1 : 0), 0);
+
+    setHandles(count);
   }
 
   useEffect(() => {
@@ -114,10 +107,6 @@ export default function GenericNode({
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
-  useEffect(() => {
-    updateNodeInternals(data.id);
-  }, [isMinimized]);
-
   return (
     <>
       <NodeToolbar>
@@ -136,7 +125,6 @@ export default function GenericNode({
           }}
           numberOfHandles={handles}
           showNode={showNode}
-          setIsMinimized={setIsMinimized}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -290,7 +278,6 @@ export default function GenericNode({
                             }
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
-                            isMinimized={isMinimized}
                           />
                         )
                     )}
@@ -317,7 +304,6 @@ export default function GenericNode({
                     type={data.node?.base_classes.join("|")}
                     left={false}
                     showNode={showNode}
-                    isMinimized={isMinimized}
                   />
                 </>
               )}
@@ -522,7 +508,6 @@ export default function GenericNode({
                         }
                         proxy={data.node?.template[templateField].proxy}
                         showNode={showNode}
-                        isMinimized={isMinimized}
                       />
                     ) : (
                       <></>
@@ -566,7 +551,6 @@ export default function GenericNode({
                   type={data.node?.base_classes.join("|")}
                   left={false}
                   showNode={showNode}
-                  isMinimized={isMinimized}
                 />
               )}
             </>

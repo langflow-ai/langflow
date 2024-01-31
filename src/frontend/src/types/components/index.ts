@@ -53,7 +53,6 @@ export type ParameterComponentType = {
   showNode?: boolean;
   index?: string;
   onCloseModal?: (close: boolean) => void;
-  isMinimized?: boolean;
 };
 export type InputListComponentType = {
   value: string[];
@@ -478,9 +477,8 @@ export type nodeToolbarPropsType = {
   deleteNode: (idx: string) => void;
   position: XYPosition;
   setShowNode: (boolean: any) => void;
-  numberOfHandles: boolean[] | [];
+  numberOfHandles: number;
   showNode: boolean;
-  setIsMinimized: (boolean: boolean) => void;
 };
 
 export type parsedDataType = {

@@ -57,7 +57,6 @@ export default function ParameterComponent({
   proxy,
   showNode,
   index = "",
-  isMinimized,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -289,7 +288,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                isMinimized ? "mt-0" : ""
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color,
