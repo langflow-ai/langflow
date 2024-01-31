@@ -32,7 +32,6 @@ export default function NodeToolbarComponent({
   setShowNode,
   numberOfHandles,
   showNode,
-  setIsMinimized,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -54,15 +53,7 @@ export default function NodeToolbarComponent({
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  function canMinimize() {
-    let countHandles: number = 0;
-    numberOfHandles.forEach((bool) => {
-      if (bool) countHandles += 1;
-    });
-    if (countHandles > 1) return false;
-    return true;
-  }
-  const isMinimal = canMinimize();
+  const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
   const paste = useFlowStore((state) => state.paste);
@@ -77,7 +68,6 @@ export default function NodeToolbarComponent({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
-  const [selectedValue, setSelectedValue] = useState("");
   const [showOverrideModal, setShowOverrideModal] = useState(false);
 
   const [flowComponent, setFlowComponent] = useState<FlowType>();
@@ -98,10 +88,6 @@ export default function NodeToolbarComponent({
     showconfirmShare,
   ]);
 
-  useEffect(() => {
-    setIsMinimized(!showNode);
-  }, [showNode]);
-
   const handleSelectChange = (event) => {
     switch (event) {
       case "advanced":
@@ -112,7 +98,7 @@ export default function NodeToolbarComponent({
         setShowNode(data.showNode ?? true ? false : true);
         break;
       case "Download":
-        downloadNode(createFlowComponent(cloneDeep(data), version));
+        downloadNode(flowComponent!);
         break;
       case "SaveAll":
         saveComponent(cloneDeep(data), false);
@@ -124,8 +110,7 @@ export default function NodeToolbarComponent({
         break;
       case "ungroup":
         takeSnapshot();
-        updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, nodes, edges, setNodes, setEdges);
+        expandGroupNode(data.id, updateFlowPosition(position, data.node?.flow!), data.node!.template, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);
@@ -196,7 +181,7 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
 
-          <Select onValueChange={handleSelectChange} value={selectedValue}>
+          <Select onValueChange={handleSelectChange}>
             <ShadTooltip content="More" side="top">
               <SelectTrigger>
                 <div>
