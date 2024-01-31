@@ -2,14 +2,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import VertexBuildModel
+from langflow.services.monitor.schema import VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
 # Get vertex_builds data from the monitor service
-@router.get("/builds", response_model=list[VertexBuildModel])
+@router.get("/builds", response_model=VertexBuildMapModel)
 async def get_vertex_builds(
     flow_id: Optional[str] = Query(None),
     vertex_id: Optional[str] = Query(None),
@@ -18,7 +18,11 @@ async def get_vertex_builds(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_vertex_builds(flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by)
+        vertex_build_dicts = monitor_service.get_vertex_builds(
+            flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by
+        )
+        vertex_build_map = VertexBuildMapModel.from_list_of_dicts(vertex_build_dicts)
+        return vertex_build_map
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
