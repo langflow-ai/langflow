@@ -146,6 +146,7 @@ export default function CodeAreaModal({
       <BaseModal.Content>
         <Input
           value={code}
+          readOnly
           className="absolute left-[500%] top-[500%]"
           id="codeValue"
         />
