@@ -54,6 +54,7 @@ class VertexBuildModel(BaseModel):
     params: Any
     data: dict
     artifacts: dict
+    timestamp: datetime = Field(default_factory=datetime.now)
 
     class Config:
         from_attributes = True
