@@ -47,13 +47,14 @@ class MessageModel(BaseModel):
 
 
 class VertexBuildModel(BaseModel):
-    index: Optional[int] = Field(default=None, alias="index")
+    index: Optional[int] = Field(default=None, alias="index", exclude=True)
     id: Optional[str] = Field(default=None, alias="id")
     flow_id: str
     valid: bool
     params: Any
     data: dict
     artifacts: dict
+    timestamp: datetime = Field(default_factory=datetime.now)
 
     class Config:
         from_attributes = True
@@ -79,3 +80,17 @@ class VertexBuildModel(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+class VertexBuildMapModel(BaseModel):
+    vertex_builds: dict[str, list[VertexBuildModel]]
+
+    @classmethod
+    def from_list_of_dicts(cls, vertex_build_dicts):
+        vertex_build_map = {}
+        for vertex_build_dict in vertex_build_dicts:
+            vertex_build = VertexBuildModel(**vertex_build_dict)
+            if vertex_build.id not in vertex_build_map:
+                vertex_build_map[vertex_build.id] = []
+            vertex_build_map[vertex_build.id].append(vertex_build)
+        return cls(vertex_builds=vertex_build_map)

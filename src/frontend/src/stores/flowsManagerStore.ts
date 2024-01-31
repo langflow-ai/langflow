@@ -1,4 +1,5 @@
 import { AxiosError } from "axios";
+import { cloneDeep } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import {
@@ -24,7 +25,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useTypesStore } from "./typesStore";
-import { cloneDeep } from "lodash";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -330,7 +330,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     const currentFlowId = get().currentFlowId;
     // push the current graph to the past state
     const flowStore = useFlowStore.getState();
-    const newState = {nodes: cloneDeep(flowStore.nodes), edges: cloneDeep(flowStore.edges)};
+    const newState = {
+      nodes: cloneDeep(flowStore.nodes),
+      edges: cloneDeep(flowStore.edges),
+    };
     const pastLength = past[currentFlowId]?.length ?? 0;
     if (
       pastLength > 0 &&
