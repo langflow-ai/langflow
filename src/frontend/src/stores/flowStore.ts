@@ -306,6 +306,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       .nodes.find(
         (node) => node.id === connection.source || node.id === connection.target
       );
+
     const sourceType = findNode?.data?.type;
     let isIoIn = false;
     let isIoOut = false;
@@ -333,7 +334,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             (scapeJSONParse(connection.targetHandle!) as targetHandleType)
               .type === "Text",
           markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
-          markerStart: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
         },
         oldEdges
       );
