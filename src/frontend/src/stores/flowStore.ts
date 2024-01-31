@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import {
   Edge,
   EdgeChange,
+  MarkerType,
   Node,
   NodeChange,
   addEdge,
@@ -9,6 +10,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { INPUT_TYPES, OUTPUT_TYPES } from "../constants/constants";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
@@ -27,6 +29,7 @@ import {
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
+import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -287,6 +290,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
+    const dark = useDarkStore.getState().dark;
+    const commonMarkerProps = {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: dark ? "#555555" : "#000000",
+    };
+
+    const inputTypes = INPUT_TYPES;
+    const outputTypes = OUTPUT_TYPES;
+
+    const findNode = useFlowStore
+      .getState()
+      .nodes.find(
+        (node) => node.id === connection.source || node.id === connection.target
+      );
+    const sourceType = findNode?.data?.type;
+    let isIo = false;
+    if (sourceType) {
+      isIo = inputTypes.has(sourceType);
+      isIo = outputTypes.has(sourceType);
+    }
+
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
@@ -305,9 +331,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           animated:
             (scapeJSONParse(connection.targetHandle!) as targetHandleType)
               .type === "Text",
+          markerEnd: isIo ? { ...commonMarkerProps } : undefined,
+          markerStart: isIo ? { ...commonMarkerProps } : undefined,
         },
         oldEdges
       );
+
       return newEdges;
     });
     useFlowsManagerStore
