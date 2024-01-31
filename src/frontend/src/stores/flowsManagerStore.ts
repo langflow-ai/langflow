@@ -332,9 +332,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     const pastLength = past[currentFlowId]?.length ?? 0;
     if (
       pastLength > 0 &&
-      JSON.stringify(past[currentFlowId][pastLength - 1]) !==
+      JSON.stringify(past[currentFlowId][pastLength - 1]) ===
         JSON.stringify(newState)
-    ) {
+    )
+      return;
+    if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
         pastLength
