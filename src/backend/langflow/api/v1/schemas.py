@@ -221,9 +221,11 @@ class VerticesOrderResponse(BaseModel):
 
 
 class ResultDict(BaseModel):
+    """Outputs of the vertex build process."""
+
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
-    """Outputs of the vertex build process."""
+    duration: Optional[float] = None
 
 
 class VertexBuildResponse(BaseModel):
