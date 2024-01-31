@@ -110,7 +110,15 @@ export default function NodeToolbarComponent({
         break;
       case "ungroup":
         takeSnapshot();
-        expandGroupNode(data.id, updateFlowPosition(position, data.node?.flow!), data.node!.template, nodes, edges, setNodes, setEdges);
+        expandGroupNode(
+          data.id,
+          updateFlowPosition(position, data.node?.flow!),
+          data.node!.template,
+          nodes,
+          edges,
+          setNodes,
+          setEdges
+        );
         break;
       case "override":
         setShowOverrideModal(true);
