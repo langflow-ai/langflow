@@ -3,12 +3,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 import duckdb
-from loguru import logger
-from platformdirs import user_cache_dir
-
 from langflow.services.base import Service
 from langflow.services.monitor.schema import MessageModel, TransactionModel, VertexBuildModel
 from langflow.services.monitor.utils import add_row_to_table, drop_and_create_table_if_schema_mismatch
+from loguru import logger
+from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
@@ -84,6 +83,14 @@ class MonitorService(Service):
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")
+
+    def delete_vertex_builds(self, flow_id: Optional[str] = None):
+        query = "DELETE FROM vertex_builds"
+        if flow_id:
+            query += f" WHERE flow_id = '{flow_id}'"
+
+        with duckdb.connect(str(self.db_path)) as conn:
+            conn.execute(query)
 
     def get_messages(
         self,
