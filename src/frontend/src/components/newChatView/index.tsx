@@ -1,8 +1,10 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import { deleteFlowPool } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { sendAllProps } from "../../types/api";
 import {
   ChatMessageType,
@@ -29,6 +31,7 @@ export default function newChatView(): JSX.Element {
     CleanFlowPool,
   } = useFlowStore();
   const { setErrorData } = useAlertStore();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -112,7 +115,9 @@ export default function newChatView(): JSX.Element {
   }
   function clearChat(): void {
     setChatHistory([]);
-    CleanFlowPool();
+    deleteFlowPool(currentFlowId).then((_) => {
+      CleanFlowPool();
+    });
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
   }

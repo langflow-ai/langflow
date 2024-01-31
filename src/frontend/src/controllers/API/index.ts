@@ -879,8 +879,17 @@ export async function getFlowPool({
   nodeId?: string;
 }): Promise<AxiosResponse<FlowPoolType>> {
   const config = {};
+  config["params"] = { flow_id: flowId };
   if (nodeId) {
     config["params"] = { nodeId };
   }
-  return await api.get(`${BASE_URL_API}flow_pool/${flowId}`, config);
+  return await api.get(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function deleteFlowPool(
+  flowId: string
+): Promise<AxiosResponse<any>> {
+  const config = {};
+  config["params"] = { flow_id: flowId };
+  return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }
