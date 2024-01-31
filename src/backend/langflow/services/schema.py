@@ -18,3 +18,4 @@ class ServiceType(str, Enum):
     STORE_SERVICE = "store_service"
     CREDENTIAL_SERVICE = "credential_service"
     STORAGE_SERVICE = "storage_service"
+    MONITOR_SERVICE = "monitor_service"

@@ -1,11 +1,10 @@
-from loguru import logger
-from sqlmodel import Session, select
-
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from loguru import logger
+from sqlmodel import Session, select
 
 from .deps import get_db_service, get_session, get_settings_service
 
@@ -16,6 +15,7 @@ def get_factories_and_deps():
     from langflow.services.chat import factory as chat_factory
     from langflow.services.credentials import factory as credentials_factory
     from langflow.services.database import factory as database_factory
+    from langflow.services.monitor import factory as monitor_factory
     from langflow.services.plugins import factory as plugins_factory
     from langflow.services.session import factory as session_service_factory  # type: ignore
     from langflow.services.settings import factory as settings_factory
@@ -47,6 +47,7 @@ def get_factories_and_deps():
         (store_factory.StoreServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
         (credentials_factory.CredentialServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
         (storage_factory.StorageServiceFactory(), [ServiceType.SESSION_SERVICE, ServiceType.SETTINGS_SERVICE]),
+        (monitor_factory.MonitorServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
     ]
 
 
