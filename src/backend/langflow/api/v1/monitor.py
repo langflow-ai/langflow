@@ -1,7 +1,6 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import VertexBuildModel
 from langflow.services.monitor.service import MonitorService
@@ -30,7 +29,7 @@ async def delete_vertex_builds(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.delete_vertex_builds(flow_id=flow_id)
+        monitor_service.delete_vertex_builds(flow_id=flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
