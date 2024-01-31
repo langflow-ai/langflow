@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -41,6 +41,41 @@ class MessageModel(BaseModel):
 
     @validator("artifacts", pre=True)
     def validate_target_args(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+
+class VertexBuildModel(BaseModel):
+    index: Optional[int] = Field(default=None, alias="index")
+    id: Optional[str] = Field(default=None, alias="id")
+    flow_id: str
+    valid: bool
+    params: Any
+    data: dict
+    artifacts: dict
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+    @validator("params", pre=True)
+    def validate_params(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return v
+        return v
+
+    @validator("data", pre=True)
+    def validate_data(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @validator("artifacts", pre=True)
+    def validate_artifacts(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
