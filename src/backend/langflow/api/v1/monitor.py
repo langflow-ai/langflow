@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import VertexBuildModel
@@ -18,7 +18,21 @@ async def get_vertex_builds(
     order_by: Optional[str] = Query("timestamp"),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
-    return monitor_service.get_vertex_builds(flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by)
+    try:
+        return monitor_service.get_vertex_builds(flow_id=flow_id, vertex_id=vertex_id, valid=valid, order_by=order_by)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/builds", status_code=204)
+async def delete_vertex_builds(
+    flow_id: Optional[str] = Query(None),
+    monitor_service: MonitorService = Depends(get_monitor_service),
+):
+    try:
+        return monitor_service.delete_vertex_builds(flow_id=flow_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/messages")
@@ -29,9 +43,12 @@ async def get_messages(
     order_by: Optional[str] = Query("timestamp"),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
-    return monitor_service.get_messages(
-        sender_type=sender_type, sender_name=sender_name, session_id=session_id, order_by=order_by
-    )
+    try:
+        return monitor_service.get_messages(
+            sender_type=sender_type, sender_name=sender_name, session_id=session_id, order_by=order_by
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/transactions")
@@ -42,4 +59,7 @@ async def get_transactions(
     order_by: Optional[str] = Query("timestamp"),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
-    return monitor_service.get_transactions(source=source, target=target, status=status, order_by=order_by)
+    try:
+        return monitor_service.get_transactions(source=source, target=target, status=status, order_by=order_by)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
