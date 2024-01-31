@@ -1161,13 +1161,12 @@ export function createFlowComponent(
   nodeData: NodeDataType,
   version: string
 ): FlowType {
-  nodeData.node!.official = false;
   const flowNode: FlowType = {
     data: {
       edges: [],
       nodes: [
         {
-          data: nodeData,
+          data: {...nodeData, node: {...nodeData.node, official: false}},
           id: nodeData.id,
           position: { x: 0, y: 0 },
           type: "genericNode",
