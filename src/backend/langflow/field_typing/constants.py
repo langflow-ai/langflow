@@ -12,7 +12,7 @@ from langchain.schema.language_model import BaseLanguageModel
 from langchain.schema.memory import BaseMemory
 from langchain.text_splitter import TextSplitter
 from langchain.tools import Tool
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
 
 # Type alias for more complex dicts
 NestedDict = Dict[str, Union[str, Dict]]
