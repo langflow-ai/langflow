@@ -113,7 +113,7 @@ export default function NodeToolbarComponent({
         setShowNode(data.showNode ?? true ? false : true);
         break;
       case "Download":
-        downloadNode(createFlowComponent(cloneDeep(data), version));
+        downloadNode(flowComponent!);
         break;
       case "SaveAll":
         saveComponent(cloneDeep(data), false);
