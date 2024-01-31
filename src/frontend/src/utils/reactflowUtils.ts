@@ -651,10 +651,13 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     x: NewPosition.x - middlePoint.x,
     y: NewPosition.y - middlePoint.y,
   };
-  flow.data!.nodes.forEach((node) => {
-    node.position.x += deltaPosition.x;
-    node.position.y += deltaPosition.y;
-  });
+  return {...flow, data: {...flow.data!, nodes: flow.data!.nodes.map((node) => ({
+    ...node,
+    position: {
+      x: node.position.x + deltaPosition.x,
+      y: node.position.y + deltaPosition.y,
+    },
+  }))}};
 }
 
 export function concatFlows(
@@ -1018,13 +1021,14 @@ export function processFlowEdges(flow: FlowType) {
 }
 
 export function expandGroupNode(
-  groupNode: NodeDataType,
+  id: string,
+  flow: FlowType,
+  template: APITemplateType,
   nodes: Node[],
   edges: Edge[],
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
 ) {
-  const { template, flow } = _.cloneDeep(groupNode.node!);
   const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
   let flowEdges = edges;
@@ -1035,7 +1039,7 @@ export function expandGroupNode(
   let updatedEdges: Edge[] = [];
   flowEdges.forEach((edge) => {
     let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === groupNode.id) {
+    if (newEdge.target === id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
       if (targetHandle.proxy) {
         let type = targetHandle.type;
@@ -1062,7 +1066,7 @@ export function expandGroupNode(
         }
       }
     }
-    if (newEdge.source === groupNode.id) {
+    if (newEdge.source === id) {
       const lastNode = _.cloneDeep(findLastNode(flow!.data!));
       newEdge.source = lastNode!.id;
       let newSourceHandle: sourceHandleType = scapeJSONParse(
@@ -1072,7 +1076,7 @@ export function expandGroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    if (edge.target === groupNode.id || edge.source === groupNode.id) {
+    if (edge.target === id || edge.source === id) {
       updatedEdges.push(newEdge);
     }
   });
@@ -1109,12 +1113,12 @@ export function expandGroupNode(
   });
 
   const filteredNodes = [
-    ...nodes.filter((n) => n.id !== groupNode.id),
+    ...nodes.filter((n) => n.id !== id),
     ...gNodes,
   ];
   const filteredEdges = [
     ...edges.filter(
-      (e) => e.target !== groupNode.id && e.source !== groupNode.id
+      (e) => e.target !== id && e.source !== id
     ),
     ...gEdges,
     ...updatedEdges,

@@ -69,6 +69,7 @@ export default function NodeToolbarComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
+  const setNode = useFlowStore((state) => state.setNode);
   const setEdges = useFlowStore((state) => state.setEdges);
 
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
@@ -124,8 +125,7 @@ export default function NodeToolbarComponent({
         break;
       case "ungroup":
         takeSnapshot();
-        updateFlowPosition(position, data.node?.flow!);
-        expandGroupNode(data, nodes, edges, setNodes, setEdges);
+        expandGroupNode(data.id, updateFlowPosition(position, data.node?.flow!), data.node!.template, nodes, edges, setNodes, setEdges);
         break;
       case "override":
         setShowOverrideModal(true);
