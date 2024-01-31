@@ -1,7 +1,7 @@
 from typing import Optional
 from langflow import CustomComponent
 from langchain.llms.base import BaseLanguageModel
-from langchain.chat_models.azure_openai import AzureChatOpenAI
+from langchain_community.chat_models.azure_openai import AzureChatOpenAI
 
 
 class AzureChatOpenAIComponent(CustomComponent):
@@ -26,7 +26,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         "2023-07-01-preview",
         "2023-08-01-preview",
         "2023-09-01-preview",
-        "2023-12-01-preview"
+        "2023-12-01-preview",
     ]
 
     def build_config(self):
