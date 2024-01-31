@@ -4,11 +4,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from pydantic import BaseModel, Field, field_validator
+
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from pydantic import BaseModel, Field, field_validator
 
 
 class BuildStatus(Enum):
@@ -226,7 +227,7 @@ class ResultDict(BaseModel):
 
 
 class VertexBuildResponse(BaseModel):
-    id: str
+    id: Optional[str] = None
     valid: bool
     params: Optional[str]
     """JSON string of the params."""
