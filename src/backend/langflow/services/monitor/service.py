@@ -64,14 +64,15 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT flow_id, vertex_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT id, flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")
         if vertex_id:
-            conditions.append(f"vertex_id = '{vertex_id}'")
+            conditions.append(f"id = '{vertex_id}'")
         if valid is not None:  # Check for None because valid is a boolean
-            conditions.append(f"valid = {valid}")
+            valid_str = "true" if valid else "false"
+            conditions.append(f"valid = {valid_str}")
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
