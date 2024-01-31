@@ -8,7 +8,7 @@ import { AuthContext } from "../../contexts/authContext";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: "",
+  baseURL: process.env.AXIOS_BASE_URL ?? "",
 });
 
 function ApiInterceptor() {

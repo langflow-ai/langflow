@@ -91,9 +91,7 @@ export class FrontEndCluster extends Construct {
     buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
       BACKEND_SERVICE_NAME: props.backendServiceName,
-      BACKEND_URL: endpoint,
-      VITE_PROXY_TARGET: endpoint,
-      VITE_PORT:'443',
+      AXIOS_BASE_URL: endpoint
     },
     // workingDirectory:"../../src/frontend"
   });
