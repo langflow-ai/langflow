@@ -1,14 +1,13 @@
-from typing import Optional, Union, List
-from langflow import CustomComponent
 import tempfile
-import urllib.request
 import urllib
+import urllib.request
+from typing import List, Optional, Union
 
-from langchain.vectorstores import Vectara
-from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
-from langchain.schema import BaseRetriever
 from langchain.embeddings import FakeEmbeddings
+from langchain.schema import BaseRetriever, Document
+from langchain_community.vectorstores import Vectara, VectorStore
+
+from langflow import CustomComponent
 
 
 class VectaraComponent(CustomComponent):
