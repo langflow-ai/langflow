@@ -1,4 +1,4 @@
-import _, { cloneDeep } from "lodash";
+import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -43,7 +43,7 @@ import {
 const uid = new ShortUniqueId({ length: 5 });
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
-  let newEdges = _.cloneDeep(edges);
+  let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -86,7 +86,7 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
 }
 
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
-  let newNodes = _.cloneDeep(data);
+  let newNodes = cloneDeep(data);
   newNodes.forEach((node: Node) => {
     node.selected = false;
   });
@@ -127,7 +127,7 @@ export function isValidConnection(
 }
 
 export function removeApiKeys(flow: FlowType): FlowType {
-  let cleanFLow = _.cloneDeep(flow);
+  let cleanFLow = cloneDeep(flow);
   cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
@@ -142,7 +142,7 @@ export function updateTemplate(
   reference: APITemplateType,
   objectToUpdate: APITemplateType
 ): APITemplateType {
-  let clonedObject: APITemplateType = _.cloneDeep(reference);
+  let clonedObject: APITemplateType = cloneDeep(reference);
 
   // Loop through each key in the reference object
   for (const key in clonedObject) {
@@ -347,7 +347,7 @@ export function updateEdgesHandleIds({
   edges,
   nodes,
 }: updateEdgesHandleIdsType): Edge[] {
-  let newEdges = _.cloneDeep(edges);
+  let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
     const targetNodeId = edge.target;
@@ -749,7 +749,7 @@ export function mergeNodeTemplates({
 	*/
   let template: APITemplateType = {};
   nodes.forEach((node) => {
-    let nodeTemplate = _.cloneDeep(node.data.node!.template);
+    let nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
       .forEach((key) => {
@@ -834,9 +834,9 @@ export function generateNodeFromFlow(
   getNodeId: (type: string) => string
 ): NodeType {
   const { nodes } = flow.data!;
-  const outputNode = _.cloneDeep(findLastNode(flow.data!));
+  const outputNode = cloneDeep(findLastNode(flow.data!));
   const position = getMiddlePoint(nodes);
-  let data = _.cloneDeep(flow);
+  let data = cloneDeep(flow);
   const id = getNodeId(outputNode?.data.type!);
   const newGroupNode: NodeType = {
     data: {
@@ -897,94 +897,6 @@ export function connectedInputNodesOnHandle(
   return connectedNodes;
 }
 
-export function ungroupNode(
-  groupNode: NodeDataType,
-  BaseFlow: ReactFlowJsonObject
-) {
-  const { template, flow } = groupNode.node!;
-  const gNodes: NodeType[] = flow!.data!.nodes;
-  const gEdges = flow!.data!.edges;
-  //redirect edges to correct proxy node
-  let updatedEdges: Edge[] = [];
-  BaseFlow.edges.forEach((edge) => {
-    let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === groupNode.id) {
-      const targetHandle: targetHandleType = newEdge.data.targetHandle;
-      if (targetHandle.proxy) {
-        let type = targetHandle.type;
-        let field = targetHandle.proxy.field;
-        let proxyId = targetHandle.proxy.id;
-        let inputTypes = targetHandle.inputTypes;
-        let node: NodeType = gNodes.find((n) => n.id === proxyId)!;
-        if (node) {
-          newEdge.target = proxyId;
-          let newTargetHandle: targetHandleType = {
-            fieldName: field,
-            type,
-            id: proxyId,
-            inputTypes: inputTypes,
-          };
-          if (node.data.node?.flow) {
-            newTargetHandle.proxy = {
-              field: node.data.node.template[field].proxy?.field!,
-              id: node.data.node.template[field].proxy?.id!,
-            };
-          }
-          newEdge.data.targetHandle = newTargetHandle;
-          newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
-        }
-      }
-    }
-    if (newEdge.source === groupNode.id) {
-      const lastNode = _.cloneDeep(findLastNode(flow!.data!));
-      newEdge.source = lastNode!.id;
-      let newSourceHandle: sourceHandleType = scapeJSONParse(
-        newEdge.sourceHandle!
-      );
-      newSourceHandle.id = lastNode!.id;
-      newEdge.data.sourceHandle = newSourceHandle;
-      newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-    }
-    if (edge.target === groupNode.id || edge.source === groupNode.id) {
-      updatedEdges.push(newEdge);
-    }
-  });
-  //update template values
-  Object.keys(template).forEach((key) => {
-    let { field, id } = template[key].proxy!;
-    let nodeIndex = gNodes.findIndex((n) => n.id === id);
-    if (nodeIndex !== -1) {
-      let display_name: string | undefined;
-      let show = gNodes[nodeIndex].data.node!.template[field].show;
-      let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
-      if (gNodes[nodeIndex].data.node!.template[field].display_name) {
-        display_name =
-          gNodes[nodeIndex].data.node!.template[field].display_name;
-      } else {
-        display_name = gNodes[nodeIndex].data.node!.template[field].name;
-      }
-      gNodes[nodeIndex].data.node!.template[field] = template[key];
-      gNodes[nodeIndex].data.node!.template[field].show = show;
-      gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
-      gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-    }
-  });
-
-  const nodes = [
-    ...BaseFlow.nodes.filter((n) => n.id !== groupNode.id),
-    ...gNodes,
-  ];
-  const edges = [
-    ...BaseFlow.edges.filter(
-      (e) => e.target !== groupNode.id && e.source !== groupNode.id
-    ),
-    ...gEdges,
-    ...updatedEdges,
-  ];
-  BaseFlow.nodes = nodes;
-  BaseFlow.edges = edges;
-}
-
 function updateProxyIdsOnTemplate(
   template: APITemplateType,
   idsMap: { [key: string]: string }
@@ -1033,12 +945,12 @@ export function expandGroupNode(
   updateProxyIdsOnTemplate(template, idsMap);
   let flowEdges = edges;
   updateEdgesIds(flowEdges, idsMap);
-  const gNodes: NodeType[] = flow?.data?.nodes!;
-  const gEdges = flow!.data!.edges;
+  const gNodes: NodeType[] = cloneDeep(flow?.data?.nodes!);
+  const gEdges = cloneDeep(flow!.data!.edges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   flowEdges.forEach((edge) => {
-    let newEdge = _.cloneDeep(edge);
+    let newEdge = cloneDeep(edge);
     if (newEdge.target === id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
       if (targetHandle.proxy) {
@@ -1067,7 +979,7 @@ export function expandGroupNode(
       }
     }
     if (newEdge.source === id) {
-      const lastNode = _.cloneDeep(findLastNode(flow!.data!));
+      const lastNode = cloneDeep(findLastNode(flow!.data!));
       newEdge.source = lastNode!.id;
       let newSourceHandle: sourceHandleType = scapeJSONParse(
         newEdge.sourceHandle!
@@ -1125,17 +1037,6 @@ export function expandGroupNode(
   ];
   setNodes(filteredNodes);
   setEdges(filteredEdges);
-}
-
-export function processFlow(FlowObject: ReactFlowJsonObject) {
-  let clonedFLow = _.cloneDeep(FlowObject);
-  clonedFLow.nodes.forEach((node: NodeType) => {
-    if (node.data.node?.flow) {
-      processFlow(node.data.node!.flow!.data!);
-      ungroupNode(node.data, clonedFLow);
-    }
-  });
-  return clonedFLow;
 }
 
 export function getGroupStatus(
