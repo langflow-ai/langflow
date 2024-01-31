@@ -225,7 +225,8 @@ class ResultDict(BaseModel):
 
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
-    duration: Optional[float] = None
+    timedelta: Optional[float] = None
+    duration: Optional[str] = None
 
 
 class VertexBuildResponse(BaseModel):
