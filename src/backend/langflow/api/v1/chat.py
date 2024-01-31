@@ -2,6 +2,9 @@ import time
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import (
     BuildStatus,
@@ -21,8 +24,7 @@ from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
-from loguru import logger
-from sqlmodel import Session
+from langflow.services.monitor.utils import log_vertex_build
 
 router = APIRouter(tags=["Chat"])
 
@@ -308,7 +310,14 @@ async def build_vertex(
             result_dict = ResultDict(results={})
             artifacts = {}
         chat_service.set_cache(flow_id, graph)
-
+        await log_vertex_build(
+            flow_id=flow_id,
+            vertex_id=vertex_id,
+            valid=valid,
+            params=params,
+            data=result_dict,
+            artifacts=artifacts,
+        )
         return VertexBuildResponse(
             valid=valid,
             params=params,
