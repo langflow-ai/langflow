@@ -115,7 +115,7 @@ export type CodeAreaComponentType = {
 };
 
 export type FileComponentType = {
-  IOInputProps;
+  IOInputProps?;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
