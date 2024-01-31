@@ -69,7 +69,6 @@ export default function Page({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
   const resetFlow = useFlowStore((state) => state.resetFlow);
-  const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const lastCopiedSelection = useFlowStore(
     (state) => state.lastCopiedSelection
   );
@@ -80,7 +79,6 @@ export default function Page({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
-  const [loading, setLoading] = useState(true);
   const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
@@ -164,12 +162,8 @@ export default function Page({
         edges: flow?.data?.edges ?? [],
         viewport: flow?.data?.viewport ?? { zoom: 1, x: 0, y: 0 },
       });
-      //   getFlowPool({flowId: currentFlowId}).then((flowPool) => {
-      //     setFlowPool(flowPool.data)
-      //     setLoading(false)
-      //   })
     }
-  }, [currentFlowId, reactFlowInstance, setLoading, setFlowPool]);
+  }, [currentFlowId, reactFlowInstance]);
 
   useEffect(() => {
     return () => {
