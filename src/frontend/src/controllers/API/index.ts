@@ -16,6 +16,7 @@ import {
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
+import { FlowPoolType } from "../../types/zustand/flow";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -868,4 +869,18 @@ export async function postBuildVertex(
 
 export async function downloadImage({ flowId, fileName }): Promise<any> {
   return await api.get(`${BASE_URL_API}files/images/${flowId}/${fileName}`);
+}
+
+export async function getFlowPool({
+  flowId,
+  nodeId,
+}: {
+  flowId: string;
+  nodeId?: string;
+}): Promise<AxiosResponse<FlowPoolType>> {
+  const config = {};
+  if (nodeId) {
+    config["params"] = { nodeId };
+  }
+  return await api.get(`${BASE_URL_API}flow_pool/${flowId}`, config);
 }
