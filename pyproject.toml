@@ -53,7 +53,6 @@ pyarrow = "^14.0.0"
 tiktoken = "~0.5.0"
 wikipedia = "^1.4.0"
 qdrant-client = "^1.7.0"
-websockets = "^10.3"
 weaviate-client = "*"
 jina = "*"
 sentence-transformers = { version = "^2.2.2", optional = true }
@@ -107,6 +106,7 @@ elasticsearch = "^8.11.1"
 pytube = "^15.0.0"
 llama-index = "^0.9.24"
 langchain-openai = "^0.0.2"
+python-socketio = "^5.11.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
