@@ -1,5 +1,4 @@
-from langchain.schema import Document
-
+from langchain_core.documents import Document
 from langflow import CustomComponent
 from langflow.utils.constants import LOADERS_INFO
 

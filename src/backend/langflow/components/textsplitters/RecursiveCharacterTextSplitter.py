@@ -1,6 +1,8 @@
 from typing import Optional
+
+from langchain_core.documents import Document
+
 from langflow import CustomComponent
-from langchain.schema import Document
 from langflow.utils.util import build_loader_repr_from_documents
 
 
