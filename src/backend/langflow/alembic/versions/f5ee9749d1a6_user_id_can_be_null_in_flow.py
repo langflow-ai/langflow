@@ -7,10 +7,8 @@ Create Date: 2023-10-18 23:12:27.297016
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-import sqlmodel
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f5ee9749d1a6"
@@ -26,7 +24,8 @@ def upgrade() -> None:
             batch_op.alter_column(
                 "user_id", existing_type=sa.CHAR(length=32), nullable=True
             )
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     # ### end Alembic commands ###
@@ -39,7 +38,8 @@ def downgrade() -> None:
             batch_op.alter_column(
                 "user_id", existing_type=sa.CHAR(length=32), nullable=False
             )
-    except Exception:
+    except Exception as e:
+        print(e)
         pass
 
     # ### end Alembic commands ###

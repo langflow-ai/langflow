@@ -24,10 +24,10 @@ export default function InputComponent({
   const refInput = useRef<HTMLInputElement>(null);
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className="relative w-full">
@@ -59,9 +59,6 @@ export default function InputComponent({
               e.preventDefault();
             }}
             onKeyDown={(e) => {
-              if (e.ctrlKey && e.key === "c") {
-                // Perform any actions you need when Ctrl+C is detected
-              }
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}

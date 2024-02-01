@@ -1,13 +1,14 @@
 from typing import Optional
 from langflow import CustomComponent
 from langchain.llms.base import BaseLanguageModel
-from langchain.chat_models.azure_openai import AzureChatOpenAI
+from langchain_community.chat_models.azure_openai import AzureChatOpenAI
 
 
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureChatOpenAI"
     description: str = "LLM model from Azure OpenAI."
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    beta = False
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
@@ -18,11 +19,21 @@ class AzureChatOpenAIComponent(CustomComponent):
         "gpt-4-vision",
     ]
 
+    AZURE_OPENAI_API_VERSIONS = [
+        "2023-03-15-preview",
+        "2023-05-15",
+        "2023-06-01-preview",
+        "2023-07-01-preview",
+        "2023-08-01-preview",
+        "2023-09-01-preview",
+        "2023-12-01-preview",
+    ]
+
     def build_config(self):
         return {
             "model": {
                 "display_name": "Model Name",
-                "value": "gpt-35-turbo",
+                "value": self.AZURE_OPENAI_MODELS[0],
                 "options": self.AZURE_OPENAI_MODELS,
                 "required": True,
             },
@@ -37,7 +48,8 @@ class AzureChatOpenAIComponent(CustomComponent):
             },
             "api_version": {
                 "display_name": "API Version",
-                "value": "2023-05-15",
+                "options": self.AZURE_OPENAI_API_VERSIONS,
+                "value": self.AZURE_OPENAI_API_VERSIONS[-1],
                 "required": True,
                 "advanced": True,
             },
@@ -54,6 +66,7 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "required": False,
                 "field_type": "int",
                 "advanced": True,
+                "info": "Maximum number of tokens to generate.",
             },
             "code": {"show": False},
         }
@@ -64,16 +77,20 @@ class AzureChatOpenAIComponent(CustomComponent):
         azure_endpoint: str,
         azure_deployment: str,
         api_key: str,
-        api_version: str = "2023-05-15",
+        api_version: str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
-        return AzureChatOpenAI(
-            model=model,
-            azure_endpoint=azure_endpoint,
-            azure_deployment=azure_deployment,
-            api_version=api_version,
-            api_key=api_key,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        try:
+            llm = AzureChatOpenAI(
+                model=model,
+                azure_endpoint=azure_endpoint,
+                azure_deployment=azure_deployment,
+                api_version=api_version,
+                api_key=api_key,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except Exception as e:
+            raise ValueError("Could not connect to AzureOpenAI API.") from e
+        return llm

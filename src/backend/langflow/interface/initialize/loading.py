@@ -10,7 +10,7 @@ from langchain.agents.tools import BaseTool
 from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
+from langchain_community.vectorstores import VectorStore
 from loguru import logger
 from pydantic import ValidationError
 

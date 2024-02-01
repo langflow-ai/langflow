@@ -106,6 +106,8 @@ embeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/google_vertex_ai_palm"
   AmazonBedrockEmbeddings:
     documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
+  OllamaEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/ollama"
 
 llms:
   OpenAI:
