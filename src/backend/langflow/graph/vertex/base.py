@@ -5,6 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
+from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.utils.constants import DIRECT_TYPES
@@ -32,6 +33,10 @@ class Vertex:
         is_task: bool = False,
         params: Optional[Dict] = None,
     ) -> None:
+        # is_external means that the Vertex send or receives data from
+        # an external source (e.g the chat)
+        self.has_external_input = False
+        self.has_external_output = False
         self.graph = graph
         self.id: str = data["id"]
         self._data = data
@@ -283,7 +288,7 @@ class Vertex:
 
         self._built = True
 
-    async def _run(self, user_id: str, inputs: Optional[dict] = None):
+    async def _run(self, user_id: str, inputs: Optional[dict] = None, session_id: Optional[str] = None):
         # user_id is just for compatibility with the other build methods
         inputs = inputs or {}
         # inputs = {key: value or "" for key, value in inputs.items()}
@@ -297,12 +302,9 @@ class Vertex:
         #         inputs = self._built_object.prompt.partial_variables
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
-        elif hasattr(self._built_object, "run") and not isinstance(self._built_object, UnbuiltObject):
-            try:
-                result = self._built_object.run(inputs)
-                self._built_result = result
-            except Exception as exc:
-                logger.error(f"Error running {self.vertex_type}: {exc}")
+
+        result = generate_result(self._built_object, inputs, self.has_external_output, session_id)
+        self._built_result = result
 
     async def _build_each_node_in_params_dict(self, user_id=None):
         """
@@ -504,4 +506,5 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
+    pass
     pass
