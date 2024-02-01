@@ -5,9 +5,9 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { getLoggedUser, onLogin } from "../../controllers/API";
+import { onLogin } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { LoginType } from "../../types/api";
 import {
   inputHandlerEventType,
@@ -19,10 +19,10 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
-  const { login, getAuthentication, setUserData, setIsAdmin } =
+  const { login, isAuthenticated, setUserData, setIsAdmin } =
     useContext(AuthContext);
   const navigate = useNavigate();
-  const { setErrorData } = useContext(alertContext);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function handleInput({
     target: { name, value },
@@ -37,8 +37,7 @@ export default function LoginPage(): JSX.Element {
     };
     onLogin(user)
       .then((user) => {
-        login(user.access_token, user.refresh_token);
-        getUser();
+        login(user.access_token);
         navigate("/");
       })
       .catch((error) => {
@@ -47,22 +46,6 @@ export default function LoginPage(): JSX.Element {
           list: [error["response"]["data"]["detail"]],
         });
       });
-  }
-
-  function getUser() {
-    if (getAuthentication()) {
-      setTimeout(() => {
-        getLoggedUser()
-          .then((user) => {
-            const isSuperUser = user!.is_superuser;
-            setIsAdmin(isSuperUser);
-            setUserData(user);
-          })
-          .catch((error) => {
-            console.log("login page", error);
-          });
-      }, 500);
-    }
   }
 
   return (

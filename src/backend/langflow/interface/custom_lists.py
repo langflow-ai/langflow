@@ -1,9 +1,10 @@
 import inspect
 from typing import Any
 
-from langchain import document_loaders, embeddings, llms, memory, requests, text_splitter
-from langchain.agents import agent_toolkits
-from langchain.chat_models import AzureChatOpenAI, ChatAnthropic, ChatOpenAI, ChatVertexAI
+from langchain import llms, memory, requests, text_splitter
+from langchain_community.chat_models import AzureChatOpenAI, ChatAnthropic, ChatOpenAI, ChatVertexAI
+from langchain_community import agent_toolkits, document_loaders, embeddings
+
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.chains.custom import CUSTOM_CHAINS
 from langflow.interface.importing.utils import import_class
@@ -24,14 +25,14 @@ llm_type_to_cls_dict["vertexai-chat"] = ChatVertexAI  # type: ignore
 
 # Toolkits
 toolkit_type_to_loader_dict: dict[str, Any] = {
-    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    toolkit_name: import_class(f"langchain_community.agent_toolkits.{toolkit_name}")
     # if toolkit_name is lower case it is a loader
     for toolkit_name in agent_toolkits.__all__
     if toolkit_name.islower()
 }
 
 toolkit_type_to_cls_dict: dict[str, Any] = {
-    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+    toolkit_name: import_class(f"langchain_community.agent_toolkits.{toolkit_name}")
     # if toolkit_name is not lower case it is a class
     for toolkit_name in agent_toolkits.__all__
     if not toolkit_name.islower()
@@ -47,13 +48,14 @@ wrapper_type_to_cls_dict: dict[str, Any] = {wrapper.__name__: wrapper for wrappe
 
 # Embeddings
 embedding_type_to_cls_dict: dict[str, Any] = {
-    embedding_name: import_class(f"langchain.embeddings.{embedding_name}") for embedding_name in embeddings.__all__
+    embedding_name: import_class(f"langchain_community.embeddings.{embedding_name}")
+    for embedding_name in embeddings.__all__
 }
 
 
 # Document Loaders
 documentloaders_type_to_cls_dict: dict[str, Any] = {
-    documentloader_name: import_class(f"langchain.document_loaders.{documentloader_name}")
+    documentloader_name: import_class(f"langchain_community.document_loaders.{documentloader_name}")
     for documentloader_name in document_loaders.__all__
 }
 

@@ -1,10 +1,10 @@
-from typing import Optional, List
-from langflow import CustomComponent
+from typing import List, Optional
 
-from langchain.vectorstores.pgvector import PGVector
-from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
+from langchain.schema import Document
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.pgvector import PGVector
+from langflow import CustomComponent
 
 
 class PostgresqlVectorComponent(CustomComponent):
