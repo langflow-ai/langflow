@@ -1,8 +1,8 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
-from langflow.services.deps import Union, get_socket_service
+from langflow.services.deps import get_socket_service
 from langflow.utils.constants import PYTHON_BASIC_TYPES
 
 
@@ -33,7 +33,5 @@ async def generate_result(built_object: Any, inputs: dict, has_external_output: 
             built_object=built_object, inputs=inputs, has_external_output=has_external_output, session_id=session_id
         )
     else:
-        result = built_object
-    return result
         result = built_object
     return result
