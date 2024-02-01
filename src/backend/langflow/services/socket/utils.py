@@ -63,7 +63,7 @@ async def build_vertex(
         start_time = time.perf_counter()
         try:
             if isinstance(vertex, StatelessVertex) or not vertex._built:
-                await vertex.build(user_id=None)
+                await vertex.build(user_id=None, session_id=sid)
             params = vertex._built_object_repr()
             valid = True
             result_dict = vertex.get_built_result()
