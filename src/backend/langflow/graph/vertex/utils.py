@@ -20,7 +20,7 @@ async def invoke_lc_runnable(
         async for chunk in stream:
             await socketio_service.emit_token(session_id, chunk)
             result += chunk
-    return built_object.invoke(inputs)
+    return await built_object.ainvoke(inputs)
 
 
 async def generate_result(built_object: Any, inputs: dict, has_external_output: bool, session_id: Optional[str] = None):
