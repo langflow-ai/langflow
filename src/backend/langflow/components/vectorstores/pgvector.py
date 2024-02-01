@@ -1,13 +1,13 @@
 from typing import Optional, Union
-from langflow import CustomComponent
-from typing import List, Optional
 
 from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever
-from langchain.schema import Document
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pgvector import PGVector
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+
 from langflow import CustomComponent
+
 
 class PGVectorComponent(CustomComponent):
     """
