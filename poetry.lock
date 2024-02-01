@@ -391,6 +391,22 @@ html5lib = ["html5lib"]
 lxml = ["lxml"]
 
 [[package]]
+name = "bidict"
+version = "0.22.1"
+description = "The bidirectional mapping library for Python."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "bidict-0.22.1-py3-none-any.whl", hash = "sha256:6ef212238eb884b664f28da76f33f1d28b260f665fc737b413b287d5487d1e7b"},
+    {file = "bidict-0.22.1.tar.gz", hash = "sha256:1e0f7f74e4860e6d0943a05d4134c63a2fad86f3d4732fb265bd79e4e856d81d"},
+]
+
+[package.extras]
+docs = ["furo", "sphinx", "sphinx-copybutton"]
+lint = ["pre-commit"]
+test = ["hypothesis", "pytest", "pytest-benchmark[histogram]", "pytest-cov", "pytest-xdist", "sortedcollections", "sortedcontainers", "sphinx"]
+
+[[package]]
 name = "billiard"
 version = "4.2.0"
 description = "Python multiprocessing fork with improvements and bugfixes"
@@ -6306,6 +6322,25 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "python-engineio"
+version = "4.8.2"
+description = "Engine.IO server and client for Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "python-engineio-4.8.2.tar.gz", hash = "sha256:f8609e3afdda318fdc336b4ba2de8dd397bb8f9b8a1b43e56c27330e32c2e34c"},
+    {file = "python_engineio-4.8.2-py3-none-any.whl", hash = "sha256:a357f0aba275c311b66f22181472ed5b174bbc541742eea1d16feae2fa1afabd"},
+]
+
+[package.dependencies]
+simple-websocket = ">=0.10.0"
+
+[package.extras]
+asyncio-client = ["aiohttp (>=3.4)"]
+client = ["requests (>=2.21.0)", "websocket-client (>=0.54.0)"]
+docs = ["sphinx"]
+
+[[package]]
 name = "python-iso639"
 version = "2024.1.2"
 description = "Look-up utilities for ISO 639 language codes and names"
@@ -6364,6 +6399,26 @@ files = [
 
 [package.extras]
 dev = ["atomicwrites (==1.2.1)", "attrs (==19.2.0)", "coverage (==6.5.0)", "hatch", "invoke (==1.7.3)", "more-itertools (==4.3.0)", "pbr (==4.3.0)", "pluggy (==1.0.0)", "py (==1.11.0)", "pytest (==7.2.0)", "pytest-cov (==4.0.0)", "pytest-timeout (==2.1.0)", "pyyaml (==5.1)"]
+
+[[package]]
+name = "python-socketio"
+version = "5.11.0"
+description = "Socket.IO server and client for Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "python-socketio-5.11.0.tar.gz", hash = "sha256:b03186e04b942088781f6286c13604a853e5e35ed59158c51ff7af22fa032e6f"},
+    {file = "python_socketio-5.11.0-py3-none-any.whl", hash = "sha256:cfcb0163d77c8d23b98285754e79016786740dd901268654a52823da0bc73382"},
+]
+
+[package.dependencies]
+bidict = ">=0.21.0"
+python-engineio = ">=4.8.0"
+
+[package.extras]
+asyncio-client = ["aiohttp (>=3.4)"]
+client = ["requests (>=2.21.0)", "websocket-client (>=0.54.0)"]
+docs = ["sphinx"]
 
 [[package]]
 name = "pytube"
@@ -7372,6 +7427,23 @@ numpy = ">=1.14"
 [package.extras]
 docs = ["matplotlib", "numpydoc (==1.1.*)", "sphinx", "sphinx-book-theme", "sphinx-remove-toctrees"]
 test = ["pytest", "pytest-cov"]
+
+[[package]]
+name = "simple-websocket"
+version = "1.0.0"
+description = "Simple WebSocket server and client for Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "simple-websocket-1.0.0.tar.gz", hash = "sha256:17d2c72f4a2bd85174a97e3e4c88b01c40c3f81b7b648b0cc3ce1305968928c8"},
+    {file = "simple_websocket-1.0.0-py3-none-any.whl", hash = "sha256:1d5bf585e415eaa2083e2bcf02a3ecf91f9712e7b3e6b9fa0b461ad04e0837bc"},
+]
+
+[package.dependencies]
+wsproto = "*"
+
+[package.extras]
+docs = ["sphinx"]
 
 [[package]]
 name = "six"
@@ -8904,6 +8976,20 @@ files = [
 ]
 
 [[package]]
+name = "wsproto"
+version = "1.2.0"
+description = "WebSockets state-machine based protocol implementation"
+optional = false
+python-versions = ">=3.7.0"
+files = [
+    {file = "wsproto-1.2.0-py3-none-any.whl", hash = "sha256:b9acddd652b585d75b20477888c56642fdade28bdfd3579aa24a4d2c037dd736"},
+    {file = "wsproto-1.2.0.tar.gz", hash = "sha256:ad565f26ecb92588a3e43bc3d96164de84cd9902482b130d0ddbaa9664a85065"},
+]
+
+[package.dependencies]
+h11 = ">=0.9.0,<1"
+
+[[package]]
 name = "yarl"
 version = "1.9.4"
 description = "Yet another URL library"
@@ -9116,4 +9202,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "d147aff39506a7f2ca9b8774a8c4340f9221bd9037ef1c484c37840247ff89a4"
+content-hash = "ca6fc0d62ad7721c0675cd707b6a69428c4d40f00854e44dfe427e653dba2985"
