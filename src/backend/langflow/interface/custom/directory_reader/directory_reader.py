@@ -66,18 +66,18 @@ class DirectoryReader:
     def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
         from langflow.interface.custom.utils import build_component
 
-        items = [
-            {
-                "name": menu["name"],
-                "path": menu["path"],
-                "components": [
-                    (*build_component(component), component)
-                    for component in menu["components"]
-                    if (component["error"] if with_errors else not component["error"])
-                ],
-            }
-            for menu in data["menu"]
-        ]
+        items = []
+        for menu in data["menu"]:
+            components = []
+            for component in menu["components"]:
+                try:
+                    if component["error"] if with_errors else not component["error"]:
+                        component_tuple = (*build_component(component), component)
+                        components.append(component_tuple)
+                except Exception as e:
+                    logger.error(f"Error while loading component: {e}")
+                    continue
+            items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
         logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
         return {"menu": filtered}

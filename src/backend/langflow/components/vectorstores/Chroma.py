@@ -3,9 +3,8 @@ from typing import List, Optional, Union
 import chromadb  # type: ignore
 from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever, Document
-from langchain.vectorstores import Chroma
-from langchain.vectorstores.base import VectorStore
-
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.chroma import Chroma
 from langflow import CustomComponent
 
 

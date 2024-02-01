@@ -297,8 +297,8 @@ export async function saveFlowStyleToDatabase(flowStyle: FlowStyleType) {
  * @returns {Promise<AxiosResponse<any>>} A promise that resolves to an AxiosResponse containing the version information.
  */
 export async function getVersion() {
-  const respnose = await api.get(`${BASE_URL_API}version`);
-  return respnose.data;
+  const response = await api.get(`${BASE_URL_API}version`);
+  return response.data;
 }
 
 /**
@@ -411,11 +411,9 @@ export async function autoLogin() {
   }
 }
 
-export async function renewAccessToken(token: string) {
+export async function renewAccessToken() {
   try {
-    if (token) {
-      return await api.post(`${BASE_URL_API}refresh?token=${token}`);
-    }
+    return await api.post(`${BASE_URL_API}refresh`);
   } catch (error) {
     throw error;
   }
@@ -429,7 +427,6 @@ export async function getLoggedUser(): Promise<Users | null> {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return null;
@@ -443,7 +440,6 @@ export async function addUser(user: UserInputType): Promise<Array<Users>> {
     }
     return res.data;
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -460,7 +456,6 @@ export async function getUsersPage(
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
   return [];
@@ -473,7 +468,6 @@ export async function deleteUser(user_id: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -485,7 +479,6 @@ export async function updateUser(user_id: string, user: changeUser) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -500,7 +493,6 @@ export async function resetPassword(user_id: string, user: resetPasswordType) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -512,7 +504,6 @@ export async function getApiKey() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -524,7 +515,6 @@ export async function createApiKey(name: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -536,7 +526,6 @@ export async function deleteApiKey(api_key: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -550,7 +539,6 @@ export async function addApiKeyStore(key: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -684,7 +672,6 @@ export async function getStoreComponents({
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -696,7 +683,6 @@ export async function postStoreComponents(component: Component) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -710,7 +696,6 @@ export async function getComponent(component_id: string) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -750,7 +735,6 @@ export async function searchComponent(
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -762,7 +746,6 @@ export async function checkHasApiKey() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -774,7 +757,6 @@ export async function checkHasStore() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -797,7 +779,6 @@ export async function getCountComponents(is_component?: boolean | null) {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -809,7 +790,6 @@ export async function getStoreTags() {
       return res.data;
     }
   } catch (error) {
-    console.log("Error:", error);
     throw error;
   }
 }
@@ -854,6 +834,16 @@ export async function updateFlowStore(
     if (response.status !== 201) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function requestLogout() {
+  try {
+    const response = await api.post(`${BASE_URL_API}logout`);
     return response.data;
   } catch (error) {
     console.error(error);

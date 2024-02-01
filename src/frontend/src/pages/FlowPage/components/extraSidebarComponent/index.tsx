@@ -1,16 +1,17 @@
 import { cloneDeep } from "lodash";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { alertContext } from "../../../../contexts/alertContext";
-import { FlowsContext } from "../../../../contexts/flowsContext";
-import { StoreContext } from "../../../../contexts/storeContext";
-import { typesContext } from "../../../../contexts/typesContext";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useStoreStore } from "../../../../stores/storeStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import {
   nodeColors,
@@ -26,15 +27,20 @@ import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 
 export default function ExtraSidebar(): JSX.Element {
-  const { data, templates, getFilterEdge, setFilterEdge, reactFlowInstance } =
-    useContext(typesContext);
-  const { flows, tabId, uploadFlow, tabsState, saveFlow, isBuilt, version } =
-    useContext(FlowsContext);
-  const { hasApiKey, validApiKey, hasStore } = useContext(StoreContext);
-  const { setErrorData } = useContext(alertContext);
+  const data = useTypesStore((state) => state.data);
+  const templates = useTypesStore((state) => state.templates);
+  const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+
+  const isBuilt = useFlowStore((state) => state.isBuilt);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
-  const isPending = tabsState[tabId]?.isPending;
   function onDragStart(
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType }
@@ -72,7 +78,7 @@ export default function ExtraSidebar(): JSX.Element {
       return ret;
     });
   }
-  const flow = flows.find((flow) => flow.id === tabId);
+
   useEffect(() => {
     // show components with error on load
     let errors: string[] = [];
@@ -187,7 +193,7 @@ export default function ExtraSidebar(): JSX.Element {
     () => (
       <ShareModal
         is_component={false}
-        component={flow!}
+        component={currentFlow!}
         disabled={!hasApiKey || !validApiKey || !hasStore}
       >
         <button
@@ -212,17 +218,15 @@ export default function ExtraSidebar(): JSX.Element {
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, flow, hasStore]
+    [hasApiKey, validApiKey, currentFlow, hasStore]
   );
 
   const ExportMemo = useMemo(
     () => (
       <ExportModal>
-        <ShadTooltip content="Export" side="top">
-          <button className={classNames("extra-side-bar-buttons")}>
-            <IconComponent name="FileDown" className="side-bar-button-size" />
-          </button>
-        </ShadTooltip>
+        <button className={classNames("extra-side-bar-buttons")}>
+          <IconComponent name="FileDown" className="side-bar-button-size" />
+        </button>
       </ExportModal>
     ),
     []
@@ -263,11 +267,19 @@ export default function ExtraSidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        {(!hasApiKey || !validApiKey) && ExportMemo}
+        {(!hasApiKey || !validApiKey) && (
+          <ShadTooltip
+            content="Export"
+            side="top"
+            styleClasses="cursor-default"
+          >
+            <div className="side-bar-button">{ExportMemo}</div>
+          </ShadTooltip>
+        )}
         <ShadTooltip content={"Code"} side="top">
           <div className="side-bar-button">
-            {flow && flow.data && (
-              <ApiModal flow={flow}>
+            {currentFlow && currentFlow.data && (
+              <ApiModal flow={currentFlow}>
                 <button
                   className={"w-full " + (!isBuilt ? "button-disable" : "")}
                 >
@@ -285,34 +297,6 @@ export default function ExtraSidebar(): JSX.Element {
             )}
           </div>
         </ShadTooltip>
-        <div className="side-bar-button" data-testid="save-button">
-          {flow && flow.data && (
-            <ShadTooltip content="Save" side="top">
-              <button
-                disabled={flow?.data?.nodes.length === 0}
-                className={
-                  "extra-side-bar-buttons " +
-                  (isPending && flow!.data!.nodes?.length > 0
-                    ? ""
-                    : "button-disable")
-                }
-                onClick={(event) => {
-                  saveFlow(flow!);
-                }}
-              >
-                <IconComponent
-                  name="Save"
-                  className={
-                    "side-bar-button-size" +
-                    (isPending && flow!.data!.nodes?.length > 0
-                      ? " "
-                      : " extra-side-bar-save-disable")
-                  }
-                />
-              </button>
-            </ShadTooltip>
-          )}
-        </div>
       </div>
       <Separator />
       <div className="side-bar-search-div-placement">

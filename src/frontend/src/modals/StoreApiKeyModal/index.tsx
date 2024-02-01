@@ -3,10 +3,10 @@ import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { StoreContext } from "../../contexts/storeContext";
 import { addApiKeyStore } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -16,10 +16,16 @@ export default function StoreApiKeyModal({
 }: StoreApiKeyType) {
   if (disabled) return <>{children}</>;
   const [open, setOpen] = useState(false);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { storeApiKey } = useContext(AuthContext);
-  const { hasApiKey, validApiKey } = useContext(StoreContext);
   const [apiKeyValue, setApiKeyValue] = useState("");
+
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
 
   const handleSaveKey = () => {
     if (apiKeyValue) {
@@ -30,12 +36,18 @@ export default function StoreApiKeyModal({
           });
           storeApiKey(apiKeyValue);
           setOpen(false);
+          setHasApiKey(true);
+          setValidApiKey(true);
+          setLoadingApiKey(false);
         },
         (error) => {
           setErrorData({
             title: "There was an error saving the API Key, please try again.",
             list: [error["response"]["data"]["detail"]],
           });
+          setHasApiKey(false);
+          setValidApiKey(false);
+          setLoadingApiKey(false);
         }
       );
     }

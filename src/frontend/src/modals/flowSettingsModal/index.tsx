@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
-import { FlowsContext } from "../../contexts/flowsContext";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
@@ -12,20 +12,21 @@ export default function FlowSettingsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const { flows, tabId, saveFlow } = useContext(FlowsContext);
-  const flow = flows.find((f) => f.id === tabId);
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const flows = useFlowsManagerStore((state) => state.flows);
   useEffect(() => {
-    setName(flow!.name);
-    setDescription(flow!.description);
-  }, [flow!.name, flow!.description]);
-  const [name, setName] = useState(flow!.name);
-  const [description, setDescription] = useState(flow!.description);
+    setName(currentFlow!.name);
+    setDescription(currentFlow!.description);
+  }, [currentFlow!.name, currentFlow!.description, open]);
+
+  const [name, setName] = useState(currentFlow!.name);
+  const [description, setDescription] = useState(currentFlow!.description);
 
   function handleClick(): void {
-    let savedFlow = flows.find((flow) => flow.id === tabId);
-    savedFlow!.name = name;
-    savedFlow!.description = description;
-    saveFlow(savedFlow!);
+    currentFlow!.name = name;
+    currentFlow!.description = description;
+    saveFlow(currentFlow!);
     setOpen(false);
   }
 
@@ -36,7 +37,7 @@ export default function FlowSettingsModal({
     flows.forEach((flow: FlowType) => {
       if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
     });
-    setNameList(tempNameList.filter((name) => name !== flow!.name));
+    setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
   }, [flows]);
 
   return (
@@ -57,7 +58,7 @@ export default function FlowSettingsModal({
 
       <BaseModal.Footer>
         <Button
-          disabled={nameLists.includes(name) && name !== flow!.name}
+          disabled={nameLists.includes(name) && name !== currentFlow!.name}
           onClick={handleClick}
           type="submit"
         >

@@ -8,6 +8,7 @@
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@mui/material": "^5.14.7",
+    "@preact/signals-react": "^2.0.0",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.4",
@@ -66,7 +67,8 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.0",
     "vite-plugin-svgr": "^3.2.0",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zustand": "^4.4.7"
   },
   "scripts": {
     "dev:docker": "vite --host 0.0.0.0",
