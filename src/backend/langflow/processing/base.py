@@ -70,14 +70,13 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         except Exception as exc:
             logger.error(f"Error fixing memory inputs: {exc}")
 
+        trace_id = kwargs.pop("session_id", None)
         try:
-            trace_id = kwargs.pop("session_id", None)
             callbacks = setup_callbacks(sync=False, trace_id=trace_id, **kwargs)
             output = await langchain_object.acall(inputs, callbacks=callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            trace_id = kwargs.pop("session_id", None)
             callbacks = setup_callbacks(sync=True, trace_id=trace_id, **kwargs)
             output = langchain_object(inputs, callbacks=callbacks)
 
