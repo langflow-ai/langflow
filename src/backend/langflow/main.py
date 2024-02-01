@@ -66,7 +66,7 @@ def create_app():
 
 
 def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
-    app.mount("/ws", socketio.ASGIApp(socketio_server))
+    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 
