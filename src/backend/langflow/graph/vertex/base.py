@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
 
 
-class PowerComponentTypes(Enum):
+class InterfaceComponentTypes(Enum):
     # ChatInput and ChatOutput are the only ones that are
     # power components
     ChatInput = "ChatInput"
@@ -55,9 +55,9 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         try:
-            self.is_power_component = PowerComponentTypes(self.vertex_type)
+            self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
-            self.is_power_component = False
+            self.is_interface_component = False
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -84,7 +84,7 @@ class Vertex:
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
-        if self.is_power_component and not isinstance(self._built_object, UnbuiltObject):
+        if self.is_interface_component and not isinstance(self._built_object, UnbuiltObject):
             result = self._built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
@@ -506,5 +506,6 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
+    pass
     pass
     pass

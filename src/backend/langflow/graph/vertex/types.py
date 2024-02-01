@@ -320,7 +320,7 @@ class ChatVertex(StatelessVertex):
             return self.artifacts["repr"] or super()._built_object_repr()
 
     async def _run(self, *args, **kwargs):
-        if self.is_power_component:
+        if self.is_interface_component:
             if self.vertex_type == "ChatOutput":
                 artifacts = None
                 sender = self.params.get("sender", None)
