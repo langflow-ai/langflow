@@ -651,13 +651,19 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     x: NewPosition.x - middlePoint.x,
     y: NewPosition.y - middlePoint.y,
   };
-  return {...flow, data: {...flow.data!, nodes: flow.data!.nodes.map((node) => ({
-    ...node,
-    position: {
-      x: node.position.x + deltaPosition.x,
-      y: node.position.y + deltaPosition.y,
+  return {
+    ...flow,
+    data: {
+      ...flow.data!,
+      nodes: flow.data!.nodes.map((node) => ({
+        ...node,
+        position: {
+          x: node.position.x + deltaPosition.x,
+          y: node.position.y + deltaPosition.y,
+        },
+      })),
     },
-  }))}};
+  };
 }
 
 export function concatFlows(
@@ -939,7 +945,7 @@ export function expandGroupNode(
   nodes: Node[],
   edges: Edge[],
   setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
   const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
@@ -1024,14 +1030,9 @@ export function expandGroupNode(
     }
   });
 
-  const filteredNodes = [
-    ...nodes.filter((n) => n.id !== id),
-    ...gNodes,
-  ];
+  const filteredNodes = [...nodes.filter((n) => n.id !== id), ...gNodes];
   const filteredEdges = [
-    ...edges.filter(
-      (e) => e.target !== id && e.source !== id
-    ),
+    ...edges.filter((e) => e.target !== id && e.source !== id),
     ...gEdges,
     ...updatedEdges,
   ];
@@ -1067,7 +1068,7 @@ export function createFlowComponent(
       edges: [],
       nodes: [
         {
-          data: {...nodeData, node: {...nodeData.node, official: false}},
+          data: { ...nodeData, node: { ...nodeData.node, official: false } },
           id: nodeData.id,
           position: { x: 0, y: 0 },
           type: "genericNode",

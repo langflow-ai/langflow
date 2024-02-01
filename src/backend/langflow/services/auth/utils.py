@@ -144,7 +144,7 @@ async def get_current_user_for_websocket(
         return await api_key_security(api_key, query_param, db)
     else:
         return None
-    
+
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
