@@ -6,7 +6,7 @@ import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
 import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
+import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
 import {
   Table,
@@ -20,9 +20,7 @@ import {
   ADMIN_HEADER_DESCRIPTION,
   ADMIN_HEADER_TITLE,
 } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import {
   addUser,
   deleteUser,
@@ -31,6 +29,8 @@ import {
 } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
 import UserManagementModal from "../../modals/UserManagementModal";
+import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
 
@@ -40,15 +40,17 @@ export default function AdminPage() {
   const [size, setPageSize] = useState(10);
   const [index, setPageIndex] = useState(1);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData } = useContext(AuthContext);
   const [totalRowsCount, setTotalRowsCount] = useState(0);
-
-  const { setTabId } = useContext(FlowsContext);
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setCurrentFlowId("");
   }, []);
 
   const userList = useRef([]);
@@ -308,7 +310,7 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
-                              asChild
+                              size="x-small"
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -333,17 +335,14 @@ export default function AdminPage() {
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <Checkbox
-                                    id="is_active"
-                                    checked={user.is_active}
-                                  />
+                                  <CheckBoxDiv checked={user.is_active} />
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
                           </TableCell>
                           <TableCell className="relative left-1 truncate py-2 text-align-last-left">
                             <ConfirmationModal
-                              asChild
+                              size="x-small"
                               title="Edit"
                               titleHeader={`${user.username}`}
                               modalContentTitle="Attention!"
@@ -368,10 +367,7 @@ export default function AdminPage() {
                               </ConfirmationModal.Content>
                               <ConfirmationModal.Trigger>
                                 <div className="flex w-fit">
-                                  <Checkbox
-                                    id="is_superuser"
-                                    checked={user.is_superuser}
-                                  />
+                                  <CheckBoxDiv checked={user.is_superuser} />
                                 </div>
                               </ConfirmationModal.Trigger>
                             </ConfirmationModal>
@@ -413,6 +409,7 @@ export default function AdminPage() {
                               </UserManagementModal>
 
                               <ConfirmationModal
+                                size="x-small"
                                 title="Delete"
                                 titleHeader="Delete User"
                                 modalContentTitle="Attention!"
@@ -432,12 +429,10 @@ export default function AdminPage() {
                                   </span>
                                 </ConfirmationModal.Content>
                                 <ConfirmationModal.Trigger>
-                                  <ShadTooltip content="Delete" side="top">
-                                    <IconComponent
-                                      name="Trash2"
-                                      className="ml-2 h-4 w-4 cursor-pointer"
-                                    />
-                                  </ShadTooltip>
+                                  <IconComponent
+                                    name="Trash2"
+                                    className="ml-2 h-4 w-4 cursor-pointer"
+                                  />
                                 </ConfirmationModal.Trigger>
                               </ConfirmationModal>
                             </div>

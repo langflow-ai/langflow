@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from "react";
-import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
-import { StoreContext } from "../../contexts/storeContext";
+import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
+import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
@@ -32,9 +32,10 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   onDelete?: () => void;
 }) {
-  const { addFlow } = useContext(FlowsContext);
-  const { setSuccessData, setErrorData } = useContext(alertContext);
-  const { setValidApiKey } = useContext(StoreContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
   const isStore = false;
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
