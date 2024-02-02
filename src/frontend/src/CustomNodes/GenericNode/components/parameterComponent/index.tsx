@@ -261,45 +261,41 @@ export default function ParameterComponent({
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
-      <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-        <div className="flex">
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
-            content={refHtml.current}
-            side={left ? "left" : "right"}
-          >
-            <Handle
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              key={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              id={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              isValidConnection={(connection) =>
-                isValidConnection(connection, nodes, edges)
-              }
-              className={classNames(
-                left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
-                "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
-              )}
-              style={{
-                borderColor: color,
-              }}
-              onClick={() => {
-                setFilterEdge(groupedEdge.current);
-              }}
-            ></Handle>
-          </ShadTooltip>
-        </div>
-      </Button>
+      <Handle
+        type={left ? "target" : "source"}
+        position={left ? Position.Left : Position.Right}
+        key={
+          proxy ? scapedJSONStringfy({ ...id, proxy }) : scapedJSONStringfy(id)
+        }
+        id={
+          proxy ? scapedJSONStringfy({ ...id, proxy }) : scapedJSONStringfy(id)
+        }
+        isValidConnection={(connection) =>
+          isValidConnection(connection, nodes, edges)
+        }
+        className={classNames(
+          left ? "my-12  " : " my-12 ",
+          "h-5 w-5 rounded-full border-[3px] bg-background",
+          !showNode ? "mt-0" : ""
+        )}
+        style={{
+          borderColor: "#7c3aed",
+        }}
+        onClick={() => {
+          setFilterEdge(groupedEdge.current);
+        }}
+      >
+        <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+          <div className="flex">
+            <ShadTooltip
+              styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+              delayDuration={0}
+              content={refHtml.current}
+              side={left ? "left" : "right"}
+            ></ShadTooltip>
+          </div>
+        </Button>
+      </Handle>
     )
   ) : (
     <div
@@ -309,7 +305,7 @@ export default function ParameterComponent({
       <>
         <div
           className={
-            "w-full truncate text-sm" +
+            "h-full w-full truncate text-sm" +
             (left ? "" : " text-end") +
             (info !== "" ? " flex items-center" : "")
           }
@@ -339,44 +335,43 @@ export default function ParameterComponent({
         {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
-          <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-            <div className="flex">
-              <ShadTooltip
-                styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-                delayDuration={0}
-                content={refHtml.current}
-                side={left ? "left" : "right"}
-              >
-                <Handle
-                  type={left ? "target" : "source"}
-                  position={left ? Position.Left : Position.Right}
-                  key={
-                    proxy
-                      ? scapedJSONStringfy({ ...id, proxy })
-                      : scapedJSONStringfy(id)
-                  }
-                  id={
-                    proxy
-                      ? scapedJSONStringfy({ ...id, proxy })
-                      : scapedJSONStringfy(id)
-                  }
-                  isValidConnection={(connection) =>
-                    isValidConnection(connection, nodes, edges)
-                  }
-                  className={classNames(
-                    left ? "-ml-0.5 " : "-mr-0.5 ",
-                    "h-3 w-3 rounded-full border-2 bg-background"
-                  )}
-                  style={{
-                    borderColor: color,
-                  }}
-                  onClick={() => {
-                    setFilterEdge(groupedEdge.current);
-                  }}
-                ></Handle>
-              </ShadTooltip>
-            </div>
-          </Button>
+          <ShadTooltip
+            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+            delayDuration={0}
+            content={refHtml.current}
+            side={"top"}
+          >
+            <Handle
+              type={left ? "target" : "source"}
+              position={left ? Position.Left : Position.Right}
+              key={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
+              id={
+                proxy
+                  ? scapedJSONStringfy({ ...id, proxy })
+                  : scapedJSONStringfy(id)
+              }
+              isValidConnection={(connection) =>
+                isValidConnection(connection, nodes, edges)
+              }
+              className={classNames(
+                " left-[-0.4px] h-full w-full rounded-none bg-transparent"
+              )}
+              style={{
+                borderColor: "transparent",
+              }}
+              onClick={() => {
+                setFilterEdge(groupedEdge.current);
+              }}
+            >
+              <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
+                <div className="flex"></div>
+              </Button>
+            </Handle>
+          </ShadTooltip>
         )}
 
         {left === true &&

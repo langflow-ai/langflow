@@ -24,6 +24,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  updateHandleColors,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -81,6 +82,12 @@ export default function Page({
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
+
+  useEffect(() => {
+    setTimeout(() => {
+      updateHandleColors(flow);
+    }, 200);
+  }, [flow]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

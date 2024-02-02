@@ -23,6 +23,7 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
 } from "../utils/reactflowUtils";
+import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -234,7 +235,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           targetHandle,
           id,
           data: cloneDeep(edge.data),
-          style: { stroke: "#555" },
+          // style: { strokeWidth: 3, stroke: "#7c3aed" },
           className:
             targetHandleObject.type === "Text"
               ? "stroke-gray-800 "
@@ -265,6 +266,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
+    const dark = useDarkStore.getState().dark;
+    const sourceElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${connection.sourceHandle}"]`
+    );
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${connection.targetHandle}"]`
+    );
+    if (sourceElement && targetElement) {
+      sourceElement.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
+      targetElement.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
+    }
+
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
@@ -274,7 +295,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             targetHandle: scapeJSONParse(connection.targetHandle!),
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
-          style: { stroke: "#555" },
+          style: { strokeWidth: 3, stroke: "#7c3aed" },
           className:
             ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
               .type === "Text"

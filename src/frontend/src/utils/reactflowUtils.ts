@@ -48,6 +48,7 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
+
     if (!sourceNode || !targetNode) {
       newEdges = newEdges.filter((edg) => edg.id !== edge.id);
       return;
@@ -55,6 +56,37 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
+
+    const sourceElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${sourceHandle}"]`
+    );
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${targetHandle}"]`
+    );
+    if (sourceElement && targetElement) {
+      sourceElement.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
+      targetElement.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
+
+      sourceElement.style.setProperty(
+        "outline-color",
+        "transparent",
+        "important"
+      );
+      targetElement.style.setProperty(
+        "outline-color",
+        "transparent",
+        "important"
+      );
+    }
+
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
@@ -194,6 +226,10 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
+
+    setTimeout(() => {
+      updateHandleColors(flow);
+    }, 300);
   }
   return data;
 };
@@ -934,7 +970,30 @@ export function processFlowEdges(flow: FlowType) {
   //update edges colors
   flow.data.edges.forEach((edge) => {
     edge.className = "";
-    edge.style = { stroke: "#555" };
+    // edge.style = { strokeWidth: 3, stroke: "#7c3aed",  };
+  });
+}
+
+export function updateHandleColors(flow: FlowType) {
+  if (!flow.data || !flow.data.edges) return;
+  //update edges colors
+  flow.data.edges.forEach((edge) => {
+    const sourceElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${edge.sourceHandle}"]`
+    );
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${edge.targetHandle}"]`
+    );
+    if (sourceElement && targetElement) {
+      sourceElement.style.setProperty("outline", "dashed", "important");
+      targetElement.style.setProperty("outline", "dashed", "important");
+
+      sourceElement.style.setProperty("outline-color", "#7c3aed", "important");
+      targetElement.style.setProperty("outline-color", "#7c3aed", "important");
+
+      sourceElement.style.setProperty("outline-offset", "-1px", "important");
+      targetElement.style.setProperty("outline-offset", "-1px", "important");
+    }
   });
 }
 
