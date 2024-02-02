@@ -316,6 +316,19 @@ export default function Page({
     setFilterEdge([]);
   }, []);
 
+  function onMouseAction(edge: Edge, color: string): void {
+    const edges = useFlowStore.getState().edges
+    const newEdges = _.cloneDeep(edges)
+    const style = { stroke: color, transition: "stroke 0.25s" };
+    const updatedEdges = newEdges.map((obj) => {
+      if (obj.id === edge.id) {
+        return { ...obj, style }
+      }
+      return obj
+    })
+    setEdges(updatedEdges);
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {!view && <ExtraSidebar />}
@@ -358,6 +371,8 @@ export default function Page({
                   panOnDrag={!view}
                   proOptions={{ hideAttribution: true }}
                   onPaneClick={onPaneClick}
+                  onEdgeMouseEnter={(event, edge) => onMouseAction(edge, "#473A5C")}
+                  onEdgeMouseLeave={(event, edge) => onMouseAction(edge, "#555")}
                 >
                   <Background className="" />
                   {!view && (

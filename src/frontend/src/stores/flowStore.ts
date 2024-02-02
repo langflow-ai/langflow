@@ -131,7 +131,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
-
+    console.log(newChange)
     set({
       edges: newChange,
       flowState: undefined,
