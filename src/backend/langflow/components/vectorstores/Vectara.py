@@ -3,11 +3,11 @@ import urllib
 import urllib.request
 from typing import List, Optional, Union
 
-from langchain.embeddings import FakeEmbeddings
-from langchain.schema import BaseRetriever, Document
-from langchain_community.vectorstores import Vectara, VectorStore
-
+from langchain_community.embeddings import FakeEmbeddings
+from langchain_community.vectorstores.vectara import Vectara
+from langchain_core.vectorstores import VectorStore
 from langflow import CustomComponent
+from langflow.field_typing import BaseRetriever, Document
 
 
 class VectaraComponent(CustomComponent):
@@ -29,14 +29,10 @@ class VectaraComponent(CustomComponent):
             "password": True,
             "required": True,
         },
-        "code": {"show": False},
-        "documents": {
-            "display_name": "Documents",
-            "info": "Pass in either for Self Query Retriever or for making a Vectara Object",
-        },
+        "documents": {"display_name": "Documents", "info": "If provided, will be upserted to corpus (optional)"},
         "files_url": {
             "display_name": "Files Url",
-            "info": "Make vectara object using url of files(documents not needed)",
+            "info": "Make vectara object using url of files (optional)",
         },
     }
 
@@ -48,6 +44,8 @@ class VectaraComponent(CustomComponent):
         files_url: Optional[List[str]] = None,
         documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
+        source = "Langflow"
+
         if documents is not None:
             return Vectara.from_documents(
                 documents=documents,
@@ -55,6 +53,7 @@ class VectaraComponent(CustomComponent):
                 vectara_customer_id=vectara_customer_id,
                 vectara_corpus_id=vectara_corpus_id,
                 vectara_api_key=vectara_api_key,
+                source=source,
             )
 
         if files_url is not None:
@@ -70,10 +69,12 @@ class VectaraComponent(CustomComponent):
                 vectara_customer_id=vectara_customer_id,
                 vectara_corpus_id=vectara_corpus_id,
                 vectara_api_key=vectara_api_key,
+                source=source,
             )
 
         return Vectara(
             vectara_customer_id=vectara_customer_id,
             vectara_corpus_id=vectara_corpus_id,
             vectara_api_key=vectara_api_key,
+            source=source,
         )
