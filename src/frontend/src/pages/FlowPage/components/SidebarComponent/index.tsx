@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
+import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
@@ -28,6 +29,7 @@ export default function Sidebar(): JSX.Element {
   const isBuilt = useFlowStore((state) => state.isBuilt);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
+  const [tabActive, setTabActive] = useState("All");
   const [search, setSearch] = useState("");
   function onDragStart(
     event: React.DragEvent<any>,
@@ -252,7 +254,7 @@ export default function Sidebar(): JSX.Element {
                 setSearch(event.target.value);
               }}
             />
-            <div className="right-1 search-icon">
+            <div className="search-icon right-1">
               <IconComponent
                 name="Search"
                 className={"h-5 w-5 stroke-[1.5] text-primary"}
@@ -269,6 +271,53 @@ export default function Sidebar(): JSX.Element {
             <IconComponent name="ChevronLeft" className="h-6 w-6" />
           </Button>
         </div>
+        <div className="flex w-full gap-0 border-b border-border px-4">
+          <button
+            onClick={() => {
+              setTabActive("All");
+            }}
+            className={
+              "border-b-2 px-4 py-3 transition-all " +
+              (tabActive === "All"
+                ? "border-primary"
+                : " border-transparent text-muted-foreground hover:text-primary")
+            }
+          >
+            All
+          </button>
+          <button
+            onClick={() => {
+              setTabActive("Flows");
+            }}
+            className={
+              "border-b-2 px-4 py-3 transition-all " +
+              (tabActive === "Flows"
+                ? "border-primary"
+                : " border-transparent text-muted-foreground hover:text-primary")
+            }
+          >
+            Flows
+          </button>
+          <button
+            onClick={() => {
+              setTabActive("Components");
+            }}
+            className={
+              "border-b-2 px-4 py-3 transition-all " +
+              (tabActive === "Components"
+                ? "border-primary"
+                : " border-transparent text-muted-foreground hover:text-primary")
+            }
+          >
+            Components
+          </button>
+          <ShadTooltip content="Coming Soon">
+            <button className="cursor-not-allowed px-4 py-3 text-muted-foreground">
+              Bundles
+            </button>
+          </ShadTooltip>
+        </div>
+        <div className="flex flex-col w-full h-full overflow-y-scroll scrollbar-hide"></div>
       </div>
       <button
         onClick={() => {
