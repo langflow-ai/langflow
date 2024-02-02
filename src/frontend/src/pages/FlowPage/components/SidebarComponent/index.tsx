@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { TagsSelector } from "../../../../components/tagsSelectorComponent";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
 import ExportModal from "../../../../modals/exportModal";
@@ -12,7 +13,9 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
+import { nodeColors } from "../../../../utils/styleUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import { Badge } from "../../../../components/ui/badge";
 
 export default function Sidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -21,6 +24,7 @@ export default function Sidebar(): JSX.Element {
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const [filteredCategories, setFilterCategories] = useState<any[]>([]);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -317,7 +321,69 @@ export default function Sidebar(): JSX.Element {
             </button>
           </ShadTooltip>
         </div>
-        <div className="flex flex-col w-full h-full overflow-y-scroll scrollbar-hide"></div>
+        <div className="flex h-full w-full flex-col gap-2 overflow-y-scroll py-4 scrollbar-hide">
+          <div className="flex w-full items-center justify-center">
+            <TagsSelector
+              tags={[
+                { id: "vectorstore", name: "Vector Store" },
+                { id: "chain", name: "Chain" },
+                { id: "nlp", name: "NLP" },
+                { id: "tool", name: "Tool" },
+                { id: "io", name: "I/O" },
+              ]}
+              loadingTags={false}
+              disabled={false}
+              selectedTags={filteredCategories}
+              setSelectedTags={setFilterCategories}
+            />
+          </div>
+          <div className="columns-2 gap-2 p-4">
+            <div className="flex flex-col overflow-hidden rounded-lg border bg-background">
+              <div className={"flex-max-width items-center truncate p-2"}>
+                <IconComponent
+                  name={"group_components"}
+                  className={"generic-node-icon "}
+                  iconColor={`${nodeColors["chains"]}`}
+                />
+                <div className="generic-node-tooltip-div">
+                  <ShadTooltip content={"My Component"}>
+                    <div className="flex" onDoubleClick={() => {}}>
+                      <div
+                        data-testid={"title-" + "My Component"}
+                        className="generic-node-tooltip-div pr-2 text-primary"
+                      >
+                        My Component
+                      </div>
+                    </div>
+                  </ShadTooltip>
+                </div>
+              </div>
+              <div className="text-muted-foreground px-4 pb-4 text-sm">
+                The description will tell the user what to do or why use it.
+              </div>
+              <div className="flex w-full flex-1 flex-wrap gap-2 px-4 pb-4">
+                  <Badge
+                    variant="gray"
+                    size="xq"
+                  >
+                    Vector Store
+                  </Badge>
+                  <Badge
+                    variant="gray"
+                    size="xq"
+                  >
+                    OpenAI
+                  </Badge>
+                  <Badge
+                    variant="gray"
+                    size="xq"
+                  >
+                    Chain
+                  </Badge>
+            </div>
+            </div>
+          </div>
+        </div>
       </div>
       <button
         onClick={() => {
