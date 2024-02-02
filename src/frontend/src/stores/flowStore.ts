@@ -36,6 +36,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   isBuilt: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
+  sidebarOpen: true,
+  setSidebarOpen(newState) {
+    set({ sidebarOpen: newState });
+  },
   setPending: (isPending) => {
     set({ isPending });
   },

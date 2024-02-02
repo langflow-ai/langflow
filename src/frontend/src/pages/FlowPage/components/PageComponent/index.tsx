@@ -29,7 +29,7 @@ import {
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
-import ExtraSidebar from "../extraSidebarComponent";
+import Sidebar from "../SidebarComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -323,7 +323,6 @@ export default function Page({
 
   return (
     <div className="flex h-full overflow-hidden">
-      {!view && <ExtraSidebar />}
       {/* Main area */}
       <main className="flex flex-1">
         {/* Primary column */}
@@ -331,7 +330,7 @@ export default function Page({
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div id="react-flow-id" className="h-full w-full">
+              <div id="react-flow-id" className="h-full w-full relative">
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
@@ -419,6 +418,7 @@ export default function Page({
                   />
                 </ReactFlow>
                 {!view && <Chat flow={flow} />}
+                {!view && <Sidebar />}
               </div>
             ) : (
               <></>

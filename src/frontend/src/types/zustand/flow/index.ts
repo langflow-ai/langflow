@@ -14,6 +14,8 @@ export type FlowStoreType = {
   sseData: object;
   isBuilding: boolean;
   isPending: boolean;
+  sidebarOpen: boolean;
+  setSidebarOpen: (newState: boolean) => void;
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: {
