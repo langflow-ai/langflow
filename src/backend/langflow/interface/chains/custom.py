@@ -67,7 +67,9 @@ Human: {input}
 class MidJourneyPromptChain(BaseCustomConversationChain):
     """MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."""
 
-    template: Optional[str] = """I want you to act as a prompt generator for Midjourney's artificial intelligence program.
+    template: Optional[
+        str
+    ] = """I want you to act as a prompt generator for Midjourney's artificial intelligence program.
     Your job is to provide detailed and creative descriptions that will inspire unique and interesting images from the AI.
     Keep in mind that the AI is capable of understanding a wide range of language and can interpret abstract concepts, so feel free to be as imaginative and descriptive as possible.
     For example, you could describe a scene from a futuristic city, or a surreal landscape filled with strange creatures.
@@ -81,7 +83,9 @@ class MidJourneyPromptChain(BaseCustomConversationChain):
 
 
 class TimeTravelGuideChain(BaseCustomConversationChain):
-    template: Optional[str] = """I want you to act as my time travel guide. You are helpful and creative. I will provide you with the historical period or future time I want to visit and you will suggest the best events, sights, or people to experience. Provide the suggestions and any necessary information.
+    template: Optional[
+        str
+    ] = """I want you to act as my time travel guide. You are helpful and creative. I will provide you with the historical period or future time I want to visit and you will suggest the best events, sights, or people to experience. Provide the suggestions and any necessary information.
     Current conversation:
     {history}
     Human: {input}

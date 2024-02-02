@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
@@ -34,7 +34,7 @@ def build_vertex(self, vertex: "Vertex") -> "Vertex":
 @celery_app.task(acks_late=True)
 def process_graph_cached_task(
     data_graph: Dict[str, Any],
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[dict, List[dict]]] = None,
     clear_cache=False,
     session_id=None,
 ) -> Dict[str, Any]:
@@ -62,7 +62,7 @@ def process_graph_cached_task(
         logger.debug(f"Built object: {built_object}")
 
         processed_inputs = process_inputs(inputs, artifacts or {})
-        result = generate_result(built_object, processed_inputs)
+        result = async_to_sync(generate_result, force_new_loop=True)(built_object, processed_inputs)
 
         # Update the session with the new data
         session_service.update_session(session_id, (graph, artifacts))

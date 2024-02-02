@@ -46,7 +46,14 @@ export default function ChatInput({
               : "hidden"
           }`,
         }}
-        value={lockChat ? "Thinking..." : chatValue}
+        value={
+          lockChat
+            ? "Thinking..."
+            : typeof chatValue === "object" &&
+              Object.keys(chatValue)?.length === 0
+            ? "No chat input variables found. Click to run your flow."
+            : chatValue
+        }
         onChange={(event): void => {
           setChatValue(event.target.value);
         }}

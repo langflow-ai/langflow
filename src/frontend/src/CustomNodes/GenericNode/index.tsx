@@ -194,7 +194,10 @@ export default function GenericNode({
                           takeSnapshot();
                         }}
                       >
-                        <div className="generic-node-tooltip-div pr-2 text-primary">
+                        <div
+                          data-testid={"title-" + data.node?.display_name}
+                          className="generic-node-tooltip-div pr-2 text-primary"
+                        >
                           {data.node?.display_name}
                         </div>
                         {nameEditable && (

@@ -137,6 +137,7 @@ export default function NodeToolbarComponent({
               onClick={() => {
                 deleteNode(data.id);
               }}
+              data-testid="delete-button-modal"
             >
               <IconComponent name="Trash2" className="h-4 w-4" />
             </button>
@@ -216,7 +217,7 @@ export default function NodeToolbarComponent({
 
               {isSaved ? (
                 <SelectItem value={"override"}>
-                  <div className="flex">
+                  <div className="flex" data-testid="save-button-modal">
                     <IconComponent
                       name="SaveAll"
                       className="relative top-0.5 mr-2 h-4 w-4"
@@ -226,7 +227,7 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               ) : (
                 <SelectItem value={"SaveAll"}>
-                  <div className="flex">
+                  <div className="flex" data-testid="save-button-modal">
                     <IconComponent
                       name="SaveAll"
                       className="relative top-0.5 mr-2 h-4 w-4"

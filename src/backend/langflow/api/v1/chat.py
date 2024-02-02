@@ -2,9 +2,6 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
-from loguru import logger
-from sqlmodel import Session
-
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 from langflow.graph.graph.base import Graph
@@ -13,6 +10,8 @@ from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
+from loguru import logger
+from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -149,13 +148,12 @@ async def stream_build(
                 logger.debug("No user_id found in cache_service")
                 user_id = None
             for i, vertex in enumerate(graph.generator_build(), 1):
+                start_time = time.perf_counter()
                 try:
                     log_dict = {
                         "log": f"Building node {vertex.vertex_type}",
                     }
                     yield str(StreamData(event="log", data=log_dict))
-                    # time this
-                    start_time = time.perf_counter()
                     if vertex.is_task:
                         vertex = await try_running_celery_task(vertex, user_id)
                     else:

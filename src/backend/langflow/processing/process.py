@@ -1,13 +1,13 @@
 import asyncio
-import json
-from pathlib import Path
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
-from langflow.graph import Graph
+from langchain_core.messages import AIMessage
+from langchain_core.runnables.base import Runnable
+from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
 from loguru import logger
@@ -106,10 +106,23 @@ def get_build_result(data_graph, session_id):
     return build_sorted_vertices(data_graph)
 
 
-def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
+def process_inputs(
+    inputs: Optional[Union[dict, List[dict]]] = None, artifacts: Optional[Dict[str, Any]] = None
+) -> Union[dict, List[dict]]:
     if inputs is None:
         inputs = {}
+    if artifacts is None:
+        artifacts = {}
 
+    if isinstance(inputs, dict):
+        inputs = update_inputs_dict(inputs, artifacts)
+    elif isinstance(inputs, List):
+        inputs = [update_inputs_dict(inp, artifacts) for inp in inputs]
+
+    return inputs
+
+
+def update_inputs_dict(inputs: dict, artifacts: Dict[str, Any]) -> dict:
     for key, value in artifacts.items():
         if key == "repr":
             continue
@@ -119,23 +132,69 @@ def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
     return inputs
 
 
-def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
-    if isinstance(langchain_object, Chain):
+async def process_runnable(runnable: Runnable, inputs: Union[dict, List[dict]]):
+    if isinstance(inputs, List) and hasattr(runnable, "abatch"):
+        result = await runnable.abatch(inputs)
+    elif isinstance(inputs, dict) and hasattr(runnable, "ainvoke"):
+        result = await runnable.ainvoke(inputs)
+    else:
+        raise ValueError(f"Runnable {runnable} does not support inputs of type {type(inputs)}")
+    # Check if the result is a list of AIMessages
+    if isinstance(result, list) and all(isinstance(r, AIMessage) for r in result):
+        result = [r.content for r in result]
+    elif isinstance(result, AIMessage):
+        result = result.content
+    return result
+
+
+async def process_inputs_dict(built_object: Union[Chain, VectorStore, Runnable], inputs: dict):
+    if isinstance(built_object, Chain):
         if inputs is None:
             raise ValueError("Inputs must be provided for a Chain")
         logger.debug("Generating result and thought")
-        result = get_result_and_thought(langchain_object, inputs)
+        result = get_result_and_thought(built_object, inputs)
 
         logger.debug("Generated result and thought")
-    elif isinstance(langchain_object, VectorStore):
-        result = langchain_object.search(**inputs)
-    elif isinstance(langchain_object, Document):
-        result = langchain_object.dict()
+    elif isinstance(built_object, VectorStore) and "query" in inputs:
+        if isinstance(inputs, dict) and "search_type" not in inputs:
+            inputs["search_type"] = "similarity"
+            logger.info("search_type not provided, using default value: similarity")
+        result = built_object.search(**inputs)
+    elif isinstance(built_object, Document):
+        result = built_object.dict()
+    elif isinstance(built_object, Runnable):
+        result = await process_runnable(built_object, inputs)
+        if isinstance(result, list):
+            result = [r.content if hasattr(r, "content") else r for r in result]
+        elif hasattr(result, "content"):
+            result = result.content
+        else:
+            result = result
+    elif hasattr(built_object, "run") and isinstance(built_object, CustomComponent):
+        result = built_object.run(inputs)
     else:
-        logger.warning(f"Unknown langchain_object type: {type(langchain_object)}")
-        if isinstance(langchain_object, Coroutine):
-            result = asyncio.run(langchain_object)
-        result = langchain_object
+        result = None
+
+    return result
+
+
+async def process_inputs_list(built_object: Runnable, inputs: List[dict]):
+    return await process_runnable(built_object, inputs)
+
+
+async def generate_result(built_object: Union[Chain, VectorStore, Runnable], inputs: Union[dict, List[dict]]):
+    if isinstance(inputs, dict):
+        result = await process_inputs_dict(built_object, inputs)
+    elif isinstance(inputs, List) and isinstance(built_object, Runnable):
+        result = await process_inputs_list(built_object, inputs)
+    else:
+        raise ValueError(f"Invalid inputs type: {type(inputs)}")
+
+    if result is None:
+        logger.warning(f"Unknown built_object type: {type(built_object)}")
+        if isinstance(built_object, Coroutine):
+            result = asyncio.run(built_object)
+        result = built_object
 
     return result
 
@@ -147,7 +206,7 @@ class Result(BaseModel):
 
 async def process_graph_cached(
     data_graph: Dict[str, Any],
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[dict, List[dict]]] = None,
     clear_cache=False,
     session_id=None,
 ) -> Result:
@@ -163,55 +222,12 @@ async def process_graph_cached(
         raise ValueError("Graph not found in the session")
     built_object = await graph.build()
     processed_inputs = process_inputs(inputs, artifacts or {})
-    result = generate_result(built_object, processed_inputs)
+    result = await generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (graph, artifacts))
 
     return Result(result=result, session_id=session_id)
-
-
-def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True):
-    """
-    Load flow from a JSON file or a JSON object.
-
-    :param flow: JSON file path or JSON object
-    :param tweaks: Optional tweaks to be processed
-    :param build: If True, build the graph, otherwise return the graph object
-    :return: Langchain object or Graph object depending on the build parameter
-    """
-    # If input is a file path, load JSON from the file
-    if isinstance(flow, (str, Path)):
-        with open(flow, "r", encoding="utf-8") as f:
-            flow_graph = json.load(f)
-    # If input is a dictionary, assume it's a JSON object
-    elif isinstance(flow, dict):
-        flow_graph = flow
-    else:
-        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
-
-    graph_data = flow_graph["data"]
-    if tweaks is not None:
-        graph_data = process_tweaks(graph_data, tweaks)
-    nodes = graph_data["nodes"]
-    edges = graph_data["edges"]
-    graph = Graph(nodes, edges)
-
-    if build:
-        langchain_object = asyncio.run(graph.build())
-
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            # Deactivating until we have a frontend solution
-            # to display intermediate steps
-            langchain_object.return_intermediate_steps = False
-
-        fix_memory_inputs(langchain_object)
-        return langchain_object
-
-    return graph
 
 
 def validate_input(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -262,4 +278,6 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
         else:
             logger.warning("Each node should be a dictionary with an 'id' key of type str")
 
+    return graph_data
+    return graph_data
     return graph_data
