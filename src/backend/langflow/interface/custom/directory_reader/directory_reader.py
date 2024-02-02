@@ -2,9 +2,8 @@ import ast
 import os
 import zlib
 
-from loguru import logger
-
 from langflow.interface.custom.custom_component import CustomComponent
+from loguru import logger
 
 
 class CustomComponentPathValueError(ValueError):
@@ -248,7 +247,11 @@ class DirectoryReader:
                 component_name_camelcase = component_name
 
             if validation_result:
-                output_types = self.get_output_types_from_code(result_content)
+                try:
+                    output_types = self.get_output_types_from_code(result_content)
+                except Exception as exc:
+                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
 
