@@ -1,10 +1,8 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
-import { Separator } from "../../../../components/ui/separator";
-import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
@@ -13,19 +11,7 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import {
-  nodeColors,
-  nodeIconsLucide,
-  nodeNames,
-} from "../../../../utils/styleUtils";
-import {
-  classNames,
-  cn,
-  removeCountFromString,
-  sensitiveSort,
-} from "../../../../utils/utils";
-import DisclosureComponent from "../DisclosureComponent";
-import SidebarDraggableComponent from "../extraSidebarComponent/sideBarDraggableComponent";
+import { classNames, cn } from "../../../../utils/utils";
 
 export default function Sidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -236,19 +222,65 @@ export default function Sidebar(): JSX.Element {
 
   return (
     <>
-    <div
-      className={cn(
-        "absolute top-0 flex h-full flex-col border-r shadow-lg w-[33vw] bg-muted transition-all duration-500 ease-in-out",
-        sidebarOpen ? "left-0" : "-left-[33vw]"
-      )}
-    >
-        <button className="absolute right-2 top-2 p-2" onClick={() => setSidebarOpen(false)}>
-          <IconComponent name="ChevronLeft" className="h-6 w-6" />
-        </button>
-    </div>
-    <button onClick={() => {setSidebarOpen(true)}} className={cn("absolute top-4 left-4 flex h-12 w-12 items-center justify-center rounded-md bg-muted border px-3 py-1 shadow-md transition-all", !sidebarOpen ? "scale-100 delay-500": "scale-0")}>
-      <IconComponent name="ChevronRight" className="h-6 w-6" />
-    </button>
+      <div
+        className={cn(
+          "absolute top-0 flex h-full w-[33vw] flex-col border-r bg-muted shadow-lg transition-all duration-500 ease-in-out",
+          sidebarOpen ? "left-0" : "-left-[33vw]"
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 p-4">
+          <Button
+            variant="primary"
+            className="p-2 shadow-sm"
+            size="lg"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <IconComponent name="Filter" className="h-5 w-6" />
+          </Button>
+          <div className="relative mx-auto flex w-full items-center">
+            <Input
+              onFocusCapture={() => handleBlur()}
+              value={search}
+              type="text"
+              name="search"
+              id="search"
+              placeholder="Search components, flows or bundles..."
+              className="nopan nodelete nodrag noundo nocopy input-search h-11 px-4"
+              onChange={(event) => {
+                handleSearchInput(event.target.value);
+                // Set search input state
+                setSearch(event.target.value);
+              }}
+            />
+            <div className="right-1 search-icon">
+              <IconComponent
+                name="Search"
+                className={"h-5 w-5 stroke-[1.5] text-primary"}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            className="p-2 shadow-sm"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <IconComponent name="ChevronLeft" className="h-6 w-6" />
+          </Button>
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          setSidebarOpen(true);
+        }}
+        className={cn(
+          "absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-md border bg-muted px-3 py-1 shadow-md transition-all",
+          !sidebarOpen ? "scale-100 delay-500" : "scale-0"
+        )}
+      >
+        <IconComponent name="ChevronRight" className="h-6 w-6" />
+      </button>
     </>
   );
 }

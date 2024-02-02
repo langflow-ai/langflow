@@ -33,6 +33,7 @@ import {
   FileSearch2,
   FileText,
   FileUp,
+  Filter,
   Fingerprint,
   FolderPlus,
   Forward,
@@ -378,6 +379,7 @@ export const nodeIconsLucide: iconsType = {
   Link,
   ToyBrick,
   RefreshCcw,
+  Filter,
   Combine,
   TerminalIcon,
 };
