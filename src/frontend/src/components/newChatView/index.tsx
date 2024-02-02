@@ -43,7 +43,6 @@ export default function newChatView(): JSX.Element {
   useEffect(() => {
     const chatOutputResponses: FlowPoolObjectType[] = [];
     outputIds.forEach((outputId) => {
-      console.log("rodou", flowPool[outputId]);
       if (outputId.includes("ChatOutput")) {
         if (flowPool[outputId] && flowPool[outputId].length > 0) {
           chatOutputResponses.push(...flowPool[outputId]);
