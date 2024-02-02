@@ -1,10 +1,9 @@
-import _ from "lodash";
+import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
   Node,
   OnSelectionChangeParams,
-  ReactFlowInstance,
   ReactFlowJsonObject,
   XYPosition,
 } from "reactflow";
@@ -13,7 +12,14 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   specialCharsRegex,
 } from "../constants/constants";
-import { APITemplateType, TemplateVariableType } from "../types/api";
+import { downloadFlowsFromDatabase } from "../controllers/API";
+import {
+  APIClassType,
+  APIKindType,
+  APIObjectType,
+  APITemplateType,
+  TemplateVariableType,
+} from "../types/api";
 import {
   FlowType,
   NodeDataType,
@@ -22,19 +28,22 @@ import {
   targetHandleType,
 } from "../types/flow";
 import {
-  cleanEdgesType,
   findLastNodeType,
   generateFlowType,
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { getFieldTitle, toTitleCase } from "./utils";
+import {
+  createRandomKey,
+  getFieldTitle,
+  getRandomDescription,
+  getRandomName,
+  toTitleCase,
+} from "./utils";
+const uid = new ShortUniqueId({ length: 5 });
 
-export function cleanEdges({
-  flow: { edges, nodes },
-  updateEdge,
-}: cleanEdgesType) {
-  let newEdges = _.cloneDeep(edges);
+export function cleanEdges(nodes: Node[], edges: Edge[]) {
+  let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -73,11 +82,11 @@ export function cleanEdges({
       }
     }
   });
-  updateEdge(newEdges);
+  return newEdges;
 }
 
 export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
-  let newNodes = _.cloneDeep(data);
+  let newNodes = cloneDeep(data);
   newNodes.forEach((node: Node) => {
     node.selected = false;
   });
@@ -86,7 +95,8 @@ export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  reactFlowInstance: ReactFlowInstance
+  nodes: Node[],
+  edges: Edge[]
 ) {
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
@@ -100,20 +110,14 @@ export function isValidConnection(
         t === targetHandleObject.type
     )
   ) {
-    let targetNode = reactFlowInstance?.getNode(target!)?.data?.node;
+    let targetNode = nodes.find((node) => node.id === target!)?.data?.node;
     if (!targetNode) {
-      if (
-        !reactFlowInstance
-          .getEdges()
-          .find((e) => e.targetHandle === targetHandle)
-      ) {
+      if (!edges.find((e) => e.targetHandle === targetHandle)) {
         return true;
       }
     } else if (
       (!targetNode.template[targetHandleObject.fieldName].list &&
-        !reactFlowInstance
-          .getEdges()
-          .find((e) => e.targetHandle === targetHandle)) ||
+        !edges.find((e) => e.targetHandle === targetHandle)) ||
       targetNode.template[targetHandleObject.fieldName].list
     ) {
       return true;
@@ -123,7 +127,7 @@ export function isValidConnection(
 }
 
 export function removeApiKeys(flow: FlowType): FlowType {
-  let cleanFLow = _.cloneDeep(flow);
+  let cleanFLow = cloneDeep(flow);
   cleanFLow.data!.nodes.forEach((node) => {
     for (const key in node.data.node.template) {
       if (node.data.node.template[key].password) {
@@ -138,7 +142,7 @@ export function updateTemplate(
   reference: APITemplateType,
   objectToUpdate: APITemplateType
 ): APITemplateType {
-  let clonedObject: APITemplateType = _.cloneDeep(reference);
+  let clonedObject: APITemplateType = cloneDeep(reference);
 
   // Loop through each key in the reference object
   for (const key in clonedObject) {
@@ -157,10 +161,44 @@ export function updateTemplate(
   return clonedObject;
 }
 
-export function updateIds(
-  newFlow: ReactFlowJsonObject,
-  getNodeId: (type: string) => string
-) {
+export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
+  let savedComponents: { [key: string]: APIClassType } = {};
+  DbData.forEach((flow: FlowType) => {
+    try {
+      if (!flow.data) {
+        return;
+      }
+      if (flow.data && flow.is_component) {
+        (flow.data.nodes[0].data as NodeDataType).node!.display_name =
+          flow.name;
+        savedComponents[
+          createRandomKey((flow.data.nodes[0].data as NodeDataType).type, uid())
+        ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
+        return;
+      }
+      if (!skipUpdate) processDataFromFlow(flow, false);
+    } catch (e) {
+      console.log(e);
+    }
+  });
+  return { data: savedComponents, flows: DbData };
+};
+
+export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
+  let data = flow?.data ? flow.data : null;
+  if (data) {
+    processFlowEdges(flow);
+    //prevent node update for now
+    // processFlowNodes(flow);
+    //add animation to text type edges
+    updateEdges(data.edges);
+    // updateNodes(data.nodes, data.edges);
+    if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
+  }
+  return data;
+};
+
+export function updateIds(newFlow: ReactFlowJsonObject) {
   let idsMap = {};
 
   if (newFlow.nodes)
@@ -278,6 +316,20 @@ export function validateNodes(nodes: Node[], edges: Edge[]) {
   return nodes.flatMap((n: NodeType) => validateNode(n, edges));
 }
 
+export function updateEdges(edges: Edge[]) {
+  if (edges)
+    edges.forEach((edge) => {
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!
+      );
+      edge.className =
+        (targetHandleObject.type === "Text"
+          ? "stroke-gray-800 "
+          : "stroke-gray-900 ") + " stroke-connection";
+      edge.animated = targetHandleObject.type === "Text";
+    });
+}
+
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
   const existingNames = flows.map((item) => item.name);
   let newName = flow.name;
@@ -295,7 +347,7 @@ export function updateEdgesHandleIds({
   edges,
   nodes,
 }: updateEdgesHandleIdsType): Edge[] {
-  let newEdges = _.cloneDeep(edges);
+  let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
     const targetNodeId = edge.target;
@@ -363,6 +415,21 @@ export function handleKeyDown(
   }
 }
 
+export function handleOnlyIntegerInput(
+  event: React.KeyboardEvent<HTMLInputElement>
+) {
+  if (
+    event.key === "." ||
+    event.key === "-" ||
+    event.key === "," ||
+    event.key === "e" ||
+    event.key === "E" ||
+    event.key === "+"
+  ) {
+    event.preventDefault();
+  }
+}
+
 export function getConnectedNodes(
   edge: Edge,
   nodes: Array<NodeType>
@@ -407,6 +474,8 @@ export function convertArrayToObj(arrayOfObjects) {
 
 export function hasDuplicateKeys(array) {
   const keys = {};
+  // Transforms an empty object into an object array without opening the 'editNode' modal to prevent the flow build from breaking.
+  if (!Array.isArray(array)) array = [{ "": "" }];
   for (const obj of array) {
     for (const key in obj) {
       if (keys[key]) {
@@ -419,6 +488,8 @@ export function hasDuplicateKeys(array) {
 }
 
 export function hasEmptyKey(objArray) {
+  // Transforms an empty object into an array without opening the 'editNode' modal to prevent the flow build from breaking.
+  if (!Array.isArray(objArray)) objArray = [];
   for (const obj of objArray) {
     for (const key in obj) {
       if (obj.hasOwnProperty(key) && key === "") {
@@ -505,12 +576,28 @@ export function getMiddlePoint(nodes: Node[]) {
   return { x: averageX, y: averageY };
 }
 
+export function getNodeId(nodeType: string) {
+  return nodeType + "-" + uid();
+}
+
+export function getHandleId(
+  source: string,
+  sourceHandle: string,
+  target: string,
+  targetHandle: string
+) {
+  return (
+    "reactflow__edge-" + source + sourceHandle + "-" + target + targetHandle
+  );
+}
+
 export function generateFlow(
   selection: OnSelectionChangeParams,
-  reactFlowInstance: ReactFlowInstance,
+  nodes: Node[],
+  edges: Edge[],
   name: string
 ): generateFlowType {
-  const newFlowData = reactFlowInstance.toObject();
+  const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
   const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
 		in future we can save this edges to when ungrouping reconect to the old nodes
@@ -543,14 +630,11 @@ export function generateFlow(
 
 export function filterFlow(
   selection: OnSelectionChangeParams,
-  reactFlowInstance: ReactFlowInstance
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
-  reactFlowInstance.setNodes((nodes) =>
-    nodes.filter((node) => !selection.nodes.includes(node))
-  );
-  reactFlowInstance.setEdges((edges) =>
-    edges.filter((edge) => !selection.edges.includes(edge))
-  );
+  setNodes((nodes) => nodes.filter((node) => !selection.nodes.includes(node)));
+  setEdges((edges) => edges.filter((edge) => !selection.edges.includes(edge)));
 }
 
 export function findLastNode({ nodes, edges }: findLastNodeType) {
@@ -567,19 +651,29 @@ export function updateFlowPosition(NewPosition: XYPosition, flow: FlowType) {
     x: NewPosition.x - middlePoint.x,
     y: NewPosition.y - middlePoint.y,
   };
-  flow.data!.nodes.forEach((node) => {
-    node.position.x += deltaPosition.x;
-    node.position.y += deltaPosition.y;
-  });
+  return {
+    ...flow,
+    data: {
+      ...flow.data!,
+      nodes: flow.data!.nodes.map((node) => ({
+        ...node,
+        position: {
+          x: node.position.x + deltaPosition.x,
+          y: node.position.y + deltaPosition.y,
+        },
+      })),
+    },
+  };
 }
 
 export function concatFlows(
   flow: FlowType,
-  ReactFlowInstance: ReactFlowInstance
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
   const { nodes, edges } = flow.data!;
-  ReactFlowInstance.addNodes(nodes);
-  ReactFlowInstance.addEdges(edges);
+  setNodes((old) => [...old, ...nodes]);
+  setEdges((old) => [...old, ...edges]);
 }
 
 export function validateSelection(
@@ -661,7 +755,7 @@ export function mergeNodeTemplates({
 	*/
   let template: APITemplateType = {};
   nodes.forEach((node) => {
-    let nodeTemplate = _.cloneDeep(node.data.node!.template);
+    let nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
       .forEach((key) => {
@@ -746,9 +840,9 @@ export function generateNodeFromFlow(
   getNodeId: (type: string) => string
 ): NodeType {
   const { nodes } = flow.data!;
-  const outputNode = _.cloneDeep(findLastNode(flow.data!));
+  const outputNode = cloneDeep(findLastNode(flow.data!));
   const position = getMiddlePoint(nodes);
-  let data = _.cloneDeep(flow);
+  let data = cloneDeep(flow);
   const id = getNodeId(outputNode?.data.type!);
   const newGroupNode: NodeType = {
     data: {
@@ -809,94 +903,6 @@ export function connectedInputNodesOnHandle(
   return connectedNodes;
 }
 
-export function ungroupNode(
-  groupNode: NodeDataType,
-  BaseFlow: ReactFlowJsonObject
-) {
-  const { template, flow } = groupNode.node!;
-  const gNodes: NodeType[] = flow!.data!.nodes;
-  const gEdges = flow!.data!.edges;
-  //redirect edges to correct proxy node
-  let updatedEdges: Edge[] = [];
-  BaseFlow.edges.forEach((edge) => {
-    let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === groupNode.id) {
-      const targetHandle: targetHandleType = newEdge.data.targetHandle;
-      if (targetHandle.proxy) {
-        let type = targetHandle.type;
-        let field = targetHandle.proxy.field;
-        let proxyId = targetHandle.proxy.id;
-        let inputTypes = targetHandle.inputTypes;
-        let node: NodeType = gNodes.find((n) => n.id === proxyId)!;
-        if (node) {
-          newEdge.target = proxyId;
-          let newTargetHandle: targetHandleType = {
-            fieldName: field,
-            type,
-            id: proxyId,
-            inputTypes: inputTypes,
-          };
-          if (node.data.node?.flow) {
-            newTargetHandle.proxy = {
-              field: node.data.node.template[field].proxy?.field!,
-              id: node.data.node.template[field].proxy?.id!,
-            };
-          }
-          newEdge.data.targetHandle = newTargetHandle;
-          newEdge.targetHandle = scapedJSONStringfy(newTargetHandle);
-        }
-      }
-    }
-    if (newEdge.source === groupNode.id) {
-      const lastNode = _.cloneDeep(findLastNode(flow!.data!));
-      newEdge.source = lastNode!.id;
-      let newSourceHandle: sourceHandleType = scapeJSONParse(
-        newEdge.sourceHandle!
-      );
-      newSourceHandle.id = lastNode!.id;
-      newEdge.data.sourceHandle = newSourceHandle;
-      newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-    }
-    if (edge.target === groupNode.id || edge.source === groupNode.id) {
-      updatedEdges.push(newEdge);
-    }
-  });
-  //update template values
-  Object.keys(template).forEach((key) => {
-    let { field, id } = template[key].proxy!;
-    let nodeIndex = gNodes.findIndex((n) => n.id === id);
-    if (nodeIndex !== -1) {
-      let display_name: string | undefined;
-      let show = gNodes[nodeIndex].data.node!.template[field].show;
-      let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
-      if (gNodes[nodeIndex].data.node!.template[field].display_name) {
-        display_name =
-          gNodes[nodeIndex].data.node!.template[field].display_name;
-      } else {
-        display_name = gNodes[nodeIndex].data.node!.template[field].name;
-      }
-      gNodes[nodeIndex].data.node!.template[field] = template[key];
-      gNodes[nodeIndex].data.node!.template[field].show = show;
-      gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
-      gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-    }
-  });
-
-  const nodes = [
-    ...BaseFlow.nodes.filter((n) => n.id !== groupNode.id),
-    ...gNodes,
-  ];
-  const edges = [
-    ...BaseFlow.edges.filter(
-      (e) => e.target !== groupNode.id && e.source !== groupNode.id
-    ),
-    ...gEdges,
-    ...updatedEdges,
-  ];
-  BaseFlow.nodes = nodes;
-  BaseFlow.edges = edges;
-}
-
 function updateProxyIdsOnTemplate(
   template: APITemplateType,
   idsMap: { [key: string]: string }
@@ -919,23 +925,39 @@ function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
   });
 }
 
+export function processFlowEdges(flow: FlowType) {
+  if (!flow.data || !flow.data.edges) return;
+  if (checkOldEdgesHandles(flow.data.edges)) {
+    const newEdges = updateEdgesHandleIds(flow.data);
+    flow.data.edges = newEdges;
+  }
+  //update edges colors
+  flow.data.edges.forEach((edge) => {
+    edge.className = "";
+    edge.style = { stroke: "#555" };
+  });
+}
+
 export function expandGroupNode(
-  groupNode: NodeDataType,
-  ReactFlowInstance: ReactFlowInstance,
-  getNodeId: (type: string) => string
+  id: string,
+  flow: FlowType,
+  template: APITemplateType,
+  nodes: Node[],
+  edges: Edge[],
+  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
+  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void
 ) {
-  const { template, flow } = _.cloneDeep(groupNode.node!);
-  const idsMap = updateIds(flow!.data!, getNodeId);
+  const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
-  let flowEdges = ReactFlowInstance.getEdges();
+  let flowEdges = edges;
   updateEdgesIds(flowEdges, idsMap);
-  const gNodes: NodeType[] = flow?.data?.nodes!;
-  const gEdges = flow!.data!.edges;
+  const gNodes: NodeType[] = cloneDeep(flow?.data?.nodes!);
+  const gEdges = cloneDeep(flow!.data!.edges);
   //redirect edges to correct proxy node
   let updatedEdges: Edge[] = [];
   flowEdges.forEach((edge) => {
-    let newEdge = _.cloneDeep(edge);
-    if (newEdge.target === groupNode.id) {
+    let newEdge = cloneDeep(edge);
+    if (newEdge.target === id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
       if (targetHandle.proxy) {
         let type = targetHandle.type;
@@ -962,8 +984,8 @@ export function expandGroupNode(
         }
       }
     }
-    if (newEdge.source === groupNode.id) {
-      const lastNode = _.cloneDeep(findLastNode(flow!.data!));
+    if (newEdge.source === id) {
+      const lastNode = cloneDeep(findLastNode(flow!.data!));
       newEdge.source = lastNode!.id;
       let newSourceHandle: sourceHandleType = scapeJSONParse(
         newEdge.sourceHandle!
@@ -972,7 +994,7 @@ export function expandGroupNode(
       newEdge.data.sourceHandle = newSourceHandle;
       newEdge.sourceHandle = scapedJSONStringfy(newSourceHandle);
     }
-    if (edge.target === groupNode.id || edge.source === groupNode.id) {
+    if (edge.target === id || edge.source === id) {
       updatedEdges.push(newEdge);
     }
   });
@@ -1008,30 +1030,14 @@ export function expandGroupNode(
     }
   });
 
-  const nodes = [
-    ...ReactFlowInstance.getNodes().filter((n) => n.id !== groupNode.id),
-    ...gNodes,
-  ];
-  const edges = [
-    ...ReactFlowInstance.getEdges().filter(
-      (e) => e.target !== groupNode.id && e.source !== groupNode.id
-    ),
+  const filteredNodes = [...nodes.filter((n) => n.id !== id), ...gNodes];
+  const filteredEdges = [
+    ...edges.filter((e) => e.target !== id && e.source !== id),
     ...gEdges,
     ...updatedEdges,
   ];
-  ReactFlowInstance.setNodes(nodes);
-  ReactFlowInstance.setEdges(edges);
-}
-
-export function processFlow(FlowObject: ReactFlowJsonObject) {
-  let clonedFLow = _.cloneDeep(FlowObject);
-  clonedFLow.nodes.forEach((node: NodeType) => {
-    if (node.data.node?.flow) {
-      processFlow(node.data.node!.flow!.data!);
-      ungroupNode(node.data, clonedFLow);
-    }
-  });
-  return clonedFLow;
+  setNodes(filteredNodes);
+  setEdges(filteredEdges);
 }
 
 export function getGroupStatus(
@@ -1057,13 +1063,12 @@ export function createFlowComponent(
   nodeData: NodeDataType,
   version: string
 ): FlowType {
-  nodeData.node!.official = false;
   const flowNode: FlowType = {
     data: {
       edges: [],
       nodes: [
         {
-          data: nodeData,
+          data: { ...nodeData, node: { ...nodeData.node, official: false } },
           id: nodeData.id,
           position: { x: 0, y: 0 },
           type: "genericNode",
@@ -1107,3 +1112,82 @@ export function removeFileNameFromComponents(flow: FlowType) {
     }
   });
 }
+
+export function typesGenerator(data: APIObjectType) {
+  return Object.keys(data)
+    .reverse()
+    .reduce((acc, curr) => {
+      Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+        acc[c] = curr;
+        // Add the base classes to the accumulator as well.
+        data[curr][c].base_classes?.forEach((b) => {
+          acc[b] = curr;
+        });
+      });
+      return acc;
+    }, {});
+}
+
+export function templatesGenerator(data: APIObjectType) {
+  return Object.keys(data).reduce((acc, curr) => {
+    Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
+      //prevent wrong overwriting of the component template by a group of the same type
+      if (!data[curr][c].flow) acc[c] = data[curr][c];
+    });
+    return acc;
+  }, {});
+}
+
+export function downloadFlow(
+  flow: FlowType,
+  flowName: string,
+  flowDescription?: string
+) {
+  let clonedFlow = cloneDeep(flow);
+  removeFileNameFromComponents(clonedFlow);
+  // create a data URI with the current flow data
+  const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+    JSON.stringify({
+      ...clonedFlow,
+      name: flowName,
+      description: flowDescription,
+    })
+  )}`;
+
+  // create a link element and set its properties
+  const link = document.createElement("a");
+  link.href = jsonString;
+  link.download = `${flowName && flowName != "" ? flowName : flow.name}.json`;
+
+  // simulate a click on the link element to trigger the download
+  link.click();
+}
+
+export function downloadFlows() {
+  downloadFlowsFromDatabase().then((flows) => {
+    const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+      JSON.stringify(flows)
+    )}`;
+
+    // create a link element and set its properties
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `flows.json`;
+
+    // simulate a click on the link element to trigger the download
+    link.click();
+  });
+}
+
+export const createNewFlow = (
+  flowData: ReactFlowJsonObject,
+  flow: FlowType
+) => {
+  return {
+    description: flow?.description ?? getRandomDescription(),
+    name: flow?.name ?? getRandomName(),
+    data: flowData,
+    id: "",
+    is_component: flow?.is_component ?? false,
+  };
+};

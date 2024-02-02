@@ -1,14 +1,12 @@
 from typing import Any, ClassVar, Dict, List, Optional, Type
 
-from langchain import retrievers
-
+from langchain_community import retrievers
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.services.deps import get_settings_service
-
 from langflow.template.frontend_node.retrievers import RetrieverFrontendNode
+from langflow.utils.util import build_template_from_class, build_template_from_method
 from loguru import logger
-from langflow.utils.util import build_template_from_method, build_template_from_class
 
 
 class RetrieverCreator(LangChainTypeCreator):
@@ -27,7 +25,7 @@ class RetrieverCreator(LangChainTypeCreator):
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
             self.type_dict: dict[str, Any] = {
-                retriever_name: import_class(f"langchain.retrievers.{retriever_name}")
+                retriever_name: import_class(f"langchain_community.retrievers.{retriever_name}")
                 for retriever_name in retrievers.__all__
             }
         return self.type_dict

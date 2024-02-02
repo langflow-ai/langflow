@@ -3,7 +3,7 @@ from typing import List, Optional
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import _get_default_system_message
 from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.memory.token_buffer import ConversationTokenBufferMemory
 from langchain.prompts import SystemMessagePromptTemplate
 from langchain.prompts.chat import MessagesPlaceholder

@@ -1,7 +1,9 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.text_splitter import Language
-from langchain.schema import Document
+from langchain_core.documents import Document
+
+from langflow import CustomComponent
 
 
 class LanguageRecursiveTextSplitterComponent(CustomComponent):
@@ -48,7 +50,7 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
         documents: list[Document],
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
-        separator_type: Optional[str] = "Python",
+        separator_type: str = "Python",
     ) -> list[Document]:
         """
         Split text into chunks of a specified length.
