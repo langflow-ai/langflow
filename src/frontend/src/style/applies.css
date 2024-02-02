@@ -275,9 +275,6 @@
   .generic-node-icon {
     @apply h-10 w-10 rounded p-1;
   }
-  .generic-node-tooltip-div {
-    @apply ml-2 truncate;
-  }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
   }

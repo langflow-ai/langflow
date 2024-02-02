@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TagsSelector } from "../../../../components/tagsSelectorComponent";
+import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
 import ExportModal from "../../../../modals/exportModal";
@@ -15,7 +16,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { nodeColors } from "../../../../utils/styleUtils";
 import { classNames, cn } from "../../../../utils/utils";
-import { Badge } from "../../../../components/ui/badge";
 
 export default function Sidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -338,19 +338,23 @@ export default function Sidebar(): JSX.Element {
             />
           </div>
           <div className="columns-2 gap-2 p-4">
-            <div className="flex flex-col overflow-hidden rounded-lg border bg-background">
-              <div className={"flex-max-width items-center truncate p-2"}>
+            <div className="flex h-40 flex-col overflow-hidden rounded-lg border bg-background">
+              <div
+                className={
+                  "flex-max-width flex-shrink-0 items-center truncate p-2"
+                }
+              >
                 <IconComponent
                   name={"group_components"}
                   className={"generic-node-icon "}
                   iconColor={`${nodeColors["chains"]}`}
                 />
-                <div className="generic-node-tooltip-div">
+                <div className="truncate">
                   <ShadTooltip content={"My Component"}>
                     <div className="flex" onDoubleClick={() => {}}>
                       <div
                         data-testid={"title-" + "My Component"}
-                        className="generic-node-tooltip-div pr-2 text-primary"
+                        className="ml-2 truncate pr-2 text-primary"
                       >
                         My Component
                       </div>
@@ -358,29 +362,63 @@ export default function Sidebar(): JSX.Element {
                   </ShadTooltip>
                 </div>
               </div>
-              <div className="text-muted-foreground px-4 pb-4 text-sm">
+              <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                 The description will tell the user what to do or why use it.
               </div>
-              <div className="flex w-full flex-1 flex-wrap gap-2 px-4 pb-4">
-                  <Badge
-                    variant="gray"
-                    size="xq"
-                  >
-                    Vector Store
-                  </Badge>
-                  <Badge
-                    variant="gray"
-                    size="xq"
-                  >
-                    OpenAI
-                  </Badge>
-                  <Badge
-                    variant="gray"
-                    size="xq"
-                  >
-                    Chain
-                  </Badge>
+              <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
+                <Badge variant="gray" size="xq">
+                  Vector Store
+                </Badge>
+                <Badge variant="gray" size="xq">
+                  OpenAI
+                </Badge>
+                <Badge variant="gray" size="xq">
+                  Chain
+                </Badge>
+              </div>
             </div>
+            <div className="flex h-40 flex-col overflow-hidden rounded-lg border bg-background">
+              <div
+                className={
+                  "flex-max-width flex-shrink-0 items-center truncate p-2"
+                }
+              >
+                <IconComponent
+                  className={cn("generic-node-icon text-flow-icon")}
+                  name={"Group"}
+                />
+                <div className="truncate">
+                  <ShadTooltip content={"My Flow"}>
+                    <div className="flex" onDoubleClick={() => {}}>
+                      <div
+                        data-testid={"title-" + "My Flow"}
+                        className="ml-2 truncate pr-2 text-primary"
+                      >
+                        My Flow
+                      </div>
+                    </div>
+                  </ShadTooltip>
+                </div>
+              </div>
+              <div className="h-full px-4 text-sm text-muted-foreground">
+                This, on the other hand, is a flow, and a person can just open
+                it.
+              </div>
+              <div className="align-center flex flex-shrink-0 justify-end px-4 pb-4">
+                <Button
+                  tabIndex={-1}
+                  variant="outline"
+                  size="sm"
+                  className="whitespace-nowrap "
+                  data-testid={"edit-flow-button-"}
+                >
+                  <IconComponent
+                    name="ExternalLink"
+                    className="main-page-nav-button select-none"
+                  />
+                  Edit Flow
+                </Button>
+              </div>
             </div>
           </div>
         </div>
