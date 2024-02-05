@@ -1,17 +1,15 @@
-import { useContext, useEffect, useState } from "react";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { useEffect, useState } from "react";
+import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
-import { useSSE } from "../../contexts/SSEContext";
-import { alertContext } from "../../contexts/alertContext";
-import { FlowsContext } from "../../contexts/flowsContext";
-import { typesContext } from "../../contexts/typesContext";
-import { undoRedoContext } from "../../contexts/undoRedoContext";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useTypesStore } from "../../stores/typesStore";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -30,11 +28,9 @@ export default function GenericNode({
   xPos: number;
   yPos: number;
 }): JSX.Element {
-  const { updateFlow, flows, tabId, saveCurrentFlow } =
-    useContext(FlowsContext);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const { types, deleteNode, reactFlowInstance, setFilterEdge, getFilterEdge } =
-    useContext(typesContext);
+  const types = useTypesStore((state) => state.types);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
+  const setNode = useFlowStore((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -44,14 +40,12 @@ export default function GenericNode({
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
-  const [handles, setHandles] = useState<boolean[] | []>([]);
-  let numberOfInputs: boolean[] = [];
-  const { modalContextOpen } = useContext(alertContext);
+  const [handles, setHandles] = useState<number>(0);
 
-  const { takeSnapshot } = useContext(undoRedoContext);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   function countHandles(): void {
-    numberOfInputs = Object.keys(data.node!.template)
+    let count = Object.keys(data.node!.template)
       .filter((templateField) => templateField.charAt(0) !== "_")
       .map((templateCamp) => {
         const { template } = data.node!;
@@ -59,32 +53,36 @@ export default function GenericNode({
         if (!template[templateCamp].show) return false;
         switch (template[templateCamp].type) {
           case "str":
-            return false;
           case "bool":
-            return false;
           case "float":
-            return false;
           case "code":
-            return false;
           case "prompt":
-            return false;
           case "file":
-            return false;
           case "int":
             return false;
           default:
             return true;
         }
-      });
-    setHandles(numberOfInputs);
+      })
+      .reduce((total, value) => total + (value ? 1 : 0), 0);
+
+    setHandles(count);
   }
 
   useEffect(() => {
     countHandles();
   }, [data, data.node]);
 
+  useEffect(() => {
+    if (!selected) {
+      setInputName(false);
+      setInputDescription(false);
+    }
+  }, [selected]);
+
   // State for outline color
-  const { sseData, isBuilding } = useSSE();
+  const sseData = useFlowStore((state) => state.sseData);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);
@@ -118,10 +116,12 @@ export default function GenericNode({
           deleteNode={(id) => {
             takeSnapshot();
             deleteNode(id);
-            saveCurrentFlow();
           }}
           setShowNode={(show: boolean) => {
-            data.showNode = show;
+            setNode(data.id, (old) => ({
+              ...old,
+              data: { ...old.data, showNode: show },
+            }));
           }}
           numberOfHandles={handles}
           showNode={showNode}
@@ -173,8 +173,16 @@ export default function GenericNode({
                           setInputName(false);
                           if (nodeName.trim() !== "") {
                             setNodeName(nodeName);
-                            data.node!.display_name = nodeName;
-                            updateNodeInternals(data.id);
+                            setNode(data.id, (old) => ({
+                              ...old,
+                              data: {
+                                ...old.data,
+                                node: {
+                                  ...old.data.node,
+                                  display_name: nodeName,
+                                },
+                              },
+                            }));
                           } else {
                             setNodeName(data.node!.display_name);
                           }
@@ -380,8 +388,16 @@ export default function GenericNode({
                   onBlur={() => {
                     setInputDescription(false);
                     setNodeDescription(nodeDescription);
-                    data.node!.description = nodeDescription;
-                    updateNodeInternals(data.id);
+                    setNode(data.id, (old) => ({
+                      ...old,
+                      data: {
+                        ...old.data,
+                        node: {
+                          ...old.data.node,
+                          description: nodeDescription,
+                        },
+                      },
+                    }));
                   }}
                   value={nodeDescription}
                   onChange={(e) => setNodeDescription(e.target.value)}
@@ -395,8 +411,16 @@ export default function GenericNode({
                     ) {
                       setInputDescription(false);
                       setNodeDescription(nodeDescription);
-                      data.node!.description = nodeDescription;
-                      updateNodeInternals(data.id);
+                      setNode(data.id, (old) => ({
+                        ...old,
+                        data: {
+                          ...old.data,
+                          node: {
+                            ...old.data.node,
+                            description: nodeDescription,
+                          },
+                        },
+                      }));
                     }
                   }}
                 />

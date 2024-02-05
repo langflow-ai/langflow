@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain.chat_models.anthropic import ChatAnthropic
+from langchain_community.chat_models.anthropic import ChatAnthropic
 from langchain.llms.base import BaseLanguageModel
 from pydantic.v1 import SecretStr
 

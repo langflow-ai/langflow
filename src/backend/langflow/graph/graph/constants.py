@@ -12,7 +12,6 @@ from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
-from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
@@ -46,7 +45,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.LLMVertex for t in llm_creator.to_list()},
             **{t: types.MemoryVertex for t in memory_creator.to_list()},
             **{t: types.EmbeddingVertex for t in embedding_creator.to_list()},
-            **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
+            # **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
             **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
             **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
             **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},

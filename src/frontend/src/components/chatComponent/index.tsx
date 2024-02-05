@@ -1,20 +1,19 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNodes } from "reactflow";
 import { ChatType } from "../../types/chat";
 import BuildTrigger from "./buildTrigger";
 import ChatTrigger from "./chatTrigger";
 
 import * as _ from "lodash";
-import { FlowsContext } from "../../contexts/flowsContext";
-import { getBuildStatus } from "../../controllers/API";
 import FormModal from "../../modals/formModal";
+import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
 
 export default function Chat({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [canOpen, setCanOpen] = useState(false);
-  const { tabsState, isBuilt, setIsBuilt } = useContext(FlowsContext);
-
+  const isBuilt = useFlowStore((state) => state.isBuilt);
+  const setIsBuilt = useFlowStore((state) => state.setIsBuilt);
+  const flowState = useFlowStore((state) => state.flowState);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -32,17 +31,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     };
   }, [isBuilt]);
 
-  useEffect(() => {
-    // Define an async function within the useEffect hook
-    const fetchBuildStatus = async () => {
-      const response = await getBuildStatus(flow.id);
-      setIsBuilt(response.data.built);
-    };
-
-    // Call the async function
-    fetchBuildStatus();
-  }, [flow]);
-
   const prevNodesRef = useRef<any[] | undefined>();
   const nodes: NodeType[] = useNodes();
   useEffect(() => {
@@ -50,27 +38,11 @@ export default function Chat({ flow }: ChatType): JSX.Element {
     const currentNodes = nodes.map((node: NodeType) =>
       _.cloneDeep(node.data.node?.template)
     );
-    if (
-      tabsState &&
-      tabsState[flow.id] &&
-      tabsState[flow.id].isPending &&
-      JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)
-    ) {
+    if (JSON.stringify(prevNodes) !== JSON.stringify(currentNodes)) {
       setIsBuilt(false);
     }
-    if (
-      tabsState &&
-      tabsState[flow.id] &&
-      tabsState[flow.id].formKeysData &&
-      tabsState[flow.id].formKeysData.input_keys !== null
-    ) {
-      setCanOpen(true);
-    } else {
-      setCanOpen(false);
-    }
-
     prevNodesRef.current = currentNodes;
-  }, [tabsState, flow.id]);
+  }, [flowState, flow.id]);
 
   return (
     <>
@@ -81,19 +53,11 @@ export default function Chat({ flow }: ChatType): JSX.Element {
           setIsBuilt={setIsBuilt}
           isBuilt={isBuilt}
         />
-        {isBuilt &&
-          tabsState[flow.id] &&
-          tabsState[flow.id].formKeysData &&
-          canOpen && (
-            <FormModal
-              key={flow.id}
-              flow={flow}
-              open={open}
-              setOpen={setOpen}
-            />
-          )}
+        {isBuilt && flowState && !!flowState?.input_keys && (
+          <FormModal key={flow.id} flow={flow} open={open} setOpen={setOpen} />
+        )}
         <ChatTrigger
-          canOpen={canOpen}
+          canOpen={!!flowState?.input_keys}
           open={open}
           setOpen={setOpen}
           isBuilt={isBuilt}
