@@ -850,3 +850,48 @@ export async function requestLogout() {
     throw error;
   }
 }
+
+export async function getGlobalVariables() {
+  // mocked for now but will eventually be a real API call
+  const globalVariables = window.sessionStorage.getItem("globalVariables");
+  return globalVariables ? JSON.parse(globalVariables) : {};
+}
+
+export async function registerGlobalVariable(name: string, value: string) {
+  // mocked for now but will eventually be a real API call
+  const globalVariables = window.sessionStorage.getItem("globalVariables");
+  const parsedGlobalVariables = globalVariables
+    ? JSON.parse(globalVariables)
+    : {};
+  parsedGlobalVariables[name] = value;
+  window.sessionStorage.setItem(
+    "globalVariables",
+    JSON.stringify(parsedGlobalVariables)
+  );
+}
+
+export async function deleteGlobalVariable(name: string) {
+  // mocked for now but will eventually be a real API call
+  const globalVariables = window.sessionStorage.getItem("globalVariables");
+  const parsedGlobalVariables = globalVariables
+    ? JSON.parse(globalVariables)
+    : {};
+  delete parsedGlobalVariables[name];
+  window.sessionStorage.setItem(
+    "globalVariables",
+    JSON.stringify(parsedGlobalVariables)
+  );
+}
+
+export async function updateGlobalVariable(name: string, value: string) {
+  // mocked for now but will eventually be a real API call
+  const globalVariables = window.sessionStorage.getItem("globalVariables");
+  const parsedGlobalVariables = globalVariables
+    ? JSON.parse(globalVariables)
+    : {};
+  parsedGlobalVariables[name] = value;
+  window.sessionStorage.setItem(
+    "globalVariables",
+    JSON.stringify(parsedGlobalVariables)
+  );
+}
