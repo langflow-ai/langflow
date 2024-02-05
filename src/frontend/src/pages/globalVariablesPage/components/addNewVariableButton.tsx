@@ -5,14 +5,20 @@ import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
 import { registerGlobalVariable } from "../../../controllers/API";
 import BaseModal from "../../../modals/baseModal";
+import { useGlobalVariablesStore } from "../../../stores/globalVariables";
 
 //TODO IMPLEMENT FORM LOGIC
 
 export default function AddNewVariableButton(): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
+  const addGlobalVariable = useGlobalVariablesStore(
+    (state) => state.addGlobalVariable
+  );
   function handleSaveVariable() {
-    registerGlobalVariable(key, value).then((_) => {});
+    registerGlobalVariable(key, value).then((_) => {
+      addGlobalVariable(key, value);
+    });
   }
   return (
     <BaseModal size="small">

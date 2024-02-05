@@ -7,7 +7,6 @@ import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 
-
 export default function InputComponent({
   autoFocus = false,
   onBlur,
@@ -27,8 +26,13 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const [filteredOpts, setFilteredValue] = useState<string[]>(["key", "key2", "key3", "key4", "key5"]);
-
+  const [filteredOpts, setFilteredValue] = useState<string[]>([
+    "key",
+    "key2",
+    "key3",
+    "key4",
+    "key5",
+  ]);
 
   // Clear component state
   useEffect(() => {
@@ -37,15 +41,14 @@ export default function InputComponent({
     }
   }, [disabled]);
 
-
-  const filteredOptions = filteredOpts.filter((option) => option.toLowerCase().includes(value.toLowerCase()))
-
+  const filteredOptions = filteredOpts.filter((option) =>
+    option.toLowerCase().includes(value.toLowerCase())
+  );
 
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
     setShowOptions(false);
   }
-
 
   return (
     <div className="relative w-full">
@@ -136,59 +139,54 @@ export default function InputComponent({
                           false ? "mb-2 w-[250px]" : "absolute w-full"
                         )}
                       >
-                        {filteredOptions.map(
-                          (option, id) => (
-                            <Listbox.Option
-                              key={id}
-                              className={({ active }) =>
-                                classNames(
-                                  active ? " bg-accent" : "",
-                                  editNode
-                                    ? "dropdown-component-false-option"
-                                    : "dropdown-component-true-option",
-                                  " hover:bg-accent"
-                                )
-                              }
-                              value={option}
-                            >
-                              {({ selected, active }) => (
-                                <>
+                        {filteredOptions.map((option, id) => (
+                          <Listbox.Option
+                            key={id}
+                            className={({ active }) =>
+                              classNames(
+                                active ? " bg-accent" : "",
+                                editNode
+                                  ? "dropdown-component-false-option"
+                                  : "dropdown-component-true-option",
+                                " hover:bg-accent"
+                              )
+                            }
+                            value={option}
+                          >
+                            {({ selected, active }) => (
+                              <>
+                                <span
+                                  className={classNames(
+                                    selected ? "font-semibold" : "font-normal",
+                                    "block truncate "
+                                  )}
+                                  data-testid={`${option}-${id ?? ""}-option`}
+                                >
+                                  {option}
+                                </span>
+
+                                {selected ? (
                                   <span
                                     className={classNames(
-                                      selected
-                                        ? "font-semibold"
-                                        : "font-normal",
-                                      "block truncate "
+                                      active ? "text-background " : "",
+                                      "dropdown-component-choosal"
                                     )}
-                                    data-testid={`${option}-${id ?? ""}-option`}
                                   >
-                                    {option}
+                                    <IconComponent
+                                      name="Check"
+                                      className={
+                                        active
+                                          ? "dropdown-component-check-icon"
+                                          : "dropdown-component-check-icon"
+                                      }
+                                      aria-hidden="true"
+                                    />
                                   </span>
-
-
-                                  {selected ? (
-                                    <span
-                                      className={classNames(
-                                        active ? "text-background " : "",
-                                        "dropdown-component-choosal"
-                                      )}
-                                    >
-                                      <IconComponent
-                                        name="Check"
-                                        className={
-                                          active
-                                            ? "dropdown-component-check-icon"
-                                            : "dropdown-component-check-icon"
-                                        }
-                                        aria-hidden="true"
-                                      />
-                                    </span>
-                                  ) : null}
-                                </>
-                              )}
-                            </Listbox.Option>
-                          )
-                        )}
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
                       </Listbox.Options>
                     </Transition>
                   </div>
@@ -198,7 +196,6 @@ export default function InputComponent({
           }
         </>
       )}
-
 
       <span
         className={
@@ -213,7 +210,6 @@ export default function InputComponent({
           aria-hidden="true"
         />
       </span>
-
 
       {password && (
         <button
