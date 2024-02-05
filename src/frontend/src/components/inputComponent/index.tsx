@@ -1,8 +1,10 @@
+import { Listbox, Transition } from "@headlessui/react";
 import * as Form from "@radix-ui/react-form";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
+import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 
 export default function InputComponent({
@@ -19,15 +21,22 @@ export default function InputComponent({
   className,
   id = "",
   blurOnEnter = false,
+  options = [],
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
+  const [showOptions, setShowOptions] = useState<boolean>(false);
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
       onChange("");
     }
   }, [disabled]);
+
+  function onInputLostFocus(event): void {
+    if (onBlur) onBlur(event);
+    setShowOptions(false);
+  }
 
   return (
     <div className="relative w-full">
@@ -36,7 +45,7 @@ export default function InputComponent({
           <Input
             id={"form-" + id}
             ref={refInput}
-            onBlur={onBlur}
+            onBlur={onInputLostFocus}
             autoFocus={autoFocus}
             type={password && !pwdVisible ? "password" : "text"}
             value={value}
@@ -65,34 +74,136 @@ export default function InputComponent({
           />
         </Form.Control>
       ) : (
-        <Input
-          id={id}
-          ref={refInput}
-          type="text"
-          onBlur={onBlur}
-          value={value}
-          autoFocus={autoFocus}
-          disabled={disabled}
-          required={required}
-          className={classNames(
-            password && !pwdVisible && value !== ""
-              ? " text-clip password "
-              : "",
-            editNode ? " input-edit-node " : "",
-            password && editNode ? "pr-8" : "",
-            password && !editNode ? "pr-10" : "",
-            className!
-          )}
-          placeholder={password && editNode ? "Key" : placeholder}
-          onChange={(e) => {
-            onChange(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            handleKeyDown(e, value, "");
-            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-          }}
-        />
+        <>
+          <Input
+            id={id}
+            ref={refInput}
+            type="text"
+            onBlur={(e) => setShowOptions(false)}
+            value={value}
+            autoFocus={autoFocus}
+            disabled={disabled}
+            required={required}
+            className={classNames(
+              password && !pwdVisible && value !== ""
+                ? " text-clip password "
+                : "",
+              editNode ? " input-edit-node " : "",
+              password && editNode ? "pr-8" : "",
+              password && !editNode ? "pr-10" : "",
+              className!
+            )}
+            placeholder={password && editNode ? "Key" : placeholder}
+            onChange={(e) => {
+              onChange(e.target.value);
+              setShowOptions(false);
+            }}
+            onKeyDown={(e) => {
+              handleKeyDown(e, value, "");
+              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+            }}
+            onFocus={() => setShowOptions(true)}
+          />
+          {
+            /* options.length > 0 */ true ? (
+              <Listbox
+                onChange={(val) => {
+                  onChange(val);
+                }}
+              >
+                <>
+                  <div className={"relative mt-1"}>
+                    <Transition
+                      show={showOptions}
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options
+                        className={classNames(
+                          editNode
+                            ? "dropdown-component-true-options nowheel custom-scroll"
+                            : "dropdown-component-false-options nowheel custom-scroll",
+                          false ? "mb-2 w-[250px]" : "absolute w-full"
+                        )}
+                      >
+                        {["key", "key2", "key3", "key4", "key5"].map(
+                          (option, id) => (
+                            <Listbox.Option
+                              key={id}
+                              className={({ active }) =>
+                                classNames(
+                                  active ? " bg-accent" : "",
+                                  editNode
+                                    ? "dropdown-component-false-option"
+                                    : "dropdown-component-true-option",
+                                  " hover:bg-accent"
+                                )
+                              }
+                              value={option}
+                            >
+                              {({ selected, active }) => (
+                                <>
+                                  <span
+                                    className={classNames(
+                                      selected
+                                        ? "font-semibold"
+                                        : "font-normal",
+                                      "block truncate "
+                                    )}
+                                    data-testid={`${option}-${id ?? ""}-option`}
+                                  >
+                                    {option}
+                                  </span>
+
+                                  {selected ? (
+                                    <span
+                                      className={classNames(
+                                        active ? "text-background " : "",
+                                        "dropdown-component-choosal"
+                                      )}
+                                    >
+                                      <IconComponent
+                                        name="Check"
+                                        className={
+                                          active
+                                            ? "dropdown-component-check-icon"
+                                            : "dropdown-component-check-icon"
+                                        }
+                                        aria-hidden="true"
+                                      />
+                                    </span>
+                                  ) : null}
+                                </>
+                              )}
+                            </Listbox.Option>
+                          )
+                        )}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </>
+              </Listbox>
+            ) : null
+          }
+        </>
       )}
+
+      <span
+        className={
+          password
+            ? "dropdown-component-arrow  right-8"
+            : "dropdown-component-arrow right-0"
+        }
+      >
+        <IconComponent
+          name="ChevronsUpDown"
+          className="dropdown-component-arrow-color"
+          aria-hidden="true"
+        />
+      </span>
+
       {password && (
         <button
           type="button"
