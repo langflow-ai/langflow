@@ -339,7 +339,10 @@ export default function Sidebar(): JSX.Element {
               />
             </div>
             <div className="columns-2 gap-2 p-4">
-              <div className="flex h-40 flex-col overflow-hidden rounded-lg border bg-background">
+              <div
+                className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                draggable={true}
+              >
                 <div
                   className={
                     "flex-max-width flex-shrink-0 items-center truncate p-2"
@@ -362,6 +365,10 @@ export default function Sidebar(): JSX.Element {
                       </div>
                     </ShadTooltip>
                   </div>
+                  <IconComponent
+                    name="Info"
+                    className="ml-1 h-4 w-4 text-muted-foreground"
+                  />
                 </div>
                 <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                   The description will tell the user what to do or why use it.
@@ -378,7 +385,10 @@ export default function Sidebar(): JSX.Element {
                   </Badge>
                 </div>
               </div>
-              <div className="flex h-40 flex-col overflow-hidden rounded-lg border bg-background">
+              <div
+                className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                draggable={true}
+              >
                 <div
                   className={
                     "flex-max-width flex-shrink-0 items-center truncate p-2"
@@ -400,6 +410,10 @@ export default function Sidebar(): JSX.Element {
                       </div>
                     </ShadTooltip>
                   </div>
+                  <IconComponent
+                    name="Info"
+                    className="ml-1 h-4 w-4 text-muted-foreground"
+                  />
                 </div>
                 <div className="h-full px-4 text-sm text-muted-foreground">
                   This, on the other hand, is a flow, and a person can just open
