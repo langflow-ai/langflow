@@ -112,7 +112,7 @@ export default function InputComponent({
                 }}
               >
                 <>
-                  <div className={"relative mt-1"}>
+                  <div className={"relative mt-1 "}>
                     <Transition
                       show={showOptions}
                       as={Fragment}
