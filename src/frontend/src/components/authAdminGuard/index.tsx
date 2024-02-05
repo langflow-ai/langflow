@@ -1,30 +1,16 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/authContext";
 
 export const ProtectedAdminRoute = ({ children }) => {
-  const {
-    isAdmin,
-    isAuthenticated,
-    logout,
-    getAuthentication,
-    userData,
-    autoLogin,
-  } = useContext(AuthContext);
-  useEffect(() => {
-    if (!isAuthenticated && !getAuthentication()) {
-      window.location.replace("/login");
-      logout();
-    }
-  }, [isAuthenticated, getAuthentication, logout, userData]);
+  const { isAdmin, isAuthenticated, logout, userData, autoLogin } =
+    useContext(AuthContext);
 
-  if (!isAuthenticated && !getAuthentication()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if ((userData && !isAdmin) || autoLogin) {
+  if (!isAuthenticated) {
+    logout();
+  } else if ((userData && !isAdmin) || autoLogin) {
     return <Navigate to="/" replace />;
+  } else {
+    return children;
   }
-
-  return children;
 };

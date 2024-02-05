@@ -14,7 +14,7 @@ export default function KeypairListComponent({
   duplicateKey,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
     }
   }, [disabled]);
@@ -65,12 +65,6 @@ export default function KeypairListComponent({
                 )}
                 placeholder="Type key..."
                 onChange={(event) => handleChangeKey(event, index)}
-                onKeyDown={(e) => {
-                  if (e.ctrlKey && e.key === "Backspace") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
               />
 
               <Input

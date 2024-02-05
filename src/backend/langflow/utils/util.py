@@ -1,14 +1,14 @@
-import re
-import inspect
 import importlib
+import inspect
+import re
 from functools import wraps
-from typing import List, Optional, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
+from langchain_core.documents import Document
 
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
-from langchain.schema import Document
 
 
 def remove_ansi_escape_codes(text):

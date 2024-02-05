@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
+from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from langchain.llms.base import BaseLLM
 from pydantic.v1 import SecretStr
 

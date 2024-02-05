@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import List, Optional
 
-from langchain.llms import Ollama
 from langchain.llms.base import BaseLLM
+from langchain_community.llms.ollama import Ollama
 
 from langflow import CustomComponent
 
@@ -133,30 +133,25 @@ class OllamaLLM(CustomComponent):
             mirostat_eta = None
             mirostat_tau = None
 
-        llm_params = {
-            "base_url": base_url,
-            "model": model,
-            "mirostat": mirostat_value,
-            "mirostat_eta": mirostat_eta,
-            "mirostat_tau": mirostat_tau,
-            "num_ctx": num_ctx,
-            "num_gpu": num_gpu,
-            "num_thread": num_thread,
-            "repeat_last_n": repeat_last_n,
-            "repeat_penalty": repeat_penalty,
-            "temperature": temperature,
-            "stop": stop,
-            "tfs_z": tfs_z,
-            "top_k": top_k,
-            "top_p": top_p,
-        }
-        
-                # None Value remove
-        llm_params = {k: v for k, v in llm_params.items() if v is not None}
-
-
         try:
-            llm = Ollama(**llm_params)
+            llm = Ollama(
+                base_url=base_url,
+                model=model,
+                mirostat=mirostat_value,
+                mirostat_eta=mirostat_eta,
+                mirostat_tau=mirostat_tau,
+                num_ctx=num_ctx,
+                num_gpu=num_gpu,
+                num_thread=num_thread,
+                repeat_last_n=repeat_last_n,
+                repeat_penalty=repeat_penalty,
+                temperature=temperature,
+                stop=stop,
+                tfs_z=tfs_z,
+                top_k=top_k,
+                top_p=top_p,
+            )
+
         except Exception as e:
             raise ValueError("Could not connect to Ollama.") from e
 

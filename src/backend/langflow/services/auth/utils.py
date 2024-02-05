@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlmodel import Session
+from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
@@ -128,6 +129,21 @@ async def get_current_user_by_jwt(
     if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+
+async def get_current_user_for_websocket(
+    websocket: WebSocket,
+    db: Session = Depends(get_session),
+    query_param: str = Security(api_key_query),
+) -> Optional[User]:
+    token = websocket.query_params.get("token")
+    api_key = websocket.query_params.get("x-api-key")
+    if token:
+        return await get_current_user_by_jwt(token, db)
+    elif api_key:
+        return await api_key_security(api_key, query_param, db)
+    else:
+        return None
 
 
 def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):

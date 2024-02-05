@@ -1,10 +1,12 @@
-from typing import Optional
-from langflow import CustomComponent
+from typing import Optional, Union
 
-from langchain.vectorstores.redis import Redis
-from langchain.schema import Document
-from langchain.vectorstores.base import VectorStore
 from langchain.embeddings.base import Embeddings
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.redis import Redis
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+
+from langflow import CustomComponent
 
 
 class RedisComponent(CustomComponent):
@@ -42,7 +44,7 @@ class RedisComponent(CustomComponent):
         redis_server_url: str,
         redis_index_name: str,
         documents: Optional[Document] = None,
-    ) -> VectorStore:
+    ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -55,10 +57,19 @@ class RedisComponent(CustomComponent):
         Returns:
         - VectorStore: The Vector Store object.
         """
-
-        return Redis.from_documents(
-            documents=documents,  # type: ignore
-            embedding=embedding,
-            redis_url=redis_server_url,
-            index_name=redis_index_name,
-        )
+        if documents is None:
+            redis_vs = Redis.from_existing_index(
+                embedding=embedding,
+                index_name=redis_index_name,
+                schema=None,
+                key_prefix=None,
+                redis_url=redis_server_url,
+            )
+        else:
+            redis_vs = Redis.from_documents(
+                documents=documents,  # type: ignore
+                embedding=embedding,
+                redis_url=redis_server_url,
+                index_name=redis_index_name,
+            )
+        return redis_vs
