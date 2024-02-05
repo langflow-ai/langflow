@@ -13,6 +13,11 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "../../../../components/ui/resizable";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -26,7 +31,7 @@ import {
   isValidConnection,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import Sidebar from "../SidebarComponent";
@@ -330,7 +335,7 @@ export default function Page({
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
             Object.keys(types).length > 0 ? (
-              <div id="react-flow-id" className="h-full w-full relative">
+              <div id="react-flow-id" className="relative h-full w-full">
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
@@ -418,7 +423,9 @@ export default function Page({
                   />
                 </ReactFlow>
                 {!view && <Chat flow={flow} />}
-                {!view && <Sidebar />}
+                {!view && (
+                  <Sidebar />
+                )}
               </div>
             ) : (
               <></>

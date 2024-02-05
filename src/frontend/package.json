@@ -50,6 +50,7 @@
     "react-icons": "^4.10.1",
     "react-laag": "^2.0.5",
     "react-markdown": "^8.0.7",
+    "react-resizable-panels": "^2.0.3",
     "react-router-dom": "^6.15.0",
     "react-syntax-highlighter": "^15.5.0",
     "react-tabs": "^6.0.2",
