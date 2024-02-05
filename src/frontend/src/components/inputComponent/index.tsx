@@ -1,6 +1,7 @@
 import { Listbox, Transition } from "@headlessui/react";
 import * as Form from "@radix-ui/react-form";
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
@@ -26,13 +27,12 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const [filteredOpts, setFilteredValue] = useState<string[]>([
-    "key",
-    "key2",
-    "key3",
-    "key4",
-    "key5",
-  ]);
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
+  );
+  const [filteredOpts, setFilteredValue] = useState<string[]>(
+    globalVariablesEntries
+  );
 
   // Clear component state
   useEffect(() => {
