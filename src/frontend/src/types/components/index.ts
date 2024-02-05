@@ -20,6 +20,7 @@ export type InputComponentType = {
   className?: string;
   id?: string;
   blurOnEnter?: boolean;
+  options?: string[];
 };
 export type ToggleComponentType = {
   enabled: boolean;
