@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 
-import { Network, EcrRepository, FrontEndCluster, BackEndCluster, Rds, EcsIAM, Rag} from './construct';
+import { Network, EcrRepository, Web, BackEndCluster, Rds, EcsIAM, Rag} from './construct';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 const errorMessageForBooleanContext = (key: string) => {
@@ -30,11 +30,10 @@ export class LangflowAppStack extends cdk.Stack {
     const arch = ecs.CpuArchitecture.X86_64
 
     // VPC
-    const { vpc, cluster, cloudmapNamespace, ecsBackSG, dbSG, backendLogGroup, alb, albTG, albSG} = new Network(this, 'Network')
+    const { vpc, cluster, ecsBackSG, dbSG, backendLogGroup, alb, albTG, albSG} = new Network(this, 'Network')
 
     // ECR
     const { ecrBackEndRepository } = new EcrRepository(this, 'Ecr', {
-      cloudmapNamespace:cloudmapNamespace,
       arch:arch
     })
 
@@ -54,25 +53,18 @@ export class LangflowAppStack extends cdk.Stack {
       backendTaskRole:backendTaskRole,
       backendTaskExecutionRole:backendTaskExecutionRole,
       backendLogGroup:backendLogGroup,
-      cloudmapNamespace:cloudmapNamespace,
       rdsCluster:rdsCluster,
       arch:arch,
       albTG:albTG
     })
     backendService.node.addDependency(rdsCluster);
 
-    const frontendService = new FrontEndCluster(this, 'frontend',{
+    const frontendService = new Web(this, 'frontend',{
       cluster:cluster,
-      backendServiceName: backendService.backendServiceName,
-      cloudmapNamespace: cloudmapNamespace,
-      arch:arch,
       alb:alb,
       albSG:albSG
     })
     frontendService.node.addDependency(backendService);
 
-
-    // S3+CloudFront
-    // new Web(this,'Cloudfront-S3')
   }
 }

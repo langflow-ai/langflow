@@ -9,7 +9,6 @@ import { Construct } from 'constructs'
 
 
 interface ECRProps {
-  cloudmapNamespace: servicediscovery.PrivateDnsNamespace;
   arch:ecs.CpuArchitecture;
 }
 

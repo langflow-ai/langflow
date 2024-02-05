@@ -3,9 +3,7 @@ import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
-  aws_ecr as ecr,
   aws_s3 as s3,
-  aws_servicediscovery as servicediscovery,
   aws_iam as iam,
   aws_logs as logs,
   aws_elasticloadbalancingv2 as elb,
@@ -13,26 +11,23 @@ import {
 import { CloudFrontToS3 } from '@aws-solutions-constructs/aws-cloudfront-s3';
 import { CfnDistribution, Distribution } from 'aws-cdk-lib/aws-cloudfront';
 import { NodejsBuild } from 'deploy-time-build';
-import { CpuArchitecture } from 'aws-cdk-lib/aws-ecs';
 
-interface FrontEndProps {
+interface WebProps {
   cluster:ecs.Cluster
-  backendServiceName: string;
-  cloudmapNamespace: servicediscovery.PrivateDnsNamespace;
-  arch:ecs.CpuArchitecture;
   alb:elb.IApplicationLoadBalancer;
   albSG:ec2.SecurityGroup;
 }
 
-export class FrontEndCluster extends Construct {
+export class Web extends Construct {
   readonly distribution;
-  constructor(scope: Construct, id: string, props:FrontEndProps) {
+  constructor(scope: Construct, id: string, props:WebProps) {
     super(scope, id)
 
   // 
   // S3 + Cloud Front
   // 
   const alb_listen_port=80
+  const api_endpoint = `http://${props.alb.loadBalancerDnsName}`
   const commonBucketProps: s3.BucketProps = {
     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     encryption: s3.BucketEncryption.S3_MANAGED,
@@ -66,10 +61,8 @@ export class FrontEndCluster extends Construct {
       },
     }
   );
-  
-  // const endpoint = "http://langflow-alb-1779019476.us-east-1.elb.amazonaws.com"
-  const endpoint = `http://${props.alb.loadBalancerDnsName}`
-  
+  this.distribution = cloudFrontWebDistribution;
+
   new NodejsBuild(this, 'BuildFrontEnd', {
     assets: [
       {
@@ -90,13 +83,11 @@ export class FrontEndCluster extends Construct {
     outputSourceDirectory: 'build',
     buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
-      BACKEND_SERVICE_NAME: props.backendServiceName,
-      AXIOS_BASE_URL: endpoint
+      VITE_AXIOS_BASE_URL: this.distribution.domainName
     },
-    // workingDirectory:"../../src/frontend"
   });
 
-  this.distribution = cloudFrontWebDistribution;
+  
   // distribution から backendへのinbound 許可
   props.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(alb_listen_port))
 

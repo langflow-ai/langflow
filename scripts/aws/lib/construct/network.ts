@@ -11,7 +11,6 @@ import {
 export class Network extends Construct {
   readonly vpc: ec2.Vpc;
   readonly cluster: ecs.Cluster;
-  readonly cloudmapNamespace: servicediscovery.PrivateDnsNamespace;
   readonly ecsBackSG: ec2.SecurityGroup;
   readonly dbSG: ec2.SecurityGroup;
   readonly backendLogGroup: logs.LogGroup;
@@ -86,16 +85,6 @@ export class Network extends Construct {
       enableFargateCapacityProviders: true,
     });
 
-    // Private DNS
-    this.cloudmapNamespace = new servicediscovery.PrivateDnsNamespace(
-      this,
-      'Namespace',
-      {
-        name: 'ecs-deploy.com',
-        vpc: this.vpc,
-      }
-    );
-
     // ECS BackEndに設定するセキュリティグループ
     this.ecsBackSG = new ec2.SecurityGroup(scope, 'ECSBackEndSecurityGroup', {
       securityGroupName: 'langflow-ecs-back-sg',
@@ -119,7 +108,6 @@ export class Network extends Construct {
       logGroupName: 'langflow-backend-logs',
       removalPolicy: RemovalPolicy.DESTROY,
     });
-
 
   }
 }
