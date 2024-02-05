@@ -49,7 +49,7 @@ export default function Dropdown({
                     >
                       {internalValue}
                     </span>
-                    <span className={"dropdown-component-arrow"}>
+                    <span className={"dropdown-component-arrow right-0"}>
                       <IconComponent
                         name="ChevronsUpDown"
                         className="dropdown-component-arrow-color"
