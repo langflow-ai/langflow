@@ -1,9 +1,8 @@
-from typing import Optional
-
-import requests
-from langchain_core.documents import Document
 from langflow import CustomComponent
+from langchain.schema import Document
 from langflow.services.database.models.base import orjson_dumps
+import requests
+from typing import Optional
 
 
 class PostRequest(CustomComponent):

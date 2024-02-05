@@ -1,8 +1,7 @@
 from typing import List, Optional
-
 import requests
-from langchain_core.documents import Document
 from langflow import CustomComponent
+from langchain.schema import Document
 from langflow.services.database.models.base import orjson_dumps
 
 

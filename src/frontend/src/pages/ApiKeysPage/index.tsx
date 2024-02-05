@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
 import { deleteApiKey, getApiKey } from "../../controllers/API";
 import ConfirmationModal from "../../modals/ConfirmationModal";
@@ -24,13 +25,11 @@ import {
   LAST_USED_SPAN_1,
   LAST_USED_SPAN_2,
 } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import { ApiKey } from "../../types/components";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
   const keysList = useRef([]);

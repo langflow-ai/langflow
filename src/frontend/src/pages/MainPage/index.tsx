@@ -1,5 +1,5 @@
 import { Group, ToyBrick } from "lucide-react";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -7,18 +7,12 @@ import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { downloadFlows } from "../../utils/reactflowUtils";
+import { alertContext } from "../../contexts/alertContext";
+import { FlowsContext } from "../../contexts/flowsContext";
 export default function HomePage(): JSX.Element {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
-  );
-  const uploadFlows = useFlowsManagerStore((state) => state.uploadFlows);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { setTabId, downloadFlows, uploadFlows, addFlow, uploadFlow } =
+    useContext(FlowsContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const location = useLocation();
   const pathname = location.pathname;
   const is_component = pathname === "/components";
@@ -62,7 +56,7 @@ export default function HomePage(): JSX.Element {
 
   // Set a null id
   useEffect(() => {
-    setCurrentFlowId("");
+    setTabId("");
   }, [pathname]);
 
   const navigate = useNavigate();

@@ -41,11 +41,12 @@ class AgentInitializerComponent(CustomComponent):
                 handle_parsing_errors=True,
                 max_iterations=max_iterations,
             )
-        return initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=agent,
-            return_intermediate_steps=True,
-            handle_parsing_errors=True,
-            max_iterations=max_iterations,
-        )
+        else:
+            return initialize_agent(
+                tools=tools,
+                llm=llm,
+                agent=agent,
+                return_intermediate_steps=True,
+                handle_parsing_errors=True,
+                max_iterations=max_iterations,
+            )
