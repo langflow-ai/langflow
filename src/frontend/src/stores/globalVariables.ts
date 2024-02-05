@@ -1,9 +1,15 @@
 import { create } from "zustand";
 import { GlobalVariablesStore } from "../types/zustand/globalVariables";
 
-const useGlobalVariablesStore = create<GlobalVariablesStore>((set, get) => ({
-  globalVariables: [],
-  setGlobalVariables: (variables) => {
-    set({ globalVariables: variables });
-  },
-}));
+export const useGlobalVariablesStore = create<GlobalVariablesStore>(
+  (set, get) => ({
+    globalVariablesEntries: [],
+    globalVariables: {},
+    setGlobalVariables: (variables) => {
+      set({
+        globalVariables: variables,
+        globalVariablesEntries: Object.keys(variables),
+      });
+    },
+  })
+);

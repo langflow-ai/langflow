@@ -1,4 +1,5 @@
 export type GlobalVariablesStore = {
-  globalVariables: Array<string>;
-  setGlobalVariables: (variables: Array<string>) => void;
+  globalVariablesEntries: Array<string>;
+  globalVariables: { [key: string]: string };
+  setGlobalVariables: (variables: { [key: string]: string }) => void;
 };
