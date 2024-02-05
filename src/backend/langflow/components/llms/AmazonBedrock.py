@@ -1,8 +1,7 @@
 from typing import Optional
-
-from langchain.llms.base import BaseLLM
-from langchain.llms.bedrock import Bedrock
 from langflow import CustomComponent
+from langchain.llms.bedrock import Bedrock
+from langchain.llms.base import BaseLLM
 
 
 class AmazonBedrockComponent(CustomComponent):
@@ -28,32 +27,18 @@ class AmazonBedrockComponent(CustomComponent):
             },
             "credentials_profile_name": {"display_name": "Credentials Profile Name"},
             "streaming": {"display_name": "Streaming", "field_type": "bool"},
-            "endpoint_url": {"display_name": "Endpoint URL"},
-            "region_name": {"display_name": "Region Name"},
-            "model_kwargs": {"display_name": "Model Kwargs"},
-            "cache": {"display_name": "Cache"},
-            "code": {"advanced": True},
+            "code": {"show": False},
         }
 
     def build(
         self,
         model_id: str = "anthropic.claude-instant-v1",
         credentials_profile_name: Optional[str] = None,
-        region_name: Optional[str] = None,
-        model_kwargs: Optional[dict] = None,
-        endpoint_url: Optional[str] = None,
-        streaming: bool = False,
-        cache: Optional[bool] = None,
     ) -> BaseLLM:
         try:
             output = Bedrock(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
-                region_name=region_name,
-                model_kwargs=model_kwargs,
-                endpoint_url=endpoint_url,
-                streaming=streaming,
-                cache=cache,
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e

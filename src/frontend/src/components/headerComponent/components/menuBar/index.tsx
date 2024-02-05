@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,18 +9,17 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
+import { alertContext } from "../../../../contexts/alertContext";
+import { undoRedoContext } from "../../../../contexts/undoRedoContext";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
-import useAlertStore from "../../../../stores/alertStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { menuBarPropsType } from "../../../../types/components";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = (): JSX.Element => {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const undo = useFlowsManagerStore((state) => state.undo);
-  const redo = useFlowsManagerStore((state) => state.redo);
+export const MenuBar = ({ flows, tabId }: menuBarPropsType): JSX.Element => {
+  const { addFlow } = useContext(FlowsContext);
+  const { setErrorData } = useContext(alertContext);
+  const { undo, redo } = useContext(undoRedoContext);
   const [openSettings, setOpenSettings] = useState(false);
 
   const navigate = useNavigate();
@@ -34,8 +34,9 @@ export const MenuBar = (): JSX.Element => {
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
+  let current_flow = flows.find((flow) => flow.id === tabId);
 
-  return currentFlow ? (
+  return (
     <div className="round-button-div">
       <button
         onClick={() => {
@@ -49,7 +50,9 @@ export const MenuBar = (): JSX.Element => {
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{currentFlow.name}</div>
+                <div className="header-menu-flow-name">
+                  {current_flow!.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>
@@ -105,8 +108,6 @@ export const MenuBar = (): JSX.Element => {
         ></FlowSettingsModal>
       </div>
     </div>
-  ) : (
-    <></>
   );
 };
 

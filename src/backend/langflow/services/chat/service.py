@@ -5,15 +5,14 @@ from typing import Any, Dict, List
 
 import orjson
 from fastapi import WebSocket, status
-from loguru import logger
-from starlette.websockets import WebSocketState
-
 from langflow.api.v1.schemas import ChatMessage, ChatResponse, FileResponse
 from langflow.interface.utils import pil_to_base64
 from langflow.services import ServiceType, service_manager
 from langflow.services.base import Service
 from langflow.services.chat.cache import Subject
 from langflow.services.chat.utils import process_graph
+from loguru import logger
+from starlette.websockets import WebSocketState
 
 from .cache import cache_service
 
@@ -118,7 +117,7 @@ class ChatService(Service):
                 if "after sending" in str(exc):
                     logger.error(f"Error closing connection: {exc}")
 
-    async def process_message(self, client_id: str, payload: Dict, build_result: Any):
+    async def process_message(self, client_id: str, payload: Dict, langchain_object: Any):
         # Process the graph data and chat message
         chat_inputs = payload.pop("inputs", {})
         chatkey = payload.pop("chatKey", None)
@@ -135,12 +134,12 @@ class ChatService(Service):
             logger.debug("Generating result and thought")
 
             result, intermediate_steps, raw_output = await process_graph(
-                build_result=build_result,
+                langchain_object=langchain_object,
                 chat_inputs=chat_inputs,
                 client_id=client_id,
                 session_id=self.connection_ids[client_id],
             )
-            self.set_cache(client_id, build_result)
+            self.set_cache(client_id, langchain_object)
         except Exception as e:
             # Log stack trace
             logger.exception(e)
@@ -206,8 +205,8 @@ class ChatService(Service):
                     continue
 
                 with self.chat_cache.set_client_id(client_id):
-                    if build_result := self.cache_service.get(client_id).get("result"):
-                        await self.process_message(client_id, payload, build_result)
+                    if langchain_object := self.cache_service.get(client_id).get("result"):
+                        await self.process_message(client_id, payload, langchain_object)
 
                     else:
                         raise RuntimeError(f"Could not find a build result for client_id {client_id}")

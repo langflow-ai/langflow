@@ -21,8 +21,7 @@ def upgrade() -> None:
     try:
         with op.batch_alter_table('credential', schema=None) as batch_op:
             batch_op.create_foreign_key("fk_credential_user_id", 'user', ['user_id'], ['id'])
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
 
     # ### end Alembic commands ###
@@ -33,8 +32,7 @@ def downgrade() -> None:
     try:
         with op.batch_alter_table('credential', schema=None) as batch_op:
             batch_op.drop_constraint("fk_credential_user_id", type_='foreignkey')
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
 
     # ### end Alembic commands ###

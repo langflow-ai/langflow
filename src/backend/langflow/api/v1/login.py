@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -16,7 +16,6 @@ router = APIRouter(tags=["Login"])
 
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
-    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
@@ -32,10 +31,7 @@ async def login_to_get_access_token(
         ) from exc
 
     if user:
-        tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False)
-        return tokens
+        return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,13 +41,9 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(
-    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
-):
+async def auto_login(db: Session = Depends(get_session), settings_service=Depends(get_settings_service)):
     if settings_service.auth_settings.AUTO_LOGIN:
-        tokens = create_user_longterm_token(db)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False)
-        return tokens
+        return create_user_longterm_token(db)
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -63,23 +55,12 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response):
-    token = request.cookies.get("refresh_token_lf")
+async def refresh_token(token: str):
     if token:
-        tokens = create_refresh_token(token)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False)
-        return tokens
+        return create_refresh_token(token)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-@router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("refresh_token_lf")
-    response.delete_cookie("access_token_lf")
-    return {"message": "Logout successful"}

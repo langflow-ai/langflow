@@ -1,35 +1,32 @@
 import { XYPosition } from "reactflow";
+import { tweakType } from "../components";
 import { FlowType, NodeDataType } from "../flow";
 
-type OnChange<ChangesType> = (changes: ChangesType[]) => void;
-
 export type FlowsContextType = {
-  //keep
-  saveFlow: (flow?: FlowType, silent?: boolean) => Promise<void>;
+  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
   tabId: string;
-  //keep
   isLoading: boolean;
   setTabId: (index: string) => void;
-  //keep
+  flows: Array<FlowType>;
   removeFlow: (id: string) => void;
-  refreshFlows: () => void;
-  //keep
   addFlow: (
     newProject: boolean,
     flow?: FlowType,
     override?: boolean,
     position?: XYPosition
   ) => Promise<String | undefined>;
+  updateFlow: (newFlow: FlowType) => void;
+  incrementNodeId: () => string;
   downloadFlow: (
     flow: FlowType,
     flowName: string,
     flowDescription?: string
   ) => void;
-  //keep
   downloadFlows: () => void;
-  //keep
   uploadFlows: () => void;
-  setVersion: (version: string) => void;
+  isBuilt: boolean;
+  setIsBuilt: (state: boolean) => void;
+  saveCurrentFlow: () => void;
   uploadFlow: ({
     newProject,
     file,
@@ -41,28 +38,38 @@ export type FlowsContextType = {
     isComponent?: boolean;
     position?: XYPosition;
   }) => Promise<String | never>;
+  hardReset: () => void;
+  getNodeId: (nodeType: string) => string;
   tabsState: FlowsState;
-  setTabsState: (
-    update: FlowsState | ((oldState: FlowsState) => FlowsState)
+  setTabsState: (state: FlowsState) => void;
+  paste: (
+    selection: { nodes: any; edges: any },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
+  lastCopiedSelection: { nodes: any; edges: any } | null;
+  setLastCopiedSelection: (selection: { nodes: any; edges: any }) => void;
+  setTweak: (tweak: tweakType) => tweakType | void;
+  getTweak: tweakType;
   saveComponent: (
     component: NodeDataType,
     override: boolean
   ) => Promise<String | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
-  flows: Array<FlowType>;
+  nodesOnFlow: string;
+  setNodesOnFlow: (nodes: string) => void;
 };
 
 export type FlowsState = {
-  [key: string]: FlowState | undefined;
-};
-
-export type FlowState = {
-  template?: string;
-  input_keys?: Object;
-  memory_keys?: Array<string>;
-  handle_keys?: Array<string>;
+  [key: string]: {
+    isPending: boolean;
+    formKeysData: {
+      template?: string;
+      input_keys?: Object;
+      memory_keys?: Array<string>;
+      handle_keys?: Array<string>;
+    };
+  };
 };
 
 export type errorsVarType = {
