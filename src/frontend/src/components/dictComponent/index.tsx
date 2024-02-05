@@ -6,7 +6,7 @@ import { classNames } from "../../utils/utils";
 import { Input } from "../ui/input";
 
 export default function DictComponent({
-  value,
+  value = [],
   onChange,
   disabled,
   editNode = false,

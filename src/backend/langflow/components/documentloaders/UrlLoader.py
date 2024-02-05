@@ -1,7 +1,8 @@
 from typing import List
 
 from langchain import document_loaders
-from langchain.schema import Document
+from langchain_core.documents import Document
+
 from langflow import CustomComponent
 
 

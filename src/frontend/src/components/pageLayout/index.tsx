@@ -12,7 +12,7 @@ export default function PageLayout({
   description: string;
   children: React.ReactNode;
   button?: React.ReactNode;
-  betaIcon: boolean;
+  betaIcon?: boolean;
 }) {
   return (
     <div className="flex h-screen w-full flex-col">

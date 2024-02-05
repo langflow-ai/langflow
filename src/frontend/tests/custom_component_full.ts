@@ -3,8 +3,8 @@ export const custom = `from langflow import CustomComponent
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.schema import Document
-from langchain.field_typing import NestedDict
+from langchain_core.documents import Document
+from langflow.field_typing import NestedDict
 
 import requests
 
