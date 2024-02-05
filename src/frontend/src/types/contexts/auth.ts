@@ -5,10 +5,12 @@ export type AuthContextType = {
   setIsAdmin: (isAdmin: boolean) => void;
   isAuthenticated: boolean;
   accessToken: string | null;
-  login: (accessToken: string) => void;
-  logout: () => Promise<void>;
+  refreshToken: string | null;
+  login: (accessToken: string, refreshToken: string) => void;
+  logout: () => void;
   userData: Users | null;
   setUserData: (userData: Users | null) => void;
+  getAuthentication: () => boolean;
   authenticationErrorCount: number;
   autoLogin: boolean;
   setAutoLogin: (autoLogin: boolean) => void;

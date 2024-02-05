@@ -1,9 +1,6 @@
 import { useEffect } from "react";
 import { IntComponentType } from "../../types/components";
-import {
-  handleKeyDown,
-  handleOnlyIntegerInput,
-} from "../../utils/reactflowUtils";
+import { handleKeyDown } from "../../utils/reactflowUtils";
 import { Input } from "../ui/input";
 
 export default function IntComponent({
@@ -17,7 +14,7 @@ export default function IntComponent({
 
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
+    if (disabled) {
       onChange("");
     }
   }, [disabled, onChange]);
@@ -27,12 +24,29 @@ export default function IntComponent({
       <Input
         id={id}
         onKeyDown={(event) => {
-          handleOnlyIntegerInput(event);
-          handleKeyDown(event, value, "");
+          if (
+            event.key !== "Backspace" &&
+            event.key !== "Enter" &&
+            event.key !== "Delete" &&
+            event.key !== "ArrowLeft" &&
+            event.key !== "ArrowRight" &&
+            event.key !== "Control" &&
+            event.key !== "Meta" &&
+            event.key !== "Shift" &&
+            event.key !== "c" &&
+            event.key !== "v" &&
+            event.key !== "a" &&
+            event.key !== "ArrowUp" &&
+            event.key !== "ArrowDown" &&
+            !/^[-]?\d*$/.test(event.key)
+          ) {
+            event.preventDefault();
+          }
+          handleKeyDown(event, value, "0");
         }}
         type="number"
         step="1"
-        min={0}
+        min={min}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
           if (Number(event.target.value) < min) {
             event.target.value = min.toString();
