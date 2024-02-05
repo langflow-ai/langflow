@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
+
 from langflow import CustomComponent
 from langflow.field_typing import BaseRetriever, Document
 
@@ -18,16 +19,13 @@ class VectaraComponent(CustomComponent):
     field_config = {
         "vectara_customer_id": {
             "display_name": "Vectara Customer ID",
-            "required": True,
         },
         "vectara_corpus_id": {
             "display_name": "Vectara Corpus ID",
-            "required": True,
         },
         "vectara_api_key": {
             "display_name": "Vectara API Key",
             "password": True,
-            "required": True,
         },
         "documents": {"display_name": "Documents", "info": "If provided, will be upserted to corpus (optional)"},
         "files_url": {
