@@ -1,18 +1,9 @@
 from langchain import tools
 from langchain.agents import Tool
-from langchain.agents.load_tools import (
-    _BASE_TOOLS,
-    _EXTRA_LLM_TOOLS,
-    _EXTRA_OPTIONAL_TOOLS,
-    _LLM_TOOLS,
-)
+from langchain.agents.load_tools import _BASE_TOOLS, _EXTRA_LLM_TOOLS, _EXTRA_OPTIONAL_TOOLS, _LLM_TOOLS
 from langchain.tools.json.tool import JsonSpec
-
 from langflow.interface.importing.utils import import_class
-from langflow.interface.tools.custom import (
-    PythonFunctionTool,
-    PythonFunction,
-)
+from langflow.interface.tools.custom import PythonFunction, PythonFunctionTool
 
 FILE_TOOLS = {"JsonSpec": JsonSpec}
 CUSTOM_TOOLS = {
@@ -21,7 +12,7 @@ CUSTOM_TOOLS = {
     "PythonFunction": PythonFunction,
 }
 
-OTHER_TOOLS = {tool: import_class(f"langchain.tools.{tool}") for tool in tools.__all__}
+OTHER_TOOLS = {tool: import_class(f"langchain_community.tools.{tool}") for tool in tools.__all__}
 
 ALL_TOOLS_NAMES = {
     **_BASE_TOOLS,

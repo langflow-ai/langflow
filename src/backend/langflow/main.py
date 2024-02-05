@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
@@ -102,11 +103,12 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 
 if __name__ == "__main__":
     import uvicorn
+
     from langflow.__main__ import get_number_of_workers
 
     configure()
     uvicorn.run(
-        create_app,
+        "langflow.main:create_app",
         host="127.0.0.1",
         port=7860,
         workers=get_number_of_workers(),

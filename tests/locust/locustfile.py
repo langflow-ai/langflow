@@ -1,10 +1,11 @@
-from locust import FastHttpUser, task, between
 import random
 import time
-import orjson
-from rich import print
-import httpx
 from pathlib import Path
+
+import httpx
+import orjson
+from locust import FastHttpUser, between, task
+from rich import print
 
 
 class NameTest(FastHttpUser):
@@ -13,7 +14,7 @@ class NameTest(FastHttpUser):
     with open("names.txt", "r") as file:
         names = [line.strip() for line in file.readlines()]
 
-    headers = {}
+    headers: dict = {}
 
     def poll_task(self, task_id, sleep_time=1):
         while True:

@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Type
 
-from langchain import utilities
+from langchain_community import utilities
 from loguru import logger
 
 from langflow.custom.customs import get_custom_nodes
@@ -30,7 +30,7 @@ class UtilityCreator(LangChainTypeCreator):
             self.type_dict = {}
             for utility_name in utilities.__all__:
                 try:
-                    imported = import_class(f"langchain.utilities.{utility_name}")
+                    imported = import_class(f"langchain_community.utilities.{utility_name}")
                     self.type_dict[utility_name] = imported
                 except Exception:
                     pass
