@@ -15,11 +15,12 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { getHealth } from "./controllers/API";
+import { getGlobalVariables, getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
@@ -124,6 +125,9 @@ export default function App() {
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables
+  );
 
   useEffect(() => {
     refreshStars();
@@ -134,6 +138,9 @@ export default function App() {
       // get data from db
       getTypes().then(() => {
         refreshFlows();
+      });
+      getGlobalVariables().then((res) => {
+        setGlobalVariables(res);
       });
     }
   }, [isAuthenticated]);

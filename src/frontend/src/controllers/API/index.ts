@@ -851,7 +851,7 @@ export async function requestLogout() {
   }
 }
 
-export async function getGlobalVariables() {
+export async function getGlobalVariables(): Promise<{ [key: string]: string }> {
   // mocked for now but will eventually be a real API call
   const globalVariables = window.sessionStorage.getItem("globalVariables");
   return globalVariables ? JSON.parse(globalVariables) : {};
