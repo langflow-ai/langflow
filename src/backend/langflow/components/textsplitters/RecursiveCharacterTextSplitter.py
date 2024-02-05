@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 
 from langflow import CustomComponent
 from langflow.utils.util import build_loader_repr_from_documents
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):
@@ -56,7 +57,6 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
         Returns:
             list[str]: The chunks of text.
         """
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
 
         if separators == "":
             separators = None
