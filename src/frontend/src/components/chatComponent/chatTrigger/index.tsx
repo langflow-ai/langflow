@@ -1,12 +1,13 @@
 import { Transition } from "@headlessui/react";
 
+import { useContext } from "react";
 import {
   CHAT_CANNOT_OPEN_DESCRIPTION,
   CHAT_CANNOT_OPEN_TITLE,
   FLOW_NOT_BUILT_DESCRIPTION,
   FLOW_NOT_BUILT_TITLE,
 } from "../../../constants/constants";
-import useAlertStore from "../../../stores/alertStore";
+import { alertContext } from "../../../contexts/alertContext";
 import { chatTriggerPropType } from "../../../types/components";
 import IconComponent from "../../genericIconComponent";
 
@@ -16,7 +17,7 @@ export default function ChatTrigger({
   isBuilt,
   canOpen,
 }: chatTriggerPropType): JSX.Element {
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { setErrorData } = useContext(alertContext);
 
   function handleClick(): void {
     if (isBuilt) {

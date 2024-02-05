@@ -1,24 +1,20 @@
 import React, { useEffect, useState } from "react";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import {
-  ConfirmationModalType,
-  ContentProps,
-  TriggerProps,
-} from "../../types/components";
+import { ConfirmationModalType, ContentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="h-full w-full">{children}</div>;
 };
-const Trigger: React.FC<TriggerProps> = ({
+const Trigger: React.FC<ContentProps> = ({
   children,
-  tooltipContent,
+  tolltipContent,
   side,
-}: TriggerProps) => {
-  return tooltipContent ? (
-    <ShadTooltip side={side} content={tooltipContent}>
+}) => {
+  return tolltipContent ? (
+    <ShadTooltip side={side} content={tolltipContent}>
       <div className="h-full w-full">{children}</div>
     </ShadTooltip>
   ) : (
@@ -27,6 +23,7 @@ const Trigger: React.FC<TriggerProps> = ({
 };
 function ConfirmationModal({
   title,
+  asChild,
   titleHeader,
   modalContentTitle,
   cancelText,
@@ -52,7 +49,6 @@ function ConfirmationModal({
   useEffect(() => {
     if (onClose) onClose!(modalOpen);
   }, [modalOpen]);
-
   const triggerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Trigger
   );
@@ -62,7 +58,7 @@ function ConfirmationModal({
 
   return (
     <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
-      <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild={asChild}>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>
         <Icon

@@ -3,8 +3,8 @@ import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
+import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import useAlertStore from "../../stores/alertStore";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -12,8 +12,8 @@ const api: AxiosInstance = axios.create({
 });
 
 function ApiInterceptor() {
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
+  const { setErrorData } = useContext(alertContext);
+  let { accessToken, login, logout, authenticationErrorCount } =
     useContext(AuthContext);
   const navigate = useNavigate();
   const cookies = new Cookies();
@@ -23,22 +23,23 @@ function ApiInterceptor() {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          const accessToken = cookies.get("access_token_lf");
-          if (accessToken && !autoLogin) {
+          const refreshToken = cookies.get("refresh_tkn_lflw");
+          if (refreshToken && refreshToken !== "auto") {
             authenticationErrorCount = authenticationErrorCount + 1;
             if (authenticationErrorCount > 3) {
               authenticationErrorCount = 0;
               logout();
+              navigate("/login");
             }
             try {
-              const res = await renewAccessToken();
+              const res = await renewAccessToken(refreshToken);
               if (res?.data?.access_token && res?.data?.refresh_token) {
-                login(res?.data?.access_token);
+                login(res?.data?.access_token, res?.data?.refresh_token);
               }
               if (error?.config?.headers) {
                 delete error.config.headers["Authorization"];
                 error.config.headers["Authorization"] = `Bearer ${cookies.get(
-                  "access_token_lf"
+                  "access_tkn_lflw"
                 )}`;
                 const response = await axios.request(error.config);
                 return response;
@@ -46,17 +47,20 @@ function ApiInterceptor() {
             } catch (error) {
               if (axios.isAxiosError(error) && error.response?.status === 401) {
                 logout();
+                navigate("/login");
               } else {
                 console.error(error);
                 logout();
+                navigate("/login");
               }
             }
           }
 
-          if (!accessToken && error?.config?.url?.includes("login")) {
+          if (!refreshToken && error?.config?.url?.includes("login")) {
             return Promise.reject(error);
           } else {
             logout();
+            navigate("/login");
           }
         } else {
           // if (URL_EXCLUDED_FROM_ERROR_RETRIES.includes(error.config?.url)) {
@@ -96,7 +100,6 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }

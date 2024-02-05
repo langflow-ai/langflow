@@ -1,6 +1,7 @@
+import { ReactFlowInstance } from "reactflow";
 import { FlowType } from "../flow";
 
-export type ChatType = { flow: FlowType };
+export type ChatType = { flow: FlowType; reactFlowInstance: ReactFlowInstance };
 export type ChatMessageType = {
   message: string | Object;
   template?: string;

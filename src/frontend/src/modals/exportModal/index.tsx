@@ -1,32 +1,33 @@
-import { ReactNode, forwardRef, useEffect, useState } from "react";
+import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
-import { useDarkStore } from "../../stores/darkStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
+import { alertContext } from "../../contexts/alertContext";
+import { FlowsContext } from "../../contexts/flowsContext";
+import { typesContext } from "../../contexts/typesContext";
+import { removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
-    const version = useDarkStore((state) => state.version);
-    const setNoticeData = useAlertStore((state) => state.setNoticeData);
+    const { flows, tabId, downloadFlow, version } = useContext(FlowsContext);
+    const { reactFlowInstance } = useContext(typesContext);
+    const { setNoticeData } = useContext(alertContext);
     const [checked, setChecked] = useState(true);
-    const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+    const flow = flows.find((f) => f.id === tabId);
     useEffect(() => {
-      setName(currentFlow!.name);
-      setDescription(currentFlow!.description);
-    }, [currentFlow!.name, currentFlow!.description]);
-    const [name, setName] = useState(currentFlow!.name);
-    const [description, setDescription] = useState(currentFlow!.description);
+      setName(flow!.name);
+      setDescription(flow!.description);
+    }, [flow!.name, flow!.description]);
+    const [name, setName] = useState(flow!.name);
+    const [description, setDescription] = useState(flow!.description);
     const [open, setOpen] = useState(false);
 
     return (
       <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
-        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
+        <BaseModal.Trigger>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent
@@ -66,8 +67,8 @@ const ExportModal = forwardRef(
               if (checked) {
                 downloadFlow(
                   {
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
+                    id: tabId,
+                    data: flow!.data!,
                     description,
                     name,
                     last_tested_version: version,
@@ -83,8 +84,8 @@ const ExportModal = forwardRef(
               } else
                 downloadFlow(
                   removeApiKeys({
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
+                    id: tabId,
+                    data: flow!.data!,
                     description,
                     name,
                     last_tested_version: version,
