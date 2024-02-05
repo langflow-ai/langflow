@@ -7,6 +7,7 @@ import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
 
+
 export default function InputComponent({
   autoFocus = false,
   onBlur,
@@ -26,6 +27,9 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [filteredOpts, setFilteredValue] = useState<string[]>(["key", "key2", "key3", "key4", "key5"]);
+
+
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
@@ -33,10 +37,15 @@ export default function InputComponent({
     }
   }, [disabled]);
 
+
+  const filteredOptions = filteredOpts.filter((option) => option.toLowerCase().includes(value.toLowerCase()))
+
+
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
     setShowOptions(false);
   }
+
 
   return (
     <div className="relative w-full">
@@ -79,7 +88,7 @@ export default function InputComponent({
             id={id}
             ref={refInput}
             type="text"
-            onBlur={(e) => setShowOptions(false)}
+            onBlur={onInputLostFocus}
             value={value}
             autoFocus={autoFocus}
             disabled={disabled}
@@ -96,7 +105,6 @@ export default function InputComponent({
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
               onChange(e.target.value);
-              setShowOptions(false);
             }}
             onKeyDown={(e) => {
               handleKeyDown(e, value, "");
@@ -105,7 +113,7 @@ export default function InputComponent({
             onFocus={() => setShowOptions(true)}
           />
           {
-            /* options.length > 0 */ true ? (
+            /* options.length > 0 && filteredOptions.length > 0 */ true ? (
               <Listbox
                 onChange={(val) => {
                   onChange(val);
@@ -128,7 +136,7 @@ export default function InputComponent({
                           false ? "mb-2 w-[250px]" : "absolute w-full"
                         )}
                       >
-                        {["key", "key2", "key3", "key4", "key5"].map(
+                        {filteredOptions.map(
                           (option, id) => (
                             <Listbox.Option
                               key={id}
@@ -156,6 +164,7 @@ export default function InputComponent({
                                   >
                                     {option}
                                   </span>
+
 
                                   {selected ? (
                                     <span
@@ -190,6 +199,7 @@ export default function InputComponent({
         </>
       )}
 
+
       <span
         className={
           password
@@ -203,6 +213,7 @@ export default function InputComponent({
           aria-hidden="true"
         />
       </span>
+
 
       {password && (
         <button
