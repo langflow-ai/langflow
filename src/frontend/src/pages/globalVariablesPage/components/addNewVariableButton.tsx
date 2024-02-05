@@ -12,16 +12,20 @@ import { useGlobalVariablesStore } from "../../../stores/globalVariables";
 export default function AddNewVariableButton(): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
   function handleSaveVariable() {
     registerGlobalVariable(key, value).then((_) => {
       addGlobalVariable(key, value);
+      setKey("");
+      setValue("");
+      setOpen(false);
     });
   }
   return (
-    <BaseModal size="small">
+    <BaseModal open={open} setOpen={setOpen} size="small">
       <BaseModal.Header
         description={"write a text variable to use anywhere on your flow"}
       >
