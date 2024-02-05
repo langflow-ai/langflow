@@ -3,16 +3,23 @@ import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import AddNewVariableButton from "./components/addNewVariableButton";
 
 export default function GlobalVariablesPage() {
-  const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
   );
   return (
     <PageLayout
       title="Variables"
       description="set your own personal varaibles and use it on your flow"
     >
-      {Object.keys(globalVariables).length > 0 ? (
-        <div></div>
+      {globalVariablesEntries.length > 0 ? (
+        <div className="flex h-full w-full flex-col justify-around">
+          {globalVariablesEntries.map((key, index) => (
+            <div className="flex w-full items-start" key={index}>
+              <span>{key}</span>
+            </div>
+          ))}
+          <AddNewVariableButton />
+        </div>
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center align-middle">
           <div>
