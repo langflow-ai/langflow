@@ -33,8 +33,7 @@ test.describe("group node test", () => {
       return dt;
     }, jsonContent);
 
-    page.waitForTimeout(2000);
-
+    // Now dispatch
     await page.dispatchEvent(
       '//*[@id="root"]/div/div[1]/div[2]/div[3]/div/div',
       "drop",
@@ -44,7 +43,9 @@ test.describe("group node test", () => {
     );
 
     await page
-      .getByTestId("edit-flow-button-e9ac1bdc-429b-475d-ac03-d26f9a2a3210-0")
+      .locator(
+        '//*[@id="root"]/div/div[1]/div[2]/div[3]/div/div/div/div/div/div/div/div[2]/span[2]'
+      )
       .click();
     await page.waitForTimeout(2000);
 
@@ -66,8 +67,9 @@ test.describe("group node test", () => {
     });
 
     await page.getByRole("button", { name: "Group" }).click();
+    await page.locator("div").filter({ hasText: "Star13756" }).nth(3).click();
 
-    const textArea = page.getByTestId("div-textarea-description");
+    const textArea = page.getByTestId("div-textarea-2");
     const elementCountText = await textArea.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
@@ -78,7 +80,5 @@ test.describe("group node test", () => {
     if (elementGroup > 0) {
       expect(true).toBeTruthy();
     }
-
-    // Now dispatch
   });
 });

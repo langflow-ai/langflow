@@ -111,7 +111,6 @@ import { AnthropicIcon } from "../icons/Anthropic";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
-import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
@@ -134,7 +133,6 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
-import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
@@ -228,7 +226,6 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
-  Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
@@ -259,7 +256,6 @@ export const nodeIconsLucide: iconsType = {
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
-  ElasticsearchStore: ElasticsearchIcon,
   Weaviate: WeaviateIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,

@@ -1,11 +1,12 @@
-from typing import Optional, Union
-
 import weaviate  # type: ignore
-from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever, Document
-from langchain_community.vectorstores import VectorStore, Weaviate
-
+from typing import Optional, Union
 from langflow import CustomComponent
+
+from langchain.vectorstores import Weaviate
+from langchain.schema import Document
+from langchain.vectorstores.base import VectorStore
+from langchain.schema import BaseRetriever
+from langchain.embeddings.base import Embeddings
 
 
 class WeaviateVectorStore(CustomComponent):
@@ -44,7 +45,7 @@ class WeaviateVectorStore(CustomComponent):
         search_by_text: bool = False,
         api_key: Optional[str] = None,
         index_name: Optional[str] = None,
-        text_key: str = "text",
+        text_key: Optional[str] = "text",
         embedding: Optional[Embeddings] = None,
         documents: Optional[Document] = None,
         attributes: Optional[list] = None,

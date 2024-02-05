@@ -3,14 +3,14 @@ import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/authContext";
 
 export const ProtectedLoginRoute = ({ children }) => {
-  const { isAuthenticated, autoLogin } = useContext(AuthContext);
+  const { getAuthentication, autoLogin } = useContext(AuthContext);
 
   if (autoLogin === true) {
     window.location.replace("/");
     return <Navigate to="/" replace />;
   }
 
-  if (isAuthenticated) {
+  if (getAuthentication()) {
     window.location.replace("/");
     return <Navigate to="/" replace />;
   }

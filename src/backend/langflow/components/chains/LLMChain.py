@@ -28,5 +28,5 @@ class LLMChainComponent(CustomComponent):
         prompt: BasePromptTemplate,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
-    ) -> Union[Chain, Callable, LLMChain]:
+    ) -> Union[Chain, Callable]:
         return LLMChain(prompt=prompt, llm=llm, memory=memory)

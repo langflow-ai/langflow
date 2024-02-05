@@ -4,15 +4,16 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { alertContext } from "../../contexts/alertContext";
+import { darkContext } from "../../contexts/darkContext";
+import { typesContext } from "../../contexts/typesContext";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
-import useAlertStore from "../../stores/alertStore";
-import { useDarkStore } from "../../stores/darkStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -26,11 +27,10 @@ export default function CodeAreaModal({
   readonly = false,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
-  const dark = useDarkStore((state) => state.dark);
-
+  const { dark } = useContext(darkContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [height, setHeight] = useState<string | null>(null);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
@@ -146,7 +146,6 @@ export default function CodeAreaModal({
       <BaseModal.Content>
         <Input
           value={code}
-          readOnly
           className="absolute left-[500%] top-[500%]"
           id="codeValue"
         />
@@ -156,7 +155,6 @@ export default function CodeAreaModal({
               readOnly={readonly}
               value={code}
               mode="python"
-              setOptions={{ fontFamily: "monospace" }}
               height={height ?? "100%"}
               highlightActiveLine={true}
               showPrintMargin={false}
