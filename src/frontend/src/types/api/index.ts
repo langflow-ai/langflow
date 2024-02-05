@@ -2,8 +2,8 @@ import { Edge, Node, Viewport } from "reactflow";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
-export type APIObjectType = { kind: APIKindType; [key: string]: APIKindType };
-export type APIKindType = { class: APIClassType; [key: string]: APIClassType };
+export type APIObjectType = { [key: string]: APIKindType };
+export type APIKindType = { [key: string]: APIClassType };
 export type APITemplateType = {
   [key: string]: TemplateVariableType;
 };

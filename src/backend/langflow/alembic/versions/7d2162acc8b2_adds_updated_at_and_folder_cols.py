@@ -37,7 +37,6 @@ def upgrade() -> None:
     with op.batch_alter_table('flow', schema=None) as batch_op:
         batch_op.add_column(sa.Column('updated_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('folder', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
-
     # ### end Alembic commands ###
 
 

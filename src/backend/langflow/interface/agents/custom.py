@@ -2,14 +2,10 @@ from typing import Any, Optional
 
 from langchain.agents import AgentExecutor, ZeroShotAgent
 from langchain.agents.agent_toolkits import (
-    SQLDatabaseToolkit,
     VectorStoreInfo,
     VectorStoreRouterToolkit,
     VectorStoreToolkit,
 )
-from langchain.agents.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
-from langchain.agents.agent_toolkits.json.toolkit import JsonToolkit
-from langchain.agents.agent_toolkits.sql.prompt import SQL_PREFIX, SQL_SUFFIX
 from langchain.agents.agent_toolkits.vectorstore.prompt import PREFIX as VECTORSTORE_PREFIX
 from langchain.agents.agent_toolkits.vectorstore.prompt import ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
@@ -17,9 +13,14 @@ from langchain.base_language import BaseLanguageModel
 from langchain.chains.llm import LLMChain
 from langchain.sql_database import SQLDatabase
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
+from langchain_community.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
+from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
+from langchain_community.agent_toolkits.sql.prompt import SQL_PREFIX, SQL_SUFFIX
 from langchain_experimental.agents.agent_toolkits.pandas.prompt import PREFIX as PANDAS_PREFIX
 from langchain_experimental.agents.agent_toolkits.pandas.prompt import SUFFIX_WITH_DF as PANDAS_SUFFIX
 from langchain_experimental.tools.python.tool import PythonAstREPLTool
+
 from langflow.interface.base import CustomAgentExecutor
 
 

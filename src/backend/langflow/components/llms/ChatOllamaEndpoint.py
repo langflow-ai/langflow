@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Optional
 
 # from langchain_community.chat_models import ChatOllama
-from langchain.chat_models import ChatOllama
-from langchain.chat_models.base import BaseChatModel
+from langchain_community.chat_models import ChatOllama
+from langchain_core.language_models.chat_models import BaseChatModel
 
 # from langchain.chat_models import ChatOllama
 from langflow import CustomComponent

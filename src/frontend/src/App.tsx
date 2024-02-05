@@ -1,6 +1,5 @@
 import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
 
@@ -15,37 +14,26 @@ import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
-import { alertContext } from "./contexts/alertContext";
-import { FlowsContext } from "./contexts/flowsContext";
-import { locationContext } from "./contexts/locationContext";
-import { typesContext } from "./contexts/typesContext";
+import { AuthContext } from "./contexts/authContext";
+import { getHealth } from "./controllers/API";
 import Router from "./routes";
+import useAlertStore from "./stores/alertStore";
+import { useDarkStore } from "./stores/darkStore";
+import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
-  let { setCurrent, setShowSideBar, setIsStackedOpen } =
-    useContext(locationContext);
-  let location = useLocation();
-  useEffect(() => {
-    setCurrent(location.pathname.replace(/\/$/g, "").split("/"));
-    setShowSideBar(true);
-    setIsStackedOpen(true);
-  }, [location.pathname, setCurrent, setIsStackedOpen, setShowSideBar]);
-  const { hardReset } = useContext(FlowsContext);
-
-  const {
-    errorData,
-    errorOpen,
-    setErrorOpen,
-    noticeData,
-    noticeOpen,
-    setNoticeOpen,
-    successData,
-    successOpen,
-    setSuccessOpen,
-    loading,
-  } = useContext(alertContext);
-  const navigate = useNavigate();
-  const { fetchError } = useContext(typesContext);
+  const errorData = useAlertStore((state) => state.errorData);
+  const errorOpen = useAlertStore((state) => state.errorOpen);
+  const setErrorOpen = useAlertStore((state) => state.setErrorOpen);
+  const noticeData = useAlertStore((state) => state.noticeData);
+  const noticeOpen = useAlertStore((state) => state.noticeOpen);
+  const setNoticeOpen = useAlertStore((state) => state.setNoticeOpen);
+  const successData = useAlertStore((state) => state.successData);
+  const successOpen = useAlertStore((state) => state.successOpen);
+  const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
+  const loading = useAlertStore((state) => state.loading);
+  const [fetchError, setFetchError] = useState(false);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -131,28 +119,60 @@ export default function App() {
     );
   };
 
+  const { isAuthenticated } = useContext(AuthContext);
+  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const getTypes = useTypesStore((state) => state.getTypes);
+  const refreshVersion = useDarkStore((state) => state.refreshVersion);
+  const refreshStars = useDarkStore((state) => state.refreshStars);
+
+  useEffect(() => {
+    refreshStars();
+    refreshVersion();
+
+    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
+    if (isAuthenticated === true) {
+      // get data from db
+      getTypes().then(() => {
+        refreshFlows();
+      });
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Timer to call getHealth every 5 seconds
+    const timer = setInterval(() => {
+      getHealth()
+        .then(() => {
+          if (fetchError) setFetchError(false);
+        })
+        .catch(() => {
+          setFetchError(true);
+        });
+    }, 20000);
+
+    // Clean up the timer on component unmount
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
       <ErrorBoundary
         onReset={() => {
-          window.localStorage.removeItem("tabsData");
-          window.localStorage.clear();
-          hardReset();
-          window.location.href = window.location.href;
+          // any reset function
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {loading ? (
+        {fetchError ? (
+          <FetchErrorComponent
+            description={FETCH_ERROR_DESCRIPION}
+            message={FETCH_ERROR_MESSAGE}
+          ></FetchErrorComponent>
+        ) : loading ? (
           <div className="loading-page-panel">
-            {fetchError ? (
-              <FetchErrorComponent
-                description={FETCH_ERROR_DESCRIPION}
-                message={FETCH_ERROR_MESSAGE}
-              ></FetchErrorComponent>
-            ) : (
-              <LoadingComponent remSize={50} />
-            )}
+            <LoadingComponent remSize={50} />
           </div>
         ) : (
           <>
