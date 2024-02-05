@@ -419,20 +419,13 @@ export default function Sidebar(): JSX.Element {
                   This, on the other hand, is a flow, and a person can just open
                   it.
                 </div>
-                <div className="align-center flex flex-shrink-0 justify-end px-4 pb-4">
-                  <Button
-                    tabIndex={-1}
-                    variant="outline"
-                    size="sm"
-                    className="whitespace-nowrap "
-                    data-testid={"edit-flow-button-"}
-                  >
-                    <IconComponent
-                      name="ExternalLink"
-                      className="main-page-nav-button select-none"
-                    />
-                    Edit Flow
-                  </Button>
+                <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
+                  <Badge variant="gray" size="xq">
+                    Vector Store
+                  </Badge>
+                  <Badge variant="gray" size="xq">
+                    Chain
+                  </Badge>
                 </div>
               </div>
             </div>
