@@ -11,5 +11,20 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
         globalVariablesEntries: Object.keys(variables),
       });
     },
+    addGlobalVariable: (key, value) => {
+      const newVariables = { ...get().globalVariables, [key]: value };
+      set({
+        globalVariables: newVariables,
+        globalVariablesEntries: Object.keys(newVariables),
+      });
+    },
+    removeGlobalVariable: (key) => {
+      const newVariables = { ...get().globalVariables };
+      delete newVariables[key];
+      set({
+        globalVariables: newVariables,
+        globalVariablesEntries: Object.keys(newVariables),
+      });
+    },
   })
 );
