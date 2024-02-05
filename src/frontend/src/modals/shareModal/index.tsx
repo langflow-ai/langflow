@@ -1,20 +1,20 @@
 import { Loader2 } from "lucide-react";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
+import { alertContext } from "../../contexts/alertContext";
+import { FlowsContext } from "../../contexts/flowsContext";
+import { StoreContext } from "../../contexts/storeContext";
+import { typesContext } from "../../contexts/typesContext";
 import {
   getStoreComponents,
   getStoreTags,
   saveFlowStore,
   updateFlowStore,
 } from "../../controllers/API";
-import useAlertStore from "../../stores/alertStore";
-import { useDarkStore } from "../../stores/darkStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { useStoreStore } from "../../stores/storeStore";
 import { FlowType } from "../../types/flow";
 import {
   downloadNode,
@@ -40,12 +40,10 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
-  const version = useDarkStore((state) => state.version);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { version, addFlow, downloadFlow } = useContext(FlowsContext);
+  const { hasApiKey, hasStore } = useContext(StoreContext);
+  const { setSuccessData, setErrorData } = useContext(alertContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "flow";
@@ -57,7 +55,7 @@ export default function ShareModal({
   const [unavaliableNames, setUnavaliableNames] = useState<
     { id: string; name: string }[]
   >([]);
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const { saveFlow, flows, tabId } = useContext(FlowsContext);
 
   const [loadingNames, setLoadingNames] = useState(false);
 
@@ -182,6 +180,9 @@ export default function ShareModal({
               Warning: This action cannot be undone.
             </span>
           </ConfirmationModal.Content>
+          <ConfirmationModal.Trigger>
+            <></>
+          </ConfirmationModal.Trigger>
         </ConfirmationModal>
       </>
     );

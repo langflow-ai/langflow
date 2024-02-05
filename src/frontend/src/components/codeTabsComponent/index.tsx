@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import AccordionComponent from "../../components/AccordionComponent";
@@ -28,13 +28,14 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
-import { useDarkStore } from "../../stores/darkStore";
-import useFlowStore from "../../stores/flowStore";
+import { darkContext } from "../../contexts/darkContext";
+import { typesContext } from "../../contexts/typesContext";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
+  unselectAllNodes,
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
@@ -52,11 +53,8 @@ export default function CodeTabsComponent({
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
-  const dark = useDarkStore((state) => state.dark);
-  const unselectAll = useFlowStore((state) => state.unselectAll);
-
-  const setNodes = useFlowStore((state) => state.setNodes);
-
+  const { dark } = useContext(darkContext);
+  const { reactFlowInstance } = useContext(typesContext);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
@@ -67,7 +65,12 @@ export default function CodeTabsComponent({
 
   useEffect(() => {
     if (tweaks && data) {
-      unselectAll();
+      unselectAllNodes({
+        data,
+        updateNodes: (nodes) => {
+          reactFlowInstance?.setNodes(nodes);
+        },
+      });
     }
   }, []);
 
@@ -588,7 +591,14 @@ export default function CodeTabsComponent({
                                               ].type === "prompt" ? (
                                               <div className="mx-auto">
                                                 <PromptAreaComponent
-                                                  readonly={true}
+                                                  readonly={
+                                                    node.data.node?.flow &&
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].dynamic
+                                                      ? true
+                                                      : false
+                                                  }
                                                   editNode={true}
                                                   disabled={false}
                                                   value={
@@ -631,7 +641,14 @@ export default function CodeTabsComponent({
                                                 <CodeAreaComponent
                                                   disabled={false}
                                                   editNode={true}
-                                                  readonly={true}
+                                                  readonly={
+                                                    node.data.node?.flow &&
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].dynamic
+                                                      ? true
+                                                      : false
+                                                  }
                                                   value={
                                                     !node.data.node.template[
                                                       templateField

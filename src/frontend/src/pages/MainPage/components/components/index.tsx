@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
@@ -6,8 +6,8 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import useAlertStore from "../../../../stores/alertStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { alertContext } from "../../../../contexts/alertContext";
+import { FlowsContext } from "../../../../contexts/flowsContext";
 import { FlowType } from "../../../../types/flow";
 
 export default function ComponentsComponent({
@@ -15,13 +15,9 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
-  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { flows, removeFlow, uploadFlow, addFlow, isLoading } =
+    useContext(FlowsContext);
+  const { setErrorData, setSuccessData } = useContext(alertContext);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
@@ -52,7 +48,7 @@ export default function ComponentsComponent({
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
     setData(all.slice(start, end));
-  }, [flows, isLoading, pageIndex, pageSize]);
+  }, [flows, pageIndex, pageSize]);
 
   const [data, setData] = useState<FlowType[]>([]);
 
@@ -159,9 +155,6 @@ export default function ComponentsComponent({
                             variant="outline"
                             size="sm"
                             className="whitespace-nowrap "
-                            data-testid={
-                              "edit-flow-button-" + item.id + "-" + idx
-                            }
                           >
                             <IconComponent
                               name="ExternalLink"

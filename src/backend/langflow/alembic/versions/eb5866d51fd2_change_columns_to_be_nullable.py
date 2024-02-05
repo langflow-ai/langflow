@@ -29,8 +29,7 @@ def upgrade() -> None:
     except exc.SQLAlchemyError:
         # connection.execute(text("ROLLBACK"))
         pass
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
 
     try:
@@ -38,8 +37,7 @@ def upgrade() -> None:
     except exc.SQLAlchemyError:
         # connection.execute(text("ROLLBACK"))
         pass
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
     # ### end Alembic commands ###
 
@@ -59,15 +57,14 @@ def downgrade() -> None:
             sa.Column("is_read_only", sa.BOOLEAN(), nullable=False),
             sa.Column("create_at", sa.DATETIME(), nullable=False),
             sa.Column("update_at", sa.DATETIME(), nullable=False),
-            sa.PrimaryKeyConstraint("id", name="pk_component"),
+            sa.PrimaryKeyConstraint("id"),
         )
         with op.batch_alter_table("component", schema=None) as batch_op:
             batch_op.create_index("ix_component_name", ["name"], unique=False)
             batch_op.create_index(
                 "ix_component_frontend_node_id", ["frontend_node_id"], unique=False
             )
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
 
     try:
@@ -81,10 +78,9 @@ def downgrade() -> None:
                 ["flow_id"],
                 ["flow.id"],
             ),
-            sa.PrimaryKeyConstraint("id", name="pk_flowstyle"),
-            sa.UniqueConstraint("id", name="uq_flowstyle_id"),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("id"),
         )
-    except Exception as e:
-        print(e)
+    except Exception:
         pass
     # ### end Alembic commands ###

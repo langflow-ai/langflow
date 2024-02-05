@@ -1,9 +1,9 @@
+import { useContext } from "react";
 import { Navigate } from "react-router-dom";
-import { useStoreStore } from "../../stores/storeStore";
+import { StoreContext } from "../../contexts/storeContext";
 
 export const StoreGuard = ({ children }) => {
-  const hasStore = useStoreStore((state) => state.hasStore);
-
+  const { hasStore } = useContext(StoreContext);
   if (!hasStore) {
     return <Navigate to="/flows" replace />;
   }

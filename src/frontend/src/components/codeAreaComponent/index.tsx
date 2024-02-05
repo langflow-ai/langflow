@@ -19,11 +19,11 @@ export default function CodeAreaComponent({
     typeof value == "string" ? value : JSON.stringify(value)
   );
   useEffect(() => {
-    if (disabled && myValue !== "") {
+    if (disabled) {
       setMyValue("");
       onChange("");
     }
-  }, [disabled]);
+  }, [disabled, onChange]);
 
   useEffect(() => {
     setMyValue(typeof value == "string" ? value : JSON.stringify(value));
