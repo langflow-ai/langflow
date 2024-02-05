@@ -15,10 +15,10 @@ export default function FloatComponent({
   const max = rangeSpec?.max ?? 2;
   // Clear component state
   useEffect(() => {
-    if (disabled) {
+    if (disabled && value !== "") {
       onChange("");
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
 
   return (
     <div className="w-full">
@@ -48,7 +48,7 @@ export default function FloatComponent({
           onChange(event.target.value);
         }}
         onKeyDown={(e) => {
-          handleKeyDown(e, value, "0");
+          handleKeyDown(e, value, "");
         }}
       />
     </div>

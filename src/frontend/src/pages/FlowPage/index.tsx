@@ -1,27 +1,28 @@
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../components/headerComponent";
-import { FlowsContext } from "../../contexts/flowsContext";
+import { useDarkStore } from "../../stores/darkStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {
-  const { flows, tabId, setTabId, version } = useContext(FlowsContext);
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
+  const version = useDarkStore((state) => state.version);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const { id } = useParams();
 
   // Set flow tab id
   useEffect(() => {
-    setTabId(id!);
+    setCurrentFlowId(id!);
   }, [id]);
 
   return (
     <>
       <Header />
       <div className="flow-page-positioning">
-        {flows.length > 0 &&
-          tabId !== "" &&
-          flows.findIndex((flow) => flow.id === tabId) !== -1 && (
-            <Page flow={flows.find((flow) => flow.id === tabId)!} />
-          )}
+        {currentFlow && <Page flow={currentFlow} />}
         <a
           target={"_blank"}
           href="https://logspace.ai/"

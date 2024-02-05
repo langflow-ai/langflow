@@ -45,6 +45,13 @@ run_frontend:
 	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
+tests_frontend:
+ifeq ($(UI), true)
+		cd src/frontend && ./run-tests.sh --ui
+else
+		cd src/frontend && ./run-tests.sh
+endif
+
 run_cli:
 	poetry run langflow run --path src/frontend/build
 
