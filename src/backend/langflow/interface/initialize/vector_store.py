@@ -2,7 +2,6 @@ import os
 from typing import Any, Callable, Dict, Type
 
 import orjson
-from langchain.schema import Document
 from langchain_community.vectorstores import (
     FAISS,
     Chroma,
@@ -13,6 +12,7 @@ from langchain_community.vectorstores import (
     SupabaseVectorStore,
     Weaviate,
 )
+from langchain_core.documents import Document
 
 
 def docs_in_params(params: dict) -> bool:
