@@ -261,11 +261,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           id,
           data: cloneDeep(edge.data),
           style: { stroke: "#555" },
-          className:
-            targetHandleObject.type === "Text"
-              ? "stroke-gray-800 "
-              : "stroke-gray-900 ",
-          animated: targetHandleObject.type === "Text",
+          className: "stroke-gray-900 ",
           selected: false,
         },
         newEdges.map((edge) => ({ ...edge, selected: false }))
@@ -329,9 +325,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
               .type === "Text"
               ? "stroke-foreground "
               : "stroke-foreground ") + " stroke-connection",
-          animated:
-            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text",
           markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
         },
         oldEdges
