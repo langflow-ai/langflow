@@ -24,6 +24,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  reconnectEdges,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -379,15 +380,20 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const { newFlow } = generateFlow(
+                        const { newFlow, removedEdges } = generateFlow(
                           lastSelection!,
                           nodes,
                           edges,
                           getRandomName()
                         );
+                        console.log("removed edges", removedEdges);
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId
+                        );
+                        const newEdges = reconnectEdges(
+                          newGroupNode,
+                          removedEdges
                         );
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
@@ -399,16 +405,17 @@ export default function Page({
                           ),
                           newGroupNode,
                         ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
+                        setEdges((oldEdges) => [
+                          ...oldEdges.filter(
                             (oldEdge) =>
                               !lastSelection!.nodes.some(
                                 (selectionNode) =>
                                   selectionNode.id === oldEdge.target ||
                                   selectionNode.id === oldEdge.source
                               )
-                          )
-                        );
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
                           title: "Invalid selection",
