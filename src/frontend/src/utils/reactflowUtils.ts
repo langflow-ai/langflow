@@ -324,11 +324,7 @@ export function updateEdges(edges: Edge[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
       );
-      edge.className =
-        (targetHandleObject.type === "Text"
-          ? "stroke-gray-800 "
-          : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = targetHandleObject.type === "Text";
+      edge.className = "stroke-gray-900 stroke-connection";
     });
 }
 
