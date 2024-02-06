@@ -21,7 +21,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 import requests
 
@@ -228,6 +228,7 @@ def test_custom_component_get_function_entrypoint_return_type():
     Test the get_function_entrypoint_return_type
     property of the CustomComponent class.
     """
+
     custom_component = CustomComponent(code=code_default, function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
     assert return_type == [Document]

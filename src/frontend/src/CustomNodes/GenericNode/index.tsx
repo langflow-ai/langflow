@@ -297,7 +297,7 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join("|")
+                        ? data.node.output_types.join(" | ")
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
@@ -580,7 +580,7 @@ export default function GenericNode({
                   }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
-                      ? data.node.output_types.join("|")
+                      ? data.node.output_types.join(" | ")
                       : data.type
                   }
                   tooltipTitle={data.node?.base_classes.join("\n")}

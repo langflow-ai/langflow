@@ -189,7 +189,7 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
 
-          <Select onValueChange={handleSelectChange}>
+          <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
               <SelectTrigger>
                 <div>

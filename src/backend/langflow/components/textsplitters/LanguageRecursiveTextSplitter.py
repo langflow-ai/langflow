@@ -1,7 +1,7 @@
 from typing import Optional
 
-from langchain.schema import Document
 from langchain.text_splitter import Language
+from langchain_core.documents import Document
 
 from langflow import CustomComponent
 

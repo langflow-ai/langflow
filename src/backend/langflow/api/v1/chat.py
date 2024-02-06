@@ -1,6 +1,6 @@
 import time
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import (
@@ -15,7 +15,7 @@ from langflow.api.v1.schemas import (
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.processing.process import process_tweaks_on_graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_active_user, get_current_user_for_websocket
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
@@ -32,17 +32,16 @@ router = APIRouter(tags=["Chat"])
 async def chat(
     client_id: str,
     websocket: WebSocket,
-    token: str = Query(...),
     db: Session = Depends(get_session),
     chat_service: "ChatService" = Depends(get_chat_service),
 ):
     """Websocket endpoint for chat."""
     try:
-        user = await get_current_user_by_jwt(token, db)
+        user = await get_current_user_for_websocket(websocket, db)
         await websocket.accept()
         if not user:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
-        if not user.is_active:
+        elif not user.is_active:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
 
         if client_id in chat_service.cache_service:
