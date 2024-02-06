@@ -386,7 +386,6 @@ export default function Page({
                           edges,
                           getRandomName()
                         );
-                        console.log("removed edges", removedEdges);
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId

@@ -631,7 +631,6 @@ export function generateFlow(
 }
 
 export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
-  console.log("excluded", excludedEdges);
   let newEdges = cloneDeep(excludedEdges);
   if (!groupNode.data.node!.flow) return [];
   const { nodes, edges } = groupNode.data.node!.flow!.data!;
@@ -661,7 +660,6 @@ export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
       edge.data.targetHandle = newTargetHandle;
     }
   });
-  console.log(newEdges);
   return newEdges;
 }
 
