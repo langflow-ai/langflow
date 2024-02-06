@@ -2,9 +2,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
-
 from langflow.services.database.models.credential.schema import CredentialType
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -28,7 +27,7 @@ class Credential(CredentialBase, table=True):
 
 class CredentialCreate(CredentialBase):
     # AcceptedProviders is a custom Enum
-    provider: CredentialType = Field(description="Provider of the credential (e.g OpenAI)")
+    provider: Optional[CredentialType] = Field(None, description="Provider of the credential (e.g OpenAI)")
 
 
 class CredentialRead(SQLModel):
