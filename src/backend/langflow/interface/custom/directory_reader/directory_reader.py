@@ -256,7 +256,7 @@ class DirectoryReader:
                 output_types = [component_name_camelcase]
 
             component_info = {
-                "name": "CustomComponent",
+                "name": component_name_camelcase,
                 "output_types": output_types,
                 "file": filename,
                 "code": result_content if validation_result else "",
