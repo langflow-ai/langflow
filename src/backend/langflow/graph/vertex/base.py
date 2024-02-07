@@ -2,12 +2,14 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
+from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
 from loguru import logger
@@ -235,7 +237,10 @@ class Vertex:
                 # what is inside value.get('content')
                 # value.get('value') is the file name
                 if file_path := value.get("file_path"):
-                    params[key] = file_path
+                    storage_service = get_storage_service()
+                    flow_id, file_name = file_path.split("/")
+                    full_path = storage_service.build_full_path(flow_id, file_name)
+                    params[key] = full_path
                 else:
                     raise ValueError(f"File path not found for {self.vertex_type}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
@@ -506,6 +511,9 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
+    pass
+    pass
+    pass
     pass
     pass
     pass
