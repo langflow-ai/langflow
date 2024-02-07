@@ -183,6 +183,7 @@ export const gradients = [
 
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
+  models: "#AA2411",
   llms: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
@@ -211,7 +212,8 @@ export const nodeColors: { [char: string]: string } = {
 
 export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
-  llms: "LLMs",
+  models: "Language Models",
+  llms: "Model Settings",
   chains: "Chains",
   agents: "Agents",
   tools: "Tools",
@@ -281,6 +283,7 @@ export const nodeIconsLucide: iconsType = {
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
+  models: Lightbulb,
   llms: Lightbulb,
   prompts: TerminalSquare,
   tools: Wrench,
