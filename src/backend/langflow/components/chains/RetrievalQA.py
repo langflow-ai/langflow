@@ -8,7 +8,7 @@ from langflow.field_typing import BaseMemory, BaseRetriever, Text
 
 
 class RetrievalQAComponent(CustomComponent):
-    display_name = "RetrievalQA"
+    display_name = "Retrieval QA"
     description = "Chain for question-answering against an index."
 
     def build_config(self):
@@ -42,6 +42,7 @@ class RetrievalQAComponent(CustomComponent):
         )
         if isinstance(inputs, Document):
             inputs = inputs.page_content
-
+        self.status = runnable
         result = runnable.invoke({input_key: inputs})
-        return result.content if hasattr(result, "content") else result
+        result = result.content if hasattr(result, "content") else result
+        return result.get("result")
