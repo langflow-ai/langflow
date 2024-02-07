@@ -1,12 +1,12 @@
 from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
-
 from langflow.field_typing.range_spec import RangeSpec
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class TemplateField(BaseModel):
     model_config = ConfigDict()
+
     field_type: str = Field(default="str", serialization_alias="type")
     """The type of field this is. Default is a string."""
 
@@ -63,6 +63,9 @@ class TemplateField(BaseModel):
 
     range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
+
+    load_from_db: bool = False
+    """Specifies if the field should be loaded from the database. Defaults to False."""
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
