@@ -24,6 +24,7 @@ import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
@@ -66,6 +67,10 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
+  );
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const flow = currentFlow?.data?.nodes ?? null;
 
@@ -408,7 +413,24 @@ export default function ParameterComponent({
                 disabled={disabled}
                 password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
-                onChange={handleOnNewValue}
+                onChange={(value) => {
+                  handleOnNewValue(value);
+                  if (globalVariablesEntries.includes(value)) {
+                    setNoticeData({
+                      title: `the value inserted in ${data.node?.display_name} is a global variable, \n 
+                    the real value will be update on run`,
+                    });
+                  }
+                  //mark as global variable
+                  setNode(data.id, (oldNode) => {
+                    let newNode = cloneDeep(oldNode);
+                    newNode.data = {
+                      ...newNode.data,
+                    };
+                    newNode.data.node.template[name].load_from_db = true;
+                    return newNode;
+                  });
+                }}
               />
             )}
           </div>
