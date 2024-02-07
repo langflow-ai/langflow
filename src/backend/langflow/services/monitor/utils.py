@@ -1,10 +1,9 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 import duckdb
+from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
-
-from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDict
@@ -35,7 +34,7 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
         elif field_info.__name__ == "bool":
             sql_type = "BOOLEAN"
         elif field_info.__name__ == "dict":
-            sql_type = "JSON"
+            sql_type = "VARCHAR"
         elif field_info.__name__ == "Any":
             sql_type = "VARCHAR"
         else:
@@ -91,7 +90,14 @@ def add_row_to_table(
     insert_sql = f"INSERT INTO {table_name} ({columns}) VALUES ({values_placeholders})"
 
     # Execute the insert statement
-    conn.execute(insert_sql, values)
+    try:
+        conn.execute(insert_sql, values)
+    except Exception as e:
+        # Log values types
+        for key, value in validated_dict.items():
+            logger.error(f"{key}: {type(value)}")
+
+        logger.error(f"Error adding row to table: {e}")
 
 
 async def log_message(
@@ -131,6 +137,7 @@ async def log_vertex_build(
 ):
     try:
         monitor_service = get_monitor_service()
+
         row = {
             "flow_id": flow_id,
             "id": vertex_id,

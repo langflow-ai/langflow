@@ -303,7 +303,7 @@ class Vertex:
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
 
-        result = generate_result(self._built_object, inputs, self.has_external_output, session_id)
+        result = await generate_result(self._built_object, inputs, self.has_external_output, session_id)
         self._built_result = result
 
     async def _build_each_node_in_params_dict(self, user_id=None):
@@ -506,6 +506,7 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
+    pass
     pass
     pass
     pass

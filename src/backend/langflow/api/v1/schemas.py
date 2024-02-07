@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
-
+from langchain_core.documents import Document
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class BuildStatus(Enum):
@@ -221,12 +221,40 @@ class VerticesOrderResponse(BaseModel):
 
 
 class ResultDict(BaseModel):
-    """Outputs of the vertex build process."""
-
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+
+    def serialize_field(self, value):
+        """Unified serialization function for handling both BaseModel and Document types,
+        including handling lists of these types."""
+        if isinstance(value, (list, tuple)):
+            return [self.serialize_field(v) for v in value]
+        elif isinstance(value, Document):
+            return value.to_json()
+        elif isinstance(value, BaseModel):
+            return value.model_dump()
+        elif isinstance(value, str):
+            return {"result": value}
+        return value
+
+    @field_serializer("results")
+    def serialize_results(self, value):
+        if isinstance(value, dict):
+            return {key: self.serialize_field(val) for key, val in value.items()}
+        return self.serialize_field(value)
+
+
+def serialize_list_of_documents_or_base_models(value):
+    if isinstance(value, list):
+        for i, val in enumerate(value):
+            if isinstance(val, Document):
+                value[i] = val.to_json()
+            elif isinstance(val, BaseModel):
+                value[i] = val.model_dump()
+
+    return value
 
 
 class VertexBuildResponse(BaseModel):
@@ -241,4 +269,5 @@ class VertexBuildResponse(BaseModel):
 
 
 class VerticesBuiltResponse(BaseModel):
+    vertices: List[VertexBuildResponse]
     vertices: List[VertexBuildResponse]

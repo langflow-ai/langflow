@@ -366,7 +366,7 @@ def sanitize_field_config(field_config: Dict):
 
 def build_component(component):
     """Build a single component."""
-    logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
     component_name = determine_component_name(component)
     component_template = create_component_template(component)
+    logger.debug(f"Building component: {component_name, component.get('output_types')}")
     return component_name, component_template
