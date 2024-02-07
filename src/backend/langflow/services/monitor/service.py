@@ -29,7 +29,7 @@ class MonitorService(Service):
         try:
             self.ensure_tables_exist()
         except Exception as e:
-            logger.error(f"Error initializing monitor service: {e}")
+            logger.exception(f"Error initializing monitor service: {e}")
 
     def to_df(self, table_name):
         return self.load_table_as_dataframe(table_name)
@@ -144,4 +144,5 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
 
+        return df.to_dict(orient="records")
         return df.to_dict(orient="records")
