@@ -7,6 +7,7 @@ import {
   SelectTrigger,
 } from "../../../../../components/ui/select-custom";
 import { useDarkStore } from "../../../../../stores/darkStore";
+import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { APIClassType } from "../../../../../types/api";
 import {
@@ -14,7 +15,7 @@ import {
   downloadNode,
   getNodeId,
 } from "../../../../../utils/reactflowUtils";
-import { removeCountFromString } from "../../../../../utils/utils";
+import { classNames, removeCountFromString } from "../../../../../utils/utils";
 
 export const SidebarDraggableComponent = forwardRef(
   (
@@ -46,6 +47,7 @@ export const SidebarDraggableComponent = forwardRef(
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
     const popoverRef = useRef<HTMLDivElement>(null);
+    const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
 
     const handlePointerDown = (e) => {
       if (!open) {
@@ -110,7 +112,10 @@ export const SidebarDraggableComponent = forwardRef(
             <div
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
-              className="side-bar-components-div-form"
+              className={classNames(
+                "side-bar-components-div-form",
+                getFilterEdge.length > 0 ? "animate-pulse" : ""
+              )}
             >
               <span className="side-bar-components-text">{display_name}</span>
               <div ref={popoverRef}>

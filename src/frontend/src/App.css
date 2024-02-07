@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 500;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* Prevent react flow to overflow the page */
 body {
   overflow: hidden;
@@ -44,15 +69,6 @@ body {
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @font-face {
   font-family: text-security-disc;
   src: url("assets/text-security-disc.woff") format("woff");
@@ -89,4 +105,60 @@ body {
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
   background-color: #bbb !important;
+}
+
+.react-flow__edge.selected path {
+  stroke-dasharray: 10;
+  animation: dash 5s linear infinite;
+  stroke: red !important;
+}
+
+.react-flow__connectionline {
+  z-index: -1 !important;
+  position: relative !important;
+  right: 0px !important;
+}
+
+.react-flow__edge path {
+  stroke: #5d00ff !important;
+  stroke-width: 3.5px !important;
+}
+
+.react-flow__handle {
+  border-radius: 0% !important;
+}
+
+.gradient-border-input-connected {
+  border-left: 5px solid #5d00ff !important;
+}
+
+.gradient-border-output-connected {
+  border-right: 5px solid #5d00ff !important;
+}
+
+.gradient-border-input {
+  border-left: none !important;
+}
+
+.gradient-border-output {
+  border-right: none !important;
+}
+
+.gradient-border-input:hover {
+  background-color: #5d00ff !important;
+  color: #fff;
+  font-weight: 500;
+}
+
+.gradient-border-output:hover {
+  background-color: #5d00ff !important;
+  color: #fff;
+  font-weight: 500;
+}
+
+.gradient-is-connectable:hover {
+  background-color: #157415 !important;
+  color: #fff;
+  font-weight: 500;
+  border: none !important;
 }

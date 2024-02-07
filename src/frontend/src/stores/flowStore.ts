@@ -22,12 +22,16 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateHandleColors,
 } from "../utils/reactflowUtils";
-import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  lastEdges: [],
+  setLastEdges: (newState) => {
+    set({ lastEdges: newState });
+  },
   sseData: {},
   flowState: undefined,
   nodes: [],
@@ -266,25 +270,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
-    const dark = useDarkStore.getState().dark;
-    const sourceElement = document.querySelector<HTMLElement>(
-      `[data-handleid="${connection.sourceHandle}"]`
-    );
-    const targetElement = document.querySelector<HTMLElement>(
-      `[data-handleid="${connection.targetHandle}"]`
-    );
-    if (sourceElement && targetElement) {
-      sourceElement.style.setProperty(
-        "background-color",
-        "transparent",
-        "important"
-      );
-      targetElement.style.setProperty(
-        "background-color",
-        "transparent",
-        "important"
-      );
-    }
+    updateHandleColors(connection);
 
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
@@ -316,6 +302,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges,
         get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
       );
+    get().setLastEdges(newEdges);
   },
   unselectAll: () => {
     let newNodes = cloneDeep(get().nodes);

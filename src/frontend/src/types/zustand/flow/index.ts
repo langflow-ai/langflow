@@ -55,4 +55,6 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  lastEdges: any[];
+  setLastEdges: (newState: any[]) => void;
 };

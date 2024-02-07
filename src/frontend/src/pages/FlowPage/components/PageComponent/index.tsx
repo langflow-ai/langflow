@@ -24,6 +24,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  updateCleanHandleColors,
   updateHandleColors,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
@@ -57,6 +58,7 @@ export default function Page({
     (state) => state.setReactFlowInstance
   );
 
+  const lastEdges = useFlowStore((state) => state.lastEdges);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
@@ -85,9 +87,11 @@ export default function Page({
 
   useEffect(() => {
     setTimeout(() => {
-      updateHandleColors(flow);
+      flow?.data?.edges.forEach((edge) => {
+        updateHandleColors(edge);
+      });
     }, 200);
-  }, [flow]);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -182,6 +186,21 @@ export default function Page({
       cleanFlow();
     };
   }, []);
+
+  useEffect(() => {
+    cleanUnnecessaryEdges();
+  }, [lastEdges]);
+
+  function cleanUnnecessaryEdges() {
+    if (lastEdges.length != edges.length) {
+      edges.forEach((edge) => {
+        updateCleanHandleColors(edge);
+      });
+      lastEdges.forEach((edge) => {
+        updateCleanHandleColors(edge);
+      });
+    }
+  }
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -292,6 +311,8 @@ export default function Page({
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
+    cleanUnnecessaryEdges();
+
     if (!edgeUpdateSuccessful.current) {
       setEdges((eds) => eds.filter((edg) => edg.id !== edge.id));
     }

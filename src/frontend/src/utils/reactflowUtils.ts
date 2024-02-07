@@ -63,30 +63,15 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
     const targetElement = document.querySelector<HTMLElement>(
       `[data-handleid="${targetHandle}"]`
     );
-    if (sourceElement && targetElement) {
-      sourceElement.style.setProperty(
-        "background-color",
-        "transparent",
-        "important"
-      );
-      targetElement.style.setProperty(
-        "background-color",
-        "transparent",
-        "important"
-      );
+    if (sourceElement && targetElement && edge?.selected) {
+      sourceElement.classList.remove("gradient-border");
+      targetElement.classList.remove("gradient-border");
 
-      sourceElement.style.setProperty(
-        "outline-color",
-        "transparent",
-        "important"
-      );
-      targetElement.style.setProperty(
-        "outline-color",
-        "transparent",
-        "important"
-      );
+      targetElement.classList.remove("gradient-is-connectable");
+
+      sourceElement.classList.add("gradient-border-output");
+      targetElement.classList.add("gradient-border-input");
     }
-
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
@@ -226,10 +211,6 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
-
-    setTimeout(() => {
-      updateHandleColors(flow);
-    }, 300);
   }
   return data;
 };
@@ -363,6 +344,8 @@ export function updateEdges(edges: Edge[]) {
           ? "stroke-gray-800 "
           : "stroke-gray-900 ") + " stroke-connection";
       edge.animated = targetHandleObject.type === "Text";
+
+      updateHandleColors(edge);
     });
 }
 
@@ -974,27 +957,43 @@ export function processFlowEdges(flow: FlowType) {
   });
 }
 
-export function updateHandleColors(flow: FlowType) {
-  if (!flow.data || !flow.data.edges) return;
-  //update edges colors
-  flow.data.edges.forEach((edge) => {
-    const sourceElement = document.querySelector<HTMLElement>(
-      `[data-handleid="${edge.sourceHandle}"]`
-    );
-    const targetElement = document.querySelector<HTMLElement>(
-      `[data-handleid="${edge.targetHandle}"]`
-    );
-    if (sourceElement && targetElement) {
-      sourceElement.style.setProperty("outline", "dashed", "important");
-      targetElement.style.setProperty("outline", "dashed", "important");
+export function updateHandleColors(edge) {
+  const sourceElement = document.querySelector<HTMLElement>(
+    `[data-handleid="${edge.sourceHandle}"]`
+  );
+  const targetElement = document.querySelector<HTMLElement>(
+    `[data-handleid="${edge.targetHandle}"]`
+  );
 
-      sourceElement.style.setProperty("outline-color", "#7c3aed", "important");
-      targetElement.style.setProperty("outline-color", "#7c3aed", "important");
+  if (sourceElement && targetElement) {
+    sourceElement.classList.remove("gradient-border-output");
+    targetElement.classList.remove("gradient-border-input");
 
-      sourceElement.style.setProperty("outline-offset", "-1px", "important");
-      targetElement.style.setProperty("outline-offset", "-1px", "important");
-    }
-  });
+    sourceElement.classList.add("gradient-border-output-connected");
+    targetElement.classList.add("gradient-border-input-connected");
+
+    targetElement.classList.remove("gradient-is-connectable");
+  }
+}
+
+export function updateCleanHandleColors(edge) {
+  // check if the source and target handle still exists
+  const sourceHandle = edge.sourceHandle; //right
+  const targetHandle = edge.targetHandle; //left
+
+  const sourceElement = document.querySelector<HTMLElement>(
+    `[data-handleid="${sourceHandle}"]`
+  );
+  const targetElement = document.querySelector<HTMLElement>(
+    `[data-handleid="${targetHandle}"]`
+  );
+  if (sourceElement && targetElement) {
+    sourceElement.classList.remove("gradient-border-output-connected");
+    targetElement.classList.remove("gradient-border-input-connected");
+
+    sourceElement.classList.add("gradient-border-output");
+    targetElement.classList.add("gradient-border-input");
+  }
 }
 
 export function expandGroupNode(

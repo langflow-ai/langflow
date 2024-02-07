@@ -15,7 +15,6 @@ import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { Button } from "../../../../components/ui/button";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
@@ -257,10 +256,41 @@ export default function ParameterComponent({
     renderTooltips();
   }, [tooltipTitle, flow]);
 
+  const hasInputOutput =
+    type != "str" &&
+    type != "dict" &&
+    type != "Document" &&
+    type != "float" &&
+    type != "bool" &&
+    type != "int" &&
+    type != "NestedDict" &&
+    type != "prompt" &&
+    type != "file";
+
+  const changeConnectionValidColor = (connection: any) => {
+    const targetHandle = connection.targetHandle; //left
+    const targetElement = document.querySelector<HTMLElement>(
+      `[data-handleid="${targetHandle}"]`
+    );
+    if (targetElement) {
+      targetElement.classList.remove("gradient-border-input");
+      targetElement.classList.remove("gradient-border-output");
+      targetElement.classList.remove("gradient-border-input-connected");
+      targetElement.classList.remove("gradient-border-output-connected");
+      targetElement.classList.add("gradient-is-connectable");
+    }
+  };
+
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
+      // <ShadTooltip
+      //   styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+      //   delayDuration={0}
+      //   content={refHtml.current}
+      //   side={"bottom"}
+      // >
       <Handle
         type={left ? "target" : "source"}
         position={left ? Position.Left : Position.Right}
@@ -270,108 +300,111 @@ export default function ParameterComponent({
         id={
           proxy ? scapedJSONStringfy({ ...id, proxy }) : scapedJSONStringfy(id)
         }
-        isValidConnection={(connection) =>
-          isValidConnection(connection, nodes, edges)
-        }
+        isValidConnection={(connection) => {
+          const isValidConnectionValidation = isValidConnection(
+            connection,
+            nodes,
+            edges
+          );
+
+          if (isValidConnectionValidation) {
+            changeConnectionValidColor(connection);
+          }
+          return isValidConnectionValidation;
+        }}
         className={classNames(
           left ? "my-12  " : " my-12 ",
-          "h-5 w-5 rounded-full border-[3px] bg-background",
-          !showNode ? "mt-0" : ""
+          "h-5 w-5 cursor-pointer",
+          !showNode ? "mt-0" : "",
+          left ? "gradient-border-input" : "gradient-border-output"
         )}
-        style={{
-          borderColor: "#7c3aed",
-        }}
         onClick={() => {
           setFilterEdge(groupedEdge.current);
         }}
-      >
-        <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-          <div className="flex">
-            <ShadTooltip
-              styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-              delayDuration={0}
-              content={refHtml.current}
-              side={left ? "left" : "right"}
-            ></ShadTooltip>
-          </div>
-        </Button>
-      </Handle>
+      ></Handle>
+      // </ShadTooltip>
     )
   ) : (
     <div
       ref={ref}
-      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className={classNames(
+        "relative mt-1 flex min-h-[2.5rem] w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      )}
     >
       <>
-        <div
-          className={
-            "h-full w-full truncate text-sm" +
-            (left ? "" : " text-end") +
-            (info !== "" ? " flex items-center" : "")
-          }
-        >
-          {proxy ? (
-            <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span>{title}</span>
-            </ShadTooltip>
-          ) : (
-            title
-          )}
-          <span className="text-status-red">{required ? " *" : ""}</span>
-          <div className="">
-            {info !== "" && (
-              <ShadTooltip content={infoHtml.current}>
-                {/* put div to avoid bug that does not display tooltip */}
-                <div>
-                  <IconComponent
-                    name="Info"
-                    className="relative bottom-0.5 ml-2 h-3 w-4"
-                  />
-                </div>
-              </ShadTooltip>
-            )}
-          </div>
-        </div>
         {left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
           <></>
         ) : (
-          <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
-            content={refHtml.current}
-            side={"top"}
+          // <ShadTooltip
+          //   styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+          //   delayDuration={0}
+          //   content={refHtml.current}
+          //   side={"bottom"}
+          // >
+          <Handle
+            type={left ? "target" : "source"}
+            position={left ? Position.Left : Position.Right}
+            key={
+              proxy
+                ? scapedJSONStringfy({ ...id, proxy })
+                : scapedJSONStringfy(id)
+            }
+            id={
+              proxy
+                ? scapedJSONStringfy({ ...id, proxy })
+                : scapedJSONStringfy(id)
+            }
+            isValidConnection={(connection) => {
+              const isValidConnectionValidation = isValidConnection(
+                connection,
+                nodes,
+                edges
+              );
+
+              if (isValidConnectionValidation) {
+                changeConnectionValidColor(connection);
+              }
+              return isValidConnectionValidation;
+            }}
+            className={classNames(
+              " left-[-0.4px] z-50 h-full w-full  bg-muted",
+              left ? "gradient-border-input" : "gradient-border-output"
+            )}
+            onClick={() => {
+              setFilterEdge(groupedEdge.current);
+            }}
           >
-            <Handle
-              type={left ? "target" : "source"}
-              position={left ? Position.Left : Position.Right}
-              key={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
+            <div
+              className={
+                "pointer-events-none relative top-2.5 h-full w-full self-center truncate text-sm" +
+                (left ? " left-6 " : " right-6 text-end ") +
+                (info !== "" ? " flex items-center " : "")
               }
-              id={
-                proxy
-                  ? scapedJSONStringfy({ ...id, proxy })
-                  : scapedJSONStringfy(id)
-              }
-              isValidConnection={(connection) =>
-                isValidConnection(connection, nodes, edges)
-              }
-              className={classNames(
-                " left-[-0.4px] h-full w-full rounded-none bg-transparent"
-              )}
-              style={{
-                borderColor: "transparent",
-              }}
-              onClick={() => {
-                setFilterEdge(groupedEdge.current);
-              }}
             >
-              <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
-                <div className="flex"></div>
-              </Button>
-            </Handle>
-          </ShadTooltip>
+              {proxy ? (
+                <ShadTooltip content={<span>{proxy.id}</span>}>
+                  <span>{title}</span>
+                </ShadTooltip>
+              ) : (
+                <span>{title}</span>
+              )}
+              <span className="text-status-red">{required ? " *" : ""}</span>
+              <div className="">
+                {info !== "" && (
+                  <ShadTooltip content={infoHtml.current}>
+                    {/* put div to avoid bug that does not display tooltip */}
+                    <div>
+                      <IconComponent
+                        name="Info"
+                        className="relative bottom-0.5 ml-1 h-3 w-4"
+                      />
+                    </div>
+                  </ShadTooltip>
+                )}
+              </div>
+            </div>
+          </Handle>
+          // </ShadTooltip>
         )}
 
         {left === true &&
