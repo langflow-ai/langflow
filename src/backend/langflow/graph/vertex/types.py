@@ -14,7 +14,7 @@ class AgentVertex(StatelessVertex):
 
         self.tools: List[Union[ToolkitVertex, ToolVertex]] = []
         self.chains: List[ChainVertex] = []
-        self.steps: List[Callable] = [self._custom_build, self._run]
+        self.steps: List[Callable] = [self._custom_build]
 
     def __getstate__(self):
         state = super().__getstate__()
@@ -201,7 +201,7 @@ class TextSplitterVertex(StatefulVertex):
 class ChainVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="chains")
-        self.steps = [self._custom_build, self._run]
+        self.steps = [self._custom_build]
 
     async def _custom_build(self, *args, **kwargs):
         force = kwargs.get("force", False)
