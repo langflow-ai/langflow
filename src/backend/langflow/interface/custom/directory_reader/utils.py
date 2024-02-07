@@ -124,12 +124,13 @@ def get_new_key(dictionary, original_key):
 
 def determine_component_name(component):
     """Determine the name of the component."""
-    component_output_types = component["output_types"]
-    if len(component_output_types) == 1:
-        return component_output_types[0]
-    else:
-        file_name = component.get("file").split(".")[0]
-        return "".join(word.capitalize() for word in file_name.split("_")) if "_" in file_name else file_name
+    # component_output_types = component["output_types"]
+    # if len(component_output_types) == 1:
+    #     return component_output_types[0]
+    # else:
+    #     file_name = component.get("file").split(".")[0]
+    #     return "".join(word.capitalize() for word in file_name.split("_")) if "_" in file_name else file_name
+    return component["name"]
 
 
 def build_menu_items(menu_item):
@@ -142,4 +143,5 @@ def build_menu_items(menu_item):
         except Exception as exc:
             logger.error(f"Error loading Component: {component['output_types']}")
             logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
+    return menu_items
     return menu_items
