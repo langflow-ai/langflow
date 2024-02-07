@@ -6,7 +6,7 @@ from langflow import CustomComponent
 from langflow.field_typing import Document, Embeddings, Text
 
 
-class ChromaComponent(CustomComponent):
+class ChromaSearchComponent(CustomComponent):
     """
     A custom component for implementing a Vector Store using Chroma.
     """
