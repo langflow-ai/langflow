@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TagsSelector } from "../../../../components/tagsSelectorComponent";
@@ -21,6 +21,7 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
 import { nodeColors } from "../../../../utils/styleUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import SideBarAccordeon from "./sideBarAccordeon";
 
 export default function Sidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -40,6 +41,16 @@ export default function Sidebar(): JSX.Element {
   const [dataFilter, setFilterData] = useState(data);
   const [tabActive, setTabActive] = useState("Components");
   const [search, setSearch] = useState("");
+  const [seeMore, setSeeMore] = useState(false);
+  const [seeMore2, setSeeMore2] = useState(false);
+  const doisRef = useRef<HTMLDivElement>(null);
+  const umRef = useRef<HTMLDivElement>(null);
+  const [umSizeRef, setUmSizeRef] = useState(umRef?.current?.clientHeight ?? 0);
+  
+
+  useEffect(() => {setUmSizeRef(umRef?.current?.clientHeight ?? 0)}, [umRef])
+
+
   const [size, setSize] = useState(40);
   function onDragStart(
     event: React.DragEvent<any>,
@@ -322,8 +333,8 @@ export default function Sidebar(): JSX.Element {
               </button>
             </ShadTooltip>
           </div>
-          <div className="flex h-full w-full flex-col gap-2 overflow-y-scroll py-4 scrollbar-hide">
-            <div className="flex w-full items-center justify-start px-4">
+          <div className="space-y-4 overflow-y-scroll p-4 scrollbar-hide">
+            <div className="flex w-full items-center justify-start pb-4">
               <TagsSelector
                 tags={[
                   { id: "vectorstore", name: "Vector Store" },
@@ -338,97 +349,10 @@ export default function Sidebar(): JSX.Element {
                 setSelectedTags={setFilterCategories}
               />
             </div>
-            <div className="columns-2 gap-2 p-4">
-              <div
-                className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
-                draggable={true}
-              >
-                <div
-                  className={
-                    "flex-max-width flex-shrink-0 items-center truncate p-2"
-                  }
-                >
-                  <IconComponent
-                    name={"group_components"}
-                    className={"generic-node-icon "}
-                    iconColor={`${nodeColors["chains"]}`}
-                  />
-                  <div className="truncate">
-                    <ShadTooltip content={"My Component"}>
-                      <div className="flex" onDoubleClick={() => {}}>
-                        <div
-                          data-testid={"title-" + "My Component"}
-                          className="ml-2 truncate pr-2 text-primary"
-                        >
-                          My Component
-                        </div>
-                      </div>
-                    </ShadTooltip>
-                  </div>
-                  <IconComponent
-                    name="Info"
-                    className="ml-1 h-4 w-4 text-muted-foreground"
-                  />
-                </div>
-                <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
-                  The description will tell the user what to do or why use it.
-                </div>
-                <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                  <Badge variant="gray" size="xq">
-                    Vector Store
-                  </Badge>
-                  <Badge variant="gray" size="xq">
-                    OpenAI
-                  </Badge>
-                  <Badge variant="gray" size="xq">
-                    Chain
-                  </Badge>
-                </div>
-              </div>
-              <div
-                className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
-                draggable={true}
-              >
-                <div
-                  className={
-                    "flex-max-width flex-shrink-0 items-center truncate p-2"
-                  }
-                >
-                  <IconComponent
-                    className={cn("generic-node-icon text-flow-icon")}
-                    name={"Group"}
-                  />
-                  <div className="truncate">
-                    <ShadTooltip content={"My Flow"}>
-                      <div className="flex" onDoubleClick={() => {}}>
-                        <div
-                          data-testid={"title-" + "My Flow"}
-                          className="ml-2 truncate pr-2 text-primary"
-                        >
-                          My Flow
-                        </div>
-                      </div>
-                    </ShadTooltip>
-                  </div>
-                  <IconComponent
-                    name="Info"
-                    className="ml-1 h-4 w-4 text-muted-foreground"
-                  />
-                </div>
-                <div className="h-full px-4 text-sm text-muted-foreground">
-                  This, on the other hand, is a flow, and a person can just open
-                  it.
-                </div>
-                <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                  <Badge variant="gray" size="xq">
-                    Vector Store
-                  </Badge>
-                  <Badge variant="gray" size="xq">
-                    Chain
-                  </Badge>
-                </div>
-              </div>
-            </div>
+            <SideBarAccordeon title="Inputs / Outputs" />
+            <SideBarAccordeon title="Data" />
+
+            
           </div>
         </ResizablePanel>
         <ResizableHandle />
