@@ -366,7 +366,7 @@ export default function GenericNode({
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
-                            ? `Duration: ${validationStatus.duration}\n${validationStatus.params}`
+                            ? `Duration: ${validationStatus.data.duration}\n${validationStatus.params}`
                                 .split("\n")
                                 .map((line, index) => (
                                   <div key={index}>{line}</div>

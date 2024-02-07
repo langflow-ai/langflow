@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_serializer, validator
 
 
 class TransactionModel(BaseModel):
@@ -60,6 +60,13 @@ class VertexBuildModel(BaseModel):
         from_attributes = True
         populate_by_name = True
 
+    @field_serializer("data", "artifacts")
+    def serialize_dict(v):
+        if isinstance(v, dict):
+            # map_dict = to_map(v)
+            return json.dumps(v)
+        return v
+
     @validator("params", pre=True)
     def validate_params(cls, v):
         if isinstance(v, str):
@@ -80,6 +87,24 @@ class VertexBuildModel(BaseModel):
         if isinstance(v, str):
             return json.loads(v)
         return v
+
+
+# create a function that turns dicts into a
+# dict like this:
+#     my_map_dict = {
+#     "key": [
+#         1, 2, 3
+#     ],
+#     "value": [
+#         "one", "two", "three"
+#     ]
+# }
+# so map has a "key" and a "value" list
+# containing the keys and values of the dict
+def to_map(value: dict):
+    keys = list(value.keys())
+    values = list(value.values())
+    return {"key": keys, "value": values}
 
 
 class VertexBuildMapModel(BaseModel):
