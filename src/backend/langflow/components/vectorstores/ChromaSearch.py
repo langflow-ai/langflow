@@ -11,9 +11,8 @@ class ChromaComponent(CustomComponent):
     A custom component for implementing a Vector Store using Chroma.
     """
 
-    display_name: str = "Chroma"
-    description: str = "Implementation of Vector Store using Chroma"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
+    display_name: str = "Chroma Search"
+    description: str = "Search a Chroma collection for similar documents."
     beta: bool = True
 
     def build_config(self):
