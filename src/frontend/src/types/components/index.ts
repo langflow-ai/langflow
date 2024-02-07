@@ -620,6 +620,7 @@ export type crashComponentPropsType = {
 
 export type validationStatusType = {
   id: string;
+  data: object;
   params: string;
   progress: number;
   valid: boolean;
