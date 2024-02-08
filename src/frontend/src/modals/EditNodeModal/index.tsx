@@ -28,7 +28,9 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
+import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -59,6 +61,10 @@ const EditNodeModal = forwardRef(
     const setPending = useFlowStore((state) => state.setPending);
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
+    const setNoticeData = useAlertStore((state) => state.setNoticeData);
+    const globalVariablesEntries = useGlobalVariablesStore(
+      (state) => state.globalVariablesEntries
+    );
 
     function changeAdvanced(n) {
       setMyData((old) => {
@@ -245,6 +251,7 @@ const EditNodeModal = forwardRef(
                                       <InputComponent
                                         id={"input-" + index}
                                         editNode={true}
+                                        options={globalVariablesEntries}
                                         disabled={disabled}
                                         password={
                                           myData.node.template[templateParam]
@@ -259,6 +266,27 @@ const EditNodeModal = forwardRef(
                                             value,
                                             templateParam
                                           );
+                                          if (
+                                            globalVariablesEntries.includes(
+                                              value
+                                            )
+                                          ) {
+                                            setNoticeData({
+                                              title: `the value inserted in ${data.node?.display_name} is a global variable, \n 
+                                            the real value will be update on run`,
+                                            });
+                                          }
+                                          //mark as global variable
+                                          setNode(data.id, (oldNode) => {
+                                            let newNode = cloneDeep(oldNode);
+                                            newNode.data = {
+                                              ...newNode.data,
+                                            };
+                                            newNode.data.node.template[
+                                              templateParam
+                                            ].load_from_db = true;
+                                            return newNode;
+                                          });
                                         }}
                                       />
                                     )}

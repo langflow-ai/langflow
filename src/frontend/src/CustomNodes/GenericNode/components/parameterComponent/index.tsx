@@ -413,6 +413,7 @@ export default function ParameterComponent({
                 disabled={disabled}
                 password={data.node?.template[name].password ?? false}
                 value={data.node?.template[name].value ?? ""}
+                options={globalVariablesEntries}
                 onChange={(value) => {
                   handleOnNewValue(value);
                   if (globalVariablesEntries.includes(value)) {

@@ -1,7 +1,6 @@
 import { Listbox, Transition } from "@headlessui/react";
 import * as Form from "@radix-ui/react-form";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
@@ -27,12 +26,7 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
-  );
-  const [filteredOpts, setFilteredValue] = useState<string[]>(
-    globalVariablesEntries
-  );
+  const [filteredOpts, setFilteredValue] = useState<string[]>(options);
 
   // Clear component state
   useEffect(() => {
@@ -197,19 +191,21 @@ export default function InputComponent({
         </>
       )}
 
-      <span
-        className={
-          password
-            ? "dropdown-component-arrow  right-8"
-            : "dropdown-component-arrow right-0"
-        }
-      >
-        <IconComponent
-          name="ChevronsUpDown"
-          className="dropdown-component-arrow-color"
-          aria-hidden="true"
-        />
-      </span>
+      {options.length > 0 && (
+        <span
+          className={
+            password
+              ? "dropdown-component-arrow  right-8"
+              : "dropdown-component-arrow right-0"
+          }
+        >
+          <IconComponent
+            name="ChevronsUpDown"
+            className="dropdown-component-arrow-color"
+            aria-hidden="true"
+          />
+        </span>
+      )}
 
       {password && (
         <button
