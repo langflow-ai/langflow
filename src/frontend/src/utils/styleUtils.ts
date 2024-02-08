@@ -16,6 +16,7 @@ import {
   ChevronsUpDown,
   Circle,
   Clipboard,
+  Code,
   Code2,
   Combine,
   Compass,
@@ -395,4 +396,5 @@ export const nodeIconsLucide: iconsType = {
   Repeat,
   io: ArrowDownUp,
   ScreenShare,
+  Code,
 };
