@@ -34,6 +34,8 @@ export type APIClassType = {
     | CustomFieldsType
     | boolean
     | undefined;
+  categories?: Array<string>;
+  tags?: Array<string>;
 };
 
 export type TemplateVariableType = {
