@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InputComponent from "../../../components/inputComponent";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -12,15 +13,17 @@ import { useGlobalVariablesStore } from "../../../stores/globalVariables";
 export default function AddNewVariableButton(): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
+  const [provider, setProvider] = useState("");
   const [open, setOpen] = useState(false);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
   function handleSaveVariable() {
-    registerGlobalVariable(key, value).then((_) => {
-      addGlobalVariable(key, value);
+    registerGlobalVariable(key, value, provider).then((_) => {
+      addGlobalVariable(key, value, provider);
       setKey("");
       setValue("");
+      setProvider("");
       setOpen(false);
     });
   }
@@ -45,6 +48,16 @@ export default function AddNewVariableButton(): JSX.Element {
               }}
               placeholder="example name"
             ></Input>
+            <Label>Provider (optional) </Label>
+            <InputComponent
+              value={provider}
+              onChange={(e) => {
+                setProvider(e);
+              }}
+              password={false}
+              options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
+              placeholder="example provider"
+            ></InputComponent>
           </div>
           <div className="h-1/2">
             <Label>Variable Value </Label>
