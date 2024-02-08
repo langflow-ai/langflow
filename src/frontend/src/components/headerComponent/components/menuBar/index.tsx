@@ -7,16 +7,20 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Node } from "reactflow";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
-import { Node } from "reactflow";
-import useFlowStore from "../../../../stores/flowStore";
 
-export const MenuBar = ({removeFunction}: {removeFunction: (nodes: Node[]) => void}): JSX.Element => {
+export const MenuBar = ({
+  removeFunction,
+}: {
+  removeFunction: (nodes: Node[]) => void;
+}): JSX.Element => {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -42,7 +46,7 @@ export const MenuBar = ({removeFunction}: {removeFunction: (nodes: Node[]) => vo
     <div className="round-button-div">
       <button
         onClick={() => {
-          removeFunction(n)
+          removeFunction(n);
           navigate(-1);
         }}
       >
