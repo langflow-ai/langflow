@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from typing import Annotated, Any, List, Optional, Union
+from langflow.template.category.schema import CategorySchema
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
@@ -22,6 +23,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
 from langflow.services.session.service import SessionService
+from langflow.template.category import categories
 from loguru import logger
 from sqlmodel import select
 
@@ -128,19 +130,12 @@ def get_all(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# @router.get("/categories", dependencies=[Depends(get_current_active_user)])
-# def get_categories(
-#     settings_service=Depends(get_settings_service),
-# ):
-#     from langflow.interface.types import get_all_types_dict
-
-#     logger.debug("Building langchain types dict")
-#     try:
-#         all_types_dict = get_all_types_dict(settings_service)
-#         return list(all_types_dict.keys())
-
-#     except Exception as exc:
-#         raise HTTPException(status_code=500, detail=str(exc)) from exc
+@router.get("/categories", response_model=List[CategorySchema])
+def get_categories():
+    try:
+        return categories
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/process/json", response_model=ProcessResponse)
