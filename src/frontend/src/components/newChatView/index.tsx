@@ -64,7 +64,7 @@ export default function newChatView(): JSX.Element {
           .artifacts as ChatOutputType;
         console.log(output.data.artifacts);
         const is_ai = sender === "Machine";
-        return { isSend: !is_ai, message: String(message), sender_name };
+        return { isSend: !is_ai, message: message, sender_name };
       });
     setChatHistory(chatMessages);
   }, [flowPool]);
