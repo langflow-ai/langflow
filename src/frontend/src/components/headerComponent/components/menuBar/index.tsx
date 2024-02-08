@@ -7,20 +7,26 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import InputComponent from "../../../inputComponent";
+import _ from "lodash";
 
 export const MenuBar = (): JSX.Element => {
+  const {id} = useParams();
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const [openSettings, setOpenSettings] = useState(false);
+  const [showEditName, setShow] = useState<boolean>(false)
+  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const [inputValue, setInputValue] = useState<string | undefined>(currentFlow?.name);
 
   const navigate = useNavigate();
 
@@ -34,6 +40,7 @@ export const MenuBar = (): JSX.Element => {
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
+  console.log(inputValue)
 
   return currentFlow ? (
     <div className="round-button-div">
@@ -45,14 +52,48 @@ export const MenuBar = (): JSX.Element => {
         <IconComponent name="ChevronLeft" className="w-4" />
       </button>
       <div className="header-menu-bar">
+      <div className="header-menu-bar-display">
+            <div
+              className="text-secondary-foreground hover:bg-secondary-foreground/5 dark:hover:bg-background/10 hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-9 px-3 truncate" 
+              onDoubleClick={(e => {
+                setShow(true)
+              })}
+              >
+              {showEditName ? (
+                <input
+                onBlur={async () => {
+                    setShow(false);
+                    if (inputValue?.trim() !== "") {
+                      const updatedFlow = _.cloneDeep(currentFlow);
+                      updatedFlow.name = inputValue!;
+                      return await saveFlow(updatedFlow);
+                    }
+                  }}
+                  value={inputValue}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace") {
+                      // Prevent the default backspace behavior which clears the input value
+                      e.preventDefault();
+                      // Remove the last character from the input value
+                      setInputValue(inputValue?.slice(0, -1));
+                    }
+                  }}
+                  onChange={(e) => {
+                    setInputValue(e.target.value);
+                  }}
+                  onFocus={() => console.log(currentFlow.name)}
+                  className=" h-9 bg-muted rounded-sm text-secondary-foreground hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background truncate"
+                />
+              ) : (
+                currentFlow.name
+              )}  
+            </div>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button asChild variant="primary" size="sm">
-              <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{currentFlow.name}</div>
-                <IconComponent name="ChevronDown" className="h-4 w-4" />
+              <div className="cursor-pointer text-secondary-foreground dark:hover:text-ring inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-9 px-3 rounded-r-md">
+                <IconComponent name={showEditName ? "Pencil" : "ChevronDown"} className="h-4 w-4 text-ring" />
               </div>
-            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
             <DropdownMenuLabel>Options</DropdownMenuLabel>
