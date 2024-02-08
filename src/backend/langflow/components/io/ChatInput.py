@@ -8,13 +8,19 @@ class ChatInput(CustomComponent):
     display_name = "Chat Input"
     description = "Used to get user input from the chat."
 
-    field_config = {
-        "code": {
-            "show": False,
+    def build_config(self):
+        return {
+            "message": {"input_types": ["Text"]},
+            "sender": {"options": ["Machine", "User"], "display_name": "Sender Type"},
+            "sender_name": {"display_name": "Sender Name"},
         }
-    }
 
-    def build(self, message: Optional[str] = None) -> Text:
+    def build(
+        self,
+        sender: Optional[str] = "User",
+        sender_name: Optional[str] = "You",
+        message: Optional[str] = None,
+    ) -> Text:
         self.repr_value = message
         if not message:
             message = ""
