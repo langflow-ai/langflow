@@ -2,15 +2,15 @@ import operator
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
-import emoji
-from langflow.interface.custom.custom_component.component import Component
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
+from langflow.interface.custom.custom_component.component import Component
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
@@ -40,21 +40,6 @@ class CustomComponent(Component):
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
-
-        # Validate the emoji at the icon field
-        if self.icon:
-            self.icon = self.validate_icon(self.icon)
-
-    def validate_icon(self, value: str):
-        # we are going to use the emoji library to validate the emoji
-        # emojis can be defined using the :emoji_name: syntax
-        if not value.startswith(":") or not value.endswith(":"):
-            raise ValueError("Invalid emoji. Please use the :emoji_name: syntax.")
-
-        emoji_value = emoji.emojize(value)
-        if value == emoji_value:
-            raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
-        return emoji_value
 
     def custom_repr(self):
         if self.repr_value == "":
