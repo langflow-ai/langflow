@@ -304,7 +304,10 @@ export default function ParameterComponent({
   ) : (
     <div
       ref={ref}
-      className="relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2"
+      className={
+        "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
+        (type === "code" ? " hidden " : "")
+      }
     >
       <>
         <div
@@ -456,7 +459,7 @@ export default function ParameterComponent({
             )}
           </div>
         ) : left === true && type === "code" ? (
-          <div className="mt-2 w-full">
+          <div className="mt-2 hidden w-full">
             <CodeAreaComponent
               readonly={
                 data.node?.flow && data.node.template[name].dynamic

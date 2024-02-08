@@ -112,6 +112,7 @@ export type CodeAreaComponentType = {
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
+  openModal?: boolean;
 };
 
 export type FileComponentType = {
@@ -480,6 +481,7 @@ export type nodeToolbarPropsType = {
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
+  name?: string;
 };
 
 export type parsedDataType = {
@@ -513,6 +515,7 @@ export type codeAreaModalPropsType = {
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
+  openModal?: boolean;
 };
 
 export type chatMessagePropsType = {
