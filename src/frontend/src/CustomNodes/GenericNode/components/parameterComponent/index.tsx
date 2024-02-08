@@ -421,16 +421,26 @@ export default function ParameterComponent({
                       title: `the value inserted in ${data.node?.display_name} is a global variable, \n 
                     the real value will be update on run`,
                     });
+                    setNode(data.id, (oldNode) => {
+                      let newNode = cloneDeep(oldNode);
+                      newNode.data = {
+                        ...newNode.data,
+                      };
+                      newNode.data.node.template[name].load_from_db = true;
+                      return newNode;
+                    });
+                  }
+                  else{
+                    setNode(data.id, (oldNode) => {
+                      let newNode = cloneDeep(oldNode);
+                      newNode.data = {
+                        ...newNode.data,
+                      };
+                      newNode.data.node.template[name].load_from_db = false;
+                      return newNode;
+                    });
                   }
                   //mark as global variable
-                  setNode(data.id, (oldNode) => {
-                    let newNode = cloneDeep(oldNode);
-                    newNode.data = {
-                      ...newNode.data,
-                    };
-                    newNode.data.node.template[name].load_from_db = true;
-                    return newNode;
-                  });
                 }}
               />
             )}

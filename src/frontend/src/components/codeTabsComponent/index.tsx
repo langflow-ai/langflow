@@ -394,6 +394,18 @@ export default function CodeTabsComponent({
                                                             title: `the value inserted in ${templateField} is a global variable, \n 
                                                           the real value will be update on run`,
                                                           });
+                                                          newInputList![
+                                                            i
+                                                          ].data.node.template[
+                                                            templateField
+                                                          ].load_from_db = true;
+                                                        }
+                                                        else{
+                                                          newInputList![
+                                                            i
+                                                          ].data.node.template[
+                                                            templateField
+                                                          ].load_from_db = false;
                                                         }
                                                         return newInputList;
                                                       });

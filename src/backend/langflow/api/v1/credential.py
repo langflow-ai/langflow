@@ -8,9 +8,6 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
-                                                          CredentialRead,
-                                                          CredentialUpdate)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
