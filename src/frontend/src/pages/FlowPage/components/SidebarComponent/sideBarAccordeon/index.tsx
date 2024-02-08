@@ -29,7 +29,7 @@ export default function SideBarAccordeon({title}: {title: string}) {
     useEffect(() => {setDoisSizeRef(doisRef?.current?.clientHeight ?? 0)}, [doisRef])
 
     return (
-        <>
+        <div className="space-y-4">
 
             <div className="flex items-center justify-between">
               <span className="px-2 text-xl font-semibold tracking-tight">
@@ -45,7 +45,7 @@ export default function SideBarAccordeon({title}: {title: string}) {
                 <IconComponent
                   name="ChevronDown"
                   className={cn(
-                    "h-5 w-5 text-muted-foreground transition-all duration-500",
+                    "h-5 w-5 text-muted-foreground transition-all duration-300",
                     seeMore2 ? "rotate-180 transform" : ""
                   )}
                 />
@@ -54,12 +54,12 @@ export default function SideBarAccordeon({title}: {title: string}) {
             <div
               className={cn(
                 "overflow-hidden transition-all duration-500 ease-in-out",
-                seeMore2 ? "h-[" + doisSizeRef + "px]" : "h-40"
+                seeMore2 ? "h-[" + doisSizeRef + "px]" : "h-32"
               )}
             >
-              <div className="grid h-fit grid-cols-2 gap-2" ref={doisRef}>
+              <div className="grid h-fit grid-cols-2 gap-4" ref={doisRef}>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -92,20 +92,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -138,20 +128,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -184,20 +164,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -230,20 +200,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -276,20 +236,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
                 <div
-                  className="flex h-40 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
+                  className="flex h-32 cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg "
                   draggable={true}
                 >
                   <div
@@ -322,20 +272,10 @@ export default function SideBarAccordeon({title}: {title: string}) {
                   <div className="h-full px-4 text-sm text-muted-foreground truncate-doubleline">
                     The description will tell the user what to do or why use it.
                   </div>
-                  <div className="flex w-full flex-1 flex-shrink-0 flex-wrap gap-2 px-4 pb-4">
-                    <Badge variant="gray" size="xq">
-                      Vector Store
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      OpenAI
-                    </Badge>
-                    <Badge variant="gray" size="xq">
-                      Chain
-                    </Badge>
-                  </div>
+                  
                 </div>
               </div>
             </div>
-            </>
+            </div>
     )
 }

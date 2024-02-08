@@ -259,16 +259,16 @@ export default function Sidebar(): JSX.Element {
           }}
           className="pointer-events-auto flex flex-col bg-muted shadow-lg"
         >
-          <div className="flex items-center justify-between gap-2 p-4">
-            <Button
+          <div className="flex items-center justify-between gap-4 py-8 px-10">
+          <Button
               variant="primary"
-              className="p-2 shadow-sm"
               size="lg"
+              className="p-2 shadow-sm"
               onClick={() => setSidebarOpen(false)}
             >
-              <IconComponent name="Filter" className="h-5 w-6" />
+              <IconComponent name="PanelRightOpen" className="h-6 w-6 stroke-1" />
             </Button>
-            <div className="relative mx-auto flex w-full items-center">
+            <div className="relative flex w-full items-center">
               <Input
                 onFocusCapture={() => handleBlur()}
                 value={search}
@@ -276,7 +276,7 @@ export default function Sidebar(): JSX.Element {
                 name="search"
                 id="search"
                 placeholder="Search components, flows or bundles..."
-                className="nopan nodelete nodrag noundo nocopy input-search h-11 px-4"
+                className="nopan nodelete nodrag noundo nocopy input-search h-12 px-4 mx-0"
                 onChange={(event) => {
                   handleSearchInput(event.target.value);
                   // Set search input state
@@ -291,16 +291,9 @@ export default function Sidebar(): JSX.Element {
                 />
               </div>
             </div>
-            <Button
-              variant="primary"
-              size="lg"
-              className="p-2 shadow-sm"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <IconComponent name="ChevronLeft" className="h-6 w-6" />
-            </Button>
+            
           </div>
-          <div className="flex w-full gap-0 border-b border-border px-4">
+          <div className="flex w-full gap-0 border-b border-border px-10">
             <button
               onClick={() => {
                 setTabActive("Components");
@@ -333,7 +326,7 @@ export default function Sidebar(): JSX.Element {
               </button>
             </ShadTooltip>
           </div>
-          <div className="space-y-4 overflow-y-scroll p-4 scrollbar-hide">
+          <div className="space-y-8 overflow-y-scroll py-6 px-10 scrollbar-hide">
             <div className="flex w-full items-center justify-start pb-4">
               <TagsSelector
                 tags={[
