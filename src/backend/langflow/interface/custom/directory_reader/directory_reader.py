@@ -220,30 +220,26 @@ class DirectoryReader:
         Build a list of menus with their components
         from the .py files in the directory.
         """
-        response = {"menu": []}
-        logger.debug("-------------------- Building component menu list --------------------")
+        # Initialize an empty dictionary to hold menus and their components
+        menus = {}
+        logger.debug("Building component menu list")
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
-            logger.debug(f"Menu name: {menu_name}")
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
-            logger.debug(f"Validation result: {validation_result}")
 
-            menu_result = self.find_menu(response, menu_name) or {
-                "name": menu_name,
-                "path": os.path.dirname(file_path),
-                "components": [],
-            }
-            component_name = filename.split(".")[0]
-            # This is the name of the file which will be displayed in the UI
-            # We need to change it from snake_case to CamelCase
+            # Directly work with dictionary to avoid repeated list searches
+            if menu_name not in menus:
+                menus[menu_name] = {
+                    "name": menu_name,
+                    "path": os.path.dirname(file_path),
+                    "components": [],
+                }
 
-            # first check if it's already CamelCase
-            if "_" in component_name:
-                component_name_camelcase = " ".join(word.title() for word in component_name.split("_"))
-            else:
-                component_name_camelcase = component_name
+            component_name = filename.rsplit(".", 1)[0]  # More robust split by extension
+            # Convert from snake_case to CamelCase more efficiently
+            component_name_camelcase = "".join(word.title() for word in component_name.split("_"))
 
             component_info = {
                 "name": "CustomComponent",
@@ -252,10 +248,10 @@ class DirectoryReader:
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
             }
-            menu_result["components"].append(component_info)
 
-            logger.debug(f"Component info: {component_info}")
-            if menu_result not in response["menu"]:
-                response["menu"].append(menu_result)
-        logger.debug("-------------------- Component menu list built --------------------")
+            menus[menu_name]["components"].append(component_info)
+
+        # Convert the menus dictionary back into a list format expected by the response
+        response = {"menu": list(menus.values())}
+        logger.debug("Component menu list built")
         return response
