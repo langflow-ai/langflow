@@ -2,6 +2,7 @@ import ast
 from typing import Callable, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage
+
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -321,7 +322,7 @@ class ChatVertex(StatelessVertex):
 
     async def _run(self, *args, **kwargs):
         if self.is_interface_component:
-            if self.vertex_type == "ChatOutput":
+            if self.vertex_type in ["ChatOutput", "ChatInput"]:
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
