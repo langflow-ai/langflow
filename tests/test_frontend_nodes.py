@@ -11,7 +11,7 @@ def sample_template_field() -> TemplateField:
 
 @pytest.fixture
 def sample_template(sample_template_field: TemplateField) -> Template:
-    return Template(type_name="test_template", fields=[sample_template_field])
+    return Template(name="test_template", fields=[sample_template_field])
 
 
 @pytest.fixture

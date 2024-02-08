@@ -20,24 +20,24 @@ def merge_nested_dicts_with_renaming(dict1, dict2):
 def build_invalid_menu(invalid_components):
     """Build the invalid menu."""
     if not invalid_components.get("menu"):
-        return {}
+        return []
 
     logger.debug("------------------- INVALID COMPONENTS -------------------")
-    invalid_menu = {}
+    invalid_items = []
     for menu_item in invalid_components["menu"]:
-        menu_name = menu_item["name"]
-        invalid_menu[menu_name] = build_invalid_menu_items(menu_item)
-    return invalid_menu
+        items = build_invalid_menu_items(menu_item)
+        invalid_items.extend(items)
+    return invalid_items
 
 
 def build_valid_menu(valid_components):
     """Build the valid menu."""
-    valid_menu = {}
+    valid_items = []
     logger.debug("------------------- VALID COMPONENTS -------------------")
     for menu_item in valid_components["menu"]:
-        menu_name = menu_item["name"]
-        valid_menu[menu_name] = build_menu_items(menu_item)
-    return valid_menu
+        items = build_menu_items(menu_item)
+        valid_items.extend(items)
+    return valid_items
 
 
 def build_and_validate_all_files(reader: DirectoryReader, file_list):
@@ -57,7 +57,7 @@ def load_files_from_path(path: str):
     return reader.get_files()
 
 
-def build_custom_component_list_from_path(path: str):
+def build_custom_component_list_from_path(path: str) -> list[dict]:
     """Build a list of custom components for the langchain from a given path"""
     file_list = load_files_from_path(path)
     reader = DirectoryReader(path, False)
@@ -67,7 +67,7 @@ def build_custom_component_list_from_path(path: str):
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)
 
-    return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
+    return valid_menu + invalid_menu
 
 
 def create_invalid_component_template(component, component_name):
@@ -102,11 +102,11 @@ def build_invalid_component(component):
 
 def build_invalid_menu_items(menu_item):
     """Build invalid menu items for a given menu."""
-    menu_items = {}
+    menu_items = []
     for component in menu_item["components"]:
         try:
             component_name, component_template = build_invalid_component(component)
-            menu_items[component_name] = component_template
+            menu_items.append(component_template)
             logger.debug(f"Added {component_name} to invalid menu.")
         except Exception as exc:
             logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
@@ -134,10 +134,10 @@ def determine_component_name(component):
 
 def build_menu_items(menu_item):
     """Build menu items for a given menu."""
-    menu_items = {}
+    menu_items = []
     for component_name, component_template, component in menu_item["components"]:
         try:
-            menu_items[component_name] = component_template
+            menu_items.append(component_template)
             logger.debug(f"Added {component_name} to valid menu.")
         except Exception as exc:
             logger.error(f"Error loading Component: {component['output_types']}")
