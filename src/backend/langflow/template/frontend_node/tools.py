@@ -7,7 +7,7 @@ from langflow.utils.constants import DEFAULT_PYTHON_FUNCTION
 class ToolNode(FrontendNode):
     name: str = "Tool"
     template: Template = Template(
-        type_name="Tool",
+        name="Tool",
         fields=[
             TemplateField(
                 field_type="str",
@@ -59,7 +59,7 @@ class ToolNode(FrontendNode):
 class PythonFunctionToolNode(FrontendNode):
     name: str = "PythonFunctionTool"
     template: Template = Template(
-        type_name="PythonFunctionTool",
+        name="PythonFunctionTool",
         fields=[
             TemplateField(
                 field_type="str",
@@ -112,7 +112,7 @@ class PythonFunctionToolNode(FrontendNode):
 class PythonFunctionNode(FrontendNode):
     name: str = "PythonFunction"
     template: Template = Template(
-        type_name="PythonFunction",
+        name="PythonFunction",
         fields=[
             TemplateField(
                 field_type="code",

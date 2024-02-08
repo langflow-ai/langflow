@@ -7,7 +7,7 @@ from langflow.utils.constants import DIRECT_TYPES
 
 
 class Template(BaseModel):
-    type_name: str
+    name: str
     fields: list[TemplateField]
 
     def process_fields(
@@ -16,7 +16,7 @@ class Template(BaseModel):
     ):
         if format_field_func:
             for field in self.fields:
-                format_field_func(field, self.type_name)
+                format_field_func(field, self.name)
 
     def sort_fields(self):
         # first sort alphabetically
@@ -29,7 +29,7 @@ class Template(BaseModel):
         result = handler(self)
         for field in self.fields:
             result[field.name] = field.model_dump(by_alias=True, exclude_none=True)
-        result["_type"] = result.pop("type_name")
+        result["_type"] = result.pop("name")
         return result
 
     # For backwards compatibility
@@ -45,7 +45,7 @@ class Template(BaseModel):
         """Returns the field with the given name."""
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
-            raise ValueError(f"Field {field_name} not found in template {self.type_name}")
+            raise ValueError(f"Field {field_name} not found in template {self.name}")
         return field
 
     def update_field(self, field_name: str, field: TemplateField) -> None:
@@ -54,7 +54,7 @@ class Template(BaseModel):
             if template_field.name == field_name:
                 self.fields[idx] = field
                 return
-        raise ValueError(f"Field {field_name} not found in template {self.type_name}")
+        raise ValueError(f"Field {field_name} not found in template {self.name}")
 
     def upsert_field(self, field_name: str, field: TemplateField) -> None:
         """Updates the field with the given name or adds it if it doesn't exist."""

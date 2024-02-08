@@ -8,7 +8,7 @@ from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONF
 
 class LLMFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        if "VertexAI" in self.template.type_name:
+        if "VertexAI" in self.template.name:
             # Add credentials field which should of type file.
             self.template.add_field(
                 TemplateField(

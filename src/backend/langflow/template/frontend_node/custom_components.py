@@ -50,7 +50,7 @@ class CustomComponentFrontendNode(FrontendNode):
     display_name: Optional[str] = "CustomComponent"
     beta: bool = True
     template: Template = Template(
-        type_name="CustomComponent",
+        name="CustomComponent",
         fields=[
             TemplateField(
                 field_type="code",

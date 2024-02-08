@@ -65,7 +65,7 @@ class VectorStoreFrontendNode(FrontendNode):
             value="{}",
         )
         extra_fields.append(extra_field)
-        if self.template.type_name == "Weaviate":
+        if self.template.name == "Weaviate":
             extra_field = TemplateField(
                 name="weaviate_url",
                 field_type="str",
@@ -89,7 +89,7 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2))
 
-        elif self.template.type_name == "Chroma":
+        elif self.template.name == "Chroma":
             # New bool field for persist parameter
             chroma_fields = [
                 TemplateField(
@@ -147,7 +147,7 @@ class VectorStoreFrontendNode(FrontendNode):
             ]
 
             extra_fields.extend(chroma_fields)
-        elif self.template.type_name == "Pinecone":
+        elif self.template.name == "Pinecone":
             # add pinecone_api_key and pinecone_env
             extra_field = TemplateField(
                 name="pinecone_api_key",
@@ -172,7 +172,7 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2))
 
-        elif self.template.type_name == "ElasticsearchStore":
+        elif self.template.name == "ElasticsearchStore":
             # add elastic and elastic credentials
             extra_field = TemplateField(
                 name="es_url",
@@ -198,7 +198,7 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2))
 
-        elif self.template.type_name == "FAISS":
+        elif self.template.name == "FAISS":
             extra_field = TemplateField(
                 name="folder_path",
                 field_type="str",
@@ -220,7 +220,7 @@ class VectorStoreFrontendNode(FrontendNode):
                 display_name="Index Name",
             )
             extra_fields.extend((extra_field, extra_field2))
-        elif self.template.type_name == "SupabaseVectorStore":
+        elif self.template.name == "SupabaseVectorStore":
             self.display_name = "Supabase"
             # Add table_name and query_name
             extra_field = TemplateField(
@@ -267,7 +267,7 @@ class VectorStoreFrontendNode(FrontendNode):
             )
             extra_fields.extend((extra_field, extra_field2, extra_field3, extra_field4))
 
-        elif self.template.type_name == "MongoDBAtlasVectorSearch":
+        elif self.template.name == "MongoDBAtlasVectorSearch":
             self.display_name = "MongoDB Atlas"
 
             extra_field = TemplateField(

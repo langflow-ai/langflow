@@ -8,7 +8,7 @@ from langflow.template.template.base import Template
 
 class ChainFrontendNode(FrontendNode):
     def add_extra_fields(self) -> None:
-        if self.template.type_name == "ConversationalRetrievalChain":
+        if self.template.name == "ConversationalRetrievalChain":
             # add memory
             self.template.add_field(
                 TemplateField(
@@ -100,7 +100,7 @@ class ChainFrontendNode(FrontendNode):
 class SeriesCharacterChainNode(FrontendNode):
     name: str = "SeriesCharacterChain"
     template: Template = Template(
-        type_name="SeriesCharacterChain",
+        name="SeriesCharacterChain",
         fields=[
             TemplateField(
                 field_type="str",
@@ -151,7 +151,7 @@ class SeriesCharacterChainNode(FrontendNode):
 class TimeTravelGuideChainNode(FrontendNode):
     name: str = "TimeTravelGuideChain"
     template: Template = Template(
-        type_name="TimeTravelGuideChain",
+        name="TimeTravelGuideChain",
         fields=[
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -186,7 +186,7 @@ class TimeTravelGuideChainNode(FrontendNode):
 class MidJourneyPromptChainNode(FrontendNode):
     name: str = "MidJourneyPromptChain"
     template: Template = Template(
-        type_name="MidJourneyPromptChain",
+        name="MidJourneyPromptChain",
         fields=[
             TemplateField(
                 field_type="BaseLanguageModel",
@@ -221,7 +221,7 @@ class MidJourneyPromptChainNode(FrontendNode):
 class CombineDocsChainNode(FrontendNode):
     name: str = "CombineDocsChain"
     template: Template = Template(
-        type_name="load_qa_chain",
+        name="load_qa_chain",
         fields=[
             TemplateField(
                 field_type="str",

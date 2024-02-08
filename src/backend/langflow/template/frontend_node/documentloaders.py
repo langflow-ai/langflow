@@ -73,7 +73,7 @@ class DocumentLoaderFrontNode(FrontendNode):
     def add_extra_fields(self) -> None:
         name = None
         display_name = "Web Page"
-        if self.template.type_name in {"GitLoader"}:
+        if self.template.name in {"GitLoader"}:
             # Add fields repo_path, clone_url, branch and file_filter
             self.template.add_field(
                 TemplateField(
@@ -119,7 +119,7 @@ class DocumentLoaderFrontNode(FrontendNode):
                     advanced=False,
                 )
             )
-        elif self.template.type_name in {"SlackDirectoryLoader"}:
+        elif self.template.name in {"SlackDirectoryLoader"}:
             self.template.add_field(
                 TemplateField(
                     field_type="file",
@@ -142,9 +142,9 @@ class DocumentLoaderFrontNode(FrontendNode):
                     advanced=False,
                 )
             )
-        elif self.template.type_name in self.file_path_templates:
-            self.template.add_field(self.file_path_templates[self.template.type_name])
-        elif self.template.type_name in {
+        elif self.template.name in self.file_path_templates:
+            self.template.add_field(self.file_path_templates[self.template.name])
+        elif self.template.name in {
             "WebBaseLoader",
             "AZLyricsLoader",
             "CollegeConfidentialLoader",
@@ -154,11 +154,11 @@ class DocumentLoaderFrontNode(FrontendNode):
             "GutenbergLoader",
         }:
             name = "web_path"
-        elif self.template.type_name in {"GutenbergLoader"}:
+        elif self.template.name in {"GutenbergLoader"}:
             name = "file_path"
-        elif self.template.type_name in {"GitbookLoader"}:
+        elif self.template.name in {"GitbookLoader"}:
             name = "web_page"
-        elif self.template.type_name in {
+        elif self.template.name in {
             "DirectoryLoader",
             "ReadTheDocsLoader",
             "NotionDirectoryLoader",
@@ -167,7 +167,7 @@ class DocumentLoaderFrontNode(FrontendNode):
             name = "path"
             display_name = "Local directory"
         if name:
-            if self.template.type_name in {"DirectoryLoader"}:
+            if self.template.name in {"DirectoryLoader"}:
                 for field in build_directory_loader_fields():
                     self.template.add_field(field)
             else:

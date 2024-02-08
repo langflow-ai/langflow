@@ -1,11 +1,8 @@
 from typing import Optional
 
-from langchain_community.chat_message_histories.mongodb import (
-    DEFAULT_COLLECTION_NAME,
-    DEFAULT_DBNAME,
-)
-from langchain_community.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
+from langchain_community.chat_message_histories.mongodb import DEFAULT_COLLECTION_NAME, DEFAULT_DBNAME
 
+from langchain_community.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.constants import INPUT_KEY_INFO, OUTPUT_KEY_INFO
@@ -43,7 +40,7 @@ class MemoryFrontendNode(FrontendNode):
                 value="",
             )
         )
-        if self.template.type_name not in {"VectorStoreRetrieverMemory"}:
+        if self.template.name not in {"VectorStoreRetrieverMemory"}:
             self.template.add_field(
                 TemplateField(
                     field_type="str",
@@ -105,7 +102,7 @@ class MemoryFrontendNode(FrontendNode):
 class PostgresChatMessageHistoryFrontendNode(MemoryFrontendNode):
     name: str = "PostgresChatMessageHistory"
     template: Template = Template(
-        type_name="PostgresChatMessageHistory",
+        name="PostgresChatMessageHistory",
         fields=[
             TemplateField(
                 field_type="str",
@@ -147,7 +144,7 @@ class MongoDBChatMessageHistoryFrontendNode(MemoryFrontendNode):
         #     session_id: str,
         #     database_name: str = DEFAULT_DBNAME,
         #     collection_name: str = DEFAULT_COLLECTION_NAME,
-        type_name="MongoDBChatMessageHistory",
+        name="MongoDBChatMessageHistory",
         fields=[
             TemplateField(
                 field_type="str",

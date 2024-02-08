@@ -25,7 +25,7 @@ class AgentFrontendNode(FrontendNode):
 class SQLAgentNode(FrontendNode):
     name: str = "SQLAgent"
     template: Template = Template(
-        type_name="sql_agent",
+        name="sql_agent",
         fields=[
             TemplateField(
                 field_type="str",  # pyright: ignore
@@ -53,7 +53,7 @@ class SQLAgentNode(FrontendNode):
 class VectorStoreRouterAgentNode(FrontendNode):
     name: str = "VectorStoreRouterAgent"
     template: Template = Template(
-        type_name="vectorstorerouter_agent",
+        name="vectorstorerouter_agent",
         fields=[
             TemplateField(
                 field_type="VectorStoreRouterToolkit",  # pyright: ignore
@@ -78,7 +78,7 @@ class VectorStoreRouterAgentNode(FrontendNode):
 class VectorStoreAgentNode(FrontendNode):
     name: str = "VectorStoreAgent"
     template: Template = Template(
-        type_name="vectorstore_agent",
+        name="vectorstore_agent",
         fields=[
             TemplateField(
                 field_type="VectorStoreInfo",  # pyright: ignore
@@ -103,7 +103,7 @@ class VectorStoreAgentNode(FrontendNode):
 class SQLDatabaseNode(FrontendNode):
     name: str = "SQLDatabase"
     template: Template = Template(
-        type_name="sql_database",
+        name="sql_database",
         fields=[
             TemplateField(
                 field_type="str",  # pyright: ignore
@@ -123,7 +123,7 @@ class SQLDatabaseNode(FrontendNode):
 class CSVAgentNode(FrontendNode):
     name: str = "CSVAgent"
     template: Template = Template(
-        type_name="csv_agent",
+        name="csv_agent",
         fields=[
             TemplateField(
                 field_type="file",  # pyright: ignore
@@ -149,7 +149,7 @@ class CSVAgentNode(FrontendNode):
 class JsonAgentNode(FrontendNode):
     name: str = "JsonAgent"
     template: Template = Template(
-        type_name="json_agent",
+        name="json_agent",
         fields=[
             TemplateField(
                 field_type="BaseToolkit",  # pyright: ignore
