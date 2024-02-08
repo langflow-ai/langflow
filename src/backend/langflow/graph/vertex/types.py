@@ -3,6 +3,7 @@ import json
 from typing import Callable, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage
+
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -354,5 +355,8 @@ class ChatVertex(StatelessVertex):
 
 
 def dict_to_codeblock(d: dict) -> str:
-    json_str = json.dumps(d, indent=4)
+    from langflow.api.utils import serialize_field
+
+    serialized = {key: serialize_field(val) for key, val in d.items()}
+    json_str = json.dumps(serialized, indent=4)
     return f"```json\n{json_str}\n```"

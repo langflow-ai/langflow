@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 import duckdb
-from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
+
+from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDict

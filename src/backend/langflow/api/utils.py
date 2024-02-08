@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 from fastapi import HTTPException
-from platformdirs import user_cache_dir
+from langchain_core.documents import Document
+from langflow.services.store.schema import StoreComponentCreate
+from pydantic import BaseModel
 
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
@@ -191,3 +193,17 @@ def format_elapsed_time(elapsed_time: float) -> str:
         minutes_unit = "minute" if minutes == 1 else "minutes"
         seconds_unit = "second" if seconds == 1 else "seconds"
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
+
+
+def serialize_field(value):
+    """Unified serialization function for handling both BaseModel and Document types,
+    including handling lists of these types."""
+    if isinstance(value, (list, tuple)):
+        return [serialize_field(v) for v in value]
+    elif isinstance(value, Document):
+        return value.to_json()
+    elif isinstance(value, BaseModel):
+        return value.model_dump()
+    elif isinstance(value, str):
+        return {"result": value}
+    return value

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from langchain_core.documents import Document
+from langflow.api.utils import serialize_field
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -226,35 +226,11 @@ class ResultDict(BaseModel):
     timedelta: Optional[float] = None
     duration: Optional[str] = None
 
-    def serialize_field(self, value):
-        """Unified serialization function for handling both BaseModel and Document types,
-        including handling lists of these types."""
-        if isinstance(value, (list, tuple)):
-            return [self.serialize_field(v) for v in value]
-        elif isinstance(value, Document):
-            return value.to_json()
-        elif isinstance(value, BaseModel):
-            return value.model_dump()
-        elif isinstance(value, str):
-            return {"result": value}
-        return value
-
     @field_serializer("results")
     def serialize_results(self, value):
         if isinstance(value, dict):
-            return {key: self.serialize_field(val) for key, val in value.items()}
-        return self.serialize_field(value)
-
-
-def serialize_list_of_documents_or_base_models(value):
-    if isinstance(value, list):
-        for i, val in enumerate(value):
-            if isinstance(val, Document):
-                value[i] = val.to_json()
-            elif isinstance(val, BaseModel):
-                value[i] = val.model_dump()
-
-    return value
+            return {key: serialize_field(val) for key, val in value.items()}
+        return serialize_field(value)
 
 
 class VertexBuildResponse(BaseModel):
