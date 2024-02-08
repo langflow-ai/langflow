@@ -67,3 +67,5 @@ class CustomComponentFrontendNode(FrontendNode):
     )
     description: Optional[str] = None
     base_classes: list[str] = []
+    categories: list[str] = ["Other"]
+    tags: list[str] = ["CustomComponent"]

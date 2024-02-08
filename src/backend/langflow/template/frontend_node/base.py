@@ -9,6 +9,7 @@ from langflow.template.frontend_node.constants import CLASSES_TO_REMOVE, FORCE_S
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class FieldFormatters(BaseModel):
@@ -54,6 +55,9 @@ class FrontendNode(BaseModel):
 
     beta: bool = False
     error: Optional[str] = None
+
+    categories: List[str] = ["Other"]
+    tags: List[str] = []
 
     # field formatters is an instance attribute but it is not used in the class
     # so we need to create a method to get it
