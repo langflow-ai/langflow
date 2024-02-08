@@ -1,6 +1,7 @@
 import ast
 import os
 import zlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 
@@ -63,24 +64,44 @@ class DirectoryReader:
         """
         return len(file_content.strip()) == 0
 
+    def process_menu_components(self, menu, with_errors):
+        """
+        Process all components in a menu in parallel and return filtered components.
+        """
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self.process_component, component, with_errors) for component in menu["components"]
+            ]
+            # Collect results from futures, filtering out None
+            future_res_gen = (future.result() for future in as_completed(futures))
+            return [res for res in future_res_gen if res is not None]
+
     def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
+        filtered_menus = []
+
+        for menu in data["menu"]:
+            filtered_components = self.process_menu_components(menu, with_errors)
+            if filtered_components:
+                filtered_menus.append({"name": menu["name"], "path": menu["path"], "components": filtered_components})
+
+        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered_menus)}')
+        return {"menu": filtered_menus}
+
+    def process_component(self, component, with_errors):
+        """
+        Processes a single component, filtering based on error presence and attempting to build it.
+        Returns a tuple of the built component or None if it should not be included.
+        """
         from langflow.interface.custom.utils import build_component
 
-        items = []
-        for menu in data["menu"]:
-            components = []
-            for component in menu["components"]:
-                try:
-                    if component["error"] if with_errors else not component["error"]:
-                        component_tuple = (*build_component(component), component)
-                        components.append(component_tuple)
-                except Exception as e:
-                    logger.error(f"Error while loading component: {e}")
-                    continue
-            items.append({"name": menu["name"], "path": menu["path"], "components": components})
-        filtered = [menu for menu in items if menu["components"]]
-        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
-        return {"menu": filtered}
+        has_error = bool(component.get("error"))
+        if with_errors == has_error:
+            try:
+                component_tuple = (*build_component(component), component)
+                return component_tuple
+            except Exception as e:
+                logger.error(f"Error while loading component: {e}")
+        return None
 
     def validate_code(self, file_content):
         """
@@ -215,43 +236,56 @@ class DirectoryReader:
                 file_content = str(StringCompressor(file_content).compress_string())
             return True, file_content
 
-    def build_component_menu_list(self, file_paths):
+    def _process_file_path(self, file_path):
         """
-        Build a list of menus with their components
-        from the .py files in the directory.
+        Helper function to process each file path. This is designed to be called in parallel.
         """
-        # Initialize an empty dictionary to hold menus and their components
-        menus = {}
-        logger.debug("Building component menu list")
+        menu_name = os.path.basename(os.path.dirname(file_path))
+        filename = os.path.basename(file_path)
+        validation_result, result_content = self.process_file(file_path)
 
-        for file_path in file_paths:
-            menu_name = os.path.basename(os.path.dirname(file_path))
-            filename = os.path.basename(file_path)
-            validation_result, result_content = self.process_file(file_path)
+        component_name = filename.rsplit(".", 1)[0]
+        component_name_camelcase = "".join(word.title() for word in component_name.split("_"))
 
-            # Directly work with dictionary to avoid repeated list searches
-            if menu_name not in menus:
-                menus[menu_name] = {
-                    "name": menu_name,
-                    "path": os.path.dirname(file_path),
-                    "components": [],
-                }
-
-            component_name = filename.rsplit(".", 1)[0]  # More robust split by extension
-            # Convert from snake_case to CamelCase more efficiently
-            component_name_camelcase = "".join(word.title() for word in component_name.split("_"))
-
-            component_info = {
+        return {
+            "menu_name": menu_name,
+            "path": os.path.dirname(file_path),
+            "component_info": {
                 "name": "CustomComponent",
                 "output_types": [component_name_camelcase],
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
-            }
+            },
+        }
 
-            menus[menu_name]["components"].append(component_info)
+    def build_component_menu_list(self, file_paths):
+        """
+        Build a list of menus with their components from the .py files in the directory,
+        parallelizing the processing of file paths.
+        """
+        menus = {}
+        logger.debug("Building component menu list in parallel")
 
-        # Convert the menus dictionary back into a list format expected by the response
+        with ThreadPoolExecutor() as executor:
+            # Submit all file paths for processing
+            futures = [executor.submit(self._process_file_path, file_path) for file_path in file_paths]
+
+            # As each future completes, process its result
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    menu_name = result["menu_name"]
+                    if menu_name not in menus:
+                        menus[menu_name] = {
+                            "name": menu_name,
+                            "path": result["path"],
+                            "components": [],
+                        }
+                    menus[menu_name]["components"].append(result["component_info"])
+                except Exception as exc:
+                    logger.error(f"Error processing file: {exc}")
+
         response = {"menu": list(menus.values())}
-        logger.debug("Component menu list built")
+        logger.debug("Component menu list built in parallel")
         return response
