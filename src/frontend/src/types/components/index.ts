@@ -479,6 +479,8 @@ export type nodeToolbarPropsType = {
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
+  openAdvancedModal?: boolean;
+  onCloseAdvancedModal?: (close: boolean) => void;
 };
 
 export type parsedDataType = {
