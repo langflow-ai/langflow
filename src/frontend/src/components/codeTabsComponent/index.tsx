@@ -28,8 +28,10 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
+import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -54,8 +56,12 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
+  );
 
   const setNodes = useFlowStore((state) => state.setNodes);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
@@ -347,6 +353,9 @@ export default function CodeTabsComponent({
                                                   </div>
                                                 ) : (
                                                   <InputComponent
+                                                    options={
+                                                      globalVariablesEntries
+                                                    }
                                                     editNode={true}
                                                     disabled={false}
                                                     password={
@@ -376,6 +385,16 @@ export default function CodeTabsComponent({
                                                         ].data.node.template[
                                                           templateField
                                                         ].value = target;
+                                                        if (
+                                                          globalVariablesEntries.includes(
+                                                            target
+                                                          )
+                                                        ) {
+                                                          setNoticeData({
+                                                            title: `the value inserted in ${templateField} is a global variable, \n 
+                                                          the real value will be update on run`,
+                                                          });
+                                                        }
                                                         return newInputList;
                                                       });
                                                       tweaks.buildTweakObject!(
