@@ -1,8 +1,7 @@
 from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
-
 from langflow.field_typing.range_spec import RangeSpec
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_serializer
 
 
 class TemplateField(BaseModel):
@@ -67,6 +66,17 @@ class TemplateField(BaseModel):
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        result = handler(self)
+        # If the field is str, we add the Text input type
+        if self.field_type == "str":
+            if "input_types" not in result:
+                result["input_types"] = ["Text"]
+            else:
+                result["input_types"].append("Text")
+        return result
+
     @field_serializer("file_path")
     def serialize_file_path(self, value):
         return value if self.field_type == "file" else ""
@@ -75,4 +85,10 @@ class TemplateField(BaseModel):
     def serialize_field_type(self, value, _info):
         if value == "float" and self.range_spec is None:
             self.range_spec = RangeSpec()
+        return value
+        return value
+        return value
+        return value
+        return value
+        return value
         return value
