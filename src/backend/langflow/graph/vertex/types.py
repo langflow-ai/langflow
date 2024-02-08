@@ -1,8 +1,8 @@
 import ast
+import json
 from typing import Callable, Dict, List, Optional, Union
 
 from langchain_core.messages import AIMessage
-
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -333,8 +333,13 @@ class ChatVertex(StatelessVertex):
                         sender_name=sender_name,
                     )
                 elif not isinstance(self._built_object, UnbuiltObject):
-                    if not isinstance(self._built_object, str):
+                    if isinstance(self._built_object, dict):
+                        # Turn the dict into a pleasing to
+                        # read JSON inside a code block
+                        self._built_object = dict_to_codeblock(self._built_object)
+                    elif not isinstance(self._built_object, str):
                         self._built_object = str(self._built_object)
+
                     artifacts = ChatOutputResponse(
                         message=self._built_object,
                         sender=sender,
@@ -346,3 +351,8 @@ class ChatVertex(StatelessVertex):
 
         else:
             await super()._run(*args, **kwargs)
+
+
+def dict_to_codeblock(d: dict) -> str:
+    json_str = json.dumps(d, indent=4)
+    return f"```json\n{json_str}\n```"
