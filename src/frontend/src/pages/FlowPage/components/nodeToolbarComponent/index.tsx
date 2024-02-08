@@ -197,44 +197,48 @@ export default function NodeToolbarComponent({
   };
 
   const [openModal, setOpenModal] = useState(false);
+  const hasCode = Object.keys(data.node!.template).includes("code");
 
   return (
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          <ShadTooltip content="Code" side="top">
-            <button
-              className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
-              onClick={() => {
-                setOpenModal(!openModal);
-              }}
-              data-testid="delete-button-modal"
-            >
-              <div className="hidden">
-                <CodeAreaComponent
-                  openModal={openModal}
-                  readonly={
-                    data.node?.flow && data.node.template[name].dynamic
-                      ? true
-                      : false
-                  }
-                  dynamic={data.node?.template[name].dynamic ?? false}
-                  setNodeClass={handleNodeClass}
-                  nodeClass={data.node}
-                  disabled={false}
-                  value={data.node?.template[name].value ?? ""}
-                  onChange={handleOnNewValue}
-                  id={"code-input-node-toolbar-" + name}
-                />
-              </div>
-              <IconComponent name="Code2" className="h-4 w-4" />
-            </button>
-          </ShadTooltip>
+          {hasCode && (
+            <ShadTooltip content="Code" side="top">
+              <button
+                className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                onClick={() => {
+                  setOpenModal(!openModal);
+                }}
+                data-testid="code-button-modal"
+              >
+                <div className="hidden">
+                  <CodeAreaComponent
+                    openModal={openModal}
+                    readonly={
+                      data.node?.flow && data.node.template[name].dynamic
+                        ? true
+                        : false
+                    }
+                    dynamic={data.node?.template[name].dynamic ?? false}
+                    setNodeClass={handleNodeClass}
+                    nodeClass={data.node}
+                    disabled={false}
+                    value={data.node?.template[name].value ?? ""}
+                    onChange={handleOnNewValue}
+                    id={"code-input-node-toolbar-" + name}
+                  />
+                </div>
+                <IconComponent name="Code2" className="h-4 w-4" />
+              </button>
+            </ShadTooltip>
+          )}
 
           <ShadTooltip content="Duplicate" side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                hasCode ? "" : "rounded-l-md"
               )}
               onClick={(event) => {
                 event.preventDefault();
