@@ -68,6 +68,7 @@ export const MenuBar = (): JSX.Element => {
                       updatedFlow.name = inputValue!;
                       return await saveFlow(updatedFlow);
                     }
+                    setInputValue(currentFlow.name);
                   }}
                   value={inputValue}
                   onKeyDown={(e) => {
