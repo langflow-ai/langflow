@@ -2,10 +2,11 @@ import operator
 from typing import Any, Callable, ClassVar, List, Optional, Union
 from uuid import UUID
 
+import emoji
+from langflow.interface.custom.custom_component.component import Component
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -15,25 +16,45 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_credential_service, get_db_service
 from langflow.utils import validate
 
-from .component import Component
-
 
 class CustomComponent(Component):
     display_name: Optional[str] = None
+    """The display name of the component. Defaults to None."""
     description: Optional[str] = None
+    """The description of the component. Defaults to None."""
+    icon: Optional[str] = None
+    """The icon of the component. It should be an emoji. Defaults to None."""
     code: Optional[str] = None
+    """The code of the component. Defaults to None."""
     field_config: dict = {}
+    """The field configuration of the component. Defaults to an empty dictionary."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
+    """The status of the component. This is displayed on the frontend. Defaults to None."""
     _tree: Optional[dict] = None
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
+
+        # Validate the emoji at the icon field
+        if self.icon:
+            self.icon = self.validate_icon(self.icon)
+
+    def validate_icon(self, value: str):
+        # we are going to use the emoji library to validate the emoji
+        # emojis can be defined using the :emoji_name: syntax
+        if not value.startswith(":") or not value.endswith(":"):
+            raise ValueError("Invalid emoji. Please use the :emoji_name: syntax.")
+
+        emoji_value = emoji.emojize(value)
+        if value == emoji_value:
+            raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+        return emoji_value
 
     def custom_repr(self):
         if self.repr_value == "":

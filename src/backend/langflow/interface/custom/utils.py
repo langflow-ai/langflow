@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
@@ -19,7 +21,6 @@ from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -231,6 +232,7 @@ def sanitize_template_config(template_config):
         "beta",
         "documentation",
         "output_types",
+        "icon",
     }
     for key in template_config.copy():
         if key not in attributes:
