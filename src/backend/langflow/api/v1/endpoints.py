@@ -1,9 +1,11 @@
 from http import HTTPStatus
 from typing import Annotated, Any, List, Optional, Union
-from langflow.template.category.schema import CategorySchema
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from loguru import logger
+from sqlmodel import select
+
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     CustomComponentCode,
@@ -24,8 +26,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
 from langflow.services.session.service import SessionService
 from langflow.template.category import categories
-from loguru import logger
-from sqlmodel import select
+from langflow.template.category.schema import CategorySchema
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -35,8 +36,9 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from langflow.services.task.service import TaskService
 from sqlmodel import Session
+
+from langflow.services.task.service import TaskService
 
 router = APIRouter(tags=["Base"])
 
@@ -114,19 +116,17 @@ async def process_graph_data(
 def get_all(
     settings_service=Depends(get_settings_service),
 ):
-    from langflow.interface.types import get_all_types_dict
+    from langflow.interface.types import get_all_types_list
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service)
+        all_types_list = get_all_types_list(settings_service)
         # each key has a list of types
         # transform that into a single list of types
-        all_types = []
-        for key in all_types_dict:
-            all_types.extend(all_types_dict[key])
-        return all_types
+        return all_types_list
 
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
