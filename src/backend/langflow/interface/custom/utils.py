@@ -7,19 +7,19 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader.utils import (
     build_custom_component_list_from_path,
     determine_component_name,
-    merge_nested_dicts_with_renaming,
 )
 from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -321,23 +321,18 @@ def create_component_template(component):
 def build_custom_components(settings_service):
     """Build custom components from the specified paths."""
     if not settings_service.settings.COMPONENTS_PATH:
-        return {}
+        return []
 
     logger.info(f"Building custom components from {settings_service.settings.COMPONENTS_PATH}")
-    custom_components_from_file = {}
+    custom_components_from_file = []
     processed_paths = set()
     for path in settings_service.settings.COMPONENTS_PATH:
         path_str = str(path)
         if path_str in processed_paths:
             continue
 
-        custom_component_dict = build_custom_component_list_from_path(path_str)
-        if custom_component_dict:
-            category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
-            custom_components_from_file = merge_nested_dicts_with_renaming(
-                custom_components_from_file, custom_component_dict
-            )
+        custom_component_list = build_custom_component_list_from_path(path_str)
+        custom_components_from_file.extend(custom_component_list)
         processed_paths.add(path_str)
 
     return custom_components_from_file
