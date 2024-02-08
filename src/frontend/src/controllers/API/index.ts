@@ -864,11 +864,15 @@ export async function getGlobalVariables(): Promise<{
   return globalVariables;
 }
 
-export async function registerGlobalVariable(
-  name: string,
-  value: string,
-  provider?: string
-) {
+export async function registerGlobalVariable({
+  name,
+  value,
+  provider,
+}: {
+  name: string;
+  value: string;
+  provider?: string;
+}) {
   return await api.post(`${BASE_URL_API}credentials/`, {
     name,
     value,
