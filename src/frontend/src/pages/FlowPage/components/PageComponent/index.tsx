@@ -13,11 +13,6 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "../../../../components/ui/resizable";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -31,7 +26,7 @@ import {
   isValidConnection,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { cn, getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import Sidebar from "../SidebarComponent";
@@ -423,9 +418,7 @@ export default function Page({
                   />
                 </ReactFlow>
                 {!view && <Chat flow={flow} />}
-                {!view && (
-                  <Sidebar />
-                )}
+                {!view && <Sidebar />}
               </div>
             ) : (
               <></>
