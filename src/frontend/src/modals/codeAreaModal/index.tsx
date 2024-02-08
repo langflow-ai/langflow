@@ -24,6 +24,7 @@ export default function CodeAreaModal({
   children,
   dynamic,
   readonly = false,
+  openModal,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const dark = useDarkStore((state) => state.dark);
@@ -42,6 +43,10 @@ export default function CodeAreaModal({
       return;
     }
   }, []);
+
+  useEffect(() => {
+    if (openModal) setOpen(true);
+  }, [openModal]);
 
   function processNonDynamicField() {
     postValidateCode(code)

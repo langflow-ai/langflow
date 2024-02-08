@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
   Select,
@@ -15,6 +16,7 @@ import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
@@ -32,6 +34,7 @@ export default function NodeToolbarComponent({
   setShowNode,
   numberOfHandles,
   showNode,
+  name = "code",
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -123,6 +126,9 @@ export default function NodeToolbarComponent({
       case "override":
         setShowOverrideModal(true);
         break;
+      case "delete":
+        deleteNode(data.id);
+        break;
     }
   };
 
@@ -130,19 +136,84 @@ export default function NodeToolbarComponent({
     Object.values(flow).includes(data.node?.display_name!)
   );
 
+  const setNode = useFlowStore((state) => state.setNode);
+
+  const handleOnNewValue = (
+    newValue: string | string[] | boolean | Object[]
+  ): void => {
+    if (data.node!.template[name].value !== newValue) {
+      takeSnapshot();
+    }
+
+    data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+      };
+
+      newNode.data.node.template[name].value = newValue;
+
+      return newNode;
+    });
+  };
+
+  const handleNodeClass = (newNodeClass: APIClassType, code?: string): void => {
+    if (!data.node) return;
+    if (data.node!.template[name].value !== code) {
+      takeSnapshot();
+    }
+
+    setNode(data.id, (oldNode) => {
+      let newNode = cloneDeep(oldNode);
+
+      newNode.data = {
+        ...newNode.data,
+        node: newNodeClass,
+        description: newNodeClass.description ?? data.node!.description,
+        display_name: newNodeClass.display_name ?? data.node!.display_name,
+      };
+
+      newNode.data.node.template[name].value = code;
+
+      return newNode;
+    });
+  };
+
+  const [openModal, setOpenModal] = useState(false);
+
   return (
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          <ShadTooltip content="Delete" side="top">
+          <ShadTooltip content="Code" side="top">
             <button
               className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               onClick={() => {
-                deleteNode(data.id);
+                setOpenModal(!openModal);
               }}
               data-testid="delete-button-modal"
             >
-              <IconComponent name="Trash2" className="h-4 w-4" />
+              <div className="hidden">
+                <CodeAreaComponent
+                  openModal={openModal}
+                  readonly={
+                    data.node?.flow && data.node.template[name].dynamic
+                      ? true
+                      : false
+                  }
+                  dynamic={data.node?.template[name].dynamic ?? false}
+                  setNodeClass={handleNodeClass}
+                  nodeClass={data.node}
+                  disabled={false}
+                  value={data.node?.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                  id={"code-input-node-toolbar-" + name}
+                />
+              </div>
+              <IconComponent name="Code2" className="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -288,6 +359,16 @@ export default function NodeToolbarComponent({
                   </div>
                 </SelectItem>
               )}
+
+              <SelectItem value={"delete"}>
+                <div className="font-red flex text-red-500 hover:text-red-500">
+                  <IconComponent
+                    name="Trash2"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  Delete{" "}
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
 
