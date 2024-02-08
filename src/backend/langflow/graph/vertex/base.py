@@ -2,8 +2,7 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
-                    Optional)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
