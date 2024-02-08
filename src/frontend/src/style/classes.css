@@ -36,6 +36,10 @@ pre {
   animation: gradient-motion-start 4s infinite forwards;
 }
 
+.requiredBadge {
+  font-size: 10px;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
