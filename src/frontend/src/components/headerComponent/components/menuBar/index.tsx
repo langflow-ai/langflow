@@ -70,7 +70,7 @@ export const MenuBar = (): JSX.Element => {
                     }
                     setInputValue(currentFlow.name);
                   }}
-                  value={inputValue}
+                  value={inputValue ?? currentFlow.name}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace") {
                       // Prevent the default backspace behavior which clears the input value
@@ -83,7 +83,7 @@ export const MenuBar = (): JSX.Element => {
                     setInputValue(e.target.value);
                   }}
                   onFocus={() => console.log(currentFlow.name)}
-                  className=" h-9 bg-muted rounded-sm text-secondary-foreground hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background truncate"
+                  className="h-9 bg-muted rounded-sm text-secondary-foreground hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background truncate"
                 />
               ) : (
                 currentFlow.name
