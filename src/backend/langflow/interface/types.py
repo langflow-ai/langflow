@@ -1,3 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
+
+from cachetools import LRUCache, cached
+
 from cachetools import LRUCache, cached
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
@@ -61,8 +65,20 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 
 
 def get_all_types_list(settings_service):
-    """Get all types list"""
-    native_components = build_langchain_types_dict()
-    custom_components_from_file = build_custom_components(settings_service)
-    # merge the two lists
+    """Get all types list by running two functions in parallel and merging their results."""
+
+    # Define a function that wraps each of the target functions
+    def run_in_executor(executor, func, *args):
+        return executor.submit(func, *args)
+
+    with ThreadPoolExecutor() as executor:
+        # Schedule both functions to run in parallel
+        future_native = run_in_executor(executor, build_langchain_types_dict)
+        future_custom = run_in_executor(executor, build_custom_components, settings_service)
+
+        # Wait for both futures to complete and retrieve their results
+        native_components = future_native.result()
+        custom_components_from_file = future_custom.result()
+
+    # Merge the two lists and return
     return native_components + custom_components_from_file
