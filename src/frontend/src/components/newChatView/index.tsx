@@ -49,6 +49,13 @@ export default function newChatView(): JSX.Element {
         }
       }
     });
+    inputIds.forEach((inputId) => {
+      if (inputId.includes("ChatInput")) {
+        if (flowPool[inputId] && flowPool[inputId].length > 0) {
+          chatOutputResponses.push(...flowPool[inputId]);
+        }
+      }
+    });
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       .filter((output) => !!output.data.artifacts.message)
