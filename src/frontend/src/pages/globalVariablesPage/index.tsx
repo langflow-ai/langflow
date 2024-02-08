@@ -11,12 +11,20 @@ export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
   );
+  const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
   const removeGlobalVariable = useGlobalVariablesStore(
     (state) => state.removeGlobalVariable
   );
 
   function handleDelete(key: string) {
-    deleteGlobalVariable(key).then((_) => removeGlobalVariable(key));
+    const id = getVariableId(key);
+    if(id!==undefined)
+    {
+      deleteGlobalVariable(id).then((_) => removeGlobalVariable(key));
+
+    }else{
+      console.error("id is undefined");
+    }
   }
   return (
     <PageLayout

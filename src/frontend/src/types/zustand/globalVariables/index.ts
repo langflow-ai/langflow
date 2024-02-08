@@ -6,4 +6,5 @@ export type GlobalVariablesStore = {
   }) => void;
   addGlobalVariable: (key: string, id: string, provider?: string) => void;
   removeGlobalVariable: (key: string) => void;
+  getVariableId: (key: string) => string | undefined;
 };

@@ -27,5 +27,8 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
         globalVariablesEntries: Object.keys(newVariables),
       });
     },
+    getVariableId: (key) => {
+      return get().globalVariables[key]?.id;
+    }
   })
 );
