@@ -854,7 +854,14 @@ export async function requestLogout() {
 export async function getGlobalVariables(): Promise<{
   [key: string]: { id: string; provider: string };
 }> {
-  return (await api.get(`${BASE_URL_API}credentials/`)).data;
+  const globalVariables = {};
+  (await api.get(`${BASE_URL_API}credentials/`)).data.forEach((element) => {
+    globalVariables[element.name] = {
+      id: element.id,
+      provider: element.provider,
+    };
+  });
+  return globalVariables;
 }
 
 export async function registerGlobalVariable(
