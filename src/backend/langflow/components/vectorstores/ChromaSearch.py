@@ -4,6 +4,7 @@ import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
 from langflow import CustomComponent
 from langflow.field_typing import Document, Embeddings, Text
+from langflow.schema import Record, docs_to_records
 
 
 class ChromaSearchComponent(CustomComponent):
@@ -61,7 +62,7 @@ class ChromaSearchComponent(CustomComponent):
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
         chroma_server_grpc_port: Optional[int] = None,
-    ) -> List[Document]:
+    ) -> List[Record]:
         """
         Builds the Vector Store or BaseRetriever object.
 
@@ -113,4 +114,4 @@ class ChromaSearchComponent(CustomComponent):
             docs = chroma.search(query=inputs, search_type=search_type.lower())
         else:
             raise ValueError("Invalid inputs provided.")
-        return docs
+        return docs_to_records(docs)
