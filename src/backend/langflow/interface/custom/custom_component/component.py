@@ -5,7 +5,6 @@ from typing import Any, ClassVar, Optional
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.code_parser import CodeParser
 from langflow.utils import validate
 
@@ -81,6 +80,9 @@ class Component:
 
                 elif "documentation" in item_name:
                     template_config["documentation"] = ast.literal_eval(item_value)
+
+                elif "icon" in item_name:
+                    template_config["icon"] = ast.literal_eval(item_value)
 
         return template_config
 
