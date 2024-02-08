@@ -104,7 +104,6 @@ export default function GenericNode({
   }, [sseData, data.id]);
 
   const showNode = data.showNode ?? true;
-
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
   return (
