@@ -156,14 +156,19 @@ export default function GenericNode({
                 (!showNode && "justify-center")
               }
             >
-              <IconComponent
-                name={data.node?.flow ? "group_components" : name}
-                className={
-                  "generic-node-icon " +
-                  (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                }
-                iconColor={`${nodeColors[types[data.type]]}`}
-              />
+              {data?.node?.icon ? (
+                <span className="text-lg">{data?.node?.icon}</span>
+              ) : (
+                <IconComponent
+                  name={data.node?.flow ? "group_components" : name}
+                  className={
+                    "generic-node-icon " +
+                    (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
+                  }
+                  iconColor={`${nodeColors[types[data.type]]}`}
+                />
+              )}
+
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   {nameEditable && inputName ? (
