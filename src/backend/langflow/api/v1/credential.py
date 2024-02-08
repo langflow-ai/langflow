@@ -9,9 +9,6 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session, select
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 
@@ -33,7 +30,10 @@ def create_credential(
         if credential_exists:
             raise HTTPException(status_code=400, detail="Credential name already exists")
 
-        db_credential = Credential.model_validate(credential, from_attributes=True, update={"user_id": current_user.id})
+        credential_dict = credential.model_dump()
+        credential_dict["user_id"] = current_user.id
+
+        db_credential = Credential.model_validate(credential_dict)
         if not db_credential.value:
             raise HTTPException(status_code=400, detail="Credential value cannot be empty")
         encrypted = auth_utils.encrypt_api_key(db_credential.value, settings_service=settings_service)
