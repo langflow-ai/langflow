@@ -8,7 +8,7 @@ from langflow.template.category.schema import CategorySchema
 
 
 class Category(str, Enum):
-    """The category of the node."""
+    """The category of the Component."""
 
     INPUTS_OUTPUTS = "Inputs / Outputs"
     """Inputs / Outputs"""

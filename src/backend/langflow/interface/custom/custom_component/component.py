@@ -5,8 +5,8 @@ from typing import Any, ClassVar, Optional
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.code_parser import CodeParser
+from langflow.template.category.categories import Category
 from langflow.utils import validate
 
 
@@ -82,7 +82,26 @@ class Component:
                 elif "documentation" in item_name:
                     template_config["documentation"] = ast.literal_eval(item_value)
 
+                elif "categories" in item_name:
+                    categories_list = ast.literal_eval(item_value)
+                    categories_list = self.validate_categories(categories_list)
+                    template_config["categories"] = categories_list
+
+                elif "tags" in item_name:
+                    tags_list = ast.literal_eval(item_value)
+                    tags_list = self.validate_tags(tags_list)
+                    template_config["tags"] = tags_list
+
         return template_config
+
+    def validate_categories(self, categories: list[str]) -> list[str]:
+        for category in categories:
+            if category not in Category:
+                raise ValueError(f"Category {category} not found.")
+        return categories
+
+    def validate_tags(self, tags: list[str]) -> list[str]:
+        return tags
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
