@@ -123,6 +123,9 @@ export default function NodeToolbarComponent({
       case "override":
         setShowOverrideModal(true);
         break;
+      case "delete":
+        deleteNode(data.id);
+
     }
   };
 
@@ -134,18 +137,6 @@ export default function NodeToolbarComponent({
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          <ShadTooltip content="Delete" side="top">
-            <button
-              className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
-              onClick={() => {
-                deleteNode(data.id);
-              }}
-              data-testid="delete-button-modal"
-            >
-              <IconComponent name="Trash2" className="h-4 w-4" />
-            </button>
-          </ShadTooltip>
-
           <ShadTooltip content="Duplicate" side="top">
             <button
               className={classNames(
@@ -288,6 +279,15 @@ export default function NodeToolbarComponent({
                   </div>
                 </SelectItem>
               )}
+              <SelectItem value={"delete"}>
+                <div className="flex text-status-red" data-testid="delete-button-modal">
+                  <IconComponent
+                    name="Trash2"
+                    className="h-4 w-4 mr-2"
+                  />{" "}
+                  Delete {" "}
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
 
