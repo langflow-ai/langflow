@@ -36,7 +36,6 @@ except ImportError:
 from langflow.services.task.service import TaskService
 from sqlmodel import Session
 
-# build router
 router = APIRouter(tags=["Base"])
 
 
@@ -117,9 +116,31 @@ def get_all(
 
     logger.debug("Building langchain types dict")
     try:
-        return get_all_types_dict(settings_service)
+        all_types_dict = get_all_types_dict(settings_service)
+        # each key has a list of types
+        # transform that into a single list of types
+        all_types = []
+        for key in all_types_dict:
+            all_types.extend(all_types_dict[key])
+        return all_types
+
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+# @router.get("/categories", dependencies=[Depends(get_current_active_user)])
+# def get_categories(
+#     settings_service=Depends(get_settings_service),
+# ):
+#     from langflow.interface.types import get_all_types_dict
+
+#     logger.debug("Building langchain types dict")
+#     try:
+#         all_types_dict = get_all_types_dict(settings_service)
+#         return list(all_types_dict.keys())
+
+#     except Exception as exc:
+#         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/process/json", response_model=ProcessResponse)
