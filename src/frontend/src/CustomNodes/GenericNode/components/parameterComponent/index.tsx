@@ -388,7 +388,7 @@ export default function ParameterComponent({
               ) : (
                 <span>{title}</span>
               )}
-              <span className="text-red-400 requiredBadge">{required ? " Required" : ""}</span>
+              {required && (<span className="text-center px-1 py-0.1 tracking-wide text-white bg-red-400 rounded-full requiredBadge ml-2">{required ? " Required" : ""}</span>)}
               <div className="">
                 {info !== "" && (
                   <ShadTooltip content={infoHtml.current}>
