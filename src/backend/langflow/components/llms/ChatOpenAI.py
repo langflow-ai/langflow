@@ -2,7 +2,6 @@ from typing import Optional, Union
 
 from langchain.llms import BaseLLM
 from langchain_community.chat_models.openai import ChatOpenAI
-
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, NestedDict
 
@@ -15,19 +14,16 @@ class ChatOpenAIComponent(CustomComponent):
         return {
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "int",
                 "advanced": False,
                 "required": False,
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
-                "field_type": "NestedDict",
                 "advanced": True,
                 "required": False,
             },
             "model_name": {
                 "display_name": "Model Name",
-                "field_type": "str",
                 "advanced": False,
                 "required": False,
                 "options": [
@@ -41,7 +37,6 @@ class ChatOpenAIComponent(CustomComponent):
             },
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
-                "field_type": "str",
                 "advanced": False,
                 "required": False,
                 "info": (
@@ -51,14 +46,12 @@ class ChatOpenAIComponent(CustomComponent):
             },
             "openai_api_key": {
                 "display_name": "OpenAI API Key",
-                "field_type": "str",
                 "advanced": False,
                 "required": False,
                 "password": True,
             },
             "temperature": {
                 "display_name": "Temperature",
-                "field_type": "float",
                 "advanced": False,
                 "required": False,
                 "value": 0.7,
