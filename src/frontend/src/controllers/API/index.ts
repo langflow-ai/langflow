@@ -851,47 +851,35 @@ export async function requestLogout() {
   }
 }
 
-export async function getGlobalVariables(): Promise<{ [key: string]: string }> {
-  // mocked for now but will eventually be a real API call
-  const globalVariables = window.sessionStorage.getItem("globalVariables");
-  return globalVariables ? JSON.parse(globalVariables) : {};
+export async function getGlobalVariables(): Promise<{
+  [key: string]: { id: string; provider: string };
+}> {
+  return (await api.get(`${BASE_URL_API}credentials/`)).data;
 }
 
-export async function registerGlobalVariable(name: string, value: string) {
-  // mocked for now but will eventually be a real API call
-  const globalVariables = window.sessionStorage.getItem("globalVariables");
-  const parsedGlobalVariables = globalVariables
-    ? JSON.parse(globalVariables)
-    : {};
-  parsedGlobalVariables[name] = value;
-  window.sessionStorage.setItem(
-    "globalVariables",
-    JSON.stringify(parsedGlobalVariables)
-  );
+export async function registerGlobalVariable(
+  name: string,
+  value: string,
+  provider?: string
+) {
+  return await api.post(`${BASE_URL_API}credentials/`, {
+    name,
+    value,
+    provider,
+  });
 }
 
-export async function deleteGlobalVariable(name: string) {
-  // mocked for now but will eventually be a real API call
-  const globalVariables = window.sessionStorage.getItem("globalVariables");
-  const parsedGlobalVariables = globalVariables
-    ? JSON.parse(globalVariables)
-    : {};
-  delete parsedGlobalVariables[name];
-  window.sessionStorage.setItem(
-    "globalVariables",
-    JSON.stringify(parsedGlobalVariables)
-  );
+export async function deleteGlobalVariable(id: string) {
+  api.delete(`${BASE_URL_API}credentials/${id}`);
 }
 
-export async function updateGlobalVariable(name: string, value: string) {
-  // mocked for now but will eventually be a real API call
-  const globalVariables = window.sessionStorage.getItem("globalVariables");
-  const parsedGlobalVariables = globalVariables
-    ? JSON.parse(globalVariables)
-    : {};
-  parsedGlobalVariables[name] = value;
-  window.sessionStorage.setItem(
-    "globalVariables",
-    JSON.stringify(parsedGlobalVariables)
-  );
+export async function updateGlobalVariable(
+  name: string,
+  value: string,
+  id: string
+) {
+  api.patch(`${BASE_URL_API}credentials/${id}`, {
+    name,
+    value,
+  });
 }
