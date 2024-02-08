@@ -95,12 +95,15 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         tikToken_enable: bool = True,
         tiktoken_model_name: Optional[str] = None,
     ) -> Union[OpenAIEmbeddings, Callable]:
+        # This is to avoid errors with Vector Stores (e.g Chroma)
+        if disallowed_special == ["all"]:
+            disallowed_special = "all"
         return OpenAIEmbeddings(
             tiktoken_enabled=tikToken_enable,
             default_headers=default_headers,
             default_query=default_query,
             allowed_special=set(allowed_special),
-            disallowed_special=set(disallowed_special),
+            disallowed_special="all",
             chunk_size=chunk_size,
             client=client,
             deployment=deployment,
