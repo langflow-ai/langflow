@@ -11,8 +11,9 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
         globalVariablesEntries: Object.keys(variables),
       });
     },
-    addGlobalVariable: (key, value) => {
-      const newVariables = { ...get().globalVariables, [key]: value };
+    addGlobalVariable: (key, id, provider) => {
+      const data = { id, provider };
+      const newVariables = { ...get().globalVariables, [key]: data };
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
