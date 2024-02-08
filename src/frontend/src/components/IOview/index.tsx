@@ -28,7 +28,10 @@ export default function IOView(): JSX.Element {
   }>(handleInitialView());
 
   function handleInitialView() {
-    if (outputs.map((output) => output.type).includes("ChatOutput")) {
+    if (
+      outputs.map((output) => output.type).includes("ChatOutput") ||
+      inputs.map((input) => input.type).includes("ChatInput")
+    ) {
       return { type: "ChatOutput" };
     }
     return { type: "" };
@@ -83,7 +86,8 @@ export default function IOView(): JSX.Element {
               </button>
             );
           })}
-          {outputs.map((output) => output.type).includes("ChatOutput") &&
+          {(outputs.map((output) => output.type).includes("ChatOutput") ||
+            inputs.map((output) => output.type).includes("chatInput")) &&
             selectedView.type !== "ChatOutput" && (
               <button
                 onClick={() => setSelectedView({ type: "ChatOutput" })}
