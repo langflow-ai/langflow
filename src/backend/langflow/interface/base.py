@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
-from langchain.chains.base import Chain
-from langchain.agents import AgentExecutor
-from langflow.services.deps import get_settings_service
-from pydantic import BaseModel
 
+from langchain.agents import AgentExecutor
+from langchain.chains.base import Chain
+from langflow.services.deps import get_settings_service
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 from loguru import logger
+from pydantic import BaseModel
 
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
@@ -67,6 +67,23 @@ class LangChainTypeCreator(BaseModel, ABC):
 
         return result
 
+    def to_list_of_dicts(self) -> List[Dict]:
+        result: List[Dict] = []
+
+        for name in self.to_list():
+            # frontend_node.to_dict() returns a dict with the following structure:
+            # {name: {template: {fields}, description: str}}
+            # so we should update the result dict
+            node = self.frontend_node(name)
+            if self.type_name not in node.tags:
+                # Add it
+                node.tags.append(self.type_name.title())
+            if node is not None:
+                node = node.to_dict()
+                result.append(node)
+
+        return result
+
     def frontend_node(self, name) -> Union[FrontendNode, None]:
         signature = self.get_signature(name)
         if signature is None:
@@ -89,7 +106,7 @@ class LangChainTypeCreator(BaseModel, ABC):
                 for key, value in signature["template"].items()
                 if key != "_type"
             ]
-            template = Template(type_name=name, fields=fields)
+            template = Template(name=name, fields=fields)
             signature = self.frontend_node_class(
                 template=template,
                 description=signature.get("description", ""),
