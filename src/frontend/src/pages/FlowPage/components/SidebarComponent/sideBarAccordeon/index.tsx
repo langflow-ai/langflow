@@ -22,7 +22,7 @@ import { APIClassType, APIObjectType } from "../../../../../types/api";
 import { nodeColors } from "../../../../../utils/styleUtils";
 import { classNames, cn } from "../../../../../utils/utils";
 
-export default function SideBarAccordeon({title}: {title: string}) {
+export default function SideBarAccordeon({title, icon}: {title: string, icon: string}) {
     const doisRef = useRef<HTMLDivElement>(null);
     const [doisSizeRef, setDoisSizeRef] = useState(doisRef?.current?.clientHeight ?? 0);
     const [seeMore2, setSeeMore2] = useState(false);
@@ -32,8 +32,8 @@ export default function SideBarAccordeon({title}: {title: string}) {
         <div className="space-y-4">
 
             <div className="flex items-center justify-between">
-              <span className="px-2 text-xl font-semibold tracking-tight">
-                {title}
+              <span className="px-2 gap-3 flex items-center text-xl font-semibold tracking-tight">
+                <IconComponent name={icon} className="w-6 h-6"/>{title}
               </span>
               <button
                 onClick={() => {

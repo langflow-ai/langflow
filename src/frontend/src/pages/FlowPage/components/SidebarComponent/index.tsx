@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TagsSelector } from "../../../../components/tagsSelectorComponent";
-import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
 import {
@@ -19,7 +18,6 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType, APIObjectType } from "../../../../types/api";
-import { nodeColors } from "../../../../utils/styleUtils";
 import { classNames, cn } from "../../../../utils/utils";
 import SideBarAccordeon from "./sideBarAccordeon";
 
@@ -46,10 +44,10 @@ export default function Sidebar(): JSX.Element {
   const doisRef = useRef<HTMLDivElement>(null);
   const umRef = useRef<HTMLDivElement>(null);
   const [umSizeRef, setUmSizeRef] = useState(umRef?.current?.clientHeight ?? 0);
-  
 
-  useEffect(() => {setUmSizeRef(umRef?.current?.clientHeight ?? 0)}, [umRef])
-
+  useEffect(() => {
+    setUmSizeRef(umRef?.current?.clientHeight ?? 0);
+  }, [umRef]);
 
   const [size, setSize] = useState(40);
   function onDragStart(
@@ -259,15 +257,8 @@ export default function Sidebar(): JSX.Element {
           }}
           className="pointer-events-auto flex flex-col bg-muted shadow-lg"
         >
-          <div className="flex items-center justify-between gap-4 py-8 px-10">
-          <Button
-              variant="primary"
-              size="lg"
-              className="p-2 shadow-sm"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <IconComponent name="PanelRightOpen" className="h-6 w-6 stroke-1" />
-            </Button>
+          <div className="flex items-center justify-between gap-4 px-10 py-8">
+            
             <div className="relative flex w-full items-center">
               <Input
                 onFocusCapture={() => handleBlur()}
@@ -276,7 +267,7 @@ export default function Sidebar(): JSX.Element {
                 name="search"
                 id="search"
                 placeholder="Search components, flows or bundles..."
-                className="nopan nodelete nodrag noundo nocopy input-search h-12 px-4 mx-0"
+                className="nopan nodelete nodrag noundo nocopy input-search mx-0 h-12 px-4"
                 onChange={(event) => {
                   handleSearchInput(event.target.value);
                   // Set search input state
@@ -291,7 +282,6 @@ export default function Sidebar(): JSX.Element {
                 />
               </div>
             </div>
-            
           </div>
           <div className="flex w-full gap-0 border-b border-border px-10">
             <button
@@ -326,7 +316,7 @@ export default function Sidebar(): JSX.Element {
               </button>
             </ShadTooltip>
           </div>
-          <div className="space-y-8 overflow-y-scroll py-6 px-10 scrollbar-hide">
+          <div className="space-y-8 overflow-y-scroll px-10 py-6 scrollbar-hide">
             <div className="flex w-full items-center justify-start pb-4">
               <TagsSelector
                 tags={[
@@ -342,10 +332,8 @@ export default function Sidebar(): JSX.Element {
                 setSelectedTags={setFilterCategories}
               />
             </div>
-            <SideBarAccordeon title="Inputs / Outputs" />
-            <SideBarAccordeon title="Data" />
-
-            
+            <SideBarAccordeon title="Inputs / Outputs" icon="ArrowLeftRight"/>
+            <SideBarAccordeon title="Data" icon="HardDrive"/>
           </div>
         </ResizablePanel>
         <ResizableHandle />
