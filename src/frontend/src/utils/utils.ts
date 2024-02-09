@@ -121,7 +121,6 @@ export function groupByFamily(
   }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
-  const inputListTypes = ["Text"];
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
       template.type &&
@@ -138,6 +137,7 @@ export function groupByFamily(
   if (flow) {
     for (const node of flow) {
       const nodeData = node.data;
+      const inputListTypes = nodeData.node?.input_types ?? [];
 
       const allTypesInBaseClassesSet = inputListTypes
         .map((type) => type)
