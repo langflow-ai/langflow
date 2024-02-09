@@ -147,9 +147,9 @@ export default function GenericNode({
           "generic-node-div"
         )}
         onDoubleClick={() => {
-          console.log(openAdvancedModal);
-
-          setOpenAdvancedModal(true);
+          if (!inputName) {
+            setOpenAdvancedModal(true);
+          }
         }}
       >
         {data.node?.beta && showNode && (
@@ -219,9 +219,11 @@ export default function GenericNode({
                     <ShadTooltip content={data.node?.display_name}>
                       <div
                         className="flex items-center gap-2"
-                        onDoubleClick={() => {
+                        onDoubleClick={(event) => {
                           setInputName(true);
                           takeSnapshot();
+                          event.stopPropagation();
+                          event.preventDefault();
                         }}
                       >
                         <div
