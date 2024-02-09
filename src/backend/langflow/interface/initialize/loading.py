@@ -122,7 +122,7 @@ async def instantiate_based_on_type(class_object, base_type, node_type, load_fro
         return class_object(**params)
 
 
-def update_params_with_load_from_db_fields(custom_component, params, load_from_db_fields):
+def update_params_with_load_from_db_fields(custom_component: "CustomComponent", params, load_from_db_fields):
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
     # and update the params with the value
