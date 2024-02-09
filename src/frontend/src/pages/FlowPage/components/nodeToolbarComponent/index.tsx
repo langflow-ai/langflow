@@ -125,7 +125,6 @@ export default function NodeToolbarComponent({
         break;
       case "delete":
         deleteNode(data.id);
-
     }
   };
 
@@ -280,12 +279,12 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
               <SelectItem value={"delete"}>
-                <div className="flex text-status-red" data-testid="delete-button-modal">
-                  <IconComponent
-                    name="Trash2"
-                    className="h-4 w-4 mr-2"
-                  />{" "}
-                  Delete {" "}
+                <div
+                  className="flex text-status-red"
+                  data-testid="delete-button-modal"
+                >
+                  <IconComponent name="Trash2" className="mr-2 h-4 w-4" />{" "}
+                  Delete{" "}
                 </div>
               </SelectItem>
             </SelectContent>

@@ -7,26 +7,26 @@ import {
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
 
+import _ from "lodash";
 import { useNavigate, useParams } from "react-router-dom";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
-import { Button } from "../../../ui/button";
-import InputComponent from "../../../inputComponent";
-import _ from "lodash";
 
 export const MenuBar = (): JSX.Element => {
-  const {id} = useParams();
+  const { id } = useParams();
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const [openSettings, setOpenSettings] = useState(false);
-  const [showEditName, setShow] = useState<boolean>(false)
+  const [showEditName, setShow] = useState<boolean>(false);
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
-  const [inputValue, setInputValue] = useState<string | undefined>(currentFlow?.name);
+  const [inputValue, setInputValue] = useState<string | undefined>(
+    currentFlow?.name
+  );
 
   const navigate = useNavigate();
 
@@ -40,7 +40,7 @@ export const MenuBar = (): JSX.Element => {
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
-  console.log(inputValue)
+  console.log(inputValue);
 
   return currentFlow ? (
     <div className="round-button-div">
@@ -49,52 +49,55 @@ export const MenuBar = (): JSX.Element => {
           navigate(-1);
         }}
       >
-        <IconComponent name="ChevronLeft" className="w-4 ml-4" />
+        <IconComponent name="ChevronLeft" className="ml-4 w-4" />
       </button>
       <div className="header-menu-bar">
-      <div className="header-menu-bar-display">
-            <div
-              className="text-secondary-foreground hover:bg-secondary-foreground/5 dark:hover:bg-background/10 hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-9 px-3 truncate" 
-              onDoubleClick={(e => {
-                setShow(true)
-              })}
-              >
-              {showEditName ? (
-                <input
+        <div className="header-menu-bar-display">
+          <div
+            className="inline-flex h-9 items-center justify-center truncate px-3 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:bg-secondary-foreground/5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-background/10"
+            onDoubleClick={(e) => {
+              setShow(true);
+            }}
+          >
+            {showEditName ? (
+              <input
                 onBlur={async () => {
-                    setShow(false);
-                    if (inputValue?.trim() !== "") {
-                      const updatedFlow = _.cloneDeep(currentFlow);
-                      updatedFlow.name = inputValue!;
-                      return await saveFlow(updatedFlow);
-                    }
-                    setInputValue(currentFlow.name);
-                  }}
-                  value={inputValue ?? currentFlow.name}
-                  onKeyDown={(e) => {
-                    if (e.key === "Backspace") {
-                      // Prevent the default backspace behavior which clears the input value
-                      e.preventDefault();
-                      // Remove the last character from the input value
-                      setInputValue(inputValue?.slice(0, -1));
-                    }
-                  }}
-                  onChange={(e) => {
-                    setInputValue(e.target.value);
-                  }}
-                  onFocus={() => console.log(currentFlow.name)}
-                  className="h-9 bg-muted rounded-sm text-secondary-foreground hover:shadow-sm inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background truncate"
-                />
-              ) : (
-                currentFlow.name
-              )}  
-            </div>
+                  setShow(false);
+                  if (inputValue?.trim() !== "") {
+                    const updatedFlow = _.cloneDeep(currentFlow);
+                    updatedFlow.name = inputValue!;
+                    return await saveFlow(updatedFlow);
+                  }
+                  setInputValue(currentFlow.name);
+                }}
+                value={inputValue ?? currentFlow.name}
+                onKeyDown={(e) => {
+                  if (e.key === "Backspace") {
+                    // Prevent the default backspace behavior which clears the input value
+                    e.preventDefault();
+                    // Remove the last character from the input value
+                    setInputValue(inputValue?.slice(0, -1));
+                  }
+                }}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                }}
+                onFocus={() => console.log(currentFlow.name)}
+                className="inline-flex h-9 items-center justify-center truncate rounded-sm bg-muted text-sm font-medium text-secondary-foreground ring-offset-background transition-colors hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              />
+            ) : (
+              currentFlow.name
+            )}
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-              <div className="cursor-pointer text-secondary-foreground dark:hover:text-ring inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-9 px-3 rounded-r-md">
-                <IconComponent name={showEditName ? "Pencil" : "ChevronDown"} className="h-4 w-4 text-ring" />
-              </div>
+            <div className="inline-flex h-9 cursor-pointer items-center justify-center rounded-r-md px-3 text-sm font-medium text-secondary-foreground ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:hover:text-ring">
+              <IconComponent
+                name={showEditName ? "Pencil" : "ChevronDown"}
+                className="h-4 w-4 text-ring"
+              />
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44">
             <DropdownMenuLabel>Options</DropdownMenuLabel>
