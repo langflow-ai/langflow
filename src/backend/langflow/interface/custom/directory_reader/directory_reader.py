@@ -2,8 +2,9 @@ import ast
 import os
 import zlib
 
-from langflow.interface.custom.custom_component import CustomComponent
 from loguru import logger
+
+from langflow.interface.custom.custom_component import CustomComponent
 
 
 class CustomComponentPathValueError(ValueError):
@@ -264,7 +265,6 @@ class DirectoryReader:
             }
             menu_result["components"].append(component_info)
 
-            logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
         logger.debug("-------------------- Component menu list built --------------------")
