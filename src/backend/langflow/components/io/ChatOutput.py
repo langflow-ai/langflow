@@ -16,7 +16,7 @@ class ChatOutput(CustomComponent):
 
     def build_config(self):
         return {
-            "message": {"input_types": ["Text"]},
+            "message": {"input_types": ["Text"], "display_name": "Message"},
             "sender": {"options": ["Machine", "User"], "display_name": "Sender Type"},
             "sender_name": {"display_name": "Sender Name"},
             "session_id": {
