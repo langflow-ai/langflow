@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
@@ -22,6 +20,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -279,20 +278,17 @@ def build_custom_component_template(
         logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        logger.debug("Built base frontend node")
-
-        logger.debug("Updated attributes")
         field_config = run_build_config(custom_component, user_id=user_id, update_field=update_field)
-        logger.debug("Built field config")
+
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
-        logger.debug("Added extra fields")
+
         frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
-        logger.debug("Added code field")
+
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
-        logger.debug("Added base classes")
+
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
