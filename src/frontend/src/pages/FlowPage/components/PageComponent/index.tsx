@@ -32,6 +32,7 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { useDarkStore } from "../../../../stores/darkStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -57,6 +58,7 @@ export default function Page({
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
   );
+  const isDark = useDarkStore((state) => state.dark);
 
   const lastEdges = useFlowStore((state) => state.lastEdges);
   const nodes = useFlowStore((state) => state.nodes);
@@ -392,7 +394,7 @@ export default function Page({
                   proOptions={{ hideAttribution: true }}
                   onPaneClick={onPaneClick}
                 >
-                  <Background className="" />
+                  <Background color={isDark ? "#797979" : ""} className="" />
                   {!view && (
                     <Controls
                       className="bg-muted fill-foreground stroke-foreground text-primary
