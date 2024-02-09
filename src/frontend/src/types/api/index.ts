@@ -17,6 +17,7 @@ export type APIClassType = {
   description: string;
   template: APITemplateType;
   display_name: string;
+  icon?: string;
   input_types?: Array<string>;
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
