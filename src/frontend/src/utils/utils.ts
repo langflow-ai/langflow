@@ -120,11 +120,9 @@ export function groupByFamily(
   }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
-    "str",
     "bool",
     "float",
     "code",
-    "prompt",
     "file",
     "int",
   ]);
