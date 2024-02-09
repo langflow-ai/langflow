@@ -68,9 +68,9 @@ class Component:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
-    def getattr_return_str(self, component, attribute):
-        attribute = getattr(component, attribute)
-        return str(attribute) if attribute else ""
+    def getattr_return_str(self, component, value):
+        value = getattr(component, value)
+        return str(value) if value else ""
 
     def build_template_config(self) -> dict:
         if not self.code:
@@ -89,11 +89,11 @@ class Component:
 
         for attribute, func in attributes_func_mapping.items():
             if hasattr(component_instance, attribute):
-                template_config[attribute] = func(component_instance, attribute)
+                template_config[attribute] = func(component=component_instance, value=attribute)
 
             return template_config
 
-    def validate_icon(self, _, value: str):
+    def validate_icon(self, value: str, *args, **kwargs):
         # we are going to use the emoji library to validate the emoji
         # emojis can be defined using the :emoji_name: syntax
         if not value.startswith(":") or not value.endswith(":"):
