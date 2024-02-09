@@ -11,6 +11,9 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain_community.vectorstores import VectorStore
 from langchain_core.documents import Document
+from loguru import logger
+from pydantic import ValidationError
+
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
@@ -22,8 +25,7 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
-from loguru import logger
-from pydantic import ValidationError
+
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
@@ -127,7 +129,8 @@ def update_params_with_load_from_db_fields(custom_component, params, load_from_d
     for field in load_from_db_fields:
         if field in params:
             try:
-                params[field] = custom_component.keys(field)
+                key = custom_component.keys(params[field])
+                params[field] = key if key else params[field]
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
                 pass
