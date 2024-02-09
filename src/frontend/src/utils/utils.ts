@@ -106,6 +106,7 @@ export function groupByFamily(
   flow?: NodeType[]
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
+
   let arrOfPossibleInputs: Array<{
     category: string;
     nodes: nodeGroupedObjType[];
@@ -119,16 +120,8 @@ export function groupByFamily(
     display_name?: string;
   }> = [];
   let checkedNodes = new Map();
-  const excludeTypes = new Set([
-    "str",
-    "bool",
-    "float",
-    "code",
-    "prompt",
-    "file",
-    "int",
-  ]);
-
+  const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
+  const inputListTypes = ["Text"];
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
       template.type &&
@@ -146,16 +139,22 @@ export function groupByFamily(
     for (const node of flow) {
       const nodeData = node.data;
 
+      const allTypesInBaseClassesSet = inputListTypes
+        .map((type) => type)
+        .every((lowerCaseType) => baseClassesSet.has(lowerCaseType));
+
       const foundNode = checkedNodes.get(nodeData.type);
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
-          Object.values(nodeData.node!.template).some(checkBaseClass),
+          Object.values(nodeData.node!.template).some(checkBaseClass) ||
+          allTypesInBaseClassesSet,
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
-          ),
+          ) ||
+          allTypesInBaseClassesSet,
         displayName: nodeData.node?.display_name,
       });
     }
