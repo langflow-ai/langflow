@@ -137,7 +137,8 @@ export function groupByFamily(
   if (flow) {
     for (const node of flow) {
       const nodeData = node.data;
-      const inputListTypes = nodeData.node?.input_types ?? [];
+      const inputListTypes =
+        nodeData.node?.input_types?.concat(nodeData?.output_types ?? []) ?? [];
 
       const allTypesInBaseClassesSet = inputListTypes
         .map((type) => type)
