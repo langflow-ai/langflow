@@ -203,7 +203,7 @@ export default function NodeToolbarComponent({
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          {hasCode && (
+          {hasCode ? (
             <ShadTooltip content="Code" side="top">
               <button
                 className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -232,13 +232,28 @@ export default function NodeToolbarComponent({
                 <IconComponent name="Code2" className="h-4 w-4" />
               </button>
             </ShadTooltip>
+          ) : (
+            <ShadTooltip content="Save" side="top">
+              <button
+                className={classNames(
+                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                  hasCode ? "" : "rounded-l-md"
+                )}
+                onClick={() => {
+                  isSaved
+                    ? setShowOverrideModal(true)
+                    : saveComponent(cloneDeep(data), false);
+                }}
+              >
+                <IconComponent name="SaveAll" className=" h-4 w-4" />
+              </button>
+            </ShadTooltip>
           )}
 
           <ShadTooltip content="Duplicate" side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                hasCode ? "" : "rounded-l-md"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -320,15 +335,17 @@ export default function NodeToolbarComponent({
                   </div>{" "}
                 </SelectItem>
               ) : (
-                <SelectItem value={"SaveAll"}>
-                  <div className="flex" data-testid="save-button-modal">
-                    <IconComponent
-                      name="SaveAll"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Save{" "}
-                  </div>{" "}
-                </SelectItem>
+                hasCode && (
+                  <SelectItem value={"SaveAll"}>
+                    <div className="flex" data-testid="save-button-modal">
+                      <IconComponent
+                        name="SaveAll"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      Save{" "}
+                    </div>{" "}
+                  </SelectItem>
+                )
               )}
               {!hasStore && (
                 <SelectItem value={"Download"}>
