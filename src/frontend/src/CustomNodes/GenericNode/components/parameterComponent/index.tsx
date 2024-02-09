@@ -367,7 +367,7 @@ export default function ParameterComponent({
               return isValidConnectionValidation;
             }}
             className={classNames(
-              " left-[-0.4px] z-50 h-full w-full  bg-muted",
+              " left-[-0.4px] h-full w-full  bg-muted",
               left ? "gradient-border-input" : "gradient-border-output"
             )}
             onClick={() => {
@@ -381,14 +381,11 @@ export default function ParameterComponent({
                 (info !== "" ? " flex items-center " : "")
               }
             >
-              {proxy ? (
-                <ShadTooltip content={<span>{proxy.id}</span>}>
-                  <span>{title}</span>
-                </ShadTooltip>
-              ) : (
-                <span>{title}</span>
+              {required && (
+                <span className="py-0.1 requiredBadge ml-2 rounded-full bg-red-400 px-1 text-center tracking-wide text-white">
+                  {required ? " Required" : ""}
+                </span>
               )}
-              {required && (<span className="text-center px-1 py-0.1 tracking-wide text-white bg-red-400 rounded-full requiredBadge ml-2">{required ? " Required" : ""}</span>)}
               <div className="">
                 {info !== "" && (
                   <ShadTooltip content={infoHtml.current}>
@@ -406,11 +403,18 @@ export default function ParameterComponent({
           </Handle>
           // </ShadTooltip>
         )}
+        {proxy ? (
+          <ShadTooltip content={<span>{proxy.id}</span>}>
+            <span className="z-50">{title}</span>
+          </ShadTooltip>
+        ) : (
+          <span className="z-50">{title}</span>
+        )}
 
         {left === true &&
         type === "str" &&
         !data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
+          <div className="z-50 mt-2 w-full">
             {data.node?.template[name].list ? (
               <InputListComponent
                 disabled={disabled}
