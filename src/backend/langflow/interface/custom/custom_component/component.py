@@ -1,4 +1,3 @@
-import ast
 import operator
 import warnings
 from typing import Any, ClassVar, Optional
@@ -7,6 +6,7 @@ from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
 from langflow.interface.custom.code_parser import CodeParser
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
 
@@ -63,26 +63,29 @@ class Component:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
-    def build_template_config(self, attributes) -> dict:
+    def getattr_return_str(self, component, attribute):
+        attribute = getattr(component, attribute)
+        return str(attribute) if attribute else ""
+
+    def build_template_config(self) -> dict:
+        if not self.code:
+            return {}
+
+        cc_class = eval_custom_component_code(self.code)
+        component_instance = cc_class()
         template_config = {}
+        attributes_func_mapping = {
+            "display_name": self.getattr_return_str,
+            "description": self.getattr_return_str,
+            "beta": self.getattr_return_str,
+            "documentation": self.getattr_return_str,
+        }
 
-        for item in attributes:
-            item_name = item.get("name")
+        for attribute, func in attributes_func_mapping.items():
+            if hasattr(component_instance, attribute):
+                template_config[attribute] = func(component_instance, attribute)
 
-            if item_value := item.get("value"):
-                if "display_name" in item_name:
-                    template_config["display_name"] = ast.literal_eval(item_value)
-
-                elif "description" in item_name:
-                    template_config["description"] = ast.literal_eval(item_value)
-
-                elif "beta" in item_name:
-                    template_config["beta"] = ast.literal_eval(item_value)
-
-                elif "documentation" in item_name:
-                    template_config["documentation"] = ast.literal_eval(item_value)
-
-        return template_config
+            return template_config
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
