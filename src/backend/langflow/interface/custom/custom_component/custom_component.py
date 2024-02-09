@@ -1,6 +1,5 @@
 import operator
-from typing import Any, Callable, ClassVar, List, Optional, Union
-from uuid import UUID
+from typing import Any, Callable, List, Optional, Union
 
 import yaml
 from cachetools import TTLCache, cachedmethod
@@ -19,23 +18,40 @@ from .component import Component
 
 
 class CustomComponent(Component):
-    display_name: Optional[str] = None
-    description: Optional[str] = None
-    code: Optional[str] = None
-    field_config: dict = {}
-    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
-    function_entrypoint_name: ClassVar[str] = "build"
-    function: Optional[Callable] = None
-    repr_value: Optional[Any] = ""
-    user_id: Optional[Union[UUID, str]] = None
-    status: Optional[Any] = None
-    _tree: Optional[dict] = None
+    """
+    Represents a custom component in Langflow.
+
+    Attributes:
+        display_name (Optional[str]): The display name of the custom component.
+        description (Optional[str]): The description of the custom component.
+        code (Optional[str]): The code of the custom component.
+        field_config (dict): The field configuration of the custom component.
+        code_class_base_inheritance (ClassVar[str]): The base class name for the custom component.
+        function_entrypoint_name (ClassVar[str]): The name of the function entrypoint for the custom component.
+        function (Optional[Callable]): The function associated with the custom component.
+        repr_value (Optional[Any]): The representation value of the custom component.
+        user_id (Optional[Union[UUID, str]]): The user ID associated with the custom component.
+        status (Optional[Any]): The status of the custom component.
+        _tree (Optional[dict]): The code tree of the custom component.
+    """
 
     def __init__(self, **data):
+        """
+        Initializes a new instance of the CustomComponent class.
+
+        Args:
+            **data: Additional keyword arguments to initialize the custom component.
+        """
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
 
     def custom_repr(self):
+        """
+        Returns the custom representation of the custom component.
+
+        Returns:
+            str: The custom representation of the custom component.
+        """
         if self.repr_value == "":
             self.repr_value = self.status
         if isinstance(self.repr_value, dict):
@@ -45,14 +61,32 @@ class CustomComponent(Component):
         return str(self.repr_value)
 
     def build_config(self):
+        """
+        Builds the configuration for the custom component.
+
+        Returns:
+            dict: The configuration for the custom component.
+        """
         return self.field_config
 
     @property
     def tree(self):
+        """
+        Gets the code tree of the custom component.
+
+        Returns:
+            dict: The code tree of the custom component.
+        """
         return self.get_code_tree(self.code or "")
 
     @property
     def get_function_entrypoint_args(self) -> list:
+        """
+        Gets the arguments of the function entrypoint for the custom component.
+
+        Returns:
+            list: The arguments of the function entrypoint.
+        """
         build_method = self.get_build_method()
         if not build_method:
             return []
@@ -76,6 +110,12 @@ class CustomComponent(Component):
 
     @cachedmethod(operator.attrgetter("cache"))
     def get_build_method(self):
+        """
+        Gets the build method for the custom component.
+
+        Returns:
+            dict: The build method for the custom component.
+        """
         if not self.code:
             return {}
 
@@ -93,6 +133,12 @@ class CustomComponent(Component):
 
     @property
     def get_function_entrypoint_return_type(self) -> List[Any]:
+        """
+        Gets the return type of the function entrypoint for the custom component.
+
+        Returns:
+            List[Any]: The return type of the function entrypoint.
+        """
         build_method = self.get_build_method()
         if not build_method or not build_method.get("has_return"):
             return []
@@ -111,6 +157,12 @@ class CustomComponent(Component):
 
     @property
     def get_main_class_name(self):
+        """
+        Gets the main class name of the custom component.
+
+        Returns:
+            str: The main class name of the custom component.
+        """
         if not self.code:
             return ""
 
@@ -129,9 +181,21 @@ class CustomComponent(Component):
 
     @property
     def template_config(self):
+        """
+        Gets the template configuration for the custom component.
+
+        Returns:
+            dict: The template configuration for the custom component.
+        """
         return self.build_template_config()
 
     def build_template_config(self):
+        """
+        Builds the template configuration for the custom component.
+
+        Returns:
+            dict: The template configuration for the custom component.
+        """
         if not self.code:
             return {}
 
@@ -147,6 +211,16 @@ class CustomComponent(Component):
 
     @property
     def keys(self):
+        """
+        Returns the credential for the current user with the specified name.
+
+        Raises:
+            ValueError: If the user id is not set.
+
+        Returns:
+            The credential for the current user with the specified name.
+        """
+
         def get_credential(name: str):
             if hasattr(self, "_user_id") and not self._user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
@@ -159,6 +233,15 @@ class CustomComponent(Component):
         return get_credential
 
     def list_key_names(self):
+        """
+        Lists the names of the credentials for the current user.
+
+        Raises:
+            ValueError: If the user id is not set.
+
+        Returns:
+            List[str]: The names of the credentials for the current user.
+        """
         if hasattr(self, "_user_id") and not self._user_id:
             raise ValueError(f"User id is not set for {self.__class__.__name__}")
         credential_service = get_credential_service()
@@ -167,7 +250,15 @@ class CustomComponent(Component):
             return credential_service.list_credentials(user_id=self._user_id, session=session)
 
     def index(self, value: int = 0):
-        """Returns a function that returns the value at the given index in the iterable."""
+        """
+        Returns a function that returns the value at the given index in the iterable.
+
+        Args:
+            value (int): The index value.
+
+        Returns:
+            Callable: A function that returns the value at the given index.
+        """
 
         def get_index(iterable: List[Any]):
             return iterable[value] if iterable else iterable
@@ -176,9 +267,25 @@ class CustomComponent(Component):
 
     @property
     def get_function(self):
+        """
+        Gets the function associated with the custom component.
+
+        Returns:
+            Callable: The function associated with the custom component.
+        """
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
+        """
+        Loads a flow with the specified ID and applies tweaks if provided.
+
+        Args:
+            flow_id (str): The ID of the flow to load.
+            tweaks (Optional[dict]): The tweaks to apply to the flow.
+
+        Returns:
+            Any: The loaded flow.
+        """
         from langflow.processing.process import build_sorted_vertices, process_tweaks
 
         db_service = get_db_service()
@@ -191,6 +298,15 @@ class CustomComponent(Component):
         return await build_sorted_vertices(graph_data, self.user_id)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
+        """
+        Lists the flows associated with the custom component.
+
+        Args:
+            get_session (Optional[Callable]): The function to get the session.
+
+        Returns:
+            List[Flow]: The list of flows associated with the custom component.
+        """
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
@@ -210,6 +326,18 @@ class CustomComponent(Component):
         tweaks: Optional[dict] = None,
         get_session: Optional[Callable] = None,
     ) -> Flow:
+        """
+        Gets a flow with the specified name or ID and applies tweaks if provided.
+
+        Args:
+            flow_name (Optional[str]): The name of the flow to get.
+            flow_id (Optional[str]): The ID of the flow to get.
+            tweaks (Optional[dict]): The tweaks to apply to the flow.
+            get_session (Optional[Callable]): The function to get the session.
+
+        Returns:
+            Flow: The flow with the specified name or ID.
+        """
         get_session = get_session or session_getter
         db_service = get_db_service()
         with get_session(db_service) as session:
@@ -225,4 +353,14 @@ class CustomComponent(Component):
         return await self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Builds the custom component.
+
+        Args:
+            *args: The positional arguments.
+            **kwargs: The keyword arguments.
+
+        Returns:
+            Any: The result of the build process.
+        """
         raise NotImplementedError
