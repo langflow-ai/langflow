@@ -494,7 +494,7 @@ export default function GenericNode({
                       ? "font-light italic"
                       : ""
                   )}
-                  onDoubleClick={() => {
+                  onDoubleClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
@@ -534,13 +534,26 @@ export default function GenericNode({
                         })}
                         data={data}
                         color={
-                          nodeColors[
-                            data.node?.template[templateField].type!
-                          ] ??
-                          nodeColors[
-                            types[data.node?.template[templateField].type!]
-                          ] ??
-                          nodeColors.unknown
+                          data.node?.template[templateField].input_types &&
+                          data.node?.template[templateField].input_types!
+                            .length > 0
+                            ? nodeColors[
+                                data.node?.template[templateField]
+                                  .input_types![0]
+                              ] ??
+                              nodeColors[
+                                types[
+                                  data.node?.template[templateField]
+                                    .input_types![0]
+                                ]
+                              ]
+                            : nodeColors[
+                                data.node?.template[templateField].type!
+                              ] ??
+                              nodeColors[
+                                types[data.node?.template[templateField].type!]
+                              ] ??
+                              nodeColors.unknown
                         }
                         title={getFieldTitle(
                           data.node?.template!,
