@@ -5,6 +5,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -136,20 +137,6 @@ class CustomComponent(Component):
     @property
     def template_config(self):
         return self.build_template_config()
-
-    def build_template_config(self):
-        if not self.code:
-            return {}
-
-        attributes = [
-            main_class["attributes"]
-            for main_class in self.tree.get("classes", [])
-            if main_class["name"] == self.get_main_class_name
-        ]
-        # Get just the first item
-        attributes = next(iter(attributes), [])
-
-        return super().build_template_config(attributes)
 
     @property
     def keys(self):

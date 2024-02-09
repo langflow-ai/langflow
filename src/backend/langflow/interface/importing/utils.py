@@ -9,9 +9,9 @@ from langchain.chains.base import Chain
 from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
+
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.wrappers.base import wrapper_creator
-from langflow.utils import validate
 
 
 def import_module(module_path: str) -> Any:
@@ -171,16 +171,3 @@ def import_utility(utility: str) -> Any:
     if utility == "SQLDatabase":
         return import_class(f"langchain_community.sql_database.{utility}")
     return import_class(f"langchain_community.utilities.{utility}")
-
-
-def get_function(code):
-    """Get the function"""
-    function_name = validate.extract_function_name(code)
-
-    return validate.create_function(code, function_name)
-
-
-def eval_custom_component_code(code: str) -> Type[CustomComponent]:
-    """Evaluate custom component code"""
-    class_name = validate.extract_class_name(code)
-    return validate.create_class(code, class_name)

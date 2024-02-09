@@ -14,8 +14,10 @@ from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
 
+from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.interface.custom.utils import get_function
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
+from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
 from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
@@ -15,11 +17,11 @@ from langflow.interface.custom.directory_reader.utils import (
     determine_component_name,
     merge_nested_dicts_with_renaming,
 )
-from langflow.interface.importing.utils import eval_custom_component_code
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.utils import validate
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -370,3 +372,10 @@ def build_component(component):
     component_template = create_component_template(component)
     logger.debug(f"Building component: {component_name, component.get('output_types')}")
     return component_name, component_template
+
+
+def get_function(code):
+    """Get the function"""
+    function_name = validate.extract_function_name(code)
+
+    return validate.create_function(code, function_name)
