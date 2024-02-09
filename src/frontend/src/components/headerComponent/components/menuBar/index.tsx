@@ -49,7 +49,7 @@ export const MenuBar = (): JSX.Element => {
           navigate(-1);
         }}
       >
-        <IconComponent name="ChevronLeft" className="w-4" />
+        <IconComponent name="ChevronLeft" className="w-4 ml-4" />
       </button>
       <div className="header-menu-bar">
       <div className="header-menu-bar-display">
