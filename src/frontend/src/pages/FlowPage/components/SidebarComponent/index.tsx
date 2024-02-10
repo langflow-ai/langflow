@@ -4,7 +4,11 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { TagsSelector } from "../../../../components/tagsSelectorComponent";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
-import { Popover, PopoverTrigger, PopoverContent } from "../../../../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../../components/ui/popover";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -262,19 +266,19 @@ export default function Sidebar(): JSX.Element {
                 </Button>
               </PopoverTrigger>
               <PopoverContent>
-              <TagsSelector
-                tags={[
-                  { id: "vectorstore", name: "Vector Store" },
-                  { id: "chain", name: "Chain" },
-                  { id: "nlp", name: "NLP" },
-                  { id: "tool", name: "Tool" },
-                  { id: "io", name: "I/O" },
-                ]}
-                loadingTags={false}
-                disabled={false}
-                selectedTags={filteredCategories}
-                setSelectedTags={setFilterCategories}
-              />
+                <TagsSelector
+                  tags={[
+                    { id: "vectorstore", name: "Vector Store" },
+                    { id: "chain", name: "Chain" },
+                    { id: "nlp", name: "NLP" },
+                    { id: "tool", name: "Tool" },
+                    { id: "io", name: "I/O" },
+                  ]}
+                  loadingTags={false}
+                  disabled={false}
+                  selectedTags={filteredCategories}
+                  setSelectedTags={setFilterCategories}
+                />
               </PopoverContent>
             </Popover>
             <div className="relative flex w-full items-center">
@@ -300,38 +304,39 @@ export default function Sidebar(): JSX.Element {
                 />
               </div>
             </div>
-            <div className="ml-4 flex w-full gap-0 border-b border-border">
+            <div className="ml-4 flex gap-0 border-b border-border">
               <button
                 onClick={() => {
                   setTabActive("Components");
                 }}
                 className={
-                  "border-b-2 px-4 py-3 transition-all " +
+                  "flex items-center gap-2.5 border-b-2 px-4 py-3 transition-all " +
                   (tabActive === "Components"
                     ? "border-primary"
                     : " border-transparent text-muted-foreground hover:text-primary")
                 }
               >
-                Components
+                <IconComponent name="ToyBrick" className="h-5 w-5" />
+                {size > 40 ? "Components" : ""}
               </button>
               <button
                 onClick={() => {
                   setTabActive("Flows");
                 }}
                 className={
-                  "border-b-2 px-4 py-3 transition-all " +
+                  "flex items-center gap-2.5 border-b-2 px-4 py-3 transition-all " +
                   (tabActive === "Flows"
                     ? "border-primary"
                     : " border-transparent text-muted-foreground hover:text-primary")
                 }
               >
-                Flows
+                <IconComponent name="Group" className="h-5 w-5" />
+                {size > 40 ? "Flows" : ""}
               </button>
             </div>
           </div>
 
           <div className="space-y-8 overflow-y-scroll px-10 py-8 scrollbar-hide">
-            
             <SideBarAccordeon
               title="Inputs / Outputs"
               icon="ArrowLeftRight"
