@@ -368,7 +368,7 @@ export default function Page({
                   proOptions={{ hideAttribution: true }}
                   onPaneClick={onPaneClick}
                 >
-                  <Background className="" />
+                  <Background className="bg-muted" />
                   {!view && (
                     <Controls
                       className="bg-muted fill-foreground stroke-foreground text-primary

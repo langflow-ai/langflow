@@ -474,7 +474,7 @@
   }
 
   .header-arrangement {
-    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-muted;
+    @apply flex-max-width h-12 items-center justify-between border-b border-border bg-background;
   }
   .header-start-display {
     @apply flex items-center justify-start gap-2;

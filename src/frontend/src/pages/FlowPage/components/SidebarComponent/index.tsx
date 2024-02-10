@@ -251,7 +251,7 @@ export default function Sidebar(): JSX.Element {
           onResize={(size) => {
             setSize(size);
           }}
-          className="pointer-events-auto flex flex-col bg-muted shadow-lg"
+          className="pointer-events-auto flex flex-col bg-background shadow-lg"
         >
           <div className="flex items-center justify-between px-10 pt-8">
             <Popover>
