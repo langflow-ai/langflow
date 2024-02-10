@@ -54,7 +54,7 @@ export default function SideBarAccordeon({
       >
         <div className="grid h-fit grid-cols-2 gap-4" ref={doisRef}>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
@@ -102,7 +102,7 @@ export default function SideBarAccordeon({
             )}
           </div>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
@@ -150,7 +150,7 @@ export default function SideBarAccordeon({
             )}
           </div>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
@@ -198,7 +198,7 @@ export default function SideBarAccordeon({
             )}
           </div>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
@@ -246,7 +246,7 @@ export default function SideBarAccordeon({
             )}
           </div>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
@@ -294,7 +294,7 @@ export default function SideBarAccordeon({
             )}
           </div>
           <div
-            className={cn("flex cursor-grab flex-col overflow-hidden rounded-lg border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
+            className={cn("flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-background transition-all hover:shadow-lg ", tagVisible ? "h-40": "h-32")}
             draggable={true}
           >
             <div
