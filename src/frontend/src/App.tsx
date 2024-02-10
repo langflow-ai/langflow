@@ -34,6 +34,7 @@ export default function App() {
   const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
   const loading = useAlertStore((state) => state.loading);
   const [fetchError, setFetchError] = useState(false);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   // Initialize state variable for the list of alerts
   const [alertsList, setAlertsList] = useState<
@@ -170,7 +171,7 @@ export default function App() {
             description={FETCH_ERROR_DESCRIPION}
             message={FETCH_ERROR_MESSAGE}
           ></FetchErrorComponent>
-        ) : loading ? (
+        ) : isLoading ? (
           <div className="loading-page-panel">
             <LoadingComponent remSize={50} />
           </div>
