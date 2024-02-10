@@ -10,6 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
@@ -20,6 +21,8 @@ export const MenuBar = (): JSX.Element => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
+  const sidebarOpen = useFlowStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useFlowStore((state) => state.setSidebarOpen);
   const [openSettings, setOpenSettings] = useState(false);
 
   const navigate = useNavigate();
@@ -36,15 +39,20 @@ export const MenuBar = (): JSX.Element => {
   }
 
   return currentFlow ? (
-    <div className="round-button-div">
-      <button
+    <div className="ml-3 flex items-center gap-2">
+      <Button
+        variant="primary"
+        size="sm"
         onClick={() => {
-          navigate(-1);
+          setSidebarOpen(!sidebarOpen);
         }}
       >
-        <IconComponent name="ChevronLeft" className="w-4" />
-      </button>
-      <div className="header-menu-bar">
+        <IconComponent
+          name={sidebarOpen ? "PanelRightOpen" : "PanelRightClose"}
+          className="h-4 w-4"
+        />
+      </Button>
+      <div className="flex items-center gap-0.5 rounded-md py-1 text-sm font-medium">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">

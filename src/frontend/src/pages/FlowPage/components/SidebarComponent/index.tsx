@@ -352,17 +352,6 @@ export default function Sidebar(): JSX.Element {
         <ResizableHandle />
         <ResizablePanel className="pointer-events-none" />
       </ResizablePanelGroup>
-      <button
-        onClick={() => {
-          setSidebarOpen(true);
-        }}
-        className={cn(
-          "absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-md border bg-muted px-3 py-1 shadow-md transition-all",
-          !sidebarOpen ? "scale-100 delay-500" : "scale-0"
-        )}
-      >
-        <IconComponent name="ChevronRight" className="h-6 w-6" />
-      </button>
     </>
   );
 }
