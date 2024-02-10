@@ -26,7 +26,7 @@ export default function SideBarAccordeon({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-3 px-2 text-xl font-semibold tracking-tight">
+        <span className="flex items-center gap-3 px-2 text-lg font-semibold tracking-tight text-primary">
           <IconComponent name={icon} className="h-6 w-6" />
           {title}
         </span>
