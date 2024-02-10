@@ -1,10 +1,10 @@
 import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
+import { useEffect, useMemo, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
 import { TagsSelector } from "../../../../components/tagsSelectorComponent";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
+import { Popover, PopoverTrigger, PopoverContent } from "../../../../components/ui/popover";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -39,15 +39,7 @@ export default function Sidebar(): JSX.Element {
   const [dataFilter, setFilterData] = useState(data);
   const [tabActive, setTabActive] = useState("Components");
   const [search, setSearch] = useState("");
-  const [seeMore, setSeeMore] = useState(false);
-  const [seeMore2, setSeeMore2] = useState(false);
-  const doisRef = useRef<HTMLDivElement>(null);
-  const umRef = useRef<HTMLDivElement>(null);
-  const [umSizeRef, setUmSizeRef] = useState(umRef?.current?.clientHeight ?? 0);
-
-  useEffect(() => {
-    setUmSizeRef(umRef?.current?.clientHeight ?? 0);
-  }, [umRef]);
+  const [tagsVisible, setTagsVisible] = useState(false);
 
   const [size, setSize] = useState(40);
   function onDragStart(
@@ -257,8 +249,34 @@ export default function Sidebar(): JSX.Element {
           }}
           className="pointer-events-auto flex flex-col bg-muted shadow-lg"
         >
-          <div className="flex items-center justify-between gap-4 px-10 py-8">
-            
+          <div className="flex items-center justify-between px-10 pt-8">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="primary"
+                  className="mr-2 h-12 p-2 px-3 shadow-sm"
+                  size="lg"
+                  onClick={() => setTagsVisible(!tagsVisible)}
+                >
+                  <IconComponent name="Filter" className="h-5 w-6" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent>
+              <TagsSelector
+                tags={[
+                  { id: "vectorstore", name: "Vector Store" },
+                  { id: "chain", name: "Chain" },
+                  { id: "nlp", name: "NLP" },
+                  { id: "tool", name: "Tool" },
+                  { id: "io", name: "I/O" },
+                ]}
+                loadingTags={false}
+                disabled={false}
+                selectedTags={filteredCategories}
+                setSelectedTags={setFilterCategories}
+              />
+              </PopoverContent>
+            </Popover>
             <div className="relative flex w-full items-center">
               <Input
                 onFocusCapture={() => handleBlur()}
@@ -266,7 +284,7 @@ export default function Sidebar(): JSX.Element {
                 type="text"
                 name="search"
                 id="search"
-                placeholder="Search components, flows or bundles..."
+                placeholder="Search components..."
                 className="nopan nodelete nodrag noundo nocopy input-search mx-0 h-12 px-4"
                 onChange={(event) => {
                   handleSearchInput(event.target.value);
@@ -282,58 +300,48 @@ export default function Sidebar(): JSX.Element {
                 />
               </div>
             </div>
-          </div>
-          <div className="flex w-full gap-0 border-b border-border px-10">
-            <button
-              onClick={() => {
-                setTabActive("Components");
-              }}
-              className={
-                "border-b-2 px-4 py-3 transition-all " +
-                (tabActive === "Components"
-                  ? "border-primary"
-                  : " border-transparent text-muted-foreground hover:text-primary")
-              }
-            >
-              Components
-            </button>
-            <button
-              onClick={() => {
-                setTabActive("Flows");
-              }}
-              className={
-                "border-b-2 px-4 py-3 transition-all " +
-                (tabActive === "Flows"
-                  ? "border-primary"
-                  : " border-transparent text-muted-foreground hover:text-primary")
-              }
-            >
-              Flows
-            </button>
-            <ShadTooltip content="Coming Soon">
-              <button className="cursor-not-allowed px-4 py-3 text-muted-foreground">
-                Bundles
+            <div className="ml-4 flex w-full gap-0 border-b border-border">
+              <button
+                onClick={() => {
+                  setTabActive("Components");
+                }}
+                className={
+                  "border-b-2 px-4 py-3 transition-all " +
+                  (tabActive === "Components"
+                    ? "border-primary"
+                    : " border-transparent text-muted-foreground hover:text-primary")
+                }
+              >
+                Components
               </button>
-            </ShadTooltip>
-          </div>
-          <div className="space-y-8 overflow-y-scroll px-10 py-6 scrollbar-hide">
-            <div className="flex w-full items-center justify-start pb-4">
-              <TagsSelector
-                tags={[
-                  { id: "vectorstore", name: "Vector Store" },
-                  { id: "chain", name: "Chain" },
-                  { id: "nlp", name: "NLP" },
-                  { id: "tool", name: "Tool" },
-                  { id: "io", name: "I/O" },
-                ]}
-                loadingTags={false}
-                disabled={false}
-                selectedTags={filteredCategories}
-                setSelectedTags={setFilterCategories}
-              />
+              <button
+                onClick={() => {
+                  setTabActive("Flows");
+                }}
+                className={
+                  "border-b-2 px-4 py-3 transition-all " +
+                  (tabActive === "Flows"
+                    ? "border-primary"
+                    : " border-transparent text-muted-foreground hover:text-primary")
+                }
+              >
+                Flows
+              </button>
             </div>
-            <SideBarAccordeon title="Inputs / Outputs" icon="ArrowLeftRight"/>
-            <SideBarAccordeon title="Data" icon="HardDrive"/>
+          </div>
+
+          <div className="space-y-8 overflow-y-scroll px-10 py-8 scrollbar-hide">
+            
+            <SideBarAccordeon
+              title="Inputs / Outputs"
+              icon="ArrowLeftRight"
+              tagVisible={tagsVisible}
+            />
+            <SideBarAccordeon
+              title="Data"
+              icon="HardDrive"
+              tagVisible={tagsVisible}
+            />
           </div>
         </ResizablePanel>
         <ResizableHandle />
