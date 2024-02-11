@@ -58,7 +58,10 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
     # Create a dictionary for O(1) lookup time.
     field_dict = {field.name: field for field in frontend_node.template.fields}
     reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
-
+    # Add any fields that are not in the field_order list
+    for field in frontend_node.template.fields:
+        if field.name not in field_order:
+            reordered_fields.append(field)
     frontend_node.template.fields = reordered_fields
 
 
@@ -228,7 +231,8 @@ def run_build_config(
         ) from exc
 
     try:
-        build_config: Dict = custom_class(user_id=user_id).build_config()
+        custom_instance = custom_class(user_id=user_id)
+        build_config: Dict = custom_instance.build_config()
 
         for field_name, field in build_config.items():
             # Allow user to build TemplateField as well
@@ -242,7 +246,7 @@ def run_build_config(
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
 
-        return build_config
+        return build_config, custom_instance
 
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
@@ -312,10 +316,11 @@ def build_custom_component_template(
         logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        field_config = run_build_config(
+        logger.debug("Updated attributes")
+        field_config, custom_instance = run_build_config(
             custom_component, user_id=user_id, update_field=update_field
         )
-
+        logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
@@ -332,7 +337,7 @@ def build_custom_component_template(
         )
         logger.debug("Added base classes")
 
-        reorder_fields(frontend_node, custom_component.field_order)
+        reorder_fields(frontend_node, custom_instance._get_field_order())
 
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
