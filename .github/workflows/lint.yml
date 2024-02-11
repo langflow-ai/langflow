@@ -17,7 +17,7 @@ jobs:
           - "3.9"
           - "3.10"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install poetry
         run: |
           pipx install poetry==$POETRY_VERSION
