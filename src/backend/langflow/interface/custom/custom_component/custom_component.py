@@ -33,6 +33,8 @@ class CustomComponent(Component):
     """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
+    field_order: List[str] = []
+    """The field order of the component. Defaults to an empty list."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None

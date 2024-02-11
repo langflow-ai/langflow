@@ -9,6 +9,7 @@ from langflow.utils.constants import DIRECT_TYPES
 class Template(BaseModel):
     type_name: str
     fields: list[TemplateField]
+    field_order: list[str] = []
 
     def process_fields(
         self,
