@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
@@ -19,7 +21,6 @@ from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -41,6 +42,18 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: L
             return_type = str(return_type)
 
         frontend_node.add_output_type(return_type)
+
+
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List[str]):
+    """Reorder fields in the frontend node based on the specified field_order."""
+    if not field_order:
+        return
+
+    # Create a dictionary for O(1) lookup time.
+    field_dict = {field.name: field for field in frontend_node.template.fields}
+    reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
+
+    frontend_node.template.fields = reordered_fields
 
 
 def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -289,6 +302,9 @@ def build_custom_component_template(
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
         logger.debug("Added base classes")
+
+        reorder_fields(frontend_node, custom_component.field_order)
+
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
