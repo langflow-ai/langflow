@@ -27,7 +27,7 @@ class CustomComponent(Component):
     """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
-    field_order: List[str] = []
+    field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
@@ -41,6 +41,9 @@ class CustomComponent(Component):
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
+
+    def _get_field_order(self):
+        return self.field_order or list(self.field_config.keys())
 
     def custom_repr(self):
         if self.repr_value == "":
