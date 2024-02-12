@@ -42,7 +42,11 @@ class OpenAIEmbeddingsComponent(CustomComponent):
                 "advanced": True,
             },
             "max_retries": {"display_name": "Max Retries", "advanced": True},
-            "model": {"display_name": "Model", "advanced": True},
+            "model": {
+                "display_name": "Model",
+                "advanced": False,
+                "options": ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+            },
             "model_kwargs": {"display_name": "Model Kwargs", "advanced": True},
             "openai_api_base": {"display_name": "OpenAI API Base", "password": True, "advanced": True},
             "openai_api_key": {"display_name": "OpenAI API Key", "password": True},
@@ -74,10 +78,10 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         disallowed_special: List[str] = ["all"],
         chunk_size: int = 1000,
         client: Optional[Any] = None,
-        deployment: str = "text-embedding-ada-002",
+        deployment: str = "text-embedding-3-small",
         embedding_ctx_length: int = 8191,
         max_retries: int = 6,
-        model: str = "text-embedding-ada-002",
+        model: str = "text-embedding-3-small",
         model_kwargs: NestedDict = {},
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = "",
@@ -91,12 +95,15 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         tikToken_enable: bool = True,
         tiktoken_model_name: Optional[str] = None,
     ) -> Union[OpenAIEmbeddings, Callable]:
+        # This is to avoid errors with Vector Stores (e.g Chroma)
+        if disallowed_special == ["all"]:
+            disallowed_special = "all"
         return OpenAIEmbeddings(
             tiktoken_enabled=tikToken_enable,
             default_headers=default_headers,
             default_query=default_query,
             allowed_special=set(allowed_special),
-            disallowed_special=set(disallowed_special),
+            disallowed_special="all",
             chunk_size=chunk_size,
             client=client,
             deployment=deployment,

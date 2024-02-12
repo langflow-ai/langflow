@@ -17,9 +17,10 @@ from langflow.interface.custom.directory_reader.utils import (
     determine_component_name,
     merge_nested_dicts_with_renaming,
 )
-from langflow.interface.importing.utils import eval_custom_component_code
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
 
@@ -232,6 +233,7 @@ def sanitize_template_config(template_config):
         "beta",
         "documentation",
         "output_types",
+        "icon",
     }
     for key in template_config.copy():
         if key not in attributes:
@@ -278,20 +280,17 @@ def build_custom_component_template(
         logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        logger.debug("Built base frontend node")
-
-        logger.debug("Updated attributes")
         field_config = run_build_config(custom_component, user_id=user_id, update_field=update_field)
-        logger.debug("Built field config")
+
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
-        logger.debug("Added extra fields")
+
         frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
-        logger.debug("Added code field")
+
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
-        logger.debug("Added base classes")
+
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
@@ -367,7 +366,14 @@ def sanitize_field_config(field_config: Dict):
 
 def build_component(component):
     """Build a single component."""
-    logger.debug(f"Building component: {component.get('name'), component.get('output_types')}")
     component_name = determine_component_name(component)
     component_template = create_component_template(component)
+    logger.debug(f"Building component: {component_name, component.get('output_types')}")
     return component_name, component_template
+
+
+def get_function(code):
+    """Get the function"""
+    function_name = validate.extract_function_name(code)
+
+    return validate.create_function(code, function_name)

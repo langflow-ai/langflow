@@ -24,7 +24,7 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=2):
+def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
     for _ in range(max_attempts):
         task_status_response = client.get(
             href,
@@ -72,14 +72,12 @@ PROMPT_REQUEST = {
                             "text-ada-001",
                         ],
                         "ChatOpenAI": [
-                            "gpt-3.5-turbo-0613",
-                            "gpt-3.5-turbo",
-                            "gpt-3.5-turbo-16k-0613",
-                            "gpt-3.5-turbo-16k",
-                            "gpt-4-0613",
-                            "gpt-4-32k-0613",
-                            "gpt-4",
-                            "gpt-4-32k",
+                            "gpt-4-turbo-preview",
+                            "gpt-4-0125-preview",
+                            "gpt-4-1106-preview",
+                            "gpt-4-vision-preview",
+                            "gpt-3.5-turbo-0125",
+                            "gpt-3.5-turbo-1106",
                         ],
                         "Anthropic": [
                             "claude-v1",
@@ -410,12 +408,78 @@ def test_various_prompts(client, prompt, expected_input_variables):
     assert response.json()["input_variables"] == expected_input_variables
 
 
-def test_basic_chat_in_process(client, added_flow, created_api_key):
+def test_get_vertices_flow_not_found(client, logged_in_headers):
+    response = client.get("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
+    assert response.status_code == 500  # Or whatever status code you've set for invalid ID
+
+
+def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
+    flow_id = added_flow_with_prompt_and_history["id"]
+    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    # The response should contain the list in this order
+    # ['ConversationBufferMemory-Lu2Nb', 'PromptTemplate-5Q0W8', 'ChatOpenAI-vy7fV', 'LLMChain-UjBh1']
+    # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
+    ids = [inner_id.split("-")[0] for _id in response.json()["ids"] for inner_id in _id]
+    assert ids == ["ChatOpenAI", "PromptTemplate", "ConversationBufferMemory", "LLMChain"]
+
+
+def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+    response = client.post("/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers)
+    assert response.status_code == 500
+
+
+def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
+    flow_id = added_flow_with_prompt_and_history["id"]
+    response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
+    assert response.status_code == 500
+
+
+def test_build_all_vertices_in_sequence_with_chat_input(client, added_flow_chat_input, logged_in_headers):
+    flow_id = added_flow_chat_input["id"]
+
+    # First, get all the vertices in the correct sequence
+    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    vertex_ids = response.json()["ids"]
+
+    # Now, iterate through each vertex and build it
+    for vertex_id in vertex_ids:
+        response = client.post(f"/api/v1/build/{flow_id}/vertices/{vertex_id}", headers=logged_in_headers)
+        json_response = response.json()
+        assert response.status_code == 200, f"Failed at vertex {vertex_id}: {json_response}"
+        assert "valid" in json_response
+        assert json_response["valid"], json_response["params"]
+
+
+def test_build_all_vertices_in_sequence_with_two_outputs(client, added_flow_two_outputs, logged_in_headers):
+    """This tests the case where a node has two outputs, one of which is Text and the other (in this case) is
+    a LLMChain. We need to make sure the correct output is passed in both cases."""
+    flow_id = added_flow_two_outputs["id"]
+
+    # First, get all the vertices in the correct sequence
+    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert "ids" in response.json()
+    vertex_ids = response.json()["ids"]
+
+    # Now, iterate through each vertex and build it
+    for vertex_id in vertex_ids:
+        response = client.post(f"/api/v1/build/{flow_id}/vertices/{vertex_id}", headers=logged_in_headers)
+        json_response = response.json()
+        assert response.status_code == 200, f"Failed at vertex {vertex_id}: {json_response}"
+        assert "valid" in json_response
+        assert json_response["valid"], json_response["params"]
+
+
+def test_basic_chat_in_process(client, flow, created_api_key):
     # Run the /api/v1/process/{flow_id} endpoint
     headers = {"x-api-key": created_api_key.api_key}
     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
     response = client.post(
-        f"api/v1/process/{added_flow.get('id')}",
+        f"api/v1/process/{flow.get('id')}",
         headers=headers,
         json=post_data,
     )
@@ -432,7 +496,7 @@ def test_basic_chat_in_process(client, added_flow, created_api_key):
         "session_id": response.json()["session_id"],
     }
     response = client.post(
-        f"api/v1/process/{added_flow.get('id')}",
+        f"api/v1/process/{flow.get('id')}",
         headers=headers,
         json=post_data,
     )
@@ -440,12 +504,12 @@ def test_basic_chat_in_process(client, added_flow, created_api_key):
     assert "Gabriel" in response.json()["result"]["text"]
 
 
-def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
+def test_basic_chat_different_session_ids(client, flow, created_api_key):
     # Run the /api/v1/process/{flow_id} endpoint
     headers = {"x-api-key": created_api_key.api_key}
     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
     response = client.post(
-        f"api/v1/process/{added_flow.get('id')}",
+        f"api/v1/process/{flow.get('id')}",
         headers=headers,
         json=post_data,
     )
@@ -462,7 +526,7 @@ def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
         "inputs": {"text": "What is my name?"},
     }
     response = client.post(
-        f"api/v1/process/{added_flow.get('id')}",
+        f"api/v1/process/{flow.get('id')}",
         headers=headers,
         json=post_data,
     )
@@ -471,9 +535,9 @@ def test_basic_chat_different_session_ids(client, added_flow, created_api_key):
     assert session_id1 != response.json()["session_id"]
 
 
-def test_basic_chat_with_two_session_ids_and_names(client, added_flow, created_api_key):
+def test_basic_chat_with_two_session_ids_and_names(client, flow, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    flow_id = added_flow.get("id")
+    flow_id = flow.get("id")
     names = ["Gabriel", "John"]
     session_ids = []
 
@@ -517,13 +581,13 @@ def test_vector_store_in_process(distributed_client, added_vector_store, created
 
 # Test function without loop
 @pytest.mark.async_test
-def test_async_task_processing(distributed_client, added_flow, created_api_key):
+def test_async_task_processing(distributed_client, flow, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
-
+    flow = flow.model_dump()
     # Run the /api/v1/process/{flow_id} endpoint with sync=False
     response = distributed_client.post(
-        f"api/v1/process/{added_flow.get('id')}",
+        f"api/v1/process/{flow.get('id')}",
         headers=headers,
         json={**post_data, "sync": False},
     )

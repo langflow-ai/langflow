@@ -22,6 +22,10 @@ class Object:
     pass
 
 
+class Text:
+    pass
+
+
 class Data:
     pass
 
@@ -54,6 +58,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
     "Data": Data,
+    "Text": Text,
     "Object": Object,
     "Callable": Callable,
     "Prompt": Prompt,

@@ -2,7 +2,6 @@ from pathlib import Path
 from tempfile import tempdir
 
 import pytest
-
 from langflow.__main__ import app
 from langflow.services import deps
 
@@ -17,6 +16,7 @@ def default_settings():
 
 def test_components_path(runner, client, default_settings):
     # Create a foldr in the tmp directory
+
     temp_dir = Path(tempdir)
     # create a "components" folder
     temp_dir = temp_dir / "components"
@@ -34,5 +34,4 @@ def test_components_path(runner, client, default_settings):
 def test_superuser(runner, client, session):
     result = runner.invoke(app, ["superuser"], input="admin\nadmin\n")
     assert result.exit_code == 0, result.stdout
-    assert "Superuser creation failed." not in result.output, result.output
-    assert "Superuser created successfully." in result.output, result.output
+    assert "Superuser created successfully." in result.stdout

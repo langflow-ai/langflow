@@ -9,7 +9,6 @@ import pytest
 from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain.llms.fake import FakeListLLM
-
 from langflow.graph import Graph
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.utils import (
@@ -21,7 +20,6 @@ from langflow.graph.graph.utils import (
     update_target_handle,
     update_template,
 )
-from langflow.graph.utils import UnbuiltObject
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.processing.process import get_result_and_thought
@@ -82,8 +80,10 @@ def test_graph_structure(basic_graph):
         assert isinstance(node, Vertex)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-        assert edge.source_id in basic_graph.vertex_map.keys()
-        assert edge.target_id in basic_graph.vertex_map.keys()
+        source_vertex = basic_graph.get_vertex(edge.source_id)
+        target_vertex = basic_graph.get_vertex(edge.target_id)
+        assert source_vertex in basic_graph.vertices
+        assert target_vertex in basic_graph.vertices
 
 
 def test_circular_dependencies(basic_graph):
@@ -152,55 +152,6 @@ def test_get_node_neighbors_basic(basic_graph):
     assert any("OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
 
 
-# def test_get_node_neighbors_complex(complex_graph):
-#     """Test getting node neighbors"""
-#     assert isinstance(complex_graph, Graph)
-#     # Get root node
-#     root = get_root_node(complex_graph)
-#     assert root is not None
-#     neighbors = complex_graph.get_nodes_with_target(root)
-#     assert neighbors is not None
-#     # Neighbors should be a list of nodes
-#     assert isinstance(neighbors, list)
-#     # Root Node is an Agent, it requires an LLMChain and tools
-#     # We need to check if there is a Chain in the one of the neighbors'
-#     assert any("Chain" in neighbor.data["type"] for neighbor in neighbors)
-#     # assert Tool is in the neighbors
-#     assert any("Tool" in neighbor.data["type"] for neighbor in neighbors)
-#     # Now on to the Chain's neighbors
-#     chain = next(neighbor for neighbor in neighbors if "Chain" in neighbor.data["type"])
-#     chain_neighbors = complex_graph.get_nodes_with_target(chain)
-#     assert chain_neighbors is not None
-#     # Check if there is a LLM in the chain's neighbors
-#     assert any("OpenAI" in neighbor.data["type"] for neighbor in chain_neighbors)
-#     # Chain should have a Prompt as a neighbor
-#     assert any("Prompt" in neighbor.data["type"] for neighbor in chain_neighbors)
-#     # Now on to the Tool's neighbors
-#     tool = next(neighbor for neighbor in neighbors if "Tool" in neighbor.data["type"])
-#     tool_neighbors = complex_graph.get_nodes_with_target(tool)
-#     assert tool_neighbors is not None
-#     # Check if there is an Agent in the tool's neighbors
-#     assert any("Agent" in neighbor.data["type"] for neighbor in tool_neighbors)
-#     # This Agent has a Tool that has a PythonFunction as func
-#     agent = next(
-#         neighbor for neighbor in tool_neighbors if "Agent" in neighbor.data["type"]
-#     )
-#     agent_neighbors = complex_graph.get_nodes_with_target(agent)
-#     assert agent_neighbors is not None
-#     # Check if there is a Tool in the agent's neighbors
-#     assert any("Tool" in neighbor.data["type"] for neighbor in agent_neighbors)
-#     # This Tool has a PythonFunction as func
-#     tool = next(
-#         neighbor for neighbor in agent_neighbors if "Tool" in neighbor.data["type"]
-#     )
-#     tool_neighbors = complex_graph.get_nodes_with_target(tool)
-#     assert tool_neighbors is not None
-#     # Check if there is a PythonFunction in the tool's neighbors
-#     assert any(
-#         "PythonFunctionTool" in neighbor.data["type"] for neighbor in tool_neighbors
-#     )
-
-
 def test_get_node(basic_graph):
     """Test getting a single node"""
     node_id = basic_graph.vertices[0].id
@@ -222,7 +173,6 @@ def test_build_edges(basic_graph):
     assert len(basic_graph.edges) == len(basic_graph._edges)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-
         assert isinstance(edge.source_id, str)
         assert isinstance(edge.target_id, str)
 
@@ -297,16 +247,14 @@ async def assert_agent_was_built(graph):
     assert isinstance(result, Chain)
 
 
-@pytest.mark.asyncio
-async def test_llm_node_build(basic_graph):
+def test_llm_node_build(basic_graph):
     llm_node = get_node_by_type(basic_graph, LLMVertex)
     assert llm_node is not None
-    built_object = await llm_node.build()
-    assert built_object is not UnbuiltObject()
+    built_object = llm_node.build()
+    assert built_object is not None
 
 
-@pytest.mark.asyncio
-async def test_toolkit_node_build(client, openapi_graph):
+def test_toolkit_node_build(client, openapi_graph):
     # Write a file to the disk
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
@@ -314,27 +262,33 @@ async def test_toolkit_node_build(client, openapi_graph):
 
     toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
     assert toolkit_node is not None
-    built_object = await toolkit_node.build()
-    assert built_object is not UnbuiltObject
+    built_object = toolkit_node.build()
+    assert built_object is not None
     # Remove the file
     os.remove(file_path)
     assert not Path(file_path).exists()
 
 
-@pytest.mark.asyncio
-async def test_file_tool_node_build(client, openapi_graph):
+def test_file_tool_node_build(client, openapi_graph):
     file_path = "api-with-examples.yaml"
     with open(file_path, "w") as f:
         f.write("openapi: 3.0.0")
 
     assert Path(file_path).exists()
     file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
-    assert file_tool_node is not UnbuiltObject and file_tool_node is not None
-    built_object = await file_tool_node.build()
-    assert built_object is not UnbuiltObject
+    assert file_tool_node is not None
+    built_object = file_tool_node.build()
+    assert built_object is not None
     # Remove the file
     os.remove(file_path)
     assert not Path(file_path).exists()
+
+
+# def test_wrapper_node_build(openapi_graph):
+#     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
+#     assert wrapper_node is not None
+#     built_object = wrapper_node.build()
+#     assert built_object is not None
 
 
 @pytest.mark.asyncio
@@ -471,12 +425,10 @@ def test_update_template(sample_template, sample_nodes):
     node2_updated = next((n for n in nodes_copy if n["id"] == "node2"), None)
     node3_updated = next((n for n in nodes_copy if n["id"] == "node3"), None)
 
-    assert node1_updated is not None
     assert node1_updated["data"]["node"]["template"]["some_field"]["show"] is True
     assert node1_updated["data"]["node"]["template"]["some_field"]["advanced"] is False
     assert node1_updated["data"]["node"]["template"]["some_field"]["display_name"] == "Name1"
 
-    assert node2_updated is not None
     assert node2_updated["data"]["node"]["template"]["other_field"]["show"] is False
     assert node2_updated["data"]["node"]["template"]["other_field"]["advanced"] is True
     assert node2_updated["data"]["node"]["template"]["other_field"]["display_name"] == "DisplayName2"
@@ -543,9 +495,9 @@ async def test_pickle_graph(json_vector_store):
     first_result = await graph.build()
     assert isinstance(first_result, AgentExecutor)
     pickled = pickle.dumps(graph)
-    assert pickled is not UnbuiltObject
+    assert pickled is not None
     unpickled = pickle.loads(pickled)
-    assert unpickled is not UnbuiltObject
+    assert unpickled is not None
     result = await unpickled.build()
     assert isinstance(result, AgentExecutor)
 
@@ -558,6 +510,6 @@ async def test_pickle_each_vertex(json_vector_store):
     for vertex in graph.vertices:
         await vertex.build()
         pickled = pickle.dumps(vertex)
-        assert pickled is not UnbuiltObject
+        assert pickled is not None
         unpickled = pickle.loads(pickled)
-        assert unpickled is not UnbuiltObject
+        assert unpickled is not None

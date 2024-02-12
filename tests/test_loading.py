@@ -16,11 +16,11 @@ def test_load_flow_from_json():
 
 def test_load_flow_from_json_with_tweaks():
     """Test loading a flow from a json file and applying tweaks"""
-    tweaks = {"dndnode_82": {"model_name": "test model"}}
+    tweaks = {"dndnode_82": {"model_name": "gpt-3.5-turbo-16k-0613"}}
     loaded = load_flow_from_json(pytest.BASIC_EXAMPLE_PATH, tweaks=tweaks)
     assert loaded is not None
     assert isinstance(loaded, Chain)
-    assert loaded.llm.model_name == "test model"
+    assert loaded.llm.model_name == "gpt-3.5-turbo-16k-0613"
 
 
 def test_get_root_vertex():
@@ -33,5 +33,4 @@ def test_get_root_vertex():
     root = get_root_vertex(graph)
     assert root is not None
     assert hasattr(root, "id")
-    assert hasattr(root, "data")
     assert hasattr(root, "data")

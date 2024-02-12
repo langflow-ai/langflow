@@ -7,6 +7,8 @@ import {
   Component,
   LoginType,
   Users,
+  VertexBuildTypeAPI,
+  VerticesOrderTypeAPI,
   changeUser,
   resetPasswordType,
   sendAllProps,
@@ -14,6 +16,7 @@ import {
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
+import { FlowPoolType } from "../../types/zustand/flow";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -350,7 +353,7 @@ export async function uploadFile(
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
-  return await api.post(`${BASE_URL_API}upload/${id}`, formData);
+  return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
 export async function postCustomComponent(
@@ -849,4 +852,44 @@ export async function requestLogout() {
     console.error(error);
     throw error;
   }
+}
+
+export async function getVerticesOrder(
+  flowId: string
+): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
+  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`);
+}
+
+export async function postBuildVertex(
+  flowId: string,
+  vertexId: string
+): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`);
+}
+
+export async function downloadImage({ flowId, fileName }): Promise<any> {
+  return await api.get(`${BASE_URL_API}files/images/${flowId}/${fileName}`);
+}
+
+export async function getFlowPool({
+  flowId,
+  nodeId,
+}: {
+  flowId: string;
+  nodeId?: string;
+}): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
+  const config = {};
+  config["params"] = { flow_id: flowId };
+  if (nodeId) {
+    config["params"] = { nodeId };
+  }
+  return await api.get(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function deleteFlowPool(
+  flowId: string
+): Promise<AxiosResponse<any>> {
+  const config = {};
+  config["params"] = { flow_id: flowId };
+  return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }

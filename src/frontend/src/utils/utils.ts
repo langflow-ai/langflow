@@ -120,11 +120,9 @@ export function groupByFamily(
   }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set([
-    "str",
     "bool",
     "float",
     "code",
-    "prompt",
     "file",
     "int",
   ]);
@@ -590,6 +588,11 @@ export function removeCountFromString(input: string): string {
   const result = input.replace(pattern, "");
 
   return result.trim(); // Trim any leading/trailing spaces
+}
+
+export function extractTypeFromLongId(id: string): string {
+  let [newId, _] = id.split("-");
+  return newId;
 }
 
 export function createRandomKey(key: string, uid: string): string {

@@ -4,6 +4,8 @@ import zlib
 
 from loguru import logger
 
+from langflow.interface.custom.custom_component import CustomComponent
+
 
 class CustomComponentPathValueError(ValueError):
     pass
@@ -245,17 +247,35 @@ class DirectoryReader:
             else:
                 component_name_camelcase = component_name
 
+            if validation_result:
+                try:
+                    output_types = self.get_output_types_from_code(result_content)
+                except Exception as exc:
+                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    output_types = [component_name_camelcase]
+            else:
+                output_types = [component_name_camelcase]
+
             component_info = {
-                "name": "CustomComponent",
-                "output_types": [component_name_camelcase],
+                "name": component_name_camelcase,
+                "output_types": output_types,
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
             }
             menu_result["components"].append(component_info)
 
-            logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
         logger.debug("-------------------- Component menu list built --------------------")
         return response
+
+    @staticmethod
+    def get_output_types_from_code(code: str) -> list:
+        """
+        Get the output types from the code.
+        """
+        custom_component = CustomComponent(code=code)
+        types_list = custom_component.get_function_entrypoint_return_type
+        # Get the name of types classes
+        return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]

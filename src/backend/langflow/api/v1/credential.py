@@ -2,12 +2,13 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session, select
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 
@@ -29,7 +30,10 @@ def create_credential(
         if credential_exists:
             raise HTTPException(status_code=400, detail="Credential name already exists")
 
-        db_credential = Credential.model_validate(credential, from_attributes=True)
+        credential_dict = credential.model_dump()
+        credential_dict["user_id"] = current_user.id
+
+        db_credential = Credential.model_validate(credential_dict)
         if not db_credential.value:
             raise HTTPException(status_code=400, detail="Credential value cannot be empty")
         encrypted = auth_utils.encrypt_api_key(db_credential.value, settings_service=settings_service)
@@ -81,6 +85,27 @@ def update_credential(
         db_credential.updated_at = datetime.utcnow()
         session.commit()
         session.refresh(db_credential)
+        return db_credential
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.delete("/{credential_id}", response_model=CredentialRead, status_code=200)
+def delete_credential(
+    *,
+    session: Session = Depends(get_session),
+    credential_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Delete a credential."""
+    try:
+        db_credential = session.exec(
+            select(Credential).where(Credential.id == credential_id, Credential.user_id == current_user.id)
+        ).first()
+        if not db_credential:
+            raise HTTPException(status_code=404, detail="Credential not found")
+        session.delete(db_credential)
+        session.commit()
         return db_credential
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

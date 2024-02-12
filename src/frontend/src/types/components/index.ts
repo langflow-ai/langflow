@@ -112,9 +112,11 @@ export type CodeAreaComponentType = {
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
+  openModal?: boolean;
 };
 
 export type FileComponentType = {
+  IOInputProps?;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -444,7 +446,7 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: () => void;
+  sendMessage: (count?: number) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -479,6 +481,9 @@ export type nodeToolbarPropsType = {
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
+  name?: string;
+  openAdvancedModal?: boolean;
+  onCloseAdvancedModal?: (close: boolean) => void;
 };
 
 export type parsedDataType = {
@@ -512,6 +517,7 @@ export type codeAreaModalPropsType = {
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
+  openModal?: boolean;
 };
 
 export type chatMessagePropsType = {
@@ -619,6 +625,7 @@ export type crashComponentPropsType = {
 
 export type validationStatusType = {
   id: string;
+  data: object;
   params: string;
   progress: number;
   valid: boolean;
@@ -642,4 +649,18 @@ export type dropdownButtonPropsType = {
   firstButtonName: string;
   onFirstBtnClick: () => void;
   options: Array<{ name: string; onBtnClick: () => void }>;
+};
+
+export type IOInputProps = {
+  inputType: string;
+  inputId: string;
+};
+export type IOOutputProps = {
+  outputType: string;
+  outputId: string;
+};
+
+export type IOFileInputProps = {
+  field: TemplateVariableType;
+  updateValue: (e: any, type: string) => void;
 };

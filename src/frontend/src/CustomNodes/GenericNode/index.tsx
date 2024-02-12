@@ -4,6 +4,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
+import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -30,6 +31,8 @@ export default function GenericNode({
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
   const deleteNode = useFlowStore((state) => state.deleteNode);
+  const flowPool = useFlowStore((state) => state.flowPool);
+  const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
@@ -41,6 +44,7 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
+  const [openAdvancedModal, setOpenAdvancedModal] = useState<boolean>(false);
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -81,7 +85,6 @@ export default function GenericNode({
   }, [selected]);
 
   // State for outline color
-  const sseData = useFlowStore((state) => state.sseData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
@@ -92,18 +95,22 @@ export default function GenericNode({
     setNodeName(data.node!.display_name);
   }, [data.node!.display_name]);
 
-  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = sseData[data.id];
+    const relevantData =
+      flowPool[data.id] && flowPool[data.id]?.length > 0
+        ? flowPool[data.id][flowPool[data.id].length - 1]
+        : null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
       setValidationStatus(null);
     }
-  }, [sseData, data.id]);
+  }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
+  const pinned = data.node?.pinned ?? false;
+
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
   return (
@@ -124,6 +131,12 @@ export default function GenericNode({
           }}
           numberOfHandles={handles}
           showNode={showNode}
+          openAdvancedModal={openAdvancedModal}
+          onCloseAdvancedModal={(open) => {
+            console.log(open);
+
+            setOpenAdvancedModal(false);
+          }}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -133,6 +146,11 @@ export default function GenericNode({
           showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
           "generic-node-div"
         )}
+        onDoubleClick={() => {
+          if (!inputName) {
+            setOpenAdvancedModal(true);
+          }
+        }}
       >
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
@@ -155,14 +173,19 @@ export default function GenericNode({
                 (!showNode && "justify-center")
               }
             >
-              <IconComponent
-                name={data.node?.flow ? "group_components" : name}
-                className={
-                  "generic-node-icon " +
-                  (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                }
-                iconColor={`${nodeColors[types[data.type]]}`}
-              />
+              {data?.node?.icon ? (
+                <span className="text-lg">{data?.node?.icon}</span>
+              ) : (
+                <IconComponent
+                  name={data.node?.flow ? "group_components" : name}
+                  className={
+                    "generic-node-icon " +
+                    (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
+                  }
+                  iconColor={`${nodeColors[types[data.type]]}`}
+                />
+              )}
+
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   {nameEditable && inputName ? (
@@ -195,15 +218,17 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div
-                        className="flex"
-                        onDoubleClick={() => {
+                        className="flex items-center gap-2"
+                        onDoubleClick={(event) => {
                           setInputName(true);
                           takeSnapshot();
+                          event.stopPropagation();
+                          event.preventDefault();
                         }}
                       >
                         <div
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div pr-2 text-primary"
+                          className="generic-node-tooltip-div text-primary"
                         >
                           {data.node?.display_name}
                         </div>
@@ -291,7 +316,7 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join("|")
+                        ? data.node.output_types.join(" | ")
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
@@ -307,9 +332,42 @@ export default function GenericNode({
                 </>
               )}
             </div>
-
             {showNode && (
-              <div className="round-button-div">
+              <Button
+                variant="outline"
+                className="h-9 px-1.5"
+                onClick={() => {
+                  setNode(data.id, (old) => ({
+                    ...old,
+                    data: {
+                      ...old.data,
+                      node: {
+                        ...old.data.node,
+                        pinned: old.data?.node?.pinned ? false : true,
+                      },
+                    },
+                  }));
+                }}
+              >
+                <Tooltip title={<span>{pinned ? "Pinned" : "Unpinned"}</span>}>
+                  <div className="generic-node-status-position flex items-center">
+                    <IconComponent
+                      name={"Pin"}
+                      className={cn(
+                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
+                        pinned ? "animate-wiggle fill-chat-trigger" : ""
+                      )}
+                    />
+                  </div>
+                </Tooltip>
+              </Button>
+            )}
+            {showNode && (
+              <Button
+                variant="outline"
+                className="h-9 px-1.5"
+                onClick={() => buildFlow(data.id)}
+              >
                 <div>
                   <Tooltip
                     title={
@@ -320,14 +378,14 @@ export default function GenericNode({
                           Build{" "}
                           <IconComponent
                             name="Zap"
-                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                            className=" h-5 fill-build-trigger stroke-build-trigger stroke-1"
                           />{" "}
                           flow to validate status.
                         </span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
-                            ? `Duration: ${validationStatus.duration}\n${validationStatus.params}`
+                            ? `Duration: ${validationStatus.data.duration}\n${validationStatus.params}`
                                 .split("\n")
                                 .map((line, index) => (
                                   <div key={index}>{line}</div>
@@ -337,35 +395,38 @@ export default function GenericNode({
                       )
                     }
                   >
-                    <div className="generic-node-status-position">
-                      <div
+                    <div className="generic-node-status-position flex items-center justify-center">
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "status-div"
+                          "absolute h-5 stroke-1"
                         )}
-                      ></div>
-                      <div
+                      />
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "status-div"
+                          "absolute h-5 stroke-1"
                         )}
-                      ></div>
-                      <div
+                      />
+                      <IconComponent
+                        name="Zap"
                         className={classNames(
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "status-div"
+                          "absolute h-5 stroke-1"
                         )}
-                      ></div>
+                      />
                     </div>
                   </Tooltip>
                 </div>
-              </div>
+              </Button>
             )}
           </div>
         </div>
@@ -433,7 +494,7 @@ export default function GenericNode({
                       ? "font-light italic"
                       : ""
                   )}
-                  onDoubleClick={() => {
+                  onDoubleClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
@@ -473,13 +534,26 @@ export default function GenericNode({
                         })}
                         data={data}
                         color={
-                          nodeColors[
-                            data.node?.template[templateField].type!
-                          ] ??
-                          nodeColors[
-                            types[data.node?.template[templateField].type!]
-                          ] ??
-                          nodeColors.unknown
+                          data.node?.template[templateField].input_types &&
+                          data.node?.template[templateField].input_types!
+                            .length > 0
+                            ? nodeColors[
+                                data.node?.template[templateField]
+                                  .input_types![0]
+                              ] ??
+                              nodeColors[
+                                types[
+                                  data.node?.template[templateField]
+                                    .input_types![0]
+                                ]
+                              ]
+                            : nodeColors[
+                                data.node?.template[templateField].type!
+                              ] ??
+                              nodeColors[
+                                types[data.node?.template[templateField].type!]
+                              ] ??
+                              nodeColors.unknown
                         }
                         title={getFieldTitle(
                           data.node?.template!,
@@ -538,7 +612,7 @@ export default function GenericNode({
                   }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
-                      ? data.node.output_types.join("|")
+                      ? data.node.output_types.join(" | ")
                       : data.type
                   }
                   tooltipTitle={data.node?.base_classes.join("\n")}

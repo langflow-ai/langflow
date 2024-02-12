@@ -2,6 +2,7 @@ import { uniqueId } from "lodash";
 import { create } from "zustand";
 import { AlertItemType } from "../types/alerts";
 import { AlertStoreType } from "../types/zustand/alert";
+import { customStringify } from "../utils/reactflowUtils";
 
 const pushNotificationList = (
   list: AlertItemType[],
@@ -13,66 +14,129 @@ const pushNotificationList = (
 
 const useAlertStore = create<AlertStoreType>((set, get) => ({
   errorData: { title: "", list: [] },
-  errorOpen: false,
   noticeData: { title: "", link: "" },
-  noticeOpen: false,
   successData: { title: "" },
-  successOpen: false,
   notificationCenter: false,
   notificationList: [],
+  tempNotificationList: [],
   loading: true,
   setErrorData: (newState: { title: string; list?: Array<string> }) => {
     if (newState.title && newState.title !== "") {
       set({
         errorData: newState,
-        errorOpen: true,
         notificationCenter: true,
-        notificationList: pushNotificationList(get().notificationList, {
-          type: "error",
-          title: newState.title,
-          list: newState.list,
-          id: uniqueId(),
-        }),
+        notificationList: [
+          {
+            type: "error",
+            title: newState.title,
+            list: newState.list,
+            id: uniqueId(),
+          },
+          ...get().notificationList,
+        ],
       });
+      const tempList = get().tempNotificationList;
+      if (
+        !tempList.some((item) => {
+          return (
+            customStringify({
+              title: item.title,
+              type: item.type,
+              list: item.list,
+            }) === customStringify({ ...newState, type: "error" })
+          );
+        })
+      ) {
+        set({
+          tempNotificationList: [
+            {
+              type: "error",
+              title: newState.title,
+              list: newState.list,
+              id: uniqueId(),
+            },
+            ...get().tempNotificationList,
+          ],
+        });
+      }
     }
-  },
-  setErrorOpen: (newState: boolean) => {
-    set({ errorOpen: newState });
   },
   setNoticeData: (newState: { title: string; link?: string }) => {
     if (newState.title && newState.title !== "") {
       set({
         noticeData: newState,
-        noticeOpen: true,
         notificationCenter: true,
-        notificationList: pushNotificationList(get().notificationList, {
-          type: "notice",
-          title: newState.title,
-          link: newState.link,
-          id: uniqueId(),
-        }),
+        notificationList: [
+          {
+            type: "notice",
+            title: newState.title,
+            link: newState.link,
+            id: uniqueId(),
+          },
+          ...get().notificationList,
+        ],
       });
+      const tempList = get().tempNotificationList;
+      if (
+        !tempList.some((item) => {
+          return (
+            customStringify({
+              title: item.title,
+              type: item.type,
+              link: item.link,
+            }) === customStringify({ ...newState, type: "notice" })
+          );
+        })
+      ) {
+        set({
+          tempNotificationList: [
+            {
+              type: "notice",
+              title: newState.title,
+              link: newState.link,
+              id: uniqueId(),
+            },
+            ...get().tempNotificationList,
+          ],
+        });
+      }
     }
-  },
-  setNoticeOpen: (newState: boolean) => {
-    set({ noticeOpen: newState });
   },
   setSuccessData: (newState: { title: string }) => {
     if (newState.title && newState.title !== "") {
       set({
         successData: newState,
-        successOpen: true,
         notificationCenter: true,
-        notificationList: pushNotificationList(get().notificationList, {
-          type: "success",
-          title: newState.title,
-          id: uniqueId(),
-        }),
+        notificationList: [
+          {
+            type: "success",
+            title: newState.title,
+            id: uniqueId(),
+          },
+          ...get().notificationList,
+        ],
       });
+      const tempList = get().tempNotificationList;
+      if (
+        !tempList.some((item) => {
+          return (
+            customStringify({ title: item.title, type: item.type }) ===
+            customStringify({ ...newState, type: "success" })
+          );
+        })
+      ) {
+        set({
+          tempNotificationList: [
+            {
+              type: "success",
+              title: newState.title,
+              id: uniqueId(),
+            },
+            ...get().tempNotificationList,
+          ],
+        });
+      }
     }
-  },
-  setSuccessOpen: (newState: boolean) => {
-    set({ successOpen: newState });
   },
   setNotificationCenter: (newState: boolean) => {
     set({ notificationCenter: newState });
@@ -89,6 +153,16 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
   },
   setLoading: (newState: boolean) => {
     set({ loading: newState });
+  },
+  clearTempNotificationList: () => {
+    set({ tempNotificationList: [] });
+  },
+  removeFromTempNotificationList: (index: string) => {
+    set({
+      tempNotificationList: get().tempNotificationList.filter(
+        (item) => item.id !== index
+      ),
+    });
   },
 }));
 

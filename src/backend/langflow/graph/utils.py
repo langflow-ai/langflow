@@ -7,6 +7,10 @@ class UnbuiltObject:
     pass
 
 
+class UnbuiltResult:
+    pass
+
+
 def validate_prompt(prompt: str):
     """Validate prompt."""
     if extract_input_variables_from_prompt(prompt):

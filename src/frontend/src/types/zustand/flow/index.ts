@@ -9,9 +9,38 @@ import {
 } from "reactflow";
 import { FlowState } from "../../tabs";
 
+export type chatInputType = {
+  result: string;
+};
+
+export type ChatOutputType = {
+  message: string;
+  sender: string;
+  sender_name: string;
+};
+
+export type FlowPoolObjectType = {
+  timestamp: string;
+  valid: boolean;
+  params: any;
+  data: { artifacts: any; results: any | ChatOutputType | chatInputType };
+  duration: string;
+  progress: number;
+  id: string;
+};
+
+export type FlowPoolType = {
+  [key: string]: Array<FlowPoolObjectType>;
+};
+
 export type FlowStoreType = {
-  updateSSEData: (sseData: object) => void;
-  sseData: object;
+  flowPool: FlowPoolType;
+  inputs: Array<{ type: string; id: string }>;
+  outputs: Array<{ type: string; id: string }>;
+  hasIO: boolean;
+  setFlowPool: (flowPool: FlowPoolType) => void;
+  addDataToFlowPool: (data: any, nodeId: string) => void;
+  CleanFlowPool: () => void;
   isBuilding: boolean;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
@@ -48,8 +77,6 @@ export type FlowStoreType = {
   setLastCopiedSelection: (
     newSelection: { nodes: any; edges: any } | null
   ) => void;
-  isBuilt: boolean;
-  setIsBuilt: (isBuilt: boolean) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
@@ -57,4 +84,6 @@ export type FlowStoreType = {
   unselectAll: () => void;
   lastEdges: any[];
   setLastEdges: (newState: any[]) => void;
+  buildFlow: (nodeId?: string) => Promise<void>;
+  getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
 };

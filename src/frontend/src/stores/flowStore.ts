@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import {
   Edge,
   EdgeChange,
+  MarkerType,
   Node,
   NodeChange,
   addEdge,
@@ -9,6 +10,8 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { INPUT_TYPES, OUTPUT_TYPES } from "../constants/constants";
+import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
   NodeType,
@@ -16,6 +19,7 @@ import {
   targetHandleType,
 } from "../types/flow";
 import { FlowStoreType } from "../types/zustand/flow";
+import { buildVertices } from "../utils/buildUtils";
 import {
   cleanEdges,
   getHandleId,
@@ -24,6 +28,9 @@ import {
   scapedJSONStringfy,
   updateHandleColors,
 } from "../utils/reactflowUtils";
+import { getInputsAndOutputs } from "../utils/storeUtils";
+import useAlertStore from "./alertStore";
+import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -37,31 +44,51 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   nodes: [],
   edges: [],
   isBuilding: false,
-  isPending: false,
-  isBuilt: false,
+  isPending: true,
+  hasIO: false,
   reactFlowInstance: null,
   lastCopiedSelection: null,
+  flowPool: {},
+  inputs: [],
+  outputs: [],
+  setFlowPool: (flowPool) => {
+    set({ flowPool });
+  },
+  addDataToFlowPool: (data: any, nodeId: string) => {
+    let newFlowPool = cloneDeep({ ...get().flowPool });
+    if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
+    else {
+      newFlowPool[nodeId].push(data);
+    }
+    get().setFlowPool(newFlowPool);
+  },
+  CleanFlowPool: () => {
+    get().setFlowPool({});
+  },
   setPending: (isPending) => {
     set({ isPending });
   },
   resetFlow: ({ nodes, edges, viewport }) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    let newEdges = cleanEdges(nodes, edges);
+    const { inputs, outputs } = getInputsAndOutputs(nodes);
     set({
       nodes,
-      edges,
+      edges: newEdges,
       flowState: undefined,
-      sseData: {},
-      isBuilt: false,
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
     });
     get().reactFlowInstance!.setViewport(viewport);
-  },
-  updateSSEData: (sseData) => {
-    set((state) => ({ sseData: { ...state.sseData, ...sseData } }));
+    if (currentFlow) {
+      getFlowPool({ flowId: currentFlow.id }).then((flowPool) => {
+        set({ flowPool: flowPool.data.vertex_builds });
+      });
+    }
   },
   setIsBuilding: (isBuilding) => {
     set({ isBuilding });
-  },
-  setIsBuilt: (isBuilt) => {
-    set({ isBuilt });
   },
   setFlowState: (flowState) => {
     const newFlowState =
@@ -89,13 +116,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
+    const { inputs, outputs } = getInputsAndOutputs(newChange);
 
     set({
       edges: newEdges,
       nodes: newChange,
       flowState: undefined,
-      isBuilt: false,
-      sseData: {},
+      inputs,
+      outputs,
+      hasIO: inputs.length > 0 || outputs.length > 0,
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -108,12 +137,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
-
     set({
       edges: newChange,
       flowState: undefined,
-      isBuilt: false,
-      sseData: {},
     });
 
     const flowsManager = useFlowsManagerStore.getState();
@@ -130,6 +156,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
+    console.log(newChange);
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
@@ -260,8 +287,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: [],
       edges: [],
       flowState: undefined,
-      sseData: {},
-      isBuilt: false,
       getFilterEdge: [],
     });
   },
@@ -271,6 +296,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   getFilterEdge: [],
   onConnect: (connection) => {
     updateHandleColors(connection);
+    const dark = useDarkStore.getState().dark;
+    const commonMarkerProps = {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: dark ? "#555555" : "#000000",
+    };
+
+    const inputTypes = INPUT_TYPES;
+    const outputTypes = OUTPUT_TYPES;
+
+    const findNode = useFlowStore
+      .getState()
+      .nodes.find(
+        (node) => node.id === connection.source || node.id === connection.target
+      );
+
+    const sourceType = findNode?.data?.type;
+    let isIoIn = false;
+    let isIoOut = false;
+    if (sourceType) {
+      isIoIn = inputTypes.has(sourceType);
+      isIoOut = outputTypes.has(sourceType);
+    }
 
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
@@ -287,12 +336,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
               .type === "Text"
               ? "stroke-foreground "
               : "stroke-foreground ") + " stroke-connection",
-          animated:
-            (scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text",
+          markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
         },
         oldEdges
       );
+
       return newEdges;
     });
     useFlowsManagerStore
@@ -314,6 +362,46 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         edges: newEdges,
       });
     });
+  },
+  buildFlow: async (nodeId?: string) => {
+    const currentFlow = useFlowsManagerStore.getState().currentFlow;
+    const setSuccessData = useAlertStore.getState().setSuccessData;
+    const setErrorData = useAlertStore.getState().setErrorData;
+    function handleBuildUpdate(data: any) {
+      get().addDataToFlowPool(data.data[data.id], data.id);
+    }
+    await updateFlowInDatabase({
+      data: {
+        nodes: get().nodes,
+        edges: get().edges,
+        viewport: get().reactFlowInstance?.getViewport()!,
+      },
+      id: currentFlow!.id,
+      name: currentFlow!.name,
+      description: currentFlow!.description,
+    });
+    return buildVertices({
+      flowId: currentFlow!.id,
+      nodeId,
+      onBuildComplete: () => {
+        if (nodeId) {
+          setSuccessData({ title: `${nodeId} built successfully` });
+        } else {
+          setSuccessData({ title: `Flow built successfully` });
+        }
+      },
+      onBuildUpdate: handleBuildUpdate,
+      onBuildError: (title, list) => {
+        setErrorData({ list, title });
+      },
+    });
+  },
+  getFlow: () => {
+    return {
+      nodes: get().nodes,
+      edges: get().edges,
+      viewport: get().reactFlowInstance?.getViewport()!,
+    };
   },
 }));
 

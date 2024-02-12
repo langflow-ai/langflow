@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
+import socketio
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
@@ -15,20 +15,24 @@ from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    initialize_services()
-    setup_llm_caching()
-    LangfuseInstance.update()
-    yield
-    teardown_services()
+def get_lifespan(fix_migration=False, socketio_server=None):
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+        setup_llm_caching()
+        LangfuseInstance.update()
+        yield
+        teardown_services()
+
+    return lifespan
 
 
 def create_app():
     """Create the FastAPI app and include the router."""
 
     configure()
-
+    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
+    lifespan = get_lifespan(socketio_server=socketio_server)
     app = FastAPI(lifespan=lifespan)
     origins = ["*"]
 
@@ -56,6 +60,13 @@ def create_app():
 
     app.include_router(router)
 
+    app = mount_socketio(app, socketio_server)
+
+    return app
+
+
+def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
+    app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
 
 
@@ -103,7 +114,6 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 
 if __name__ == "__main__":
     import uvicorn
-
     from langflow.__main__ import get_number_of_workers
 
     configure()

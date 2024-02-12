@@ -1,15 +1,15 @@
+from collections import defaultdict, deque
 from typing import Dict, Generator, List, Type, Union
 
 from langchain.chains.base import Chain
-from loguru import logger
-
-from langflow.graph.edge.base import Edge
+from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
+from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+from loguru import logger
 
 
 class Graph:
@@ -20,6 +20,8 @@ class Graph:
         nodes: List[Dict],
         edges: List[Dict[str, str]],
     ) -> None:
+        self.inputs = []
+        self.outputs = []
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -32,6 +34,7 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+
         self._build_graph()
 
     def __getstate__(self):
@@ -79,6 +82,31 @@ class Graph:
         self._build_vertex_params()
         # remove invalid vertices
         self._validate_vertices()
+        # Now that we have the vertices and edges
+        # We need to map the vertices that are connected to
+        # to ChatVertex instances
+        self._map_chat_vertices()
+
+    def _map_chat_vertices(self) -> None:
+        """Maps the vertices that are connected to ChatVertex instances."""
+        # For each edge, we need to check if the source or target vertex is a ChatVertex
+        # If it is, we need to update the other vertex `is_external` attribute
+        # and store the id of the ChatVertex in the attributes self.inputs and self.outputs
+        for edge in self.edges:
+            source_vertex = self.get_vertex(edge.source_id)
+            target_vertex = self.get_vertex(edge.target_id)
+            if isinstance(source_vertex, ChatVertex):
+                # The source vertex is a ChatVertex
+                # thus the target vertex is an external vertex
+                # and the source vertex is an input
+                target_vertex.has_external_input = True
+                self.inputs.append(source_vertex.id)
+            if isinstance(target_vertex, ChatVertex):
+                # The target vertex is a ChatVertex
+                # thus the source vertex is an external vertex
+                # and the target vertex is an output
+                source_vertex.has_external_output = True
+                self.outputs.append(target_vertex.id)
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -110,7 +138,7 @@ class Graph:
         """Returns a vertex by id."""
         return self.vertex_map.get(vertex_id)
 
-    def get_vertex_edges(self, vertex_id: str) -> List[Edge]:
+    def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
         return [edge for edge in self.edges if edge.source_id == vertex_id or edge.target_id == vertex_id]
 
@@ -192,13 +220,13 @@ class Graph:
                 neighbors[neighbor] += 1
         return neighbors
 
-    def _build_edges(self) -> List[Edge]:
+    def _build_edges(self) -> List[ContractEdge]:
         """Builds the edges of the graph."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: List[Edge] = []
+        edges: List[ContractEdge] = []
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
@@ -206,21 +234,28 @@ class Graph:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
-            edges.append(Edge(source, target, edge))
+            edges.append(ContractEdge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, vertex_type: str, vertex_base_type: str) -> Type[Vertex]:
-        """Returns the vertex class based on the vertex type."""
-        if vertex_type in FILE_TOOLS:
-            return FileToolVertex
-        if vertex_base_type == "CustomComponent":
-            return lazy_load_vertex_dict.get_custom_component_vertex_type()
+    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
+        """Returns the node class based on the node type."""
+        # First we check for the node_base_type
+        node_name = node_id.split("-")[0]
+        if node_name in ["ChatOutput", "ChatInput"]:
+            return ChatVertex
+        if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
 
-        if vertex_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_base_type]
+        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
+
+        if node_type in FILE_TOOLS:
+            return FileToolVertex
+        if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (
-            lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_type]
-            if vertex_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
+            lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
+            if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP
             else Vertex
         )
 
@@ -232,7 +267,7 @@ class Graph:
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type)
+            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
@@ -253,3 +288,35 @@ class Graph:
         vertex_ids = [vertex.id for vertex in self.vertices]
         edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
+
+    def layered_topological_sort(self):
+        in_degree = {vertex.id: 0 for vertex in self.vertices}  # Initialize in-degrees
+        graph = defaultdict(list)  # Adjacency list representation
+
+        # Build graph and compute in-degrees
+        for edge in self.edges:
+            graph[edge.source_id].append(edge.target_id)
+            in_degree[edge.target_id] += 1
+
+        # Queue for vertices with no incoming edges
+        queue = deque(vertex.id for vertex in self.vertices if in_degree[vertex.id] == 0)
+        layers = []
+
+        current_layer = 0
+        while queue:
+            layers.append([])  # Start a new layer
+            layer_size = len(queue)
+            for _ in range(layer_size):
+                vertex_id = queue.popleft()
+                layers[current_layer].append(vertex_id)
+                for neighbor in graph[vertex_id]:
+                    in_degree[neighbor] -= 1  # 'remove' edge
+                    if in_degree[neighbor] == 0:
+                        queue.append(neighbor)
+            current_layer += 1  # Next layer
+
+        return layers
+        return layers
+        return layers
+        return layers
+        return layers

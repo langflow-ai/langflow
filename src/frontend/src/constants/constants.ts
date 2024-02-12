@@ -519,6 +519,8 @@ export const ADMIN_HEADER_DESCRIPTION =
 
 export const BASE_URL_API = "/api/v1/";
 
+export const BACKEND_URL = "http://localhost:7860/";
+
 /**
  * URLs excluded from error retries.
  * @constant
@@ -677,3 +679,6 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
+
+export const INPUT_TYPES = new Set(["ChatInput", "TextInput", "FileLoader"]);
+export const OUTPUT_TYPES = new Set(["ChatOutput"]);

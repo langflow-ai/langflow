@@ -1,4 +1,5 @@
 import {
+  ArrowDownUp,
   ArrowUpToLine,
   Bell,
   BookMarked,
@@ -15,6 +16,7 @@ import {
   ChevronsUpDown,
   Circle,
   Clipboard,
+  Code,
   Code2,
   Combine,
   Compass,
@@ -67,13 +69,16 @@ import {
   Network,
   Paperclip,
   Pencil,
+  Pin,
   Plus,
   Redo,
   RefreshCcw,
+  Repeat,
   Rocket,
   Save,
   SaveAll,
   Scissors,
+  ScreenShare,
   Search,
   Settings2,
   Share,
@@ -134,6 +139,7 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
@@ -178,6 +184,7 @@ export const gradients = [
 
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
+  models: "#AA2411",
   llms: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
@@ -201,11 +208,13 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  io: "#e6b25a",
 };
 
 export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
-  llms: "LLMs",
+  models: "Language Models",
+  llms: "Model Settings",
   chains: "Chains",
   agents: "Agents",
   tools: "Tools",
@@ -223,10 +232,12 @@ export const nodeNames: { [char: string]: string } = {
   utilities: "Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
+  io: "I/O",
   unknown: "Other",
 };
 
 export const nodeIconsLucide: iconsType = {
+  Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
@@ -273,6 +284,7 @@ export const nodeIconsLucide: iconsType = {
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
+  models: Lightbulb,
   llms: Lightbulb,
   prompts: TerminalSquare,
   tools: Wrench,
@@ -375,9 +387,14 @@ export const nodeIconsLucide: iconsType = {
   Loader2,
   BookmarkPlus,
   Heart,
+  Pin,
   Link,
   ToyBrick,
   RefreshCcw,
   Combine,
   TerminalIcon,
+  Repeat,
+  io: ArrowDownUp,
+  ScreenShare,
+  Code,
 };

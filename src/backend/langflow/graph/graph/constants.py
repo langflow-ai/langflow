@@ -15,6 +15,8 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
+chat_components = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
+
 
 class VertexTypesDict(LazyLoadDictBase):
     def __init__(self):
@@ -30,9 +32,6 @@ class VertexTypesDict(LazyLoadDictBase):
             **langchain_types_dict,
             "Custom": ["Custom Tool", "Python Function"],
         }
-
-    def get_custom_component_vertex_type(self):
-        return types.CustomComponentVertex
 
     def get_type_dict(self):
         return {
@@ -51,7 +50,11 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
+            **{t: types.ChatVertex for t in chat_components},
         }
+
+    def get_custom_component_vertex_type(self):
+        return types.CustomComponentVertex
 
 
 lazy_load_vertex_dict = VertexTypesDict()

@@ -8,14 +8,19 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import _ from "lodash";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Node } from "reactflow";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import IconComponent from "../../../genericIconComponent";
 
-export const MenuBar = (): JSX.Element => {
-  const { id } = useParams();
+export const MenuBar = ({
+  removeFunction,
+}: {
+  removeFunction: (nodes: Node[]) => void;
+}): JSX.Element => {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -27,6 +32,7 @@ export const MenuBar = (): JSX.Element => {
   const [inputValue, setInputValue] = useState<string | undefined>(
     currentFlow?.name
   );
+  const n = useFlowStore((state) => state.nodes);
 
   const navigate = useNavigate();
 
@@ -46,6 +52,7 @@ export const MenuBar = (): JSX.Element => {
     <div className="round-button-div">
       <button
         onClick={() => {
+          removeFunction(n);
           navigate(-1);
         }}
       >

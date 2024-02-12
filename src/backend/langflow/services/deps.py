@@ -7,12 +7,23 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.credentials.service import CredentialService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.monitor.service import MonitorService
     from langflow.services.plugins.service import PluginService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
+    from langflow.services.socket.service import SocketIOService
+    from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
     from sqlmodel import Session
+
+
+def get_socket_service() -> "SocketIOService":
+    return service_manager.get(ServiceType.SOCKET_IO_SERVICE)  # type: ignore
+
+
+def get_storage_service() -> "StorageService":
+    return service_manager.get(ServiceType.STORAGE_SERVICE)  # type: ignore
 
 
 def get_credential_service() -> "CredentialService":
@@ -49,6 +60,10 @@ def get_cache_service() -> "BaseCacheService":
 
 def get_session_service() -> "SessionService":
     return service_manager.get(ServiceType.SESSION_SERVICE)  # type: ignore
+
+
+def get_monitor_service() -> "MonitorService":
+    return service_manager.get(ServiceType.MONITOR_SERVICE)  # type: ignore
 
 
 def get_task_service() -> "TaskService":

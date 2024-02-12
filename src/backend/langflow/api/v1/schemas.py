@@ -1,13 +1,15 @@
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from langflow.api.utils import serialize_field
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class BuildStatus(Enum):
@@ -212,3 +214,36 @@ class Token(BaseModel):
 
 class ApiKeyCreateRequest(BaseModel):
     api_key: str
+
+
+class VerticesOrderResponse(BaseModel):
+    ids: List[List[str]]
+
+
+class ResultDict(BaseModel):
+    results: Optional[Any] = Field(default_factory=dict)
+    artifacts: Optional[Any] = Field(default_factory=dict)
+    timedelta: Optional[float] = None
+    duration: Optional[str] = None
+
+    @field_serializer("results")
+    def serialize_results(self, value):
+        if isinstance(value, dict):
+            return {key: serialize_field(val) for key, val in value.items()}
+        return serialize_field(value)
+
+
+class VertexBuildResponse(BaseModel):
+    id: Optional[str] = None
+    valid: bool
+    params: Optional[str]
+    """JSON string of the params."""
+    data: ResultDict
+    """Mapping of vertex ids to result dict containing the param name and result value."""
+    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    """Timestamp of the build."""
+
+
+class VerticesBuiltResponse(BaseModel):
+    vertices: List[VertexBuildResponse]
+    vertices: List[VertexBuildResponse]

@@ -1,12 +1,15 @@
 import { useContext, useEffect } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
+import { Node } from "reactflow";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
@@ -27,8 +30,10 @@ export default function Header(): JSX.Element {
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const navigate = useNavigate();
-
+  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
+  const { id } = useParams();
+  const n = useFlowStore((state) => state.nodes);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
@@ -43,13 +48,19 @@ export default function Header(): JSX.Element {
     window.localStorage.setItem("isDark", dark.toString());
   }, [dark]);
 
+  async function checkForChanges(nodes: Node[]): Promise<void> {
+    if (nodes.length === 0) {
+      await removeFlow(id!);
+    }
+  }
+
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[30%]">
-        <Link to="/">
+        <Link to="/" onClick={() => checkForChanges(n)}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <MenuBar />
+        <MenuBar removeFunction={checkForChanges} />
       </div>
       <div className="round-button-div">
         <Link to="/">
@@ -62,6 +73,9 @@ export default function Header(): JSX.Element {
                 : "secondary"
             }
             size="sm"
+            onClick={() => {
+              checkForChanges(n);
+            }}
           >
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
@@ -85,6 +99,9 @@ export default function Header(): JSX.Element {
               className="gap-2"
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
+              onClick={() => {
+                checkForChanges(n);
+              }}
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="flex-1">Store</div>

@@ -14,8 +14,10 @@ from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
 
+from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.interface.custom.utils import get_function
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
+from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
 from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer
@@ -119,8 +121,8 @@ async def instantiate_based_on_type(class_object, base_type, node_type, params, 
 
 async def instantiate_custom_component(node_type, class_object, params, user_id):
     params_copy = params.copy()
-    class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
-    custom_component = class_object(user_id=user_id)
+    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
+    custom_component: "CustomComponent" = class_object(user_id=user_id)
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()

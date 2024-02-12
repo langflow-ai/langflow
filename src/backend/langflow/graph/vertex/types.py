@@ -1,17 +1,22 @@
 import ast
-from typing import Any, Dict, List, Optional, Union
+import json
+from typing import Callable, Dict, List, Optional, Union
+
+from langchain_core.messages import AIMessage
 
 from langflow.graph.utils import UnbuiltObject, flatten_list
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.utils.schemas import ChatOutputResponse
 
 
-class AgentVertex(Vertex):
+class AgentVertex(StatelessVertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="agents", params=params)
 
         self.tools: List[Union[ToolkitVertex, ToolVertex]] = []
         self.chains: List[ChainVertex] = []
+        self.steps: List[Callable] = [self._custom_build]
 
     def __getstate__(self):
         state = super().__getstate__()
@@ -26,84 +31,85 @@ class AgentVertex(Vertex):
 
     def _set_tools_and_chains(self) -> None:
         for edge in self.edges:
-            if not hasattr(edge, "source_id"):
+            if not hasattr(edge, "source"):
                 continue
-            source_node = self.graph.get_vertex(edge.source_id)
+            source_node = edge.source
             if isinstance(source_node, (ToolVertex, ToolkitVertex)):
                 self.tools.append(source_node)
             elif isinstance(source_node, ChainVertex):
                 self.chains.append(source_node)
 
-    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
-        if not self._built or force:
-            self._set_tools_and_chains()
-            # First, build the tools
-            for tool_node in self.tools:
-                await tool_node.build(user_id=user_id)
+    async def _custom_build(self, *args, **kwargs):
+        user_id = kwargs.get("user_id", None)
+        self._set_tools_and_chains()
+        # First, build the tools
+        for tool_node in self.tools:
+            await tool_node.build(user_id=user_id)
 
-            # Next, build the chains and the rest
-            for chain_node in self.chains:
-                await chain_node.build(tools=self.tools, user_id=user_id)
+        # Next, build the chains and the rest
+        for chain_node in self.chains:
+            await chain_node.build(tools=self.tools, user_id=user_id)
 
-            await self._build(user_id=user_id)
-
-        return self._built_object
+        await self._build(user_id=user_id)
 
 
-class ToolVertex(Vertex):
-    def __init__(
-        self,
-        data: Dict,
-        graph,
-        params: Optional[Dict] = None,
-    ):
+class ToolVertex(StatelessVertex):
+    def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="tools", params=params)
 
 
-class LLMVertex(Vertex):
+class LLMVertex(StatelessVertex):
     built_node_type = None
     class_built_object = None
 
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="llms", params=params)
+        self.steps: List[Callable] = [self._custom_build]
 
-    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def _custom_build(self, *args, **kwargs):
         # LLM is different because some models might take up too much memory
-        # or time to load. So we only load them when we need them.ß
+        # or time to load. So we only load them when we need them.
+        # Avoid deepcopying the LLM
+        # that are loaded from a file
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
         if self.vertex_type == self.built_node_type:
-            return self.class_built_object
+            self._built_object = self.class_built_object
         if not self._built or force:
             await self._build(user_id=user_id)
             self.built_node_type = self.vertex_type
             self.class_built_object = self._built_object
-        # Avoid deepcopying the LLM
-        # that are loaded from a file
-        return self._built_object
 
 
-class ToolkitVertex(Vertex):
+class ToolkitVertex(StatelessVertex):
     def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="toolkits", params=params)
 
 
 class FileToolVertex(ToolVertex):
     def __init__(self, data: Dict, graph, params=None):
-        super().__init__(data, graph=graph, params=params)
+        super().__init__(
+            data,
+            params=params,
+            graph=graph,
+        )
 
 
-class WrapperVertex(Vertex):
-    def __init__(self, data: Dict, graph):
+class WrapperVertex(StatelessVertex):
+    def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="wrappers")
+        self.steps: List[Callable] = [self._custom_build]
 
-    async def build(self, force: bool = False, user_id=None, *args, **kwargs) -> Any:
+    async def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
         if not self._built or force:
             if "headers" in self.params:
                 self.params["headers"] = ast.literal_eval(self.params["headers"])
             await self._build(user_id=user_id)
-        return self._built_object
 
 
-class DocumentLoaderVertex(Vertex):
+class DocumentLoaderVertex(StatefulVertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="documentloaders", params=params)
 
@@ -111,7 +117,7 @@ class DocumentLoaderVertex(Vertex):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
 
-        if self._built_object and not isinstance(self._built_object, UnbuiltObject):
+        if not isinstance(self._built_object, UnbuiltObject):
             avg_length = sum(len(doc.page_content) for doc in self._built_object if hasattr(doc, "page_content")) / len(
                 self._built_object
             )
@@ -121,12 +127,12 @@ class DocumentLoaderVertex(Vertex):
         return f"{self.vertex_type}()"
 
 
-class EmbeddingVertex(Vertex):
+class EmbeddingVertex(StatefulVertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="embeddings", params=params)
 
 
-class VectorStoreVertex(Vertex):
+class VectorStoreVertex(StatefulVertex):
     def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="vectorstores")
 
@@ -135,6 +141,15 @@ class VectorStoreVertex(Vertex):
     # VectorStores may contain databse connections
     # so we need to define the __reduce__ method and the __setstate__ method
     # to avoid pickling errors
+    def clean_edges_for_pickling(self):
+        # for each edge that has self as source
+        # we need to clear the _built_object of the target
+        # so that we don't try to pickle a database connection
+        for edge in self.edges:
+            if edge.source == self:
+                edge.target._built_object = None
+                edge.target._built = False
+                edge.target.params[edge.target_param] = self
 
     def remove_docs_and_texts_from_params(self):
         # remove documents and texts from params
@@ -142,33 +157,34 @@ class VectorStoreVertex(Vertex):
         self.params.pop("documents", None)
         self.params.pop("texts", None)
 
-    # def __getstate__(self):
-    #     # We want to save the params attribute
-    #     # and if "documents" or "texts" are in the params
-    #     # we want to remove them because they have already
-    #     # been processed.
-    #     params = self.params.copy()
-    #     params.pop("documents", None)
-    #     params.pop("texts", None)
+    def __getstate__(self):
+        # We want to save the params attribute
+        # and if "documents" or "texts" are in the params
+        # we want to remove them because they have already
+        # been processed.
+        params = self.params.copy()
+        params.pop("documents", None)
+        params.pop("texts", None)
+        self.clean_edges_for_pickling()
 
-    #     return super().__getstate__()
+        return super().__getstate__()
 
     def __setstate__(self, state):
         super().__setstate__(state)
         self.remove_docs_and_texts_from_params()
 
 
-class MemoryVertex(Vertex):
+class MemoryVertex(StatefulVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="memory")
 
 
-class RetrieverVertex(Vertex):
+class RetrieverVertex(StatefulVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="retrievers")
 
 
-class TextSplitterVertex(Vertex):
+class TextSplitterVertex(StatefulVertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="textsplitters", params=params)
 
@@ -176,7 +192,7 @@ class TextSplitterVertex(Vertex):
         # This built_object is a list of documents. Maybe we should
         # show how many documents are in the list?
 
-        if self._built_object and not isinstance(self._built_object, UnbuiltObject):
+        if not isinstance(self._built_object, UnbuiltObject):
             avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
@@ -184,54 +200,51 @@ class TextSplitterVertex(Vertex):
         return f"{self.vertex_type}()"
 
 
-class ChainVertex(Vertex):
+class ChainVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="chains")
+        self.steps = [self._custom_build]
 
-    async def build(
-        self,
-        force: bool = False,
-        user_id=None,
-        *args,
-        **kwargs,
-    ) -> Any:
-        if not self._built or force:
-            # Temporarily remove the code from the params
-            self.params.pop("code", None)
-            # Check if the chain requires a PromptVertex
+    async def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
+        # Remove this once LLMChain is CustomComponent
+        self.params.pop("code", None)
+        for key, value in self.params.items():
+            if isinstance(value, PromptVertex):
+                # Build the PromptVertex, passing the tools if available
+                tools = kwargs.get("tools", None)
+                self.params[key] = value.build(tools=tools, pinned=force)
 
-            # Temporarily remove "code" from the params
-            self.params.pop("code", None)
+        await self._build(user_id=user_id)
 
-            for key, value in self.params.items():
-                if isinstance(value, PromptVertex):
-                    # Build the PromptVertex, passing the tools if available
-                    tools = kwargs.get("tools", None)
-                    self.params[key] = await value.build(tools=tools, force=force)
+    def set_artifacts(self) -> None:
+        if isinstance(self._built_object, UnbuiltObject):
+            return
+        if self._built_object and hasattr(self._built_object, "input_keys"):
+            self.artifacts = dict(input_keys=self._built_object.input_keys)
 
-            await self._build(user_id=user_id)
+    def _built_object_repr(self):
+        if isinstance(self._built_object, str):
+            return self._built_object
+        return super()._built_object_repr()
 
-        return self._built_object
 
-
-class PromptVertex(Vertex):
+class PromptVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="prompts")
+        self.steps: List[Callable] = [self._custom_build]
 
-    async def build(
-        self,
-        force: bool = False,
-        user_id=None,
-        tools: Optional[List[Union[ToolkitVertex, ToolVertex]]] = None,
-        *args,
-        **kwargs,
-    ) -> Any:
+    async def _custom_build(self, *args, **kwargs):
+        force = kwargs.get("force", False)
+        user_id = kwargs.get("user_id", None)
+        tools = kwargs.get("tools", [])
         if not self._built or force:
             if "input_variables" not in self.params or self.params["input_variables"] is None:
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = [await tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
+                tools = [tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
@@ -253,10 +266,11 @@ class PromptVertex(Vertex):
                 self.params.pop("input_variables", None)
 
             await self._build(user_id=user_id)
-        return self._built_object
 
     def _built_object_repr(self):
         if not self.artifacts or self._built_object is None or not hasattr(self._built_object, "format"):
+            return super()._built_object_repr()
+        elif isinstance(self._built_object, UnbuiltObject):
             return super()._built_object_repr()
         # We'll build the prompt with the artifacts
         # to show the user what the prompt looks like
@@ -266,13 +280,9 @@ class PromptVertex(Vertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            if (
-                not hasattr(self._built_object, "template")
-                and hasattr(self._built_object, "prompt")
-                and not isinstance(self._built_object, UnbuiltObject)
-            ):
+            if not hasattr(self._built_object, "template") and hasattr(self._built_object, "prompt"):
                 template = self._built_object.prompt.template
-            elif not isinstance(self._built_object, UnbuiltObject) and hasattr(self._built_object, "template"):
+            else:
                 template = self._built_object.template
             for key, value in artifacts.items():
                 if value:
@@ -283,14 +293,24 @@ class PromptVertex(Vertex):
             return str(self._built_object)
 
 
-class OutputParserVertex(Vertex):
+class OutputParserVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="output_parsers")
 
 
-class CustomComponentVertex(Vertex):
+class CustomComponentVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components", is_task=False)
+        super().__init__(data, graph=graph, base_type="custom_components")
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()
+
+
+class ChatVertex(StatelessVertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="custom_components", is_task=True)
+        self.steps = [self._build, self._run]
 
     def _built_object_repr(self):
         if self.task_id and self.is_task:
@@ -300,3 +320,43 @@ class CustomComponentVertex(Vertex):
                 return f"Task {self.task_id} is not running"
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
+
+    async def _run(self, *args, **kwargs):
+        if self.is_interface_component:
+            if self.vertex_type in ["ChatOutput", "ChatInput"]:
+                artifacts = None
+                sender = self.params.get("sender", None)
+                sender_name = self.params.get("sender_name", None)
+                if isinstance(self._built_object, AIMessage):
+                    artifacts = ChatOutputResponse.from_message(
+                        self._built_object,
+                        sender=sender,
+                        sender_name=sender_name,
+                    )
+                elif not isinstance(self._built_object, UnbuiltObject):
+                    if isinstance(self._built_object, dict):
+                        # Turn the dict into a pleasing to
+                        # read JSON inside a code block
+                        self._built_object = dict_to_codeblock(self._built_object)
+                    elif not isinstance(self._built_object, str):
+                        self._built_object = str(self._built_object)
+
+                    artifacts = ChatOutputResponse(
+                        message=self._built_object,
+                        sender=sender,
+                        sender_name=sender_name,
+                    )
+                if artifacts:
+                    self.artifacts = artifacts.model_dump()
+            self._built_result = self._built_object
+
+        else:
+            await super()._run(*args, **kwargs)
+
+
+def dict_to_codeblock(d: dict) -> str:
+    from langflow.api.utils import serialize_field
+
+    serialized = {key: serialize_field(val) for key, val in d.items()}
+    json_str = json.dumps(serialized, indent=4)
+    return f"```json\n{json_str}\n```"

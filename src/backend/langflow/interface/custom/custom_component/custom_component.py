@@ -10,30 +10,43 @@ from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
+from langflow.interface.custom.custom_component.component import Component
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_credential_service, get_db_service
+from langflow.services.deps import get_credential_service, get_db_service, get_storage_service
+from langflow.services.storage.service import StorageService
 from langflow.utils import validate
-
-from .component import Component
 
 
 class CustomComponent(Component):
     display_name: Optional[str] = None
+    """The display name of the component. Defaults to None."""
     description: Optional[str] = None
+    """The description of the component. Defaults to None."""
+    icon: Optional[str] = None
+    """The icon of the component. It should be an emoji. Defaults to None."""
     code: Optional[str] = None
+    """The code of the component. Defaults to None."""
     field_config: dict = {}
+    """The field configuration of the component. Defaults to an empty dictionary."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
+    """The status of the component. This is displayed on the frontend. Defaults to None."""
     _tree: Optional[dict] = None
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
+
+    def get_full_path(self, path: str) -> str:
+        storage_svc: "StorageService" = get_storage_service()
+
+        flow_id, file_name = path.split("/", 1)
+        return storage_svc.build_full_path(flow_id, file_name)
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -131,20 +144,6 @@ class CustomComponent(Component):
     def template_config(self):
         return self.build_template_config()
 
-    def build_template_config(self):
-        if not self.code:
-            return {}
-
-        attributes = [
-            main_class["attributes"]
-            for main_class in self.tree.get("classes", [])
-            if main_class["name"] == self.get_main_class_name
-        ]
-        # Get just the first item
-        attributes = next(iter(attributes), [])
-
-        return super().build_template_config(attributes)
-
     @property
     def keys(self):
         def get_credential(name: str):
@@ -174,7 +173,6 @@ class CustomComponent(Component):
 
         return get_index
 
-    @property
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 

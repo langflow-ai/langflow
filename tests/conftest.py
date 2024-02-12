@@ -10,16 +10,16 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -34,13 +34,22 @@ def pytest_configure():
     pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
 
     pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
-        Path(__file__).parent.absolute() / "data" / "BasicChatwithPromptandHistory.json"
+        Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
     )
+    pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
+    pytest.TWO_OUTPUTS = Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
     pytest.VECTOR_STORE_PATH = Path(__file__).parent.absolute() / "data" / "Vector_store.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
     """
+
+
+@pytest.fixture(autouse=True)
+def check_openai_api_key_in_environment_variables():
+    import os
+
+    assert os.environ.get("OPENAI_API_KEY") is not None, "OPENAI_API_KEY is not set in environment variables"
 
 
 @pytest.fixture()
@@ -225,7 +234,7 @@ def test_user(client):
         username="testuser",
         password="testpassword",
     )
-    response = client.post("/api/v1/users", json=user_data.model_dump())
+    response = client.post("/api/v1/users", json=user_data.dict())
     assert response.status_code == 201
     return response.json()
 
@@ -264,13 +273,9 @@ def flow(client, json_flow: str, active_user):
     from langflow.services.database.models.flow.model import FlowCreate
 
     loaded_json = json.loads(json_flow)
-    flow_data = FlowCreate(
-        name="test_flow",
-        data=loaded_json.get("data"),
-        user_id=active_user.id,
-        description="description",
-    )
-    flow = Flow.model_validate(flow_data.model_dump())
+    flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
+
+    flow = Flow.model_validate(flow_data)
     with session_getter(get_db_service()) as session:
         session.add(flow)
         session.commit()
@@ -280,11 +285,47 @@ def flow(client, json_flow: str, active_user):
 
 
 @pytest.fixture
-def added_flow(client, json_flow_with_prompt_and_history, logged_in_headers):
+def json_chat_input():
+    with open(pytest.CHAT_INPUT, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def json_two_outputs():
+    with open(pytest.TWO_OUTPUTS, "r") as f:
+        return f.read()
+
+
+@pytest.fixture
+def added_flow_with_prompt_and_history(client, json_flow_with_prompt_and_history, logged_in_headers):
     flow = orjson.loads(json_flow_with_prompt_and_history)
     data = flow["data"]
     flow = FlowCreate(name="Basic Chat", description="description", data=data)
-    response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
+
+
+@pytest.fixture
+def added_flow_chat_input(client, json_chat_input, logged_in_headers):
+    flow = orjson.loads(json_chat_input)
+    data = flow["data"]
+    flow = FlowCreate(name="Chat Input", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == flow.name
+    assert response.json()["data"] == flow.data
+    return response.json()
+
+
+@pytest.fixture
+def added_flow_two_outputs(client, json_two_outputs, logged_in_headers):
+    flow = orjson.loads(json_two_outputs)
+    data = flow["data"]
+    flow = FlowCreate(name="Two Outputs", description="description", data=data)
+    response = client.post("api/v1/flows/", json=flow.dict(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == flow.name
     assert response.json()["data"] == flow.data
@@ -296,7 +337,7 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
     vector_store = orjson.loads(json_vector_store)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Vector Store", description="description", data=data)
-    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
+    response = client.post("api/v1/flows/", json=vector_store.dict(), headers=logged_in_headers)
     assert response.status_code == 201
     assert response.json()["name"] == vector_store.name
     assert response.json()["data"] == vector_store.data
@@ -304,16 +345,19 @@ def added_vector_store(client, json_vector_store, logged_in_headers):
 
 
 @pytest.fixture
-def test_component_code():
-    path = Path(__file__).parent.absolute() / "data" / "component.py"
-    # load the content as a string
-    with open(path, "r") as f:
-        return f.read()
-
-
-@pytest.fixture
-def test_component_with_templatefield_code():
-    path = Path(__file__).parent.absolute() / "data" / "component_with_templatefield.py"
-    # load the content as a string
-    with open(path, "r") as f:
-        return f.read()
+def created_api_key(active_user):
+    hashed = get_password_hash("random_key")
+    api_key = ApiKey(
+        name="test_api_key",
+        user_id=active_user.id,
+        api_key="random_key",
+        hashed_api_key=hashed,
+    )
+    db_manager = get_db_service()
+    with session_getter(db_manager) as session:
+        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+            return existing_api_key
+        session.add(api_key)
+        session.commit()
+        session.refresh(api_key)
+    return api_key
