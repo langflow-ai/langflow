@@ -33,5 +33,3 @@ const fetchApiData = async () => {
     console.log(e);
   }
 };
-
-fetchApiData();
