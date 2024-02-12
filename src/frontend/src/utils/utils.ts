@@ -122,6 +122,7 @@ export function groupByFamily(
   }> = [];
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
+
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
       template.type &&
