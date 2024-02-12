@@ -15,6 +15,7 @@ import {
 import { TypeModal } from "../../constants/enums";
 import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
@@ -46,6 +47,7 @@ export default function GenericModal({
   const textRef = useRef<HTMLTextAreaElement>(null);
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
 
   function checkVariables(valueToCheck: string): void {
     const regex = /\{([^{}]+)\}/g;
@@ -89,6 +91,7 @@ export default function GenericModal({
 
   useEffect(() => {
     setInputValue(value);
+    unselectAll();
   }, [value, modalOpen]);
 
   const coloredContent = (inputValue || "")

@@ -13,6 +13,7 @@ import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -28,6 +29,7 @@ export default function CodeAreaModal({
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const dark = useDarkStore((state) => state.dark);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
 
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -45,6 +47,8 @@ export default function CodeAreaModal({
   }, []);
 
   useEffect(() => {
+    unselectAll();
+
     if (openModal) setOpen(true);
   }, [openModal]);
 
