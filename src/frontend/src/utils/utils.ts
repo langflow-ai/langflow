@@ -103,7 +103,8 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[]
+  flow?: NodeType[],
+  dataSideBar?: any
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
 
@@ -135,10 +136,19 @@ export function groupByFamily(
   };
 
   if (flow) {
+    let inputListTypes: any = [];
+
+    Object.keys(dataSideBar).forEach((key) => {
+      Object.keys(dataSideBar[key]).forEach((templateKey) => {
+        inputListTypes =
+          dataSideBar[key][templateKey]?.template?.input_types?.types?.concat(
+            dataSideBar[key][templateKey]?.output_types ?? []
+          ) ?? [];
+      });
+    });
+
     for (const node of flow) {
       const nodeData = node.data;
-      const inputListTypes =
-        nodeData.node?.input_types?.concat(nodeData?.output_types ?? []) ?? [];
 
       const allTypesInBaseClassesSet = inputListTypes
         .map((type) => type)
@@ -167,7 +177,6 @@ export function groupByFamily(
 
     for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
-
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(

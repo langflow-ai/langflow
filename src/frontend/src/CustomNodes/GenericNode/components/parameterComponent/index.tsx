@@ -66,6 +66,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
+  const dataSideBar = useTypesStore((state) => state.data);
 
   const flow = currentFlow?.data?.nodes ?? null;
 
@@ -168,7 +169,13 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTooltips() {
-    let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
+    let groupedObj: any = groupByFamily(
+      myData,
+      tooltipTitle!,
+      left,
+      flow!,
+      dataSideBar!
+    );
     groupedEdge.current = groupedObj;
 
     if (groupedObj && groupedObj.length > 0) {
