@@ -192,8 +192,6 @@ tools:
     documentation: ""
   Calculator:
     documentation: ""
-  SearchAPIRun:
-    documentation: ""
   Serper Search:
     documentation: ""
   Tool:
@@ -256,8 +254,6 @@ utilities:
   SearxResults:
     documentation: ""
   SearxSearchWrapper:
-    documentation: ""
-  SearchApiAPIWrapper:
     documentation: ""
   SerpAPIWrapper:
     documentation: ""

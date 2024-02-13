@@ -2,22 +2,26 @@ import Admonition from "@theme/Admonition";
 
 # SearchApi Tool
 
-The [SearchApi](https://www.searchapi.io/) allows developers to scrape results from search engines such as Google, Google Scholar, YouTube, YouTube transcripts, and more, and can be used as in Langflow through the `SearchAPIRun` component.
+The [SearchApi](https://www.searchapi.io/) allows developers to retrieve results from search engines such as Google, Google Scholar, YouTube, YouTube transcripts, and more, and can be used as in Langflow through the `SearchApi` tool.
 
 <Admonition type="info">
-  To use the SearchApi, you first need to sign up [SearchApi](https://www.searchapi.io/) for an API key on the provider's website.
+  To use the SearchApi, you must first obtain an API key by registering at [SearchApi's website](https://www.searchapi.io/).
 </Admonition>
 
-Here, the `ZeroShotPrompt` component specifies a prompt template for the `ZeroShotAgent`. Set a _Prefix_ and _Suffix_ with rules for the agent to obey. In the example, we used default templates.
+In the given example, we specify `engine` as `youtube_transcripts` and provide a `video_id`.
 
-The `LLMChain` is a simple chain that takes in a prompt template, formats it with the user input, and returns the response from an LLM.
+<Admonition type="info">
+  All engines and parameters can be found in [SearchApi documentation](https://www.searchapi.io/docs/google).
+</Admonition>
+
+The `RetrievalQA` chain processes a `Document` along with a user's question to return an answer.
 
 <Admonition type="tip">
   In this example, we used [`ChatOpenAI`](https://platform.openai.com/) as the
   LLM, but feel free to experiment with other Language Models!
 </Admonition>
 
-The `ZeroShotAgent` takes the `LLMChain` and the `SearchAPIRun` tool as inputs, using the tool to find information when necessary.
+The `RetrievalQA` takes `CombineDocsChain` and `SearchApi` tool as inputs, using the tool as a `Document` to answer questions.
 
 <Admonition type="info">
   Learn more about the SearchApi
@@ -42,7 +46,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 <Admonition type="note" title="LangChain Components 🦜🔗">
 
 - [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
-- [`SearchAPIRun`](https://python.langchain.com/docs/integrations/tools/searchapi)
+- [`SearchApiAPIWrapper`](https://python.langchain.com/docs/integrations/providers/searchapi#wrappers)
 - [`ZeroShotAgent`](https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent)
 
 </Admonition>
