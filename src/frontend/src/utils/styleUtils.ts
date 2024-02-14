@@ -70,6 +70,7 @@ import {
   Paperclip,
   Pencil,
   Pin,
+  Play,
   Plus,
   Redo,
   RefreshCcw,
@@ -237,6 +238,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
