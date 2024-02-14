@@ -301,6 +301,9 @@
   .yellow-status {
     @apply generic-node-status text-status-yellow fill-status-yellow;
   }
+  .blue-status {
+    @apply generic-node-status text-status-blue fill-status-blue;
+  }
   .status-build-animation {
     @apply opacity-0;
   }

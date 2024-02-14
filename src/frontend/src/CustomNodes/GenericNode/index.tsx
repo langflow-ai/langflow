@@ -372,7 +372,7 @@ export default function GenericNode({
             {showNode && (
               <Button
                 variant="outline"
-                className="h-9 px-1.5"
+                className={cn("h-9 px-1.5 group", isBuilding ? "hover:border-status-red" : "")}
                 onClick={() => buildFlow(data.id)}
               >
                 <div>
@@ -404,30 +404,48 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
-                          validationStatus && validationStatus.valid
+                          validationStatus && validationStatus.valid && !isBuilding
                             ? "green-status"
                             : "status-build-animation",
                           "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
-                          validationStatus && !validationStatus.valid
+                          validationStatus && !validationStatus.valid && !isBuilding
                             ? "red-status"
                             : "status-build-animation",
                           "absolute h-5 stroke-1"
                         )}
                       />
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
+                          !validationStatus && !isBuilding
+                            ? "blue-status"
                             : "status-build-animation",
                           "absolute h-5 stroke-1"
+                        )}
+                      />
+                      <IconComponent
+                        name="Play"
+                        className={classNames(
+                          isBuilding
+                            ? "yellow-status group-hover:opacity-0"
+                            : "status-build-animation",
+                          "absolute h-5 stroke-1"
+                        )}
+                      />
+                      <IconComponent
+                        name="Square"
+                        className={classNames(
+                          isBuilding
+                            ? "red-status group-hover:opacity-100"
+                            : "status-build-animation",
+                          "absolute h-4 stroke-1 opacity-0"
                         )}
                       />
                     </div>
