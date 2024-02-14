@@ -107,6 +107,9 @@ export default function GenericNode({
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
+  const emojiRegex = /\p{Emoji}/u;
+  const isEmoji = emojiRegex.test(data?.node?.icon!);
+
   return (
     <>
       <NodeToolbar>
