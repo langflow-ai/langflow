@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
@@ -110,6 +110,43 @@ export default function GenericNode({
   const emojiRegex = /\p{Emoji}/u;
   const isEmoji = emojiRegex.test(data?.node?.icon!);
 
+  const iconNodeRender = useCallback(() => {
+    if (data?.node?.icon) {
+      if (isEmoji) {
+        return <span className="text-lg">{data.node.icon}</span>;
+      } else {
+        const iconName =
+          data.node.icon || (data.node?.flow ? "group_components" : name);
+        const iconClassName = `generic-node-icon ${
+          !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+        }`;
+        const iconColor = nodeColors[types[data.type]];
+
+        return (
+          <IconComponent
+            name={iconName}
+            className={iconClassName}
+            iconColor={iconColor}
+          />
+        );
+      }
+    } else {
+      const iconName = data.node?.flow ? "group_components" : name;
+      const iconClassName = `generic-node-icon ${
+        !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+      }`;
+      const iconColor = nodeColors[types[data.type]];
+
+      return (
+        <IconComponent
+          name={iconName}
+          className={iconClassName}
+          iconColor={iconColor}
+        />
+      );
+    }
+  }, [data, isEmoji, name, showNode]);
+
   return (
     <>
       <NodeToolbar>
@@ -159,30 +196,7 @@ export default function GenericNode({
                 (!showNode && "justify-center")
               }
             >
-              {data?.node?.icon ? (
-                isEmoji ? (
-                  <span className="text-lg">{data?.node?.icon}</span>
-                ) : (
-                  <IconComponent
-                    name={data?.node?.icon ? data?.node?.icon : name}
-                    className={
-                      "generic-node-icon " +
-                      (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                    }
-                    iconColor={`${nodeColors[types[data.type]]}`}
-                  />
-                )
-              ) : (
-                <IconComponent
-                  name={data.node?.flow ? "group_components" : name}
-                  className={
-                    "generic-node-icon " +
-                    (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                  }
-                  iconColor={`${nodeColors[types[data.type]]}`}
-                />
-              )}
-
+              {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   {nameEditable && inputName ? (
