@@ -7,7 +7,7 @@ from typing import Optional
 
 class SearchApi(CustomComponent):
     display_name: str = "SearchApi"
-    description: str = "Real-time search engines API."
+    description: str = "Real-time search engine results API."
     output_types: list[str] = ["Document"]
     documentation: str = "https://www.searchapi.io/docs/google"
     field_config = {
@@ -41,8 +41,8 @@ class SearchApi(CustomComponent):
 
         search_api_wrapper = SearchApiAPIWrapper(engine=engine, searchapi_api_key=api_key)
 
-        query = params.pop("query", "default query")
-        results = search_api_wrapper.results(query, **params)
+        q = params.pop("q", "SearchApi Langflow")
+        results = search_api_wrapper.results(q, **params)
 
         result = orjson_dumps(results, indent_2=False)
 
