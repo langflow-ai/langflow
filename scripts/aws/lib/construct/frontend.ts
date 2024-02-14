@@ -25,17 +25,24 @@ export class Web extends Construct {
   readonly distribution;
   constructor(scope: Construct, id: string, props:WebProps) {
     super(scope, id)
+    
+  const commonBucketProps: s3.BucketProps = {
+    blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    encryption: s3.BucketEncryption.S3_MANAGED,
+    autoDeleteObjects: true,
+    removalPolicy: RemovalPolicy.DESTROY,
+    objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+    enforceSSL: true,
+  };
 
   // CDKにて 静的WebサイトをホストするためのAmazon S3バケットを作成
-  const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {
-    removalPolicy: RemovalPolicy.DESTROY,
-  });
+  const websiteBucket = new s3.Bucket(this, 'LangflowWebsiteBucket', commonBucketProps);
   
   const originAccessIdentity = new cloudfront.OriginAccessIdentity(
     this,
     'OriginAccessIdentity',
     {
-      comment: 'website-distribution-originAccessIdentity',
+      comment: 'langflow-distribution-originAccessIdentity',
     }
   );
 
@@ -51,16 +58,19 @@ export class Web extends Construct {
   });
 
   websiteBucket.addToResourcePolicy(webSiteBucketPolicyStatement);
+  websiteBucket.grantRead(originAccessIdentity);
 
   const s3SpaOrigin = new origins.S3Origin(websiteBucket);
-  const ApiSpaOrigin = new origins.LoadBalancerV2Origin(props.alb);  
+  const ApiSpaOrigin = new origins.LoadBalancerV2Origin(props.alb,{
+    protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY
+  });  
 
   const cloudFrontWebDistribution = new cloudfront.Distribution(this, 'distribution', {
-    comment: 'website-distribution',
+    comment: 'langflow-distribution',
     defaultRootObject: 'index.html',
     defaultBehavior: { origin:  s3SpaOrigin },
     additionalBehaviors: {
-      '/*': {
+      '/api/v1/*': {
         origin: ApiSpaOrigin,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         
@@ -69,31 +79,10 @@ export class Web extends Construct {
         originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
       },
     },
-    // errorResponses: [
-    //   {
-    //     ttl: Duration.seconds(300),
-    //     httpStatus: 403,
-    //     responseHttpStatus: 403,
-    //     responsePagePath: '/error.html',
-    //   },
-    //   {
-    //     ttl: Duration.seconds(300),
-    //     httpStatus: 404,
-    //     responseHttpStatus: 404,
-    //     responsePagePath: '/error.html',
-    //   },
-    // ],
-    // defaultBehavior: {
-    //   allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-    //   cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
-    //   cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-    //   viewerProtocolPolicy:
-    //     cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    //   origin: new cloudfront_origins.S3Origin(websiteBucket, {
-    //     originAccessIdentity,
-    //   }),
-    // },
-    // priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
+    enableLogging: true, // ログ出力設定
+    logBucket: new s3.Bucket(this, 'LogBucket',commonBucketProps),
+    logFilePrefix: 'distribution-access-logs/',
+    logIncludesCookies: true,
   });
   this.distribution = cloudFrontWebDistribution;
 
@@ -118,75 +107,9 @@ export class Web extends Construct {
     outputSourceDirectory: 'build',
     buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
-      VITE_AXIOS_BASE_URL: this.distribution.domainName
+      // VITE_AXIOS_BASE_URL: `https://${this.distribution.domainName}`
     },
   });
-
-        
-  // 
-  // S3 + Cloud Front
-  // 
-//   const alb_listen_port=80
-//   const api_endpoint = `http://${props.alb.loadBalancerDnsName}`
-//   const commonBucketProps: s3.BucketProps = {
-//     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-//     encryption: s3.BucketEncryption.S3_MANAGED,
-//     autoDeleteObjects: true,
-//     removalPolicy: RemovalPolicy.DESTROY,
-//     objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-//     enforceSSL: true,
-//   };
-
-//   const { cloudFrontWebDistribution, s3BucketInterface } = new CloudFrontToS3(
-//     this,
-//     'Web',
-//     {
-//       insertHttpSecurityHeaders: false,
-//       loggingBucketProps: commonBucketProps,
-//       bucketProps: commonBucketProps,
-//       cloudFrontLoggingBucketProps: commonBucketProps,
-//       cloudFrontDistributionProps: {
-//         errorResponses: [
-//           {
-//             httpStatus: 403,
-//             responseHttpStatus: 200,
-//             responsePagePath: '/index.html',
-//           },
-//           {
-//             httpStatus: 404,
-//             responseHttpStatus: 200,
-//             responsePagePath: '/index.html',
-//           },
-//         ],
-//       },
-//     }
-//   );
-//   this.distribution = cloudFrontWebDistribution;
-
-//   new NodejsBuild(this, 'BuildFrontEnd', {
-//     assets: [
-//       {
-//         path: '../../src/frontend',
-//         exclude: [
-//           '.git',
-//           '.github',
-//           '.gitignore',
-//           '.prettierignore',
-//           'build',
-//           'node_modules'
-//         ],
-//       },
-//     ],
-//     nodejsVersion:20,
-//     destinationBucket: s3BucketInterface,
-//     distribution: cloudFrontWebDistribution,
-//     outputSourceDirectory: 'build',
-//     buildCommands: ['npm install', 'npm run build'],
-//     buildEnvironment: {
-//       VITE_AXIOS_BASE_URL: this.distribution.domainName
-//     },
-//   });
-
   
   // distribution から backendへのinbound 許可
   const alb_listen_port=80
