@@ -370,7 +370,7 @@ export default function ParameterComponent({
               return isValidConnectionValidation;
             }}
             className={classNames(
-              " left-[-0.4px] h-full w-full  bg-muted",
+              " h-full w-full bg-muted",
               left ? "gradient-border-input" : "gradient-border-output"
             )}
             onClick={() => {
