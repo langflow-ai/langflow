@@ -30,7 +30,7 @@ export default function newChatView(): JSX.Element {
     getFlow,
     CleanFlowPool,
   } = useFlowStore();
-  const { setErrorData } = useAlertStore();
+  const { setErrorData,setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -38,6 +38,14 @@ export default function newChatView(): JSX.Element {
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
   const outputIds = outputs.map((obj) => obj.id);
+  const outputTypes = outputs.map((obj) => obj.type);
+
+  useEffect(() => {
+    if(!outputTypes.includes("ChatOutput"))
+    {
+      setNoticeData({title:"There is no ChatOutput node in the flow."})
+    }
+  },[]);
 
   //build chat history
   useEffect(() => {
