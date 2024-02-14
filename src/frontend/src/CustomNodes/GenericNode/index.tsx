@@ -44,7 +44,6 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
-  const [openAdvancedModal, setOpenAdvancedModal] = useState<boolean>(false);
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -131,9 +130,8 @@ export default function GenericNode({
           }}
           numberOfHandles={handles}
           showNode={showNode}
-          openAdvancedModal={openAdvancedModal}
+          openAdvancedModal={false}
           onCloseAdvancedModal={() => {
-            setOpenAdvancedModal(false);
           }}
         ></NodeToolbarComponent>
       </NodeToolbar>
@@ -144,11 +142,6 @@ export default function GenericNode({
           showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
           "generic-node-div"
         )}
-        onDoubleClick={() => {
-          if (!inputName) {
-            setOpenAdvancedModal(true);
-          }
-        }}
       >
         {data.node?.beta && showNode && (
           <div className="beta-badge-wrapper">
