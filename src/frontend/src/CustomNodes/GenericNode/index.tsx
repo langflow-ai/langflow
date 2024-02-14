@@ -160,7 +160,18 @@ export default function GenericNode({
               }
             >
               {data?.node?.icon ? (
-                <span className="text-lg">{data?.node?.icon}</span>
+                isEmoji ? (
+                  <span className="text-lg">{data?.node?.icon}</span>
+                ) : (
+                  <IconComponent
+                    name={data.node?.flow ? "group_components" : name}
+                    className={
+                      "generic-node-icon " +
+                      (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
+                    }
+                    iconColor={`${nodeColors[types[data.type]]}`}
+                  />
+                )
               ) : (
                 <IconComponent
                   name={data.node?.flow ? "group_components" : name}
