@@ -15,6 +15,7 @@ import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Badge } from "../../../../components/ui/badge";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
@@ -58,6 +59,7 @@ export default function ParameterComponent({
   index = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
+  const types = useTypesStore((state) => state.types);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -409,7 +411,23 @@ export default function ParameterComponent({
             <span className="z-50">{title}</span>
           </ShadTooltip>
         ) : (
-          <span className="z-50">{title}</span>
+          <span className="z-50 flex flex-wrap gap-2">
+            {title.map((t) => (
+              <Badge
+                variant="nonebg"
+                size="md"
+                className="font-normal"
+                style={{
+                  backgroundColor:
+                    String((!left
+                      ? nodeColors[t] ?? nodeColors[types[t]]
+                      : nodeColors[types[data.type]] ?? nodeColors.unknown) + "35"),
+                }}
+              >
+                {t}
+              </Badge>
+            ))}
+          </span>
         )}
 
         {left === true &&

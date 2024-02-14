@@ -39,7 +39,7 @@ export type DropDownComponentType = {
 };
 export type ParameterComponentType = {
   data: NodeDataType;
-  title: string;
+  title: string[];
   id: sourceHandleType | targetHandleType;
   color: string;
   left: boolean;

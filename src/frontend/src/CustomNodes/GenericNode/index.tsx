@@ -280,10 +280,10 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                             }
-                            title={getFieldTitle(
+                            title={[getFieldTitle(
                               data.node?.template!,
                               templateField
-                            )}
+                            )]}
                             info={data.node?.template[templateField].info}
                             name={templateField}
                             tooltipTitle={
@@ -323,8 +323,8 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
-                        : data.type
+                        ? data.node.output_types
+                        : [data.type]
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
                     id={{
@@ -361,8 +361,8 @@ export default function GenericNode({
                     <IconComponent
                       name={"Pin"}
                       className={cn(
-                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                        pinned ? "animate-wiggle fill-chat-trigger" : ""
+                        "h-5 fill-transparent stroke-status-blue stroke-2 transition-all",
+                        pinned ? "animate-wiggle fill-status-blue" : ""
                       )}
                     />
                   </div>
@@ -580,10 +580,10 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                         }
-                        title={getFieldTitle(
+                        title={[getFieldTitle(
                           data.node?.template!,
                           templateField
-                        )}
+                        )]}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
@@ -637,8 +637,8 @@ export default function GenericNode({
                   }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
-                      ? data.node.output_types.join(" | ")
-                      : data.type
+                      ? data.node.output_types
+                      : [data.type]
                   }
                   tooltipTitle={data.node?.base_classes.join("\n")}
                   id={{
