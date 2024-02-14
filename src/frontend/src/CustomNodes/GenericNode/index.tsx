@@ -164,7 +164,7 @@ export default function GenericNode({
                   <span className="text-lg">{data?.node?.icon}</span>
                 ) : (
                   <IconComponent
-                    name={data.node?.flow ? "group_components" : name}
+                    name={data?.node?.icon ? data?.node?.icon : name}
                     className={
                       "generic-node-icon " +
                       (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
