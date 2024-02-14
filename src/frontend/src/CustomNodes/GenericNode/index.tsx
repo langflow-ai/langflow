@@ -216,30 +216,37 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <ShadTooltip content={data.node?.display_name}>
-                      <div
-                        className="flex items-center gap-2"
-                        onDoubleClick={(event) => {
-                          setInputName(true);
-                          takeSnapshot();
-                          event.stopPropagation();
-                          event.preventDefault();
-                        }}
-                      >
+                    <div className="group flex items-center gap-2.5">
+                      <ShadTooltip content={data.node?.display_name}>
                         <div
+                          onDoubleClick={(event) => {
+                            setInputName(true);
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
                           data-testid={"title-" + data.node?.display_name}
                           className="generic-node-tooltip-div text-primary"
                         >
                           {data.node?.display_name}
                         </div>
-                        {nameEditable && (
+                      </ShadTooltip>
+                      {nameEditable && (
+                        <div
+                          onClick={(event) => {
+                            setInputName(true);
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
+                        >
                           <IconComponent
                             name="Pencil"
-                            className="h-4 w-4 text-ring"
+                            className="hidden h-4 w-4 animate-pulse text-status-blue group-hover:block"
                           />
-                        )}
-                      </div>
-                    </ShadTooltip>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
