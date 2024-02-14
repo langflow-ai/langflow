@@ -123,6 +123,28 @@ export function groupByFamily(
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
+  let inputListTypes: string[] = [];
+
+  Object.keys(dataSideBar).forEach((key) => {
+    Object.keys(dataSideBar[key]).forEach((templateKey) => {
+      Object.keys(dataSideBar[key][templateKey]?.template).forEach(
+        (keyTemplate) => {
+          inputListTypes = inputListTypes.concat(
+            dataSideBar[key][templateKey]?.template[keyTemplate].input_types ??
+              []
+          );
+        }
+      );
+    });
+  });
+
+  // console.log(flow);
+
+  const inputList = inputListTypes.filter(
+    (value, index) => inputListTypes.indexOf(value) === index
+  );
+  const inputListSet = new Set(inputList);
+
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
       template.type &&
@@ -136,37 +158,26 @@ export function groupByFamily(
     );
   };
 
+  const checkBaseSetClassesOnSideBar = (template) => {
+    console.log(template);
+
+    return template?.output_types?.some((output) => inputListSet.has(output));
+  };
+
   if (flow) {
-    let inputListTypes: any = [];
-
-    Object.keys(dataSideBar).forEach((key) => {
-      Object.keys(dataSideBar[key]).forEach((templateKey) => {
-        inputListTypes =
-          dataSideBar[key][templateKey]?.template?.input_types?.types?.concat(
-            dataSideBar[key][templateKey]?.output_types ?? []
-          ) ?? [];
-      });
-    });
-
     for (const node of flow) {
       const nodeData = node.data;
-
-      const allTypesInBaseClassesSet = inputListTypes
-        .map((type) => type)
-        .every((lowerCaseType) => baseClassesSet.has(lowerCaseType));
 
       const foundNode = checkedNodes.get(nodeData.type);
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
-          Object.values(nodeData.node!.template).some(checkBaseClass) ||
-          allTypesInBaseClassesSet,
+          Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
-          ) ||
-          allTypesInBaseClassesSet,
+          ),
         displayName: nodeData.node?.display_name,
       });
     }
@@ -178,14 +189,16 @@ export function groupByFamily(
 
     for (const [n, node] of Object.entries(nodes!)) {
       let foundNode = checkedNodes.get(n);
+
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
-          ),
+          hasBaseClassInBaseClasses:
+            node!.base_classes.some((baseClass) =>
+              baseClassesSet.has(baseClass)
+            ) || checkBaseSetClassesOnSideBar(node),
           displayName: node?.display_name,
         };
       }
@@ -197,6 +210,9 @@ export function groupByFamily(
     }
 
     const totalNodes = Object.keys(nodes!).length;
+
+    // console.log(arrOfPossibleInputs);
+    // console.log(arrOfPossibleOutputs);
 
     if (tempInputs.length)
       arrOfPossibleInputs.push({
