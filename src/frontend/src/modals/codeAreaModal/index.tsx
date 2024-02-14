@@ -47,8 +47,6 @@ export default function CodeAreaModal({
   }, []);
 
   useEffect(() => {
-    unselectAll();
-
     if (openModal) setOpen(true);
   }, [openModal]);
 
