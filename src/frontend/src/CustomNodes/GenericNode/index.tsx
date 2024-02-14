@@ -132,9 +132,7 @@ export default function GenericNode({
           numberOfHandles={handles}
           showNode={showNode}
           openAdvancedModal={openAdvancedModal}
-          onCloseAdvancedModal={(open) => {
-            console.log(open);
-
+          onCloseAdvancedModal={() => {
             setOpenAdvancedModal(false);
           }}
         ></NodeToolbarComponent>
@@ -220,7 +218,9 @@ export default function GenericNode({
                       <div
                         className="flex items-center gap-2"
                         onDoubleClick={(event) => {
-                          setInputName(true);
+                          if (nameEditable) {
+                            setInputName(true);
+                          }
                           takeSnapshot();
                           event.stopPropagation();
                           event.preventDefault();
@@ -447,6 +447,7 @@ export default function GenericNode({
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
+                    setInputName(false);
                     setNodeDescription(nodeDescription);
                     setNode(data.id, (old) => ({
                       ...old,
