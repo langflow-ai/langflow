@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
@@ -36,14 +36,14 @@ class QdrantComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
+        collection_name: str,
         documents: Optional[Document] = None,
         api_key: Optional[str] = None,
-        collection_name: Optional[str] = None,
         content_payload_key: str = "page_content",
         distance_func: str = "Cosine",
-        grpc_port: Optional[int] = 6334,
-        host: Optional[str] = None,
+        grpc_port: int = 6334,
         https: bool = False,
+        host: Optional[str] = None,
         location: Optional[str] = None,
         metadata_payload_key: str = "metadata",
         path: Optional[str] = None,
@@ -51,14 +51,15 @@ class QdrantComponent(CustomComponent):
         prefer_grpc: bool = False,
         prefix: Optional[str] = None,
         search_kwargs: Optional[NestedDict] = None,
-        timeout: Optional[float] = None,
+        timeout: Optional[int] = None,
         url: Optional[str] = None,
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
         if documents is None:
             from qdrant_client import QdrantClient
+
             client = QdrantClient(
                 location=location,
-                url=host, 
+                url=host,
                 port=port,
                 grpc_port=grpc_port,
                 https=https,
@@ -71,17 +72,16 @@ class QdrantComponent(CustomComponent):
                 collection_name=collection_name,
                 host=host,
                 path=path,
-                )
-            vs = Qdrant(client=client, 
-                        collection_name=collection_name, 
-                        embeddings=embedding,
-                        search_kwargs=search_kwargs,
-                        distance_func=distance_func,
-                        )
+            )
+            vs = Qdrant(
+                client=client,
+                collection_name=collection_name,
+                embeddings=embedding,
+            )
             return vs
         else:
             vs = Qdrant.from_documents(
-                documents=documents,
+                documents=documents,  # type: ignore
                 embedding=embedding,
                 api_key=api_key,
                 collection_name=collection_name,
@@ -99,5 +99,5 @@ class QdrantComponent(CustomComponent):
                 search_kwargs=search_kwargs,
                 timeout=timeout,
                 url=url,
-                )
+            )
         return vs

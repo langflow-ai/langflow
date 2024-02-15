@@ -30,6 +30,7 @@ export default function App() {
   );
   const loading = useAlertStore((state) => state.loading);
   const [fetchError, setFetchError] = useState(false);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   const removeAlert = (id: string) => {
     removeFromTempNotificationList(id);
@@ -86,7 +87,7 @@ export default function App() {
             description={FETCH_ERROR_DESCRIPION}
             message={FETCH_ERROR_MESSAGE}
           ></FetchErrorComponent>
-        ) : loading ? (
+        ) : isLoading ? (
           <div className="loading-page-panel">
             <LoadingComponent remSize={50} />
           </div>
