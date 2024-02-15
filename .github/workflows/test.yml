@@ -15,7 +15,9 @@ jobs:
     strategy:
       matrix:
         python-version:
+          - "3.9"
           - "3.10"
+          - "3.11"
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
