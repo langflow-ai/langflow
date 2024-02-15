@@ -58,7 +58,7 @@ jina = "*"
 sentence-transformers = { version = "^2.3.1", optional = true }
 ctransformers = { version = "^0.2.10", optional = true }
 cohere = "^4.45.0"
-python-multipart = "^0.0.6"
+python-multipart = "^0.0.7"
 sqlmodel = "^0.0.14"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.15.0"
