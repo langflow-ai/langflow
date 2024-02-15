@@ -56,9 +56,10 @@ class QdrantComponent(CustomComponent):
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
         if documents is None:
             from qdrant_client import QdrantClient
+
             client = QdrantClient(
                 location=location,
-                url=host, 
+                url=host,
                 port=port,
                 grpc_port=grpc_port,
                 https=https,
@@ -71,13 +72,14 @@ class QdrantComponent(CustomComponent):
                 collection_name=collection_name,
                 host=host,
                 path=path,
-                )
-            vs = Qdrant(client=client, 
-                        collection_name=collection_name, 
-                        embeddings=embedding,
-                        search_kwargs=search_kwargs,
-                        distance_func=distance_func,
-                        )
+            )
+            vs = Qdrant(
+                client=client,
+                collection_name=collection_name,
+                embeddings=embedding,
+                search_kwargs=search_kwargs,
+                distance_func=distance_func,
+            )
             return vs
         else:
             vs = Qdrant.from_documents(
@@ -99,5 +101,5 @@ class QdrantComponent(CustomComponent):
                 search_kwargs=search_kwargs,
                 timeout=timeout,
                 url=url,
-                )
+            )
         return vs

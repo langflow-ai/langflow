@@ -6,9 +6,7 @@ from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEm
 class HuggingFaceInferenceAPIEmbeddingsComponent(CustomComponent):
     display_name = "HuggingFaceInferenceAPIEmbeddings"
     description = "HuggingFace sentence_transformers embedding models, API version."
-    documentation = (
-        "https://github.com/huggingface/text-embeddings-inference"
-    )
+    documentation = "https://github.com/huggingface/text-embeddings-inference"
 
     def build_config(self):
         return {
