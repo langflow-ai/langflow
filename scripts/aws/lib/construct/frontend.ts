@@ -68,6 +68,18 @@ export class Web extends Construct {
   const cloudFrontWebDistribution = new cloudfront.Distribution(this, 'distribution', {
     comment: 'langflow-distribution',
     defaultRootObject: 'index.html',
+    errorResponses: [
+      {
+        httpStatus: 403,
+        responseHttpStatus: 403,
+        responsePagePath: '/index.html',
+      },
+      {
+        httpStatus: 404,
+        responseHttpStatus: 404,
+        responsePagePath: '/index.html',
+      },
+    ],
     defaultBehavior: { origin:  s3SpaOrigin },
     additionalBehaviors: {
       '/api/v1/*': {
