@@ -3,7 +3,7 @@ from typing import List, Optional
 import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
 from langflow import CustomComponent
-from langflow.field_typing import Document, Embeddings, Text
+from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record, docs_to_records
 
 
@@ -15,6 +15,7 @@ class ChromaSearchComponent(CustomComponent):
     display_name: str = "Chroma Search"
     description: str = "Search a Chroma collection for similar documents."
     beta: bool = True
+    icon = "Chroma"
 
     def build_config(self):
         """
@@ -25,13 +26,19 @@ class ChromaSearchComponent(CustomComponent):
         """
         return {
             "inputs": {"display_name": "Input"},
-            "search_type": {"display_name": "Search Type", "options": ["Similarity", "MMR"]},
+            "search_type": {
+                "display_name": "Search Type",
+                "options": ["Similarity", "MMR"],
+            },
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
-            "persist": {"display_name": "Persist"},
-            "persist_directory": {"display_name": "Persist Directory"},
+            # "persist": {"display_name": "Persist"},
+            "index_directory": {"display_name": "Index Directory"},
             "code": {"show": False, "display_name": "Code"},
             "documents": {"display_name": "Documents", "is_list": True},
-            "embedding": {"display_name": "Embedding"},
+            "embedding": {
+                "display_name": "Embedding",
+                "info": "Embedding model to vectorize inputs (make sure to use same as index)",
+            },
             "chroma_server_cors_allow_origins": {
                 "display_name": "Server CORS Allow Origins",
                 "advanced": True,
@@ -53,11 +60,9 @@ class ChromaSearchComponent(CustomComponent):
         inputs: Text,
         search_type: str,
         collection_name: str,
-        persist: bool,
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
-        persist_directory: Optional[str] = None,
-        documents: Optional[List[Document]] = None,
+        index_directory: Optional[str] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
@@ -87,26 +92,20 @@ class ChromaSearchComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
+                or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
 
-        # If documents, then we need to create a Chroma instance using .from_documents
-        if documents is not None and embedding is not None:
-            if len(documents) == 0:
-                raise ValueError("If documents are provided, there must be at least one document.")
-            chroma = Chroma.from_documents(
-                documents=documents,  # type: ignore
-                persist_directory=persist_directory if persist else None,
-                collection_name=collection_name,
-                embedding=embedding,
-                client_settings=chroma_settings,
-            )
-        else:
-            chroma = Chroma(persist_directory=persist_directory, client_settings=chroma_settings)
+        chroma = Chroma(
+            embedding_function=embedding,
+            collection_name=collection_name,
+            persist_directory=index_directory,
+            client_settings=chroma_settings,
+        )
 
         # Validate the inputs
         docs = []
