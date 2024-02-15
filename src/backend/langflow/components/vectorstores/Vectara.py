@@ -6,7 +6,6 @@ from typing import List, Optional, Union
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
-
 from langflow import CustomComponent
 from langflow.field_typing import BaseRetriever, Document
 
@@ -46,7 +45,7 @@ class VectaraComponent(CustomComponent):
 
         if documents is not None:
             return Vectara.from_documents(
-                documents=documents,
+                documents=documents,  # type: ignore
                 embedding=FakeEmbeddings(size=768),
                 vectara_customer_id=vectara_customer_id,
                 vectara_corpus_id=vectara_corpus_id,
