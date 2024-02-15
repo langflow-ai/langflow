@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
