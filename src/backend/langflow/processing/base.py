@@ -7,8 +7,6 @@ from loguru import logger
 from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
-from langflow.processing.process import fix_memory_inputs, format_actions
-from langflow.services.deps import get_plugins_service
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
