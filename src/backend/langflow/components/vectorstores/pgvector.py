@@ -5,7 +5,6 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pgvector import PGVector
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-
 from langflow import CustomComponent
 
 
@@ -63,13 +62,13 @@ class PGVectorComponent(CustomComponent):
                     collection_name=collection_name,
                     connection_string=pg_server_url,
                 )
-
-            vector_store = PGVector.from_documents(
-                embedding=embedding,
-                documents=documents,
-                collection_name=collection_name,
-                connection_string=pg_server_url,
-            )
+            else:
+                vector_store = PGVector.from_documents(
+                    embedding=embedding,
+                    documents=documents,  # type: ignore
+                    collection_name=collection_name,
+                    connection_string=pg_server_url,
+                )
         except Exception as e:
             raise RuntimeError(f"Failed to build PGVector: {e}")
         return vector_store

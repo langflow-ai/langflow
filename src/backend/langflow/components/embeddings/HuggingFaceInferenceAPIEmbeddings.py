@@ -1,6 +1,8 @@
-from langflow import CustomComponent
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
+from langflow import CustomComponent
+from pydantic.v1.types import SecretStr
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(CustomComponent):
@@ -29,12 +31,12 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(CustomComponent):
         model_kwargs: Optional[Dict] = {},
         multi_process: bool = False,
     ) -> HuggingFaceInferenceAPIEmbeddings:
+        if api_key:
+            secret_api_key = SecretStr(api_key)
+        else:
+            raise ValueError("API Key is required")
         return HuggingFaceInferenceAPIEmbeddings(
-            api_key=api_key,
+            api_key=secret_api_key,
             api_url=api_url,
             model_name=model_name,
-            cache_folder=cache_folder,
-            encode_kwargs=encode_kwargs,
-            model_kwargs=model_kwargs,
-            multi_process=multi_process,
         )

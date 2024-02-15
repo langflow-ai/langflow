@@ -1,9 +1,9 @@
 from typing import Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, RangeSpec, TemplateField
+from pydantic.v1.types import SecretStr
 
 
 class GoogleGenerativeAIComponent(CustomComponent):
@@ -63,10 +63,10 @@ class GoogleGenerativeAIComponent(CustomComponent):
     ) -> BaseLanguageModel:
         return ChatGoogleGenerativeAI(
             model=model,
-            max_output_tokens=max_output_tokens or None,
+            max_output_tokens=max_output_tokens or None,  # type: ignore
             temperature=temperature,
             top_k=top_k or None,
-            top_p=top_p or None,
+            top_p=top_p or None,  # type: ignore
             n=n or 1,
-            google_api_key=google_api_key,
+            google_api_key=SecretStr(google_api_key),
         )
