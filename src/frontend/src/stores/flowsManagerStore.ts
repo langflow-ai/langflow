@@ -62,10 +62,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
             get().setFlows(flows);
-            set({ isLoading: false });
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
+            set({ isLoading: false });
             resolve();
           }
         })
