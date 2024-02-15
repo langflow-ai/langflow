@@ -1,6 +1,7 @@
-from langflow import CustomComponent
-from typing import Union, Callable
+from typing import Callable, Union
+
 from langchain_community.utilities.google_search import GoogleSearchAPIWrapper
+from langflow import CustomComponent
 
 
 class GoogleSearchAPIWrapperComponent(CustomComponent):
@@ -18,4 +19,4 @@ class GoogleSearchAPIWrapperComponent(CustomComponent):
         google_api_key: str,
         google_cse_id: str,
     ) -> Union[GoogleSearchAPIWrapper, Callable]:
-        return GoogleSearchAPIWrapper(google_api_key=google_api_key, google_cse_id=google_cse_id)
+        return GoogleSearchAPIWrapper(google_api_key=google_api_key, google_cse_id=google_cse_id)  # type: ignore

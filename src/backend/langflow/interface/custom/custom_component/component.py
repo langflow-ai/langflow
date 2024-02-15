@@ -37,7 +37,7 @@ class Component:
                 setattr(self, key, value)
 
         # Validate the emoji at the icon field
-        if self.icon:
+        if hasattr(self, "icon") and self.icon:
             self.icon = self.validate_icon(self.icon)
 
     def __setattr__(self, key, value):
