@@ -34,6 +34,7 @@ import {
   FileSearch,
   FileSearch2,
   FileText,
+  Cable,
   FileUp,
   Fingerprint,
   FolderPlus,
@@ -396,7 +397,7 @@ export const nodeIconsLucide: iconsType = {
   Combine,
   TerminalIcon,
   Repeat,
-  io: ArrowDownUp,
+  io: Cable,
   ScreenShare,
   Code,
 };
