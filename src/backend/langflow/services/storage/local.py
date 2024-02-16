@@ -89,7 +89,9 @@ class LocalStorageService(StorageService):
             file_path.unlink()
             logger.info(f"File {file_name} deleted successfully from flow {flow_id}.")
         else:
-            logger.warning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
+            logger.warning(
+                f"Attempted to delete non-existent file {file_name} in flow {flow_id}."
+            )
 
     def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
