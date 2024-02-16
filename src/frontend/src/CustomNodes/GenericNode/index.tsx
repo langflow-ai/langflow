@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import Tooltip from "../../components/TooltipComponent";
@@ -112,6 +112,39 @@ export default function GenericNode({
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
+  const emojiRegex = /\p{Emoji}/u;
+  const isEmoji = emojiRegex.test(data?.node?.icon!);
+
+  const iconNodeRender = useCallback(() => {
+    const iconElement = data?.node?.icon;
+    const iconColor = nodeColors[types[data.type]];
+    const iconName =
+      iconElement || (data.node?.flow ? "group_components" : name);
+    const iconClassName = `generic-node-icon ${
+      !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+    }`;
+
+    if (iconElement && isEmoji) {
+      return nodeIconFragment(iconElement);
+    } else {
+      return checkNodeIconFragment(iconColor, iconName, iconClassName);
+    }
+  }, [data, isEmoji, name, showNode]);
+
+  const nodeIconFragment = (icon) => {
+    return <span className="text-lg">{icon}</span>;
+  };
+
+  const checkNodeIconFragment = (iconColor, iconName, iconClassName) => {
+    return (
+      <IconComponent
+        name={iconName}
+        className={iconClassName}
+        iconColor={iconColor}
+      />
+    );
+  };
+
   return (
     <>
       <NodeToolbar>
@@ -164,19 +197,7 @@ export default function GenericNode({
                 (!showNode && "justify-center")
               }
             >
-              {data?.node?.icon ? (
-                <span className="text-lg">{data?.node?.icon}</span>
-              ) : (
-                <IconComponent
-                  name={data.node?.flow ? "group_components" : name}
-                  className={
-                    "generic-node-icon " +
-                    (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                  }
-                  iconColor={`${nodeColors[types[data.type]]}`}
-                />
-              )}
-
+              {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   {nameEditable && inputName ? (
@@ -370,7 +391,7 @@ export default function GenericNode({
                         <span className="flex">
                           Build{" "}
                           <IconComponent
-                            name="Zap"
+                            name="Play"
                             className=" h-5 fill-build-trigger stroke-build-trigger stroke-1"
                           />{" "}
                           flow to validate status.
@@ -390,7 +411,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
@@ -399,7 +420,7 @@ export default function GenericNode({
                         )}
                       />
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
                           validationStatus && !validationStatus.valid
                             ? "red-status"
@@ -408,7 +429,7 @@ export default function GenericNode({
                         )}
                       />
                       <IconComponent
-                        name="Zap"
+                        name="Play"
                         className={classNames(
                           !validationStatus || isBuilding
                             ? "yellow-status"

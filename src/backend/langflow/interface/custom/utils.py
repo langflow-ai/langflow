@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
@@ -22,6 +20,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -150,9 +149,6 @@ def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
     if not function_args:
         return
-
-    # sort function_args which is a list of dicts
-    function_args.sort(key=lambda x: x["name"])
 
     for extra_field in function_args:
         if "name" not in extra_field or extra_field["name"] == "self":

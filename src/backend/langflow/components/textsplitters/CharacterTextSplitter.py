@@ -24,6 +24,8 @@ class CharacterTextSplitterComponent(CustomComponent):
         chunk_size: int = 1000,
         separator: str = "\n",
     ) -> List[Document]:
+        # separator may come escaped from the frontend
+        separator = separator.encode().decode("unicode_escape")
         docs = CharacterTextSplitter(
             chunk_overlap=chunk_overlap,
             chunk_size=chunk_size,

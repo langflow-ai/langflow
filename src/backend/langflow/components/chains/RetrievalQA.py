@@ -45,4 +45,6 @@ class RetrievalQAComponent(CustomComponent):
         self.status = runnable
         result = runnable.invoke({input_key: inputs})
         result = result.content if hasattr(result, "content") else result
+        # Result is a dict with keys "query",  "result" and "source_documents"
+        # for now we just return the result
         return result.get("result")

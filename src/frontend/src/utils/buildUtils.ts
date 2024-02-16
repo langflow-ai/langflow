@@ -26,10 +26,11 @@ export async function buildVertices({
     for (let i = 0; i < verticesOrder.length; i += 1) {
       const innerArray = verticesOrder[i];
       const idIndex = innerArray.indexOf(nodeId);
-
       if (idIndex !== -1) {
-        // If the targetId is found in the inner array, cut the array before the id
-        vertices.push(innerArray.slice(0, idIndex + 1));
+        // If there's a nodeId, we want to run just that component and not the entire layer
+        // because a layer contains dependencies for the next layer
+        // and we are stopping at the layer that contains the nodeId
+        vertices.push([innerArray[idIndex]]);
         break; // Stop searching after finding the first occurrence
       }
       // If the targetId is not found, include the entire inner array
@@ -38,7 +39,7 @@ export async function buildVertices({
   } else {
     vertices = verticesOrder;
   }
-
+  console.log("Vertices: ", vertices);
   const buildResults: Array<boolean> = [];
   for (let i = 0; i < vertices.length; i += 1) {
     await Promise.all(

@@ -132,12 +132,12 @@ async def instantiate_custom_component(node_type, class_object, params, user_id)
 
     if is_async:
         # Await the build method directly if it's async
-        built_object = await custom_component.build(**params_copy)
+        build_result = await custom_component.build(**params_copy)
     else:
         # Call the build method directly if it's sync
-        built_object = custom_component.build(**params_copy)
+        build_result = custom_component.build(**params_copy)
 
-    return built_object, {"repr": custom_component.custom_repr()}
+    return build_result, {"repr": custom_component.custom_repr()}
 
 
 def instantiate_wrapper(node_type, class_object, params):
