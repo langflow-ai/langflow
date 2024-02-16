@@ -11,6 +11,7 @@ import {
 } from "reactflow";
 import { create } from "zustand";
 import { INPUT_TYPES, OUTPUT_TYPES } from "../constants/constants";
+import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import {
   NodeDataType,
@@ -357,6 +358,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
+      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILDED);
     }
     await updateFlowInDatabase({
       data: {
@@ -382,6 +384,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildError: (title, list) => {
         setErrorData({ list, title });
       },
+      onBuildStart: (idList) => {
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
+      },
     });
   },
   getFlow: () => {
@@ -390,6 +395,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges,
       viewport: get().reactFlowInstance?.getViewport()!,
     };
+  },
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    nodeIdList.forEach((id) => {
+      const nodeToUpdate = get().nodes.find((node) => node.id === id);
+      if (nodeToUpdate) {
+        nodeToUpdate.data.build_status = status;
+        get().setNodes(get().nodes);
+      }
+    });
   },
 }));
 
