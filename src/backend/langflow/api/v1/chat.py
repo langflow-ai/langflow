@@ -285,15 +285,19 @@ async def get_vertices(
     """Check the flow_id is in the flow_data_store."""
     try:
         # First, we need to check if the flow_id is in the cache
-
+        graph = None
         if cache := chat_service.get_cache(flow_id):
-            graph = cache.get("result")
+            graph: Graph = cache.get("result")
+
+        flow: Flow = session.get(Flow, flow_id)
+        if not flow or not flow.data:
+            raise ValueError("Invalid flow ID")
+        other_graph = Graph.from_payload(flow.data)
+        if graph is None:
+            graph = other_graph
         else:
-            flow: Flow = session.get(Flow, flow_id)
-            if not flow or not flow.data:
-                raise ValueError("Invalid flow ID")
-            graph = Graph.from_payload(flow.data)
-            chat_service.set_cache(flow_id, graph)
+            graph = graph.update(other_graph)
+        chat_service.set_cache(flow_id, graph)
 
         if component_id:
             vertices = graph.sort_up_to_vertex(component_id)
@@ -350,12 +354,15 @@ async def build_vertex(
                 duration=duration,
                 timedelta=timedelta,
             )
+            chat_service.set_cache(flow_id, graph)
         except Exception as exc:
             params = str(exc)
             valid = False
             result_dict = ResultDict(results={})
             artifacts = {}
-        chat_service.set_cache(flow_id, graph)
+            # If there's an error building the vertex
+            # we need to clear the cache
+            chat_service.clear_cache(flow_id)
         await log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
