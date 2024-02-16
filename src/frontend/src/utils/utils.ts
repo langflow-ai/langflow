@@ -141,8 +141,6 @@ export function groupByFamily(
           })))
     );
   };
-  console.log(flow);
-
   if (flow) {
     // se existir o flow
     for (const node of flow) {
