@@ -17,7 +17,9 @@ from langflow.interface.custom.directory_reader.utils import (
 )
 from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import (
+    CustomComponentFrontendNode,
+)
 from langflow.utils.util import get_base_classes
 from loguru import logger
 
@@ -106,7 +108,7 @@ def add_new_custom_field(
 ):
     # Check field_config if any of the keys are in it
     # if it is, update the value
-    display_name = field_config.pop("display_name", field_name)
+    display_name = field_config.pop("display_name", None)
     field_type = field_config.pop("field_type", field_type)
     field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
@@ -172,7 +174,11 @@ def get_field_dict(field: Union[TemplateField, dict]):
     return field
 
 
-def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None, update_field=None):
+def run_build_config(
+    custom_component: CustomComponent,
+    user_id: Optional[Union[str, UUID]] = None,
+    update_field=None,
+):
     """Build the field configuration for a custom component"""
 
     try:
@@ -357,7 +363,16 @@ def update_field_dict(field_dict):
 
 def sanitize_field_config(field_config: Dict):
     # If any of the already existing keys are in field_config, remove them
-    for key in ["name", "field_type", "value", "required", "placeholder", "display_name", "advanced", "show"]:
+    for key in [
+        "name",
+        "field_type",
+        "value",
+        "required",
+        "placeholder",
+        "display_name",
+        "advanced",
+        "show",
+    ]:
         field_config.pop(key, None)
     return field_config
 
