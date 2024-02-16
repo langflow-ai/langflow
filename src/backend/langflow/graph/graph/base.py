@@ -1,5 +1,5 @@
 from collections import defaultdict, deque
-from typing import Dict, Generator, List, Type, Union
+from typing import Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
 from langflow.graph.edge.base import ContractEdge
@@ -310,19 +310,39 @@ class Graph:
         )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def layered_topological_sort(self):
-        in_degree = {vertex.id: 0 for vertex in self.vertices}  # Initialize in-degrees
+    def sort_up_to_vertex(self, vertex_id: str) -> "Graph":
+        """Cuts the graph up to a given vertex."""
+        # Get the vertices that are connected to the vertex
+        # and the vertex itself
+        vertices = [self.get_vertex(vertex_id)]
+        for edge in self.get_vertex(edge.target_id).edges:
+            vertices.append(self.get_vertex(edge.target_id))
+
+        edges = [edge for vertex in vertices for edge in vertex.edges]
+
+        return self.layered_topological_sort(vertices, edges)
+
+    def layered_topological_sort(
+        self,
+        vertices: Optional[List[Vertex]] = None,
+        edges: Optional[List[ContractEdge]] = None,
+    ) -> List[List[str]]:
+        """Performs a layered topological sort of the vertices in the graph."""
+        if vertices is None:
+            vertices = self.vertices
+        if edges is None:
+            edges = self.edges
+
+        in_degree = {vertex.id: 0 for vertex in vertices}  # Initialize in-degrees
         graph = defaultdict(list)  # Adjacency list representation
 
         # Build graph and compute in-degrees
-        for edge in self.edges:
+        for edge in edges:
             graph[edge.source_id].append(edge.target_id)
             in_degree[edge.target_id] += 1
 
         # Queue for vertices with no incoming edges
-        queue = deque(
-            vertex.id for vertex in self.vertices if in_degree[vertex.id] == 0
-        )
+        queue = deque(vertex.id for vertex in vertices if in_degree[vertex.id] == 0)
         layers = []
 
         current_layer = 0
