@@ -1,13 +1,12 @@
 from pathlib import Path
 
-import aiofiles
 from loguru import logger
 
 from .service import StorageService
 
 
 class LocalStorageService(StorageService):
-    """A service class for handling local storage operations."""
+    """A service class for handling local storage operations without aiofiles."""
 
     def __init__(self, session_service, settings_service):
         """Initialize the local storage service with session and settings services."""
@@ -35,8 +34,8 @@ class LocalStorageService(StorageService):
         file_path = folder_path / file_name
 
         try:
-            async with aiofiles.open(file_path, "wb") as f:
-                await f.write(data)
+            with open(file_path, "wb") as f:
+                f.write(data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception as e:
             logger.error(f"Error saving file {file_name} in flow {flow_id}: {e}")
@@ -56,9 +55,9 @@ class LocalStorageService(StorageService):
             logger.warning(f"File {file_name} not found in flow {flow_id}.")
             raise FileNotFoundError(f"File {file_name} not found in flow {flow_id}")
 
-        async with aiofiles.open(file_path, "rb") as f:
+        with open(file_path, "rb") as f:
             logger.info(f"File {file_name} retrieved successfully from flow {flow_id}.")
-            return await f.read()
+            return f.read()
 
     async def list_files(self, flow_id: str):
         """
@@ -95,4 +94,4 @@ class LocalStorageService(StorageService):
 
     def teardown(self):
         """Perform any cleanup operations when the service is being torn down."""
-        pass  # No specific teardown actions required for local storage at the moment.
+        pass  # No specific teardown actions required for local
