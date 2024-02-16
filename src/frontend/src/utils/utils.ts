@@ -136,11 +136,12 @@ export function groupByFamily(
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
-          template.input_types.some((inputType) => {
-            baseClassesSet.has(inputType);
-          })))
+          template.input_types.some((inputType) =>
+            baseClassesSet.has(inputType)
+          )))
     );
   };
+
   if (flow) {
     // se existir o flow
     for (const node of flow) {
