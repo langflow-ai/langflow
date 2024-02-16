@@ -99,7 +99,7 @@ class ChromaSearchComponent(CustomComponent):
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
-
+        index_directory = self.resolve_path(index_directory)
         chroma = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,
