@@ -1,6 +1,8 @@
-from langflow import CustomComponent
+from typing import Any, Dict, List
+
 from langchain.docstore.document import Document
-from typing import Optional, Dict, Any
+from langchain.document_loaders.directory import DirectoryLoader
+from langflow import CustomComponent
 
 
 class DirectoryLoaderComponent(CustomComponent):
@@ -23,20 +25,18 @@ class DirectoryLoaderComponent(CustomComponent):
         self,
         glob: str,
         path: str,
-        load_hidden: Optional[bool] = False,
-        max_concurrency: Optional[int] = 10,
-        metadata: Optional[dict] = {},
-        recursive: Optional[bool] = True,
-        silent_errors: Optional[bool] = False,
-        use_multithreading: Optional[bool] = True,
-    ) -> Document:
-        return Document(
+        max_concurrency: int = 2,
+        load_hidden: bool = False,
+        recursive: bool = True,
+        silent_errors: bool = False,
+        use_multithreading: bool = True,
+    ) -> List[Document]:
+        return DirectoryLoader(
             glob=glob,
             path=path,
             load_hidden=load_hidden,
             max_concurrency=max_concurrency,
-            metadata=metadata,
             recursive=recursive,
             silent_errors=silent_errors,
             use_multithreading=use_multithreading,
-        )
+        ).load()

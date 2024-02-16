@@ -5,7 +5,6 @@ import pinecone  # type: ignore
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
-
 from langflow import CustomComponent
 from langflow.field_typing import Document, Embeddings
 
@@ -31,11 +30,11 @@ class PineconeComponent(CustomComponent):
         embedding: Embeddings,
         pinecone_env: str,
         documents: List[Document],
+        text_key: str = "text",
+        pool_threads: int = 4,
         index_name: Optional[str] = None,
         pinecone_api_key: Optional[str] = None,
-        text_key: Optional[str] = "text",
         namespace: Optional[str] = "default",
-        pool_threads: Optional[int] = None,
     ) -> Union[VectorStore, Pinecone, BaseRetriever]:
         if pinecone_api_key is None or pinecone_env is None:
             raise ValueError("Pinecone API Key and Environment are required.")
@@ -43,6 +42,8 @@ class PineconeComponent(CustomComponent):
             raise ValueError("Pinecone API Key is required.")
 
         pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)  # type: ignore
+        if not index_name:
+            raise ValueError("Index Name is required.")
         if documents:
             return Pinecone.from_documents(
                 documents=documents,
