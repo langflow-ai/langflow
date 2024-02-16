@@ -6,6 +6,7 @@ from typing import Any, ClassVar, Optional
 import emoji
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser import CodeParser
 from langflow.utils import validate
 
@@ -20,7 +21,9 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class Component:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = (
+        "The name of the entrypoint function must be provided."
+    )
 
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"
@@ -96,11 +99,12 @@ class Component:
         # we are going to use the emoji library to validate the emoji
         # emojis can be defined using the :emoji_name: syntax
         if not value.startswith(":") or not value.endswith(":"):
-            raise ValueError("Invalid emoji. Please use the :emoji_name: syntax.")
-
+            warnings.warn("Invalid emoji. Please use the :emoji_name: syntax.")
+            return value
         emoji_value = emoji.emojize(value, variant="emoji_type")
         if value == emoji_value:
-            raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+            warnings.warn(f"Invalid emoji. {value} is not a valid emoji.")
+            return value
         return emoji_value
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
