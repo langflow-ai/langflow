@@ -39,12 +39,15 @@ export async function buildVertices({
   } else {
     vertices = verticesOrder;
   }
-  console.log("Vertices: ", vertices);
+
+  // Set each vertex state to building
+
   const buildResults: Array<boolean> = [];
   for (let i = 0; i < vertices.length; i += 1) {
     await Promise.all(
       vertices[i].map(async (id) => {
         try {
+          // Set vertex state to building
           const buildRes = await postBuildVertex(flowId, id);
           const buildData: VertexBuildTypeAPI = buildRes.data;
           if (onBuildUpdate) {
