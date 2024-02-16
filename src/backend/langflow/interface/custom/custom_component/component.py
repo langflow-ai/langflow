@@ -5,7 +5,6 @@ from typing import Any, ClassVar, Optional
 import emoji
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.code_parser import CodeParser
 from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.utils import validate
@@ -38,10 +37,6 @@ class Component:
             else:
                 setattr(self, key, value)
 
-        # Validate the emoji at the icon field
-        if hasattr(self, "icon") and self.icon:
-            self.icon = self.validate_icon(self.icon)
-
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):
             warnings.warn("user_id is immutable and cannot be changed.")
@@ -70,8 +65,8 @@ class Component:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
-    def getattr_return_str(self, component, value):
-        value = getattr(component, value)
+    def getattr_return_str(self, value):
+
         return str(value) if value else ""
 
     def build_template_config(self) -> dict:
@@ -91,9 +86,10 @@ class Component:
 
         for attribute, func in attributes_func_mapping.items():
             if hasattr(component_instance, attribute):
-                template_config[attribute] = func(component=component_instance, value=attribute)
+                value = getattr(component_instance, attribute)
+                template_config[attribute] = func(value=value)
 
-            return template_config
+        return template_config
 
     def validate_icon(self, value: str, *args, **kwargs):
         # we are going to use the emoji library to validate the emoji
