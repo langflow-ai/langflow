@@ -76,6 +76,25 @@ class Graph:
             return False
         return self.__repr__() == other.__repr__()
 
+    # update this graph with another graph by comparing the __repr__ of each vertex
+    # and if the __repr__ of a vertex is not the same as the other
+    # then update the .data of the vertex to the self
+    # both graphs have the same vertices and edges
+    # but the data of the vertices might be different
+    def update(self, other: "Graph", different_vertices: List[str] = None) -> None:
+        if different_vertices is None:
+            different_vertices = []
+        for vertex in self.vertices:
+            if (
+                vertex.id in different_vertices
+                or vertex.__repr__() != other.get_vertex(vertex.id).__repr__()
+            ):
+                vertex.data = other.get_vertex(vertex.id).data
+                vertex._build_params()
+                vertex.graph = self
+                vertex._built = False
+        return self
+
     def _build_graph(self) -> None:
         """Builds the graph from the vertices and edges."""
         self.vertices = self._build_vertices()
