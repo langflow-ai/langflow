@@ -4,7 +4,7 @@ from langflow.field_typing import Text
 
 
 class CohereComponent(CustomComponent):
-    display_name = "Cohere"
+    display_name = "Cohere model"
     description = "Cohere large language models."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
 
