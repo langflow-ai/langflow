@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain_community.chat_models.openai import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langflow import CustomComponent
 from langflow.field_typing import NestedDict, Text
 
