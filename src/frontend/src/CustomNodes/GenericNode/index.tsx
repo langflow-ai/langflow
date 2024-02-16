@@ -111,41 +111,34 @@ export default function GenericNode({
   const isEmoji = emojiRegex.test(data?.node?.icon!);
 
   const iconNodeRender = useCallback(() => {
-    if (data?.node?.icon) {
-      if (isEmoji) {
-        return <span className="text-lg">{data.node.icon}</span>;
-      } else {
-        const iconName =
-          data.node.icon || (data.node?.flow ? "group_components" : name);
-        const iconClassName = `generic-node-icon ${
-          !showNode ? "absolute inset-x-6 h-12 w-12" : ""
-        }`;
-        const iconColor = nodeColors[types[data.type]];
+    const iconElement = data?.node?.icon;
+    const iconColor = nodeColors[types[data.type]];
+    const iconName =
+      iconElement || (data.node?.flow ? "group_components" : name);
+    const iconClassName = `generic-node-icon ${
+      !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+    }`;
 
-        return (
-          <IconComponent
-            name={iconName}
-            className={iconClassName}
-            iconColor={iconColor}
-          />
-        );
-      }
+    if (iconElement && isEmoji) {
+      return nodeIconFragment(iconElement);
     } else {
-      const iconName = data.node?.flow ? "group_components" : name;
-      const iconClassName = `generic-node-icon ${
-        !showNode ? "absolute inset-x-6 h-12 w-12" : ""
-      }`;
-      const iconColor = nodeColors[types[data.type]];
-
-      return (
-        <IconComponent
-          name={iconName}
-          className={iconClassName}
-          iconColor={iconColor}
-        />
-      );
+      return checkNodeIconFragment(iconColor, iconName, iconClassName);
     }
   }, [data, isEmoji, name, showNode]);
+
+  const nodeIconFragment = (icon) => {
+    return <span className="text-lg">{icon}</span>;
+  };
+
+  const checkNodeIconFragment = (iconColor, iconName, iconClassName) => {
+    return (
+      <IconComponent
+        name={iconName}
+        className={iconClassName}
+        iconColor={iconColor}
+      />
+    );
+  };
 
   return (
     <>
