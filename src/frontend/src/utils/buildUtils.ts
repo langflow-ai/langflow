@@ -1,5 +1,7 @@
 import { AxiosError } from "axios";
+import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
+import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 
 type BuildVerticesParams = {
@@ -9,6 +11,7 @@ type BuildVerticesParams = {
   onBuildUpdate?: (data: any) => void; // Replace any with the actual type of data
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list) => void;
+  onBuildStart?: (idList: string[]) => void;
 };
 
 export async function buildVertices({
@@ -18,10 +21,12 @@ export async function buildVertices({
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
+  onBuildStart,
 }: BuildVerticesParams) {
   let orderResponse = await getVerticesOrder(flowId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices: Array<Array<string>> = [];
+
   if (nodeId) {
     for (let i = 0; i < verticesOrder.length; i += 1) {
       const innerArray = verticesOrder[i];
@@ -40,10 +45,13 @@ export async function buildVertices({
     vertices = verticesOrder;
   }
 
-  // Set each vertex state to building
+  const verticesIds = vertices.flatMap((v) => v);
+  useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
 
+  // Set each vertex state to building
   const buildResults: Array<boolean> = [];
   for (let i = 0; i < vertices.length; i += 1) {
+    if (onBuildStart) onBuildStart(vertices[i]);
     await Promise.all(
       vertices[i].map(async (id) => {
         try {

@@ -1,4 +1,5 @@
 import { Edge, Node, Viewport } from "reactflow";
+import { BuildStatus } from "../../constants/enums";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
@@ -36,6 +37,7 @@ export type APIClassType = {
     | CustomFieldsType
     | boolean
     | undefined;
+  build_status?: BuildStatus;
 };
 
 export type TemplateVariableType = {

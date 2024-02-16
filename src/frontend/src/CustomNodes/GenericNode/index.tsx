@@ -7,6 +7,7 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
+import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -71,7 +72,6 @@ export default function GenericNode({
 
     setHandles(count);
   }
-
   useEffect(() => {
     countHandles();
   }, [data, data.node]);
@@ -164,8 +164,6 @@ export default function GenericNode({
           numberOfHandles={handles}
           showNode={showNode}
           openAdvancedModal={false}
-          onCloseAdvancedModal={() => {
-          }}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
@@ -410,33 +408,44 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      <IconComponent
-                        name="Play"
-                        className={classNames(
-                          validationStatus && validationStatus.valid
-                            ? "green-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-1"
-                        )}
-                      />
-                      <IconComponent
-                        name="Play"
-                        className={classNames(
-                          validationStatus && !validationStatus.valid
-                            ? "red-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-1"
-                        )}
-                      />
-                      <IconComponent
-                        name="Play"
-                        className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-1"
-                        )}
-                      />
+                      {data?.build_status === BuildStatus.TO_BUILD ? (
+                        <>
+                          <IconComponent
+                            name="Square"
+                            className="red-status absolute h-5 stroke-1"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <IconComponent
+                            name="Play"
+                            className={classNames(
+                              validationStatus && validationStatus.valid
+                                ? "green-status"
+                                : "status-build-animation",
+                              "absolute h-5 stroke-1"
+                            )}
+                          />
+                          <IconComponent
+                            name="Play"
+                            className={classNames(
+                              validationStatus && !validationStatus.valid
+                                ? "red-status"
+                                : "status-build-animation",
+                              "absolute h-5 stroke-1"
+                            )}
+                          />
+                          <IconComponent
+                            name="Play"
+                            className={classNames(
+                              !validationStatus || isBuilding
+                                ? "yellow-status"
+                                : "status-build-animation",
+                              "absolute h-5 stroke-1"
+                            )}
+                          />
+                        </>
+                      )}
                     </div>
                   </Tooltip>
                 </div>

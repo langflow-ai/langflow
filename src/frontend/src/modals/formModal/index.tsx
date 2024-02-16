@@ -205,7 +205,6 @@ export default function FormModal({
     if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
-        console.log(data);
         let newChatHistory: ChatMessageType[] = [];
         for (let i = 0; i < data.length; i++) {
           if (data[i].type === "prompt" && data[i].prompt) {
