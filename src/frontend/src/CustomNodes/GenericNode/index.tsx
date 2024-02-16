@@ -164,6 +164,7 @@ export default function GenericNode({
           numberOfHandles={handles}
           showNode={showNode}
           openAdvancedModal={false}
+          onCloseAdvancedModal={() => {}}
         ></NodeToolbarComponent>
       </NodeToolbar>
 
