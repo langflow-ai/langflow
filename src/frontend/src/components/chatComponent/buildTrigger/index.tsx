@@ -104,7 +104,7 @@ export default function BuildTrigger({
                 />
               ) : (
                 <IconComponent
-                  name="Zap"
+                  name="Play"
                   className="sh-6 w-6 fill-build-trigger stroke-build-trigger stroke-1"
                 />
               )}
