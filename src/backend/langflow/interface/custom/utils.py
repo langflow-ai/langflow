@@ -132,7 +132,7 @@ def add_new_custom_field(
 ):
     # Check field_config if any of the keys are in it
     # if it is, update the value
-    display_name = field_config.pop("display_name", field_name)
+    display_name = field_config.pop("display_name", None)
     field_type = field_config.pop("field_type", field_type)
     field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
