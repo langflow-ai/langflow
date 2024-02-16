@@ -8,7 +8,7 @@ from langflow import CustomComponent
 
 class CTransformersComponent(CustomComponent):
     display_name = "CTransformers model"
-    description = "C Transformers LLM models"
+    description = "Generate text using CTransformers LLM models"
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
 
     def build_config(self):
@@ -34,5 +34,6 @@ class CTransformersComponent(CustomComponent):
     def build(self, model: str, model_file: str,inputs:str, model_type: str, config: Optional[Dict] = None) -> Text:
         output = CTransformers(model=model, model_file=model_file, model_type=model_type, config=config)
         message = output.invoke(inputs)
-        self.status = message
-        return message
+        result = message.content if hasattr(message, "content") else message
+        self.status = result
+        return result

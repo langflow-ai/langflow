@@ -10,7 +10,7 @@ from langflow.field_typing import Text
 class QianfanChatEndpointComponent(CustomComponent):
     display_name: str = "QianfanChat Model"
     description: str = (
-        "Baidu Qianfan chat models. Get more detail from "
+        "Generate text using Baidu Qianfan chat models. Get more detail from "
         "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
     )
 

@@ -8,7 +8,7 @@ from langflow import CustomComponent
 
 class AmazonBedrockComponent(CustomComponent):
     display_name: str = "Amazon Bedrock model"
-    description: str = "LLM model from Amazon Bedrock."
+    description: str = "Generate text using LLM model from Amazon Bedrock."
 
     def build_config(self):
         return {

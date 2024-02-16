@@ -10,7 +10,7 @@ from langflow import CustomComponent
 
 class AnthropicLLM(CustomComponent):
     display_name: str = "Anthropic model"
-    description: str = "Anthropic Chat&Completion large language models."
+    description: str = "Generate text using Anthropic Chat&Completion large language models."
 
     def build_config(self):
         return {
