@@ -87,7 +87,8 @@ class Component:
         for attribute, func in attributes_func_mapping.items():
             if hasattr(component_instance, attribute):
                 value = getattr(component_instance, attribute)
-                template_config[attribute] = func(value=value)
+                if value is not None:
+                    template_config[attribute] = func(value=value)
 
         return template_config
 
