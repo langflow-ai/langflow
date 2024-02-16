@@ -9,7 +9,7 @@ from langflow.field_typing import Text
 
 class GoogleGenerativeAIComponent(CustomComponent):
     display_name: str = "Google Generative AI model"
-    description: str = "A component that uses Google Generative AI to generate text."
+    description: str = "Generate text using Google Generative AI to generate text."
     documentation: str = "http://docs.langflow.org/components/custom"
 
     def build_config(self):

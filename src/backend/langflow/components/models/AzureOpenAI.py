@@ -6,7 +6,7 @@ from langchain_openai import AzureChatOpenAI
 
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureOpenAI model"
-    description: str = "LLM model from Azure OpenAI."
+    description: str = "Generate text using LLM model from Azure OpenAI."
     documentation: str = (
         "https://python.langchain.com/docs/integrations/llms/azure_openai"
     )

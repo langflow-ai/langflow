@@ -8,7 +8,7 @@ from langflow.field_typing import Text
 
 class ChatVertexAIComponent(CustomComponent):
     display_name = "ChatVertexAI model"
-    description = "`Vertex AI` Chat large language models API."
+    description = "Generate text using Vertex AI Chat large language models API."
 
     def build_config(self):
         return {
