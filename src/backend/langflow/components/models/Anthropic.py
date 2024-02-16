@@ -1,52 +1,81 @@
 from typing import Optional
 
-from langchain_community.llms.anthropic import Anthropic
+from langchain_community.chat_models.anthropic import ChatAnthropic
 from pydantic.v1 import SecretStr
+from langflow.field_typing import Text
+
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, NestedDict
 
 
-class AnthropicComponent(CustomComponent):
-    display_name = "Anthropic Model"
-    description = "Anthropic large language models."
+class AnthropicLLM(CustomComponent):
+    display_name: str = "Anthropic model"
+    description: str = "Anthropic Chat&Completion large language models."
 
     def build_config(self):
         return {
+            "model": {
+                "display_name": "Model Name",
+                "options": [
+                    "claude-2.1",
+                    "claude-2.0",
+                    "claude-instant-1.2",
+                    "claude-instant-1",
+                    # Add more models as needed
+                ],
+                "info": "https://python.langchain.com/docs/integrations/chat/anthropic",
+                "required": True,
+                "value": "claude-2.1",
+            },
             "anthropic_api_key": {
                 "display_name": "Anthropic API Key",
-                "type": str,
+                "required": True,
                 "password": True,
+                "info": "Your Anthropic API key.",
             },
-            "anthropic_api_url": {
-                "display_name": "Anthropic API URL",
-                "type": str,
-            },
-            "model_kwargs": {
-                "display_name": "Model Kwargs",
-                "field_type": "NestedDict",
-                "advanced": True,
+            "max_tokens": {
+                "display_name": "Max Tokens",
+                "field_type": "int",
+                "value": 256,
             },
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
+                "value": 0.7,
             },
+            "api_endpoint": {
+                "display_name": "API Endpoint",
+                "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
+            },
+            "code": {"show": False},
             "inputs": {"display_name": "Input"},
-
         }
 
     def build(
         self,
-        anthropic_api_key: str,
-        anthropic_api_url: str,
-        model_kwargs: NestedDict = {},
+        model: str,
+        inputs:str,
+        anthropic_api_key: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        inputs: str = None,
-    ) -> BaseLanguageModel:
-        llm = Anthropic(
-            anthropic_api_key=SecretStr(anthropic_api_key),
-            anthropic_api_url=anthropic_api_url,
-            model_kwargs=model_kwargs,
-            temperature=temperature,
-        )
-        return llm.invoke(input=inputs)
+        api_endpoint: Optional[str] = None,
+    ) -> Text:
+        # Set default API endpoint if not provided
+        if not api_endpoint:
+            api_endpoint = "https://api.anthropic.com"
+
+        try:
+            output = ChatAnthropic(
+                model_name=model,
+                anthropic_api_key=SecretStr(anthropic_api_key) if anthropic_api_key else None,
+                max_tokens_to_sample=max_tokens,  # type: ignore
+                temperature=temperature,
+                anthropic_api_url=api_endpoint,
+            )
+        except Exception as e:
+            raise ValueError("Could not connect to Anthropic API.") from e
+        message = output.invoke(inputs)
+        result = message.content if hasattr(message, "content") else message
+        self.status = result
+        return result
+

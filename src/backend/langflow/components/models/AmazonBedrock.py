@@ -1,7 +1,8 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLLM
-from langchain.llms.bedrock import Bedrock
+from langchain_community.chat_models.bedrock import BedrockChat
+from langflow.field_typing import Text
+
 from langflow import CustomComponent
 
 
@@ -46,9 +47,9 @@ class AmazonBedrockComponent(CustomComponent):
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
         cache: Optional[bool] = None,
-    ) -> BaseLLM:
+    ) -> Text:
         try:
-            output = Bedrock(
+            output = BedrockChat(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
                 region_name=region_name,
@@ -59,4 +60,6 @@ class AmazonBedrockComponent(CustomComponent):
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
-        return output.invoke(input=inputs)
+        message = output.invoke(input=inputs)
+        self.status = message
+        return message
