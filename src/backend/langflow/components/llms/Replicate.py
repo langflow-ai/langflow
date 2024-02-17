@@ -53,6 +53,7 @@ class ReplicateComponent(CustomComponent):
                 "field_type": "bool",
                 "advanced": True,
                 "required": False,
+                "default": True,
             },
             "stop": {
                 "display_name": "Stop Sequences",
