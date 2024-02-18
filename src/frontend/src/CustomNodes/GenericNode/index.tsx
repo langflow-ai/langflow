@@ -420,7 +420,7 @@ export default function GenericNode({
                         )}
                       />
                       <IconComponent
-                        name="FlaskConical"
+                        name="AlertCircle"
                         className={classNames(
                           validationStatus && !validationStatus.valid
                             ? "red-status"
