@@ -129,8 +129,9 @@ export class Web extends Construct {
   const alb_listen_port_443=443
   props.albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(alb_listen_port_443))
 
+
   new CfnOutput(this, 'URL', {
-    value: this.distribution.domainName,
+    value: `https://${this.distribution.domainName}`,
   });
 }
 
