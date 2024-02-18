@@ -251,7 +251,7 @@ class ChatService(Service):
         """
         Clear the cache for a client.
         """
-        self.cache_service.clear(client_id)
+        self.cache_service.delete(client_id)
 
 
 def dict_to_markdown_table(my_dict):
