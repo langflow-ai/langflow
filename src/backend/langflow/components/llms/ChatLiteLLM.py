@@ -102,20 +102,20 @@ class ChatLiteLLMComponent(CustomComponent):
         model_kwargs: Optional[Dict[str, Any]] = {},
         top_p: Optional[float] = None,
         top_k: Optional[int] = None,
-        n: Optional[int] = 1,
-        max_tokens: Optional[int] = 256,
-        max_retries: Optional[int] = 6,
-        verbose: Optional[bool] = False,
+        n: int = 1,
+        max_tokens: int = 256,
+        max_retries: int = 6,
+        verbose: bool = False,
     ) -> Union[BaseLanguageModel, Callable]:
         try:
             import litellm
+            litellm.drop_params=True
+            litellm.set_verbose=verbose
         except ImportError:
             raise ChatLiteLLMException(
                 "Could not import litellm python package. "
                 "Please install it with `pip install litellm`"
             )
-        litellm.drop_params=True
-        litellm.set_verbose=verbose
         if api_key:
             if "perplexity" in model:
                 os.environ["PERPLEXITYAI_API_KEY"] = api_key
@@ -124,9 +124,10 @@ class ChatLiteLLMComponent(CustomComponent):
         
         LLM = ChatLiteLLM(
             model=model,
+            client=None,
             streaming=streaming,
             temperature=temperature,
-            model_kwargs=model_kwargs,
+            model_kwargs=model_kwargs if model_kwargs is not None else {},
             top_p=top_p,
             top_k=top_k,
             n=n,
