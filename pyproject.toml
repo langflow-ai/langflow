@@ -87,7 +87,7 @@ python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
 pydantic = "^2.6.0"
 pydantic-settings = "^2.1.0"
-zep-python = "*"
+zep-python = "1.5.0"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 loguru = "^0.7.1"
 langfuse = "^2.9.0"
