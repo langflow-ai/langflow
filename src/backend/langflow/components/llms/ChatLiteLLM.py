@@ -7,7 +7,7 @@ import os
 
 
 class LiteLLMComponent(CustomComponent):
-    display_name = "LiteLLM"
+    display_name = "ChatLiteLLM"
     description = "`LiteLLM` collection of large language models."
     documentation = "https://python.langchain.com/docs/integrations/chat/litellm"
 
@@ -37,7 +37,7 @@ class LiteLLMComponent(CustomComponent):
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
-                "advanced": True,
+                "advanced": False,
                 "required": False,
                 "default": 0.7,
             },
@@ -72,7 +72,7 @@ class LiteLLMComponent(CustomComponent):
             "max_tokens": {
                 "display_name": "Max tokens",
                 "field_type": "int",
-                "advanced": True,
+                "advanced": False,
                 "required": False,
                 "default": 256,
                 "info": "The maximum number of tokens to generate for each chat completion.",
