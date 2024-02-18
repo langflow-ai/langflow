@@ -370,8 +370,8 @@ export default function GenericNode({
                         <span className="flex">
                           Build{" "}
                           <IconComponent
-                            name="Play"
-                            className=" h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                            name="FlaskConical"
+                            className=" h-5 stroke-build-trigger stroke-1"
                           />{" "}
                           flow to validate status.
                         </span>
@@ -390,7 +390,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
-                        name="Play"
+                        name="FlaskConical"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
@@ -399,7 +399,7 @@ export default function GenericNode({
                         )}
                       />
                       <IconComponent
-                        name="Play"
+                        name="FlaskConical"
                         className={classNames(
                           validationStatus && !validationStatus.valid
                             ? "red-status"
@@ -408,7 +408,7 @@ export default function GenericNode({
                         )}
                       />
                       <IconComponent
-                        name="Play"
+                        name="FlaskConical"
                         className={classNames(
                           !validationStatus || isBuilding
                             ? "yellow-status"
