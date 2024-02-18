@@ -134,4 +134,3 @@ class LiteLLMComponent(CustomComponent):
             max_retries=max_retries,
         )
         return LLM
-# litellm.drop_params=True
