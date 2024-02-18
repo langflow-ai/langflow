@@ -17,17 +17,7 @@ class ReplicateComponent(CustomComponent):
                 "field_type": "str",
                 "advanced": False,
                 "required": True,
-                "options": [
-                    "meta/llama-2-70b",
-                    "meta/llama-2-13b",
-                    "meta/llama-2-7b",
-                    "meta/llama-2-70b-chat",
-                    "meta/llama-2-13b-chat",
-                    "meta/llama-2-7b-chat",
-                    "mistralai/mistral-7b-v0.1",
-                    "mistralai/mistral-7b-instruct-v0.2",
-                    "mistralai/mixtral-8x7b-instruct-v0.1",
-                ],
+                "default": "mistralai/mistral-7b-instruct-v0.2:f5701ad84de5715051cb99d550539719f8a7fbcf65e0e62a3d1eb3f94720764e",
             },
             "model_kwargs": {
                 "display_name": "Model Keyword Arguments",
@@ -80,7 +70,6 @@ class ReplicateComponent(CustomComponent):
                 "Could not import replicate python package. "
                 "Please install it with `pip install replicate`."
             )
-        version_obj = replicate_python.models.get(model).versions.list()[0]
         return Replicate(
             model=model,
             model_kwargs=model_kwargs,
@@ -88,5 +77,4 @@ class ReplicateComponent(CustomComponent):
             prompt_key=prompt_key,
             streaming=streaming,
             stop=stop,
-            version_obj=version_obj,
         )
