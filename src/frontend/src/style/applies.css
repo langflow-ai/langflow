@@ -296,7 +296,7 @@
     @apply generic-node-status text-status-green;
   }
   .red-status {
-    @apply generic-node-status text-status-red fill-status-red;
+    @apply generic-node-status text-status-red;
   }
   .yellow-status {
     @apply generic-node-status text-status-yellow;

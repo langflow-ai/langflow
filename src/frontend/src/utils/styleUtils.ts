@@ -111,6 +111,7 @@ import {
   XCircle,
   Zap,
   FlaskConical,
+  AlertCircle,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -402,4 +403,5 @@ export const nodeIconsLucide: iconsType = {
   ScreenShare,
   Code,
   FlaskConical,
+  AlertCircle,
 };
