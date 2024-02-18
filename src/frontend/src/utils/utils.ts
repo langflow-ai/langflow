@@ -119,13 +119,7 @@ export function groupByFamily(
     display_name?: string;
   }> = [];
   let checkedNodes = new Map();
-  const excludeTypes = new Set([
-    "bool",
-    "float",
-    "code",
-    "file",
-    "int",
-  ]);
+  const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
@@ -134,12 +128,11 @@ export function groupByFamily(
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
-          template.input_types.some((inputType) => {
-            baseClassesSet.has(inputType);
-          })))
+          template.input_types.some((inputType) =>
+            baseClassesSet.has(inputType)
+          )))
     );
   };
-  console.log(flow);
 
   if (flow) {
     // se existir o flow
