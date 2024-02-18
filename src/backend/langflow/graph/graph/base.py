@@ -85,6 +85,9 @@ class Graph:
         if different_vertices is None:
             different_vertices = []
         for vertex in self.vertices:
+            other_vertex = other.get_vertex(vertex.id)
+            if other_vertex is None:
+                continue
             if (
                 vertex.id in different_vertices
                 or vertex.__repr__() != other.get_vertex(vertex.id).__repr__()
