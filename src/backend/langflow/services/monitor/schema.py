@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field, field_serializer, validator
 
 class TransactionModel(BaseModel):
     id: Optional[int] = Field(default=None, alias="id")
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
+    timestamp: Optional[datetime] = Field(
+        default_factory=datetime.now, alias="timestamp"
+    )
     source: str
     target: str
     target_args: dict
@@ -89,18 +91,13 @@ class VertexBuildModel(BaseModel):
         return v
 
 
-# create a function that turns dicts into a
-# dict like this:
-#     my_map_dict = {
-#     "key": [
-#         1, 2, 3
-#     ],
-#     "value": [
-#         "one", "two", "three"
-#     ]
-# }
-# so map has a "key" and a "value" list
-# containing the keys and values of the dict
+class VertexBuildResponseModel(VertexBuildModel):
+
+    @field_serializer("data", "artifacts")
+    def serialize_dict(v):
+        return v
+
+
 def to_map(value: dict):
     keys = list(value.keys())
     values = list(value.values())
@@ -108,13 +105,13 @@ def to_map(value: dict):
 
 
 class VertexBuildMapModel(BaseModel):
-    vertex_builds: dict[str, list[VertexBuildModel]]
+    vertex_builds: dict[str, list[VertexBuildResponseModel]]
 
     @classmethod
     def from_list_of_dicts(cls, vertex_build_dicts):
         vertex_build_map = {}
         for vertex_build_dict in vertex_build_dicts:
-            vertex_build = VertexBuildModel(**vertex_build_dict)
+            vertex_build = VertexBuildResponseModel(**vertex_build_dict)
             if vertex_build.id not in vertex_build_map:
                 vertex_build_map[vertex_build.id] = []
             vertex_build_map[vertex_build.id].append(vertex_build)
