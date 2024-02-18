@@ -6,7 +6,7 @@ from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMExce
 import os
 
 
-class LiteLLMComponent(CustomComponent):
+class ChatLiteLLMComponent(CustomComponent):
     display_name = "ChatLiteLLM"
     description = "`LiteLLM` collection of large language models."
     documentation = "https://python.langchain.com/docs/integrations/chat/litellm"
