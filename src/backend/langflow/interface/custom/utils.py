@@ -43,6 +43,21 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: L
         frontend_node.add_output_type(return_type)
 
 
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List[str]):
+    """Reorder fields in the frontend node based on the specified field_order."""
+    if not field_order:
+        return
+
+    # Create a dictionary for O(1) lookup time.
+    field_dict = {field.name: field for field in frontend_node.template.fields}
+    reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
+    # Add any fields that are not in the field_order list
+    for field in frontend_node.template.fields:
+        if field.name not in field_order:
+            reordered_fields.append(field)
+    frontend_node.template.fields = reordered_fields
+
+
 def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
@@ -193,7 +208,8 @@ def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[
         ) from exc
 
     try:
-        build_config: Dict = custom_class(user_id=user_id).build_config()
+        custom_instance = custom_class(user_id=user_id)
+        build_config: Dict = custom_instance.build_config()
 
         for field_name, field in build_config.items():
             # Allow user to build TemplateField as well
@@ -207,7 +223,7 @@ def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
 
-        return build_config
+        return build_config, custom_instance
 
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
@@ -278,7 +294,7 @@ def build_custom_component_template(
         logger.debug("Built base frontend node")
 
         logger.debug("Updated attributes")
-        field_config = run_build_config(custom_component, user_id=user_id, update_field=update_field)
+        field_config, custom_instance = run_build_config(custom_component, user_id=user_id, update_field=update_field)
         logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
@@ -289,6 +305,9 @@ def build_custom_component_template(
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
         logger.debug("Added base classes")
+
+        reorder_fields(frontend_node, custom_instance._get_field_order())
+
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
