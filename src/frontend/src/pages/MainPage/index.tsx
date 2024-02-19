@@ -6,7 +6,6 @@ import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
-import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
@@ -70,7 +69,7 @@ export default function HomePage(): JSX.Element {
   // Personal flows display
   return (
     <PageLayout
-      title={USER_PROJECTS_HEADER}
+      title={USER_PROJECTS_HEADERdasd}
       description="Manage your personal projects. Download or upload your collection."
       button={
         <div className="flex gap-2">
