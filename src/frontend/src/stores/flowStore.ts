@@ -381,7 +381,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         }
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title, list) => {
+      onBuildError: (title, list, idList) => {
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDED);
+
         setErrorData({ list, title });
       },
       onBuildStart: (idList) => {

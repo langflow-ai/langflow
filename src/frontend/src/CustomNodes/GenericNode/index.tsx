@@ -172,7 +172,15 @@ export default function GenericNode({
         className={classNames(
           selected ? "border border-ring" : "border",
           showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
-          "generic-node-div"
+          "generic-node-div",
+          data?.build_status === BuildStatus.BUILDED &&
+            validationStatus &&
+            !validationStatus.valid
+            ? "border-none ring ring-red-300"
+            : "",
+          data?.build_status === BuildStatus.BUILDING
+            ? "  border-none ring"
+            : ""
         )}
       >
         {data.node?.beta && showNode && (
@@ -384,7 +392,8 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      isBuilding ? (
+                      isBuilding ||
+                      data?.build_status === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -409,7 +418,7 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      {data?.build_status === BuildStatus.TO_BUILD ? (
+                      {data?.build_status === BuildStatus.BUILDING ? (
                         <>
                           <IconComponent
                             name="Square"
