@@ -105,7 +105,7 @@ export default function Header(): JSX.Element {
             <div className="header-github-display">{stars ?? 0}</div>
           </a>
           <a
-            href="https://twitter.com/logspace_ai"
+            href="https://twitter.com/langflow_ai"
             target="_blank"
             rel="noreferrer"
             className="text-muted-foreground"
