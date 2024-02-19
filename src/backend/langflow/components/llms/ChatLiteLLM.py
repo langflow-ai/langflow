@@ -1,8 +1,9 @@
-from langflow import CustomComponent
-from typing import Optional, Union, Callable, Any, Dict
-from langflow.field_typing import BaseLanguageModel
-from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 import os
+from typing import Any, Callable, Dict, Optional, Union
+
+from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+from langflow import CustomComponent
+from langflow.field_typing import BaseLanguageModel
 
 
 class ChatLiteLLMComponent(CustomComponent):
@@ -107,7 +108,7 @@ class ChatLiteLLMComponent(CustomComponent):
         verbose: bool = False,
     ) -> Union[BaseLanguageModel, Callable]:
         try:
-            import litellm
+            import litellm  # type: ignore
 
             litellm.drop_params = True
             litellm.set_verbose = verbose
