@@ -75,7 +75,8 @@ export type FlowStoreType = {
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
-    newSelection: { nodes: any; edges: any } | null
+    newSelection: { nodes: any; edges: any } | null,
+    isCrop?: boolean
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
