@@ -37,7 +37,7 @@ async def login_to_get_access_token(
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
         )
