@@ -1,14 +1,14 @@
 from typing import Callable, Union
 
-from pydantic import BaseModel, model_serializer
-
 from langflow.template.field.base import TemplateField
 from langflow.utils.constants import DIRECT_TYPES
+from pydantic import BaseModel, model_serializer
 
 
 class Template(BaseModel):
     type_name: str
     fields: list[TemplateField]
+    field_order: list[str] = []
 
     def process_fields(
         self,
@@ -30,6 +30,7 @@ class Template(BaseModel):
         for field in self.fields:
             result[field.name] = field.model_dump(by_alias=True, exclude_none=True)
         result["_type"] = result.pop("type_name")
+        result.pop("field_order", None)
         return result
 
     # For backwards compatibility

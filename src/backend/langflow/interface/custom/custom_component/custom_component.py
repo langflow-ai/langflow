@@ -5,7 +5,6 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -28,6 +27,8 @@ class CustomComponent(Component):
     """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
+    field_order: Optional[List[str]] = None
+    """The field order of the component. Defaults to an empty list."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
@@ -40,6 +41,9 @@ class CustomComponent(Component):
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         super().__init__(**data)
+
+    def _get_field_order(self):
+        return self.field_order or list(self.field_config.keys())
 
     def custom_repr(self):
         if self.repr_value == "":
