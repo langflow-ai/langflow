@@ -367,6 +367,8 @@ class ChatVertex(StatelessVertex):
                         message = self._built_object.text
                     elif not isinstance(self._built_object, str):
                         message = str(self._built_object)
+                    else:
+                        message = self._built_object
 
                     artifacts = ChatOutputResponse(
                         message=message,
