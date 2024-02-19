@@ -59,7 +59,9 @@ class ChatService(Service):
         """Send the last chat message to the client."""
         client_id = self.chat_cache.current_client_id
         if client_id in self.active_connections:
-            chat_response = self.chat_history.get_history(client_id, filter_messages=False)[-1]
+            chat_response = self.chat_history.get_history(
+                client_id, filter_messages=False
+            )[-1]
             if chat_response.is_bot:
                 # Process FileResponse
                 if isinstance(chat_response, FileResponse):
@@ -86,7 +88,9 @@ class ChatService(Service):
                 data_type=self.last_cached_object_dict["type"],
             )
 
-            self.chat_history.add_message(self.chat_cache.current_client_id, chat_response)
+            self.chat_history.add_message(
+                self.chat_cache.current_client_id, chat_response
+            )
 
     async def connect(self, client_id: str, websocket: WebSocket):
         self.active_connections[client_id] = websocket
@@ -209,7 +213,9 @@ class ChatService(Service):
                         await self.process_message(client_id, payload, build_result)
 
                     else:
-                        raise RuntimeError(f"Could not find a build result for client_id {client_id}")
+                        raise RuntimeError(
+                            f"Could not find a build result for client_id {client_id}"
+                        )
         except Exception as exc:
             # Handle any exceptions that might occur
             logger.exception(f"Error handling websocket: {exc}")
@@ -240,6 +246,12 @@ class ChatService(Service):
         Get the cache for a client.
         """
         return self.cache_service.get(client_id)
+
+    def clear_cache(self, client_id: str):
+        """
+        Clear the cache for a client.
+        """
+        self.cache_service.delete(client_id)
 
 
 def dict_to_markdown_table(my_dict):

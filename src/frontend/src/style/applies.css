@@ -293,13 +293,13 @@
     @apply opacity-100 animate-wiggle;
   }
   .green-status {
-    @apply generic-node-status text-status-green fill-status-green;
+    @apply generic-node-status text-status-green;
   }
   .red-status {
-    @apply generic-node-status text-status-red fill-status-red;
+    @apply generic-node-status text-status-red;
   }
   .yellow-status {
-    @apply generic-node-status text-status-yellow fill-status-yellow;
+    @apply generic-node-status text-status-yellow;
   }
   .status-build-animation {
     @apply opacity-0;

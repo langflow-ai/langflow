@@ -55,10 +55,13 @@ class Vertex:
         self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.parent_is_top_level = False
         self.layer = None
+        self.should_run = True
         try:
             self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
             self.is_interface_component = False
+
+        self.use_result = False
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -78,14 +81,18 @@ class Vertex:
             ):
                 if edge.target_id not in edge_results:
                     edge_results[edge.target_id] = {}
-                edge_results[edge.target_id][edge.target_param] = await edge.get_result(source=self, target=target)
+                edge_results[edge.target_id][edge.target_param] = await edge.get_result(
+                    source=self, target=target
+                )
         return edge_results
 
     def get_built_result(self):
         # If the Vertex.type is a power component
         # then we need to return the built object
         # instead of the result dict
-        if self.is_interface_component and not isinstance(self._built_object, UnbuiltObject):
+        if self.is_interface_component and not isinstance(
+            self._built_object, UnbuiltObject
+        ):
             result = self._built_object
             # if it is not a dict or a string and hasattr model_dump then
             # return the model_dump
@@ -95,7 +102,11 @@ class Vertex:
 
         if isinstance(self._built_result, UnbuiltResult):
             return {}
-        return self._built_result if isinstance(self._built_result, dict) else {"result": self._built_result}
+        return (
+            self._built_result
+            if isinstance(self._built_result, dict)
+            else {"result": self._built_result}
+        )
 
     def set_artifacts(self) -> None:
         pass
@@ -149,18 +160,29 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.pinned = self.data["node"].get("pinned", False)
-        template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
-        template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
+        template_dicts = {
+            key: value
+            for key, value in self.data["node"]["template"].items()
+            if isinstance(value, dict)
+        }
 
         self.required_inputs = [
-            template_dicts[key]["type"] for key, value in template_dicts.items() if value["required"]
+            template_dicts[key]["type"]
+            for key, value in template_dicts.items()
+            if value["required"]
         ]
         self.optional_inputs = [
-            template_dicts[key]["type"] for key, value in template_dicts.items() if not value["required"]
+            template_dicts[key]["type"]
+            for key, value in template_dicts.items()
+            if not value["required"]
         ]
         # Add the template_dicts[key]["input_types"] to the optional_inputs
         self.optional_inputs.extend(
-            [input_type for value in template_dicts.values() for input_type in value.get("input_types", [])]
+            [
+                input_type
+                for value in template_dicts.values()
+                for input_type in value.get("input_types", [])
+            ]
         )
 
         template_dict = self.data["node"]["template"]
@@ -203,7 +225,11 @@ class Vertex:
         if self.graph is None:
             raise ValueError("Graph not found")
 
-        template_dict = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
+        template_dict = {
+            key: value
+            for key, value in self.data["node"]["template"].items()
+            if isinstance(value, dict)
+        }
         params = self.params.copy() if self.params else {}
 
         for edge in self.edges:
@@ -255,7 +281,11 @@ class Vertex:
                     # list of dicts, so we need to convert it to a dict
                     # before passing it to the build method
                     if isinstance(val, list):
-                        params[key] = {k: v for item in value.get("value", []) for k, v in item.items()}
+                        params[key] = {
+                            k: v
+                            for item in value.get("value", [])
+                            for k, v in item.items()
+                        }
                     elif isinstance(val, dict):
                         params[key] = val
                 elif value.get("type") == "int" and val is not None:
@@ -292,7 +322,12 @@ class Vertex:
 
         self._built = True
 
-    async def _run(self, user_id: str, inputs: Optional[dict] = None, session_id: Optional[str] = None):
+    async def _run(
+        self,
+        user_id: str,
+        inputs: Optional[dict] = None,
+        session_id: Optional[str] = None,
+    ):
         # user_id is just for compatibility with the other build methods
         inputs = inputs or {}
         # inputs = {key: value or "" for key, value in inputs.items()}
@@ -307,7 +342,9 @@ class Vertex:
         if isinstance(self._built_object, str):
             self._built_result = self._built_object
 
-        result = await generate_result(self._built_object, inputs, self.has_external_output, session_id)
+        result = await generate_result(
+            self._built_object, inputs, self.has_external_output, session_id
+        )
         self._built_result = result
 
     async def _build_each_node_in_params_dict(self, user_id=None):
@@ -335,11 +372,13 @@ class Vertex:
         """
         return all(self._is_node(node) for node in value)
 
-    async def get_result(self, requester: Optional["Vertex"] = None, user_id=None, timeout=None) -> Any:
+    async def get_result(
+        self, requester: Optional["Vertex"] = None, user_id=None, timeout=None
+    ) -> Any:
         # PLEASE REVIEW THIS IF STATEMENT
         # Check if the Vertex was built already
         if self._built:
-            return self._built_object
+            return self._built_object if not self.use_result else self._built_result
 
         if self.is_task and self.task_id is not None:
             task = self.get_task()
@@ -369,7 +408,9 @@ class Vertex:
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
 
-    async def _build_list_of_nodes_and_update_params(self, key, nodes: List["Vertex"], user_id=None):
+    async def _build_list_of_nodes_and_update_params(
+        self, key, nodes: List["Vertex"], user_id=None
+    ):
         """
         Iterates over a list of nodes, builds each and updates the params dictionary.
         """
@@ -421,7 +462,9 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
-            raise ValueError(f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}") from exc
+            raise ValueError(
+                f"Error building node {self.vertex_type}(ID:{self.id}): {str(exc)}"
+            ) from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -458,7 +501,7 @@ class Vertex:
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
-        if self.pinned:
+        if self.pinned and self._built:
             return self.get_requester_result(requester)
         self._reset()
 
@@ -480,9 +523,15 @@ class Vertex:
             return self._built_object
 
         # Get the requester edge
-        requester_edge = next((edge for edge in self.edges if edge.target_id == requester.id), None)
+        requester_edge = next(
+            (edge for edge in self.edges if edge.target_id == requester.id), None
+        )
         # Return the result of the requester edge
-        return None if requester_edge is None else await requester_edge.get_result(source=self, target=requester)
+        return (
+            None
+            if requester_edge is None
+            else await requester_edge.get_result(source=self, target=requester)
+        )
 
     def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:
@@ -502,7 +551,11 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
+        return (
+            "Built sucessfully ✨"
+            if self._built_object is not None
+            else "Failed to build 😵‍💫"
+        )
 
 
 class StatefulVertex(Vertex):
@@ -510,10 +563,4 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
-    pass
-    pass
-    pass
-    pass
-    pass
-    pass
     pass

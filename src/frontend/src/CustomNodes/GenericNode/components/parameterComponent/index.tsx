@@ -406,13 +406,27 @@ export default function ParameterComponent({
                 data-testid={"textarea-" + data.node.template[name].name}
               />
             ) : (
-              <InputComponent
-                id={"input-" + index}
-                disabled={disabled}
-                password={data.node?.template[name].password ?? false}
-                value={data.node?.template[name].value ?? ""}
-                onChange={handleOnNewValue}
-              />
+              <div className="mt-2 flex w-full items-center">
+                <div className="w-5/6 flex-grow">
+                  <InputComponent
+                    id={"input-" + index}
+                    disabled={disabled}
+                    password={data.node?.template[name].password ?? false}
+                    value={data.node?.template[name].value ?? ""}
+                    onChange={handleOnNewValue}
+                  />
+                </div>
+                {data.node?.template[name].refresh && (
+                  <button
+                    className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
+                    onClick={() => {
+                      handleUpdateValues(name, data);
+                    }}
+                  >
+                    <IconComponent name="RefreshCcw" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ) : left === true && type === "bool" ? (
