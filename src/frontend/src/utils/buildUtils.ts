@@ -23,7 +23,7 @@ export async function buildVertices({
   onBuildError,
   onBuildStart,
 }: BuildVerticesParams) {
-  let orderResponse = await getVerticesOrder(flowId);
+  let orderResponse = await getVerticesOrder(flowId, nodeId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices: Array<Array<string>> = [];
 

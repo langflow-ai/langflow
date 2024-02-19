@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from langchain_core.documents import Document
 from pydantic import BaseModel
@@ -37,6 +37,24 @@ class Record(BaseModel):
             Document: The converted Document.
         """
         return Document(page_content=self.text, metadata=self.data)
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        """
+        Returns the text of the record.
+
+        Returns:
+            Any: The text of the record.
+        """
+        return self.text
+
+    def __str__(self) -> str:
+        """
+        Returns the text of the record.
+
+        Returns:
+            str: The text of the record.
+        """
+        return self.text
 
 
 def docs_to_records(documents: list[Document]) -> list[Record]:

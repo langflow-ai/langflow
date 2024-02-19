@@ -378,6 +378,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
+    const setNoticeData = useAlertStore.getState().setNoticeData;
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILDED);
@@ -392,6 +393,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       name: currentFlow!.name,
       description: currentFlow!.description,
     });
+    setNoticeData({ title: "Running components" });
     return buildVertices({
       flowId: currentFlow!.id,
       nodeId,

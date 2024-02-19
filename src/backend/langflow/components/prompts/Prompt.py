@@ -20,6 +20,7 @@ class PromptComponent(CustomComponent):
         **kwargs,
     ) -> Text:
         prompt_template = PromptTemplate.from_template(template)
+
         try:
             formated_prompt = prompt_template.format(**kwargs)
         except Exception as exc:

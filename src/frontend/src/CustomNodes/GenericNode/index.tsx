@@ -86,6 +86,18 @@ export default function GenericNode({
   // State for outline color
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
+  // should be empty string if no duration
+  // else should be `Duration: ${duration}`
+  const getDurationString = (duration: number | null): string => {
+    if (duration === null) {
+      return "";
+    } else {
+      return `Duration: ${duration}`;
+    }
+  };
+
+  const durationString = getDurationString(validationStatus?.data.duration);
+
   useEffect(() => {
     setNodeDescription(data.node!.description);
   }, [data.node!.description]);
@@ -400,19 +412,19 @@ export default function GenericNode({
                           Build{" "}
                           <IconComponent
                             name="Play"
-                            className=" h-5 fill-build-trigger stroke-build-trigger stroke-1"
+                            className=" h-5 stroke-build-trigger stroke-2"
                           />{" "}
                           flow to validate status.
                         </span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
-                            ? `Duration: ${validationStatus.data.duration}\n${validationStatus.params}`
+                            ? `${durationString}\n${validationStatus.params}`
                                 .split("\n")
                                 .map((line, index) => (
                                   <div key={index}>{line}</div>
                                 ))
-                            : ""}
+                            : durationString}
                         </div>
                       )
                     }
