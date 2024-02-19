@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
-
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -10,6 +8,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.deps import get_session, get_settings_service
+from sqlmodel import Session
 
 router = APIRouter(tags=["Login"])
 
@@ -20,7 +19,9 @@ async def login_to_get_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
+    settings_service=Depends(get_settings_service),
 ):
+    auth_settings = settings_service.auth_settings
     try:
         user = authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
@@ -33,8 +34,20 @@ async def login_to_get_access_token(
 
     if user:
         tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite="none", secure=True)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite="none", secure=True)
+        response.set_cookie(
+            "refresh_token_lf",
+            tokens["refresh_token"],
+            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            samesite=auth_settings.REFRESH_SAME_SITE,
+            secure=auth_settings.REFRESH_SECURE,
+        )
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
         return tokens
     else:
         raise HTTPException(
@@ -46,11 +59,20 @@ async def login_to_get_access_token(
 
 @router.get("/auto_login")
 async def auto_login(
-    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
+    response: Response,
+    db: Session = Depends(get_session),
+    settings_service=Depends(get_settings_service),
 ):
+    auth_settings = settings_service.auth_settings
     if settings_service.auth_settings.AUTO_LOGIN:
         tokens = create_user_longterm_token(db)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite="none", secure=True)
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
         return tokens
 
     raise HTTPException(
@@ -63,12 +85,29 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response):
+async def refresh_token(
+    request: Request, response: Response, settings_service=Depends(get_settings_service)
+):
+    auth_settings = settings_service.auth_settings
+
     token = request.cookies.get("refresh_token_lf")
+
     if token:
         tokens = create_refresh_token(token)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite="none", secure=True)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite="none", secure=True)
+        response.set_cookie(
+            "refresh_token_lf",
+            tokens["refresh_token"],
+            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            samesite=auth_settings.REFRESH_SAME_SITE,
+            secure=auth_settings.REFRESH_SECURE,
+        )
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
         return tokens
     else:
         raise HTTPException(
