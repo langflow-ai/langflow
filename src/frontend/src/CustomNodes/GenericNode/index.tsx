@@ -402,8 +402,8 @@ export default function GenericNode({
                         <span className="flex">
                           Build{" "}
                           <IconComponent
-                            name="FlaskConical"
-                            className=" h-5 stroke-build-trigger stroke-1"
+                            name="Play"
+                            className=" h-5 stroke-build-trigger stroke-2"
                           />{" "}
                           flow to validate status.
                         </span>
@@ -422,12 +422,12 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       <IconComponent
-                        name="FlaskConical"
+                        name="Play"
                         className={classNames(
                           validationStatus && validationStatus.valid
                             ? "green-status"
                             : "status-build-animation",
-                          "absolute h-5 stroke-1"
+                          "absolute h-5 stroke-2"
                         )}
                       />
                       <IconComponent
@@ -436,16 +436,16 @@ export default function GenericNode({
                           validationStatus && !validationStatus.valid
                             ? "red-status"
                             : "status-build-animation",
-                          "absolute h-5 stroke-1"
+                          "absolute h-5 stroke-2"
                         )}
                       />
                       <IconComponent
-                        name="FlaskConical"
+                        name="Play"
                         className={classNames(
                           !validationStatus || isBuilding
                             ? "yellow-status"
                             : "status-build-animation",
-                          "absolute h-5 stroke-1"
+                          "absolute h-5 stroke-2"
                         )}
                       />
                     </div>
