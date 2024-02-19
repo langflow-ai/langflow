@@ -55,10 +55,13 @@ class Vertex:
         self.parent_node_id: Optional[str] = self._data.get("parent_node_id")
         self.parent_is_top_level = False
         self.layer = None
+        self.should_run = True
         try:
             self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
             self.is_interface_component = False
+
+        self.use_result = False
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -375,7 +378,7 @@ class Vertex:
         # PLEASE REVIEW THIS IF STATEMENT
         # Check if the Vertex was built already
         if self._built:
-            return self._built_object
+            return self._built_object if not self.use_result else self._built_result
 
         if self.is_task and self.task_id is not None:
             task = self.get_task()
@@ -560,10 +563,4 @@ class StatefulVertex(Vertex):
 
 
 class StatelessVertex(Vertex):
-    pass
-    pass
-    pass
-    pass
-    pass
-    pass
     pass
