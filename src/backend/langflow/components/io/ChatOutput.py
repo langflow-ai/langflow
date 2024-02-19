@@ -40,6 +40,13 @@ class ChatOutput(CustomComponent):
     ) -> Text:
         self.status = message
         if as_record:
+            if isinstance(message, Record):
+                # Update the data of the record
+                message.data["sender"] = sender_type
+                message.data["sender_name"] = sender_name
+                message.data["session_id"] = session_id
+
+                return message
             return Record(
                 text=message,
                 data={

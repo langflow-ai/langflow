@@ -32,6 +32,11 @@ class ChatInput(CustomComponent):
     ) -> Union[Text, Record]:
         self.status = message
         if as_record:
+            if isinstance(message, Record):
+                # Update the data of the record
+                message.data["sender"] = sender_type
+                message.data["sender_name"] = sender_name
+                return message
             return Record(
                 text=message, data={"sender": sender_type, "sender_name": sender_name}
             )
