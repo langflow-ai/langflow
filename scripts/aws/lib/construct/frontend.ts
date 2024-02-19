@@ -65,6 +65,15 @@ export class Web extends Construct {
     protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY
   });  
 
+  const albBehaviorOptions = {
+    origin: ApiSpaOrigin,
+    allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+    
+    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+    cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+    originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
+  }
+
   const cloudFrontWebDistribution = new cloudfront.Distribution(this, 'distribution', {
     comment: 'langflow-distribution',
     defaultRootObject: 'index.html',
@@ -82,14 +91,8 @@ export class Web extends Construct {
     ],
     defaultBehavior: { origin:  s3SpaOrigin },
     additionalBehaviors: {
-      '/api/v1/*': {
-        origin: ApiSpaOrigin,
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
-      },
+      '/api/v1/*': albBehaviorOptions,
+      '/health' : albBehaviorOptions,
     },
     enableLogging: true, // ログ出力設定
     logBucket: new s3.Bucket(this, 'LogBucket',commonBucketProps),
