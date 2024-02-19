@@ -1,9 +1,10 @@
+import os
+
+import yaml
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
 from loguru import logger
-import os
-import yaml
 
 
 class SettingsService(Service):
@@ -11,8 +12,8 @@ class SettingsService(Service):
 
     def __init__(self, settings: Settings, auth_settings: AuthSettings):
         super().__init__()
-        self.settings = settings
-        self.auth_settings = auth_settings
+        self.settings: Settings = settings
+        self.auth_settings: AuthSettings = auth_settings
 
     @classmethod
     def load_settings_from_yaml(cls, file_path: str) -> "SettingsService":
@@ -30,7 +31,9 @@ class SettingsService(Service):
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
                     raise KeyError(f"Key {key} not found in settings")
-                logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
+                logger.debug(
+                    f"Loading {len(settings_dict[key])} {key} from {file_path}"
+                )
 
         settings = Settings(**settings_dict)
         if not settings.CONFIG_DIR:
