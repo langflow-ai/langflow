@@ -336,9 +336,22 @@ class Graph:
         """Cuts the graph up to a given vertex."""
         # Get the vertices that are connected to the vertex
         # and the vertex itself
-        vertices = [self.get_vertex(vertex_id)]
-        for edge in self.get_vertex(edge.target_id).edges:
-            vertices.append(self.get_vertex(edge.target_id))
+        vertex = self.get_vertex(vertex_id)
+        vertices = [vertex]
+        for edge in vertex.edges:
+            if edge.target_id == vertex_id:
+                vertices.append(self.get_vertex(edge.source_id))
+
+        # Get the edges that are connected to the vertices
+        edges = []
+        for vertex in vertices:
+            edges.extend(self.get_vertex_edges(vertex.id))
+            source_vertex = self.get_vertex(edge.source_id)
+            target_vertex = self.get_vertex(edge.target_id)
+            if source_vertex not in vertices:
+                vertices.append(source_vertex)
+            if target_vertex not in vertices:
+                vertices.append(target_vertex)
 
         edges = [edge for vertex in vertices for edge in vertex.edges]
 
