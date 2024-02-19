@@ -109,6 +109,13 @@ export default function Page({
           setLastCopiedSelection(_.cloneDeep(lastSelection));
         } else if (
           (event.ctrlKey || event.metaKey) &&
+          event.key === "x" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection), true);
+        } else if (
+          (event.ctrlKey || event.metaKey) &&
           event.key === "v" &&
           lastCopiedSelection
         ) {
