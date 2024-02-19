@@ -90,7 +90,7 @@ module.exports = {
           },
           {
             position: "right",
-            href: "https://twitter.com/logspace_ai",
+            href: "https://twitter.com/langflow_ai",
             position: "right",
             className: "header-twitter-link",
             target: "_blank",
