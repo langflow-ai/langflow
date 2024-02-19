@@ -855,9 +855,16 @@ export async function requestLogout() {
 }
 
 export async function getVerticesOrder(
-  flowId: string
+  flowId: string,
+  nodeId?: string | null
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
-  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`);
+  // nodeId is optional and is a query parameter
+  // if nodeId is not provided, the API will return all vertices
+  const config = {};
+  if (nodeId) {
+    config["params"] = { component_id: nodeId };
+  }
+  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
 }
 
 export async function postBuildVertex(
