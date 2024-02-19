@@ -33,8 +33,8 @@ async def login_to_get_access_token(
 
     if user:
         tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite=None)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None)
+        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite=None, secure=True)
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None, secure=True)
         return tokens
     else:
         raise HTTPException(
@@ -50,7 +50,7 @@ async def auto_login(
 ):
     if settings_service.auth_settings.AUTO_LOGIN:
         tokens = create_user_longterm_token(db)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None)
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None, secure=True)
         return tokens
 
     raise HTTPException(
@@ -67,8 +67,8 @@ async def refresh_token(request: Request, response: Response):
     token = request.cookies.get("refresh_token_lf")
     if token:
         tokens = create_refresh_token(token)
-        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite=None)
-        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None)
+        response.set_cookie("refresh_token_lf", tokens["refresh_token"], httponly=True, samesite=None, secure=True)
+        response.set_cookie("access_token_lf", tokens["access_token"], httponly=False, samesite=None, secure=True)
         return tokens
     else:
         raise HTTPException(
