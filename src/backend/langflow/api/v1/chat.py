@@ -300,7 +300,12 @@ async def get_vertices(
         chat_service.set_cache(flow_id, graph)
 
         if component_id:
-            vertices = graph.sort_up_to_vertex(component_id)
+            try:
+                vertices = graph.sort_up_to_vertex(component_id)
+            except Exception as exc:
+                logger.error(f"IN DEVELOPMENT: Error getting vertices: {exc}")
+                logger.exception(exc)
+                vertices = graph.layered_topological_sort()
         else:
             vertices = graph.layered_topological_sort()
         # Now vertices is a list of lists
