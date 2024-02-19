@@ -1,9 +1,9 @@
-from dataclasses import Field
-from langflow import CustomComponent
-from typing import Optional, Union, Callable, Any, Dict
-from langflow.field_typing import BaseLanguageModel
-from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 import os
+from typing import Any, Callable, Dict, Optional, Union
+
+from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+from langflow import CustomComponent
+from langflow.field_typing import BaseLanguageModel
 
 
 class ChatLiteLLMComponent(CustomComponent):
@@ -108,20 +108,20 @@ class ChatLiteLLMComponent(CustomComponent):
         verbose: bool = False,
     ) -> Union[BaseLanguageModel, Callable]:
         try:
-            import litellm
-            litellm.drop_params=True
-            litellm.set_verbose=verbose
+            import litellm  # type: ignore
+
+            litellm.drop_params = True
+            litellm.set_verbose = verbose
         except ImportError:
             raise ChatLiteLLMException(
-                "Could not import litellm python package. "
-                "Please install it with `pip install litellm`"
+                "Could not import litellm python package. " "Please install it with `pip install litellm`"
             )
         if api_key:
             if "perplexity" in model:
                 os.environ["PERPLEXITYAI_API_KEY"] = api_key
             elif "replicate" in model:
                 os.environ["REPLICATE_API_KEY"] = api_key
-        
+
         LLM = ChatLiteLLM(
             model=model,
             client=None,
