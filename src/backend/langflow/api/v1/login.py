@@ -85,9 +85,7 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(
-    request: Request, response: Response, settings_service=Depends(get_settings_service)
-):
+async def refresh_token(request: Request, response: Response, settings_service=Depends(get_settings_service)):
     auth_settings = settings_service.auth_settings
 
     token = request.cookies.get("refresh_token_lf")

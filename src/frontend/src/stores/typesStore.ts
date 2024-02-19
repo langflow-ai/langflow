@@ -23,7 +23,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
             data: { ...old.data, ...data },
             templates: templatesGenerator(data),
           }));
-          setLoading(false)
+          setLoading(false);
           resolve();
         })
         .catch((error) => {
