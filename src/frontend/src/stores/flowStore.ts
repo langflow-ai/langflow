@@ -381,7 +381,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function handleBuildUpdate(data: any) {
       get().addDataToFlowPool(data.data[data.id], data.id);
-      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILDED);
+      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
     }
     await updateFlowInDatabase({
       data: {
@@ -406,7 +406,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list, idList) => {
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDED);
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
 
         setErrorData({ list, title });
       },
