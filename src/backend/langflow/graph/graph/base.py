@@ -355,7 +355,8 @@ class Graph:
 
         edges = [edge for vertex in vertices for edge in vertex.edges]
 
-        return self.layered_topological_sort(vertices, edges)
+        vertices = self.layered_topological_sort(vertices, edges)
+        return self.sort_chat_inputs_first(vertices)
 
     def layered_topological_sort(
         self,
@@ -432,3 +433,24 @@ class Graph:
         refined_layers = [layer for layer in refined_layers if layer]
 
         return refined_layers
+
+    def sort_chat_inputs_first(self, vertices: List[List[str]]) -> List[List[str]]:
+
+        chat_inputs_first = []
+        for layer in vertices:
+            for vertex_id in layer:
+                if "ChatInput" in vertex_id:
+                    # Remove the ChatInput from the layer
+                    layer.remove(vertex_id)
+                    chat_inputs_first.append(vertex_id)
+        if not chat_inputs_first:
+            return vertices
+
+        vertices = [chat_inputs_first] + vertices
+
+        return vertices
+
+    def sort_vertices(self) -> List[List[str]]:
+        """Sorts the vertices in the graph."""
+        vertices = self.layered_topological_sort()
+        return self.sort_chat_inputs_first(vertices)
