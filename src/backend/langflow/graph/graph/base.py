@@ -405,15 +405,18 @@ class Graph:
         # Build the adjacency list for reverse lookup (dependencies)
 
         refined_layers = [[] for _ in initial_layers]  # Start with empty layers
-        new_layer_index_map = defaultdict(
-            int
-        )  # Map each vertex to its highest dependency layer
+        new_layer_index_map = defaultdict(int)
 
+        # Map each vertex to its new layer index
+        # by finding the lowest layer index of its dependencies
+        # and subtracting 1
+        # If a vertex has no dependencies, it will be placed in the first layer
+        # If a vertex has dependencies, it will be placed in the lowest layer index of its dependencies
+        # minus 1
         for vertex_id, deps in graph.items():
-            for dep in deps:
-                new_layer_index_map[vertex_id] = (
-                    max(new_layer_index_map[vertex_id], vertex_to_layer[dep]) - 1
-                )
+            indexes = [vertex_to_layer[dep] for dep in deps]
+            new_layer_index = max(min(indexes, default=0) - 1, 0)
+            new_layer_index_map[vertex_id] = new_layer_index
 
         for layer_index, layer in enumerate(initial_layers):
             for vertex_id in layer:
