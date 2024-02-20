@@ -305,8 +305,8 @@ class Vertex:
                 else:
                     params.pop(key, None)
         # Add _type to params
-        self.params = {}
-        self._raw_params = params
+        self.params = params
+        self._raw_params = params.copy()
 
     async def _build(self, user_id=None):
         """
