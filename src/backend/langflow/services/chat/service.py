@@ -1,20 +1,13 @@
-from typing import Any, Dict
+from typing import Any
 
-from fastapi import WebSocket
 from langflow.services.base import Service
 from langflow.services.deps import get_cache_service
-
-from .cache import cache_service
 
 
 class ChatService(Service):
     name = "chat_service"
 
     def __init__(self):
-        self.active_connections: Dict[str, WebSocket] = {}
-        self.connection_ids: Dict[str, str] = {}
-        self.chat_cache = cache_service
-        self.chat_cache.attach(self.update)
         self.cache_service = get_cache_service()
 
     def set_cache(self, client_id: str, data: Any) -> bool:
