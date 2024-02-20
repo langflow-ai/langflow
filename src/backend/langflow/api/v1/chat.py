@@ -305,9 +305,10 @@ async def get_vertices(
             except Exception as exc:
                 logger.error(f"IN DEVELOPMENT: Error getting vertices: {exc}")
                 logger.exception(exc)
-                vertices = graph.layered_topological_sort()
+                vertices = graph.sort_vertices()
         else:
-            vertices = graph.layered_topological_sort()
+            vertices = graph.sort_vertices()
+
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
