@@ -1,8 +1,8 @@
 import ast
 import inspect
 import types
-from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from langflow.graph.schema import InterfaceComponentTypes
 
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
@@ -16,13 +16,6 @@ from loguru import logger
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
-
-
-class InterfaceComponentTypes(Enum):
-    # ChatInput and ChatOutput are the only ones that are
-    # power components
-    ChatInput = "ChatInput"
-    ChatOutput = "ChatOutput"
 
 
 class Vertex:
