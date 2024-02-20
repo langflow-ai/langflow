@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -13,8 +13,8 @@ import {
   regexHighlight,
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
-import { alertContext } from "../../contexts/alertContext";
 import { postValidatePrompt } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
@@ -40,9 +40,10 @@ export default function GenericModal({
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
   const [wordsHighlight, setWordsHighlight] = useState<string[]>([]);
-  const { setErrorData, setSuccessData, setNoticeData, setModalContextOpen } =
-    useContext(alertContext);
-  const ref = useRef();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const divRef = useRef(null);
   const divRefPrompt = useRef(null);
 
@@ -122,24 +123,22 @@ export default function GenericModal({
         }
         if (apiReturn.data) {
           let inputVariables = apiReturn.data.input_variables ?? [];
+          if (
+            JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
+          ) {
+            if (setNodeClass)
+              setNodeClass(apiReturn.data?.frontend_node, inputValue);
+            setModalOpen(closeModal);
+            setIsEdit(false);
+          }
           if (!inputVariables || inputVariables.length === 0) {
-            setIsEdit(true);
             setNoticeData({
               title: "Your template does not have any variables.",
             });
-            setModalOpen(false);
           } else {
-            if (
-              JSON.stringify(apiReturn.data?.frontend_node) !==
-              JSON.stringify({})
-            ) {
-              setNodeClass!(apiReturn.data?.frontend_node, inputValue);
-              setModalOpen(closeModal);
-              setIsEdit(false);
-              setSuccessData({
-                title: "Prompt is ready",
-              });
-            }
+            setSuccessData({
+              title: "Prompt is ready",
+            });
           }
         } else {
           setIsEdit(true);
@@ -157,10 +156,6 @@ export default function GenericModal({
         });
       });
   }
-
-  useEffect(() => {
-    setModalContextOpen(modalOpen);
-  }, [modalOpen]);
 
   return (
     <BaseModal
@@ -231,8 +226,7 @@ export default function GenericModal({
               />
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
-                //@ts-ignore
-                ref={ref}
+                ref={textRef}
                 className="form-input h-full w-full rounded-lg focus-visible:ring-1"
                 value={inputValue}
                 onChange={(event) => {

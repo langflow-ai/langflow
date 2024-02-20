@@ -1,4 +1,5 @@
 from cachetools import LRUCache, cached
+
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.directory_reader.utils import merge_nested_dicts_with_renaming
@@ -14,7 +15,6 @@ from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.utilities.base import utility_creator
-from langflow.interface.vector_store.base import vectorstore_creator
 from langflow.interface.wrappers.base import wrapper_creator
 
 
@@ -46,7 +46,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         toolkits_creator,
         wrapper_creator,
         embedding_creator,
-        vectorstore_creator,
+        # vectorstore_creator,
         documentloader_creator,
         textsplitter_creator,
         utility_creator,

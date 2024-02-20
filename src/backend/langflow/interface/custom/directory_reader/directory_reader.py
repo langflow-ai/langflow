@@ -2,6 +2,7 @@ import ast
 import os
 import zlib
 
+from langflow.interface.custom.custom_component import CustomComponent
 from loguru import logger
 
 
@@ -66,18 +67,18 @@ class DirectoryReader:
     def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
         from langflow.interface.custom.utils import build_component
 
-        items = [
-            {
-                "name": menu["name"],
-                "path": menu["path"],
-                "components": [
-                    (*build_component(component), component)
-                    for component in menu["components"]
-                    if (component["error"] if with_errors else not component["error"])
-                ],
-            }
-            for menu in data["menu"]
-        ]
+        items = []
+        for menu in data["menu"]:
+            components = []
+            for component in menu["components"]:
+                try:
+                    if component["error"] if with_errors else not component["error"]:
+                        component_tuple = (*build_component(component), component)
+                        components.append(component_tuple)
+                except Exception as e:
+                    logger.error(f"Error while loading component: {e}")
+                    continue
+            items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
         logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
         return {"menu": filtered}
@@ -245,9 +246,18 @@ class DirectoryReader:
             else:
                 component_name_camelcase = component_name
 
+            if validation_result:
+                try:
+                    output_types = self.get_output_types_from_code(result_content)
+                except Exception as exc:
+                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    output_types = [component_name_camelcase]
+            else:
+                output_types = [component_name_camelcase]
+
             component_info = {
                 "name": "CustomComponent",
-                "output_types": [component_name_camelcase],
+                "output_types": output_types,
                 "file": filename,
                 "code": result_content if validation_result else "",
                 "error": "" if validation_result else result_content,
@@ -259,3 +269,13 @@ class DirectoryReader:
                 response["menu"].append(menu_result)
         logger.debug("-------------------- Component menu list built --------------------")
         return response
+
+    @staticmethod
+    def get_output_types_from_code(code: str) -> list:
+        """
+        Get the output types from the code.
+        """
+        custom_component = CustomComponent(code=code)
+        types_list = custom_component.get_function_entrypoint_return_type
+        # Get the name of types classes
+        return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]

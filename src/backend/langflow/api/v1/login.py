@@ -1,7 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session
-
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -10,16 +8,20 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.deps import get_session, get_settings_service
+from sqlmodel import Session
 
 router = APIRouter(tags=["Login"])
 
 
 @router.post("/login", response_model=Token)
 async def login_to_get_access_token(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_session),
     # _: Session = Depends(get_current_active_user)
+    settings_service=Depends(get_settings_service),
 ):
+    auth_settings = settings_service.auth_settings
     try:
         user = authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
@@ -31,7 +33,22 @@ async def login_to_get_access_token(
         ) from exc
 
     if user:
-        return create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        response.set_cookie(
+            "refresh_token_lf",
+            tokens["refresh_token"],
+            httponly=auth_settings.REFRESH_HTTPONLY,
+            samesite=auth_settings.REFRESH_SAME_SITE,
+            secure=auth_settings.REFRESH_SECURE,
+        )
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
+        return tokens
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,9 +58,22 @@ async def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(db: Session = Depends(get_session), settings_service=Depends(get_settings_service)):
+async def auto_login(
+    response: Response,
+    db: Session = Depends(get_session),
+    settings_service=Depends(get_settings_service),
+):
+    auth_settings = settings_service.auth_settings
     if settings_service.auth_settings.AUTO_LOGIN:
-        return create_user_longterm_token(db)
+        tokens = create_user_longterm_token(db)
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
+        return tokens
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -55,12 +85,38 @@ async def auto_login(db: Session = Depends(get_session), settings_service=Depend
 
 
 @router.post("/refresh")
-async def refresh_token(token: str):
+async def refresh_token(request: Request, response: Response, settings_service=Depends(get_settings_service)):
+    auth_settings = settings_service.auth_settings
+
+    token = request.cookies.get("refresh_token_lf")
+
     if token:
-        return create_refresh_token(token)
+        tokens = create_refresh_token(token)
+        response.set_cookie(
+            "refresh_token_lf",
+            tokens["refresh_token"],
+            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            samesite=auth_settings.REFRESH_SAME_SITE,
+            secure=auth_settings.REFRESH_SECURE,
+        )
+        response.set_cookie(
+            "access_token_lf",
+            tokens["access_token"],
+            httponly=auth_settings.ACCESS_HTTPONLY,
+            samesite=auth_settings.ACCESS_SAME_SITE,
+            secure=auth_settings.ACCESS_SECURE,
+        )
+        return tokens
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("refresh_token_lf")
+    response.delete_cookie("access_token_lf")
+    return {"message": "Logout successful"}

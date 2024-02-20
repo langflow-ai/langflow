@@ -3,6 +3,7 @@ import operator
 import warnings
 from typing import Any, ClassVar, Optional
 
+import emoji
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
@@ -34,6 +35,10 @@ class Component:
                 setattr(self, "_user_id", value)
             else:
                 setattr(self, key, value)
+
+        # Validate the emoji at the icon field
+        if hasattr(self, "icon") and self.icon:
+            self.icon = self.validate_icon(self.icon)
 
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):
@@ -82,7 +87,23 @@ class Component:
                 elif "documentation" in item_name:
                     template_config["documentation"] = ast.literal_eval(item_value)
 
+                elif "icon" in item_name:
+                    icon_str = ast.literal_eval(item_value)
+                    template_config["icon"] = self.validate_icon(icon_str)
+
         return template_config
+
+    def validate_icon(self, value: str):
+        # we are going to use the emoji library to validate the emoji
+        # emojis can be defined using the :emoji_name: syntax
+        if not value.startswith(":") or not value.endswith(":"):
+            warnings.warn("Invalid emoji. Please use the :emoji_name: syntax.")
+            return value
+        emoji_value = emoji.emojize(value, variant="emoji_type")
+        if value == emoji_value:
+            warnings.warn(f"Invalid emoji. {value} is not a valid emoji.")
+            return value
+        return emoji_value
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError

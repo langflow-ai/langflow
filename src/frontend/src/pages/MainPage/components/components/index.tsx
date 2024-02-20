@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
@@ -6,8 +6,8 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import { alertContext } from "../../../../contexts/alertContext";
-import { FlowsContext } from "../../../../contexts/flowsContext";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
 
 export default function ComponentsComponent({
@@ -15,9 +15,13 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const { flows, removeFlow, uploadFlow, addFlow, isLoading } =
-    useContext(FlowsContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [pageSize, setPageSize] = useState(10);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
@@ -48,7 +52,7 @@ export default function ComponentsComponent({
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
     setData(all.slice(start, end));
-  }, [flows, pageIndex, pageSize]);
+  }, [flows, isLoading, pageIndex, pageSize]);
 
   const [data, setData] = useState<FlowType[]>([]);
 
@@ -90,12 +94,6 @@ export default function ComponentsComponent({
     setPageSize(10);
   }
 
-  useEffect(() => {
-    setTimeout(() => {
-      setLoadingScreen(false);
-    }, 600);
-  }, []);
-
   return (
     <CardsWrapComponent
       onFileDrop={onFileDrop}
@@ -103,7 +101,7 @@ export default function ComponentsComponent({
     >
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
-          {!loadingScreen && data.length === 0 ? (
+          {!isLoading && data.length === 0 ? (
             <div className="mt-6 flex w-full items-center justify-center text-center">
               <div className="flex-max-width h-full flex-col">
                 <div className="flex w-full flex-col gap-4">
@@ -132,7 +130,7 @@ export default function ComponentsComponent({
             </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-              {loadingScreen === false && data?.length > 0 ? (
+              {isLoading === false && data?.length > 0 ? (
                 data?.map((item, idx) => (
                   <CollectionCardComponent
                     onDelete={() => {
@@ -155,6 +153,9 @@ export default function ComponentsComponent({
                             variant="outline"
                             size="sm"
                             className="whitespace-nowrap "
+                            data-testid={
+                              "edit-flow-button-" + item.id + "-" + idx
+                            }
                           >
                             <IconComponent
                               name="ExternalLink"
@@ -178,7 +179,7 @@ export default function ComponentsComponent({
             </div>
           )}
         </div>
-        {!loadingScreen && data.length > 0 && (
+        {!isLoading && data.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
               storeComponent={true}

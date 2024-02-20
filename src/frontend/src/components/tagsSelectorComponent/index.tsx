@@ -1,5 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { darkContext } from "../../contexts/darkContext";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/utils";
 import { Badge } from "../ui/badge";
 
@@ -24,7 +23,6 @@ export function TagsSelector({
         : selectedTags.filter((_, i) => i !== index);
     setSelectedTags(newArray);
   };
-  const { dark } = useContext(darkContext);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fadeContainerRef = useRef<HTMLDivElement>(null);

@@ -3,9 +3,8 @@ from typing import List, Optional, Union
 import chromadb  # type: ignore
 from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever, Document
-from langchain.vectorstores import Chroma
-from langchain.vectorstores.base import VectorStore
-
+from langchain_community.vectorstores import VectorStore
+from langchain_community.vectorstores.chroma import Chroma
 from langflow import CustomComponent
 
 
@@ -30,7 +29,7 @@ class ChromaComponent(CustomComponent):
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
             "persist": {"display_name": "Persist"},
             "persist_directory": {"display_name": "Persist Directory"},
-            "code": {"show": False, "display_name": "Code"},
+            "code": {"advanced": True, "display_name": "Code"},
             "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {"display_name": "Embedding"},
             "chroma_server_cors_allow_origins": {

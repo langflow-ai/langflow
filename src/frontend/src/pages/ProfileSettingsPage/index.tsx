@@ -7,17 +7,19 @@ import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { FlowsContext } from "../../contexts/flowsContext";
 import { resetPassword, updateUser } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
 export default function ProfileSettingsPage(): JSX.Element {
-  const { setTabId } = useContext(FlowsContext);
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE
@@ -25,9 +27,10 @@ export default function ProfileSettingsPage(): JSX.Element {
 
   // set null id
   useEffect(() => {
-    setTabId("");
+    setCurrentFlowId("");
   }, []);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
   const { password, cnfPassword, gradient } = inputState;
 
@@ -97,6 +100,7 @@ export default function ProfileSettingsPage(): JSX.Element {
                     Password{" "}
                   </Form.Label>
                   <InputComponent
+                    id="pasword"
                     onChange={(value) => {
                       handleInput({ target: { name: "password", value } });
                     }}
@@ -118,6 +122,7 @@ export default function ProfileSettingsPage(): JSX.Element {
                   </Form.Label>
 
                   <InputComponent
+                    id="cnfPassword"
                     onChange={(value) => {
                       handleInput({ target: { name: "cnfPassword", value } });
                     }}
@@ -143,9 +148,9 @@ export default function ProfileSettingsPage(): JSX.Element {
                 <GradientChooserComponent
                   value={
                     gradient == ""
-                      ? userData!.profile_image ??
+                      ? userData?.profile_image ??
                         gradients[
-                          parseInt(userData!.id ?? "", 30) % gradients.length
+                          parseInt(userData?.id ?? "", 30) % gradients.length
                         ]
                       : gradient
                   }

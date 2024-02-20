@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
-import { alertContext } from "../../../contexts/alertContext";
 import { AuthContext } from "../../../contexts/authContext";
-import { getLoggedUser, onLogin } from "../../../controllers/API";
+import { onLogin } from "../../../controllers/API";
+import useAlertStore from "../../../stores/alertStore";
 import { LoginType } from "../../../types/api";
 import {
   inputHandlerEventType,
@@ -17,11 +17,10 @@ export default function LoginAdminPage() {
 
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-  const { login, getAuthentication, setUserData } = useContext(AuthContext);
+  const { login, isAuthenticated, setUserData } = useContext(AuthContext);
 
   const { password, username } = inputState;
-  const { setErrorData } = useContext(alertContext);
-
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
@@ -35,8 +34,7 @@ export default function LoginAdminPage() {
     };
     onLogin(user)
       .then((user) => {
-        login(user.access_token, user.refresh_token);
-        getUser();
+        login(user.access_token);
         navigate("/admin/");
       })
       .catch((error) => {
@@ -45,20 +43,6 @@ export default function LoginAdminPage() {
           list: [error["response"]["data"]["detail"]],
         });
       });
-  }
-
-  function getUser() {
-    if (getAuthentication()) {
-      setTimeout(() => {
-        getLoggedUser()
-          .then((user) => {
-            setUserData(user);
-          })
-          .catch((error) => {
-            console.log("login admin page", error);
-          });
-      }, 1000);
-    }
   }
 
   return (

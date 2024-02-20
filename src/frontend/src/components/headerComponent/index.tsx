@@ -1,14 +1,16 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
-import { alertContext } from "../../contexts/alertContext";
 import { AuthContext } from "../../contexts/authContext";
-import { darkContext } from "../../contexts/darkContext";
-import { StoreContext } from "../../contexts/storeContext";
 
-import { FlowsContext } from "../../contexts/flowsContext";
+import { Node } from "reactflow";
+import useAlertStore from "../../stores/alertStore";
+import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
@@ -24,25 +26,41 @@ import { Separator } from "../ui/separator";
 import MenuBar from "./components/menuBar";
 
 export default function Header(): JSX.Element {
-  const { flows, tabId } = useContext(FlowsContext);
-  const { dark, setDark } = useContext(darkContext);
-  const { notificationCenter } = useContext(alertContext);
+  const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
-  const { hasStore } = useContext(StoreContext);
-  const { stars, gradientIndex } = useContext(darkContext);
   const navigate = useNavigate();
+  const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const { id } = useParams();
+  const n = useFlowStore((state) => state.nodes);
+
+  const dark = useDarkStore((state) => state.dark);
+  const setDark = useDarkStore((state) => state.setDark);
+  const stars = useDarkStore((state) => state.stars);
+
+  useEffect(() => {
+    if (dark) {
+      document.getElementById("body")!.classList.add("dark");
+    } else {
+      document.getElementById("body")!.classList.remove("dark");
+    }
+    window.localStorage.setItem("isDark", dark.toString());
+  }, [dark]);
+
+  async function checkForChanges(nodes: Node[]): Promise<void> {
+    if (nodes.length === 0) {
+      await removeFlow(id!);
+    }
+  }
 
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[30%]">
-        <Link to="/">
+        <Link to="/" onClick={() => checkForChanges(n)}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-
-        {flows.findIndex((f) => tabId === f.id) !== -1 && tabId !== "" && (
-          <MenuBar flows={flows} tabId={tabId} />
-        )}
+        <MenuBar removeFunction={checkForChanges} />
       </div>
       <div className="round-button-div">
         <Link to="/">
@@ -55,6 +73,9 @@ export default function Header(): JSX.Element {
                 : "secondary"
             }
             size="sm"
+            onClick={() => {
+              checkForChanges(n);
+            }}
           >
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
@@ -78,6 +99,9 @@ export default function Header(): JSX.Element {
               className="gap-2"
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
+              onClick={() => {
+                checkForChanges(n);
+              }}
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="flex-1">Store</div>
@@ -95,10 +119,10 @@ export default function Header(): JSX.Element {
           >
             <FaGithub className="h-5 w-5" />
             <div className="hidden lg:block">Star</div>
-            <div className="header-github-display">{stars}</div>
+            <div className="header-github-display">{stars ?? 0}</div>
           </a>
           <a
-            href="https://twitter.com/logspace_ai"
+            href="https://twitter.com/langflow_ai"
             target="_blank"
             rel="noreferrer"
             className="text-muted-foreground"
@@ -159,7 +183,10 @@ export default function Header(): JSX.Element {
                   <button
                     className={
                       "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      (userData?.profile_image ?? gradients[gradientIndex])
+                      (userData?.profile_image ??
+                        gradients[
+                          parseInt(userData?.id ?? "", 30) % gradients.length
+                        ])
                     }
                   />
                 </DropdownMenuTrigger>
@@ -184,7 +211,6 @@ export default function Header(): JSX.Element {
                     className="cursor-pointer"
                     onClick={() => {
                       logout();
-                      navigate("/login");
                     }}
                   >
                     Sign Out
