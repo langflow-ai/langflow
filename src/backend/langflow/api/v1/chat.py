@@ -11,7 +11,11 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from langflow.api.utils import build_input_keys_response, format_elapsed_time
+from langflow.api.utils import (
+    build_and_cache_graph,
+    build_input_keys_response,
+    format_elapsed_time,
+)
 from langflow.api.v1.schemas import (
     BuildStatus,
     BuiltResponse,
@@ -30,7 +34,6 @@ from langflow.services.auth.utils import (
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
 from langflow.services.monitor.utils import log_vertex_build
 from loguru import logger
@@ -272,25 +275,6 @@ async def try_running_celery_task(vertex, user_id):
         vertex.task_id = None
         await vertex.build(user_id=user_id)
     return vertex
-
-
-def build_and_cache_graph(
-    flow_id: str,
-    session: Session,
-    chat_service: "ChatService",
-    graph: Optional[Graph] = None,
-):
-    """Build and cache the graph."""
-    flow: Flow = session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        raise ValueError("Invalid flow ID")
-    other_graph = Graph.from_payload(flow.data)
-    if graph is None:
-        graph = other_graph
-    else:
-        graph = graph.update(other_graph)
-    chat_service.set_cache(flow_id, graph)
-    return graph
 
 
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
