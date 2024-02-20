@@ -51,17 +51,20 @@ export async function buildVertices({
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
+  // by not using Promise.all, we can update the UI as we build each vertex
+  // and not wait for all of them to finish
+  // by not using await, we can start building the next vertex without waiting for the previous one to finish
   for (let i = 0; i < vertices.length; i += 1) {
     if (onBuildStart) onBuildStart(vertices[i]);
     for (const id of vertices[i]) {
-      buildVertex(
+      await buildVertex({
         flowId,
         id,
         onBuildUpdate,
         onBuildError,
         verticesIds,
-        buildResults
-      );
+        buildResults,
+      });
     }
   }
 
@@ -71,14 +74,21 @@ export async function buildVertices({
   }
 }
 
-async function buildVertex(
+async function buildVertex({
   flowId,
   id,
   onBuildUpdate,
   onBuildError,
   verticesIds,
-  buildResults
-) {
+  buildResults,
+}: {
+  flowId: string;
+  id: string;
+  onBuildUpdate?: (data: any) => void;
+  onBuildError?: (title, list, idList: string[]) => void;
+  verticesIds: string[];
+  buildResults: boolean[];
+}) {
   try {
     const buildRes = await postBuildVertex(flowId, id);
     const buildData: VertexBuildTypeAPI = buildRes.data;
