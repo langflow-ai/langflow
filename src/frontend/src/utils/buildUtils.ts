@@ -47,6 +47,7 @@ export async function buildVertices({
 
   const verticesIds = vertices.flatMap((v) => v);
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
+  useFlowStore.getState().updateVerticesBuild(verticesIds);
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];

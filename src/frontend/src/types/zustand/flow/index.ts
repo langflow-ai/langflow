@@ -87,4 +87,6 @@ export type FlowStoreType = {
   buildFlow: (nodeId?: string) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  updateVerticesBuild: (vertices: string[]) => void;
+  verticesBuild: string[];
 };

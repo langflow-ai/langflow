@@ -431,6 +431,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
     });
   },
+  updateVerticesBuild: (vertices: string[]) => {
+    set({ verticesBuild: vertices });
+  },
+  verticesBuild: [],
 }));
 
 export default useFlowStore;
