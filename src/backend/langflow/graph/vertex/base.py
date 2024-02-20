@@ -2,8 +2,8 @@ import ast
 import inspect
 import types
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
-from langflow.graph.schema import InterfaceComponentTypes
 
+from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -300,9 +300,8 @@ class Vertex:
                 else:
                     params.pop(key, None)
         # Add _type to params
-        self._raw_params = params
         self.params = params
-        # TODO: Hash params dict
+        self._raw_params = params
 
     async def _build(self, user_id=None):
         """
@@ -344,7 +343,7 @@ class Vertex:
         """
         Iterates over each node in the params dictionary and builds it.
         """
-        for key, value in self.params.copy().items():
+        for key, value in self._raw_params.items():
             if self._is_node(value):
                 if value == self:
                     del self.params[key]
@@ -390,7 +389,7 @@ class Vertex:
         await self.build(requester=requester, user_id=user_id)
         return self._built_object
 
-    async def _build_node_and_update_params(self, key, node, user_id=None):
+    async def _build_node_and_update_params(self, key, node: "Vertex", user_id=None):
         """
         Builds a given node and updates the params dictionary accordingly.
         """
