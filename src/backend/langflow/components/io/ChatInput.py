@@ -11,7 +11,11 @@ class ChatInput(CustomComponent):
 
     def build_config(self):
         return {
-            "message": {"input_types": ["Text"], "display_name": "Message","multiline": True},
+            "message": {
+                "input_types": ["Text"],
+                "display_name": "Message",
+                "multiline": True,
+            },
             "sender_type": {
                 "options": ["Machine", "User"],
                 "display_name": "Sender Type",
@@ -42,4 +46,5 @@ class ChatInput(CustomComponent):
             )
         if not message:
             message = ""
+        self.status = message
         return message
