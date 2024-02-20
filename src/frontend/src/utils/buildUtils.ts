@@ -45,7 +45,7 @@ export async function buildVertices({
     vertices_layers = verticesOrder;
   }
 
-  const verticesIds = vertices_layers.flatMap((v) => v);
+  const verticesIds = vertices_layers.flat();
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().updateVerticesBuild(verticesIds);
 
