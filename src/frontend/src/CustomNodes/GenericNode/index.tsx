@@ -7,6 +7,7 @@ import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
+import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -71,7 +72,6 @@ export default function GenericNode({
 
     setHandles(count);
   }
-
   useEffect(() => {
     countHandles();
   }, [data, data.node]);
@@ -157,6 +157,78 @@ export default function GenericNode({
     );
   };
 
+  const getIconPlayOrPauseComponent = (name, className) => (
+    <IconComponent
+      name={name}
+      className={`absolute h-5 stroke-2 ${className} ml-0.5`}
+    />
+  );
+
+  const getStatusClassName = (
+    validationStatus: validationStatusType | null,
+    isBuilding: boolean
+  ) => {
+    if (validationStatus && validationStatus.valid) {
+      return "green-status";
+    } else if (validationStatus && !validationStatus.valid) {
+      return "red-status";
+    } else if (!validationStatus || isBuilding) {
+      return "yellow-status";
+    } else {
+      return "status-build-animation";
+    }
+  };
+
+  const renderIconPlayOrPauseComponents = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null,
+    isBuilding: boolean
+  ) => {
+    if (buildStatus === BuildStatus.BUILDING) {
+      return getIconPlayOrPauseComponent("Square", "red-status");
+    } else {
+      const className = getStatusClassName(validationStatus, isBuilding);
+      return <>{getIconPlayOrPauseComponent("Play", className)}</>;
+    }
+  };
+
+  const getSpecificClassFromBuildStatus = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    if (
+      buildStatus === BuildStatus.BUILDED &&
+      validationStatus &&
+      !validationStatus.valid
+    ) {
+      return "border-none ring ring-red-300";
+    } else if (buildStatus === BuildStatus.BUILDING) {
+      return "border-none ring";
+    } else {
+      return "";
+    }
+  };
+
+  const getNodeBorderClassName = (
+    selected: boolean,
+    showNode: boolean,
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    return classNames(
+      getBaseBorderClass(selected),
+      getNodeSizeClass(showNode),
+      "generic-node-div",
+      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
+    );
+  };
+
+  const getBaseBorderClass = (selected) =>
+    selected ? "border border-ring" : "border";
+
+  const getNodeSizeClass = (showNode) =>
+    showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
+
   return (
     <>
       <NodeToolbar>
@@ -181,10 +253,11 @@ export default function GenericNode({
       </NodeToolbar>
 
       <div
-        className={classNames(
-          selected ? "border border-ring" : "border",
-          showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
-          "generic-node-div"
+        className={getNodeBorderClassName(
+          selected,
+          showNode,
+          data?.build_status,
+          validationStatus
         )}
       >
         {data.node?.beta && showNode && (
@@ -396,7 +469,8 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      isBuilding ? (
+                      isBuilding ||
+                      data?.build_status === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -421,33 +495,11 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      <IconComponent
-                        name="Play"
-                        className={classNames(
-                          validationStatus && validationStatus.valid
-                            ? "green-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-2"
-                        )}
-                      />
-                      <IconComponent
-                        name="AlertCircle"
-                        className={classNames(
-                          validationStatus && !validationStatus.valid
-                            ? "red-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-2"
-                        )}
-                      />
-                      <IconComponent
-                        name="Play"
-                        className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
-                            : "status-build-animation",
-                          "absolute h-5 stroke-2"
-                        )}
-                      />
+                      {renderIconPlayOrPauseComponents(
+                        data?.build_status,
+                        validationStatus,
+                        isBuilding
+                      )}
                     </div>
                   </Tooltip>
                 </div>

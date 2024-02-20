@@ -7,6 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "reactflow";
+import { BuildStatus } from "../../../constants/enums";
 import { FlowState } from "../../tabs";
 
 export type chatInputType = {
@@ -85,4 +86,5 @@ export type FlowStoreType = {
   unselectAll: () => void;
   buildFlow: (nodeId?: string) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
+  updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
 };
