@@ -222,7 +222,7 @@ class VerticesOrderResponse(BaseModel):
     ids: List[List[str]]
 
 
-class ResultDict(BaseModel):
+class ResultData(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
@@ -240,7 +240,7 @@ class VertexBuildResponse(BaseModel):
     valid: bool
     params: Optional[str]
     """JSON string of the params."""
-    data: ResultDict
+    data: ResultData
     """Mapping of vertex ids to result dict containing the param name and result value."""
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
     """Timestamp of the build."""

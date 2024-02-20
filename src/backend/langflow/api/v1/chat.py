@@ -20,7 +20,7 @@ from langflow.api.v1.schemas import (
     BuildStatus,
     BuiltResponse,
     InitResponse,
-    ResultDict,
+    ResultData,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
@@ -322,6 +322,7 @@ async def build_vertex(
     inputs: dict = Body(None),
 ):
     """Build a vertex instead of the entire graph."""
+    start_time = time.perf_counter()
     try:
         cache = chat_service.get_cache(flow_id)
         if not cache:
@@ -336,7 +337,6 @@ async def build_vertex(
             graph = cache.get("result")
         result_dict = {}
         duration = ""
-        start_time = time.perf_counter()
         if tweaks:
             graph = process_tweaks_on_graph(graph, tweaks)
         if not (vertex := graph.get_vertex(vertex_id)):
@@ -351,13 +351,9 @@ async def build_vertex(
                 # to the frontend
                 vertex.set_artifacts()
                 artifacts = vertex.artifacts
-                timedelta = time.perf_counter() - start_time
-                duration = format_elapsed_time(timedelta)
-                result_dict = ResultDict(
+                result_dict = ResultData(
                     results=result_dict,
                     artifacts=artifacts,
-                    duration=duration,
-                    timedelta=timedelta,
                 )
                 vertex.set_result(result_dict)
             elif vertex.result is not None:
@@ -370,7 +366,7 @@ async def build_vertex(
         except Exception as exc:
             params = str(exc)
             valid = False
-            result_dict = ResultDict(results={})
+            result_dict = ResultData(results={})
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
@@ -383,6 +379,12 @@ async def build_vertex(
             data=result_dict,
             artifacts=artifacts,
         )
+
+        timedelta = time.perf_counter() - start_time
+        duration = format_elapsed_time(timedelta)
+        result_dict.duration = duration
+        result_dict.timedelta = timedelta
+
         return VertexBuildResponse(
             valid=valid,
             params=params,
