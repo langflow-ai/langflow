@@ -3,7 +3,7 @@ from typing import Callable
 
 import socketio
 from langflow.api.utils import format_elapsed_time
-from langflow.api.v1.schemas import ResultDict, VertexBuildResponse
+from langflow.api.v1.schemas import ResultData, VertexBuildResponse
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.services.database.models.flow.model import Flow
@@ -73,11 +73,16 @@ async def build_vertex(
             artifacts = vertex.artifacts
             timedelta = time.perf_counter() - start_time
             duration = format_elapsed_time(timedelta)
-            result_dict = ResultDict(results=result_dict, artifacts=artifacts, duration=duration, timedelta=timedelta)
+            result_dict = ResultData(
+                results=result_dict,
+                artifacts=artifacts,
+                duration=duration,
+                timedelta=timedelta,
+            )
         except Exception as exc:
             params = str(exc)
             valid = False
-            result_dict = ResultDict(results={})
+            result_dict = ResultData(results={})
             artifacts = {}
         set_cache(flow_id, graph)
         await log_vertex_build(
@@ -90,7 +95,9 @@ async def build_vertex(
         )
 
         # Emit the vertex build response
-        response = VertexBuildResponse(valid=valid, params=params, id=vertex.id, data=result_dict)
+        response = VertexBuildResponse(
+            valid=valid, params=params, id=vertex.id, data=result_dict
+        )
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
     except Exception as exc:
