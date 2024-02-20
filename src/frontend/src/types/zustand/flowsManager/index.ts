@@ -7,6 +7,7 @@ export type FlowsManagerStoreType = {
   currentFlow: FlowType | undefined;
   currentFlowId: string;
   setCurrentFlowId: (currentFlowId: string) => void;
+  saveLoading: boolean;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshFlows: () => Promise<void>;
