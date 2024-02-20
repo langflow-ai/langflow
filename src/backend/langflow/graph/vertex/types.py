@@ -2,6 +2,7 @@ import ast
 import json
 from typing import Callable, Dict, List, Optional, Union
 
+import yaml
 from langchain_core.messages import AIMessage
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
@@ -343,8 +344,11 @@ class ChatVertex(StatelessVertex):
                 return str(task.info)
             else:
                 return f"Task {self.task_id} is not running"
-        if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+        if self.artifacts:
+            # dump as a yaml string
+            yaml_str = yaml.dump(self.artifacts, default_flow_style=False)
+            return yaml_str
+        return super()._built_object_repr()
 
     async def _run(self, *args, **kwargs):
         if self.is_interface_component:
