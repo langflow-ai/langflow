@@ -175,7 +175,7 @@ class ChatService(Service):
         await self.send_json(client_id, response)
         self.chat_history.add_message(client_id, response)
 
-    def set_cache(self, client_id: str, langchain_object: Any) -> bool:
+    def set_cache(self, client_id: str, data: Any) -> bool:
         """
         Set the cache for a client.
         """
@@ -183,8 +183,8 @@ class ChatService(Service):
         # so we need to change it to something else
 
         result_dict = {
-            "result": langchain_object,
-            "type": type(langchain_object),
+            "result": data,
+            "type": type(data),
         }
         self.cache_service.upsert(client_id, result_dict)
         return client_id in self.cache_service
