@@ -10,6 +10,8 @@ export type FlowType = {
   style?: FlowStyleType;
   is_component?: boolean;
   last_tested_version?: string;
+  updated_at?: string;
+  date_created?: string;
   parent?: string;
 };
 

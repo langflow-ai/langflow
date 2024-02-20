@@ -3,7 +3,6 @@ from typing import Optional
 
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
     HTTPException,
     WebSocket,
@@ -26,7 +25,6 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.graph.graph.base import Graph
-from langflow.processing.process import process_tweaks_on_graph
 from langflow.services.auth.utils import (
     get_current_active_user,
     get_current_user_for_websocket,
@@ -318,12 +316,11 @@ async def build_vertex(
     vertex_id: str,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
-    tweaks: dict = Body(None),
-    inputs: dict = Body(None),
 ):
     """Build a vertex instead of the entire graph."""
     start_time = time.perf_counter()
     try:
+        start_time = time.perf_counter()
         cache = chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
@@ -337,10 +334,8 @@ async def build_vertex(
             graph = cache.get("result")
         result_dict = {}
         duration = ""
-        if tweaks:
-            graph = process_tweaks_on_graph(graph, tweaks)
-        if not (vertex := graph.get_vertex(vertex_id)):
-            raise ValueError(f"Invalid vertex {vertex_id}")
+
+        vertex = graph.get_vertex(vertex_id)
         try:
             if not vertex.pinned or not vertex._built:
                 await vertex.build(user_id=current_user.id)
@@ -364,7 +359,7 @@ async def build_vertex(
                 raise ValueError(f"No result found for vertex {vertex_id}")
             chat_service.set_cache(flow_id, graph)
         except Exception as exc:
-            params = str(exc)
+            params = repr(exc)
             valid = False
             result_dict = ResultData(results={})
             artifacts = {}
