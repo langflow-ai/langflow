@@ -25,7 +25,7 @@ export async function buildVertices({
 }: BuildVerticesParams) {
   let orderResponse = await getVerticesOrder(flowId, nodeId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-  let vertices: Array<Array<string>> = [];
+  let vertices_layers: Array<Array<string>> = [];
 
   if (nodeId) {
     for (let i = 0; i < verticesOrder.length; i += 1) {
@@ -35,27 +35,25 @@ export async function buildVertices({
         // If there's a nodeId, we want to run just that component and not the entire layer
         // because a layer contains dependencies for the next layer
         // and we are stopping at the layer that contains the nodeId
-        vertices.push([innerArray[idIndex]]);
+        vertices_layers.push([innerArray[idIndex]]);
         break; // Stop searching after finding the first occurrence
       }
       // If the targetId is not found, include the entire inner array
-      vertices.push(innerArray);
+      vertices_layers.push(innerArray);
     }
   } else {
-    vertices = verticesOrder;
+    vertices_layers = verticesOrder;
   }
 
-  const verticesIds = vertices.flatMap((v) => v);
+  const verticesIds = vertices_layers.flatMap((v) => v);
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().updateVerticesBuild(verticesIds);
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
-  // by not using Promise.all, we can update the UI as we build each vertex
-  // and not wait for all of them to finish
-  for (let i = 0; i < vertices.length; i += 1) {
-    if (onBuildStart) onBuildStart(vertices[i]);
-    for (const id of vertices[i]) {
+  for (const layer of vertices_layers) {
+    if (onBuildStart) onBuildStart(layer);
+    for (const id of layer) {
       await buildVertex({
         flowId,
         id,
