@@ -1,13 +1,12 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 import duckdb
+from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.services.deps import get_monitor_service
-
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDict
+    from langflow.api.v1.schemas import ResultData
 
 
 INDEX_KEY = "index"
@@ -44,7 +43,9 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     return columns
 
 
-def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, model: Type[BaseModel]):
+def drop_and_create_table_if_schema_mismatch(
+    db_path: str, table_name: str, model: Type[BaseModel]
+):
     with duckdb.connect(db_path) as conn:
         # Get the current schema from the database
         try:
@@ -64,8 +65,12 @@ def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, mode
                     conn.execute(f"CREATE SEQUENCE seq_{table_name} START 1;")
                 except duckdb.CatalogException:
                     pass
-                desired_schema[INDEX_KEY] = f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
-            columns_sql = ", ".join(f"{name} {data_type}" for name, data_type in desired_schema.items())
+                desired_schema[INDEX_KEY] = (
+                    f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
+                )
+            columns_sql = ", ".join(
+                f"{name} {data_type}" for name, data_type in desired_schema.items()
+            )
             create_table_sql = f"CREATE TABLE {table_name} ({columns_sql})"
             conn.execute(create_table_sql)
 
@@ -133,7 +138,7 @@ async def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultDict",
+    data: "ResultData",
     artifacts: Optional[dict] = None,
 ):
     try:
