@@ -5,6 +5,7 @@ from langchain.chains.base import Chain
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
+from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     ChatVertex,
@@ -453,4 +454,18 @@ class Graph:
     def sort_vertices(self) -> List[List[str]]:
         """Sorts the vertices in the graph."""
         vertices = self.layered_topological_sort()
+        # Sort each layer to have ChatInput or ChatOutput first
+        # each layer consists of a list of vertex ids
+        # formatted as ComponentName-5letters
+        # e.g. ChatInput-abcde
+        # we just need to check if the vertex id contains ChatInput or ChatOutput
+        # and sort the layers accordingly
+        # InterfaceComponentTypes is an enum
+        for layer in vertices:
+            layer.sort(
+                key=lambda x: any(
+                    InterfaceComponentTypes.CHAT_INPUT.value in x,
+                    InterfaceComponentTypes.CHAT_OUTPUT.value in x,
+                )
+            )
         return self.sort_chat_inputs_first(vertices)
