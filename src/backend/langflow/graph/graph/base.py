@@ -94,6 +94,7 @@ class Graph:
                 or vertex.__repr__() != other.get_vertex(vertex.id).__repr__()
             ):
                 vertex.data = other.get_vertex(vertex.id).data
+                vertex.params = {}
                 vertex._build_params()
                 vertex.graph = self
                 vertex._built = False
@@ -461,11 +462,12 @@ class Graph:
         # we just need to check if the vertex id contains ChatInput or ChatOutput
         # and sort the layers accordingly
         # InterfaceComponentTypes is an enum
+        # check all values of the enum and sort the layers
         for layer in vertices:
             layer.sort(
                 key=lambda x: any(
-                    InterfaceComponentTypes.CHAT_INPUT.value in x,
-                    InterfaceComponentTypes.CHAT_OUTPUT.value in x,
+                    comp_type.value in x
+                    for comp_type in InterfaceComponentTypes.__members__.values()
                 )
             )
         return self.sort_chat_inputs_first(vertices)
