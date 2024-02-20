@@ -14,6 +14,7 @@ from langflow.utils.util import sync_to_async
 from loguru import logger
 
 if TYPE_CHECKING:
+    from langflow.api.v1.schemas import ResultDict
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
 
@@ -49,6 +50,7 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         self.should_run = True
+        self.result: Optional["ResultDict"] = None
         try:
             self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
@@ -78,6 +80,9 @@ class Vertex:
                     source=self, target=target
                 )
         return edge_results
+
+    def set_result(self, result: "ResultDict") -> None:
+        self.result = result
 
     def get_built_result(self):
         # If the Vertex.type is a power component
