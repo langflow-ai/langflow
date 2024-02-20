@@ -53,7 +53,6 @@ export async function buildVertices({
   const buildResults: Array<boolean> = [];
   // by not using Promise.all, we can update the UI as we build each vertex
   // and not wait for all of them to finish
-  // by not using await, we can start building the next vertex without waiting for the previous one to finish
   for (let i = 0; i < vertices.length; i += 1) {
     if (onBuildStart) onBuildStart(vertices[i]);
     for (const id of vertices[i]) {
