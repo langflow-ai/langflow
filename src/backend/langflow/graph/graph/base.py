@@ -7,12 +7,8 @@ from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    ChatVertex,
-    FileToolVertex,
-    LLMVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
+                                         ToolkitVertex)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from loguru import logger
@@ -216,7 +212,10 @@ class Graph:
 
     def get_vertex(self, vertex_id: str) -> Union[None, Vertex]:
         """Returns a vertex by id."""
-        return self.vertex_map.get(vertex_id)
+        try:
+            return self.vertex_map.get(vertex_id)
+        except KeyError:
+            raise ValueError(f"Vertex {vertex_id} not found")
 
     def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
