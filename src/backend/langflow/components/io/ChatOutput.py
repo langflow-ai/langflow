@@ -61,4 +61,5 @@ class ChatOutput(CustomComponent):
             )
         if not message:
             message = ""
+        self.status = message
         return message
