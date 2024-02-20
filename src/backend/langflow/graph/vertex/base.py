@@ -1,8 +1,7 @@
 import ast
 import inspect
 import types
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
-                    Optional)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
@@ -306,8 +305,8 @@ class Vertex:
                 else:
                     params.pop(key, None)
         # Add _type to params
-        self.params = params
-        self._raw_params = params.copy()
+        self.params = {}
+        self._raw_params = params
 
     async def _build(self, user_id=None):
         """
