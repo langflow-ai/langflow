@@ -53,36 +53,52 @@ export async function buildVertices({
   for (let i = 0; i < vertices.length; i += 1) {
     if (onBuildStart) onBuildStart(vertices[i]);
     for (const id of vertices[i]) {
-      try {
-        const buildRes = await postBuildVertex(flowId, id);
-        const buildData: VertexBuildTypeAPI = buildRes.data;
-        if (onBuildUpdate) {
-          let data = {};
-          if (!buildData.valid) {
-            onBuildError!(
-              "Error Building Component",
-              [buildData.params],
-              verticesIds
-            );
-          }
-          data[buildData.id] = buildData;
-          onBuildUpdate({ data, id: buildData.id });
-        }
-        buildResults.push(buildData.valid);
-      } catch (error) {
-        onBuildError!(
-          "Error Building Component",
-          [
-            (error as AxiosError<any>).response?.data?.detail ??
-              "Unknown Error",
-          ],
-          verticesIds
-        );
-      }
+      buildVertex(
+        flowId,
+        id,
+        onBuildUpdate,
+        onBuildError,
+        verticesIds,
+        buildResults
+      );
     }
   }
+
   if (onBuildComplete) {
     const allNodesValid = buildResults.every((result) => result);
     onBuildComplete(allNodesValid);
+  }
+}
+
+async function buildVertex(
+  flowId,
+  id,
+  onBuildUpdate,
+  onBuildError,
+  verticesIds,
+  buildResults
+) {
+  try {
+    const buildRes = await postBuildVertex(flowId, id);
+    const buildData: VertexBuildTypeAPI = buildRes.data;
+    if (onBuildUpdate) {
+      let data = {};
+      if (!buildData.valid) {
+        onBuildError!(
+          "Error Building Component",
+          [buildData.params],
+          verticesIds
+        );
+      }
+      data[buildData.id] = buildData;
+      onBuildUpdate({ data, id: buildData.id });
+    }
+    buildResults.push(buildData.valid);
+  } catch (error) {
+    onBuildError!(
+      "Error Building Component",
+      [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
+      verticesIds
+    );
   }
 }
