@@ -19,7 +19,7 @@ from langflow.api.v1.schemas import (
     BuildStatus,
     BuiltResponse,
     InitResponse,
-    ResultDict,
+    ResultData,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
@@ -318,6 +318,7 @@ async def build_vertex(
     current_user=Depends(get_current_active_user),
 ):
     """Build a vertex instead of the entire graph."""
+    start_time = time.perf_counter()
     try:
         start_time = time.perf_counter()
         cache = chat_service.get_cache(flow_id)
@@ -327,7 +328,7 @@ async def build_vertex(
                 f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
             )
             graph = build_and_cache_graph(
-                flow_id=flow_id, session=get_session(), chat_service=chat_service
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")
@@ -345,13 +346,9 @@ async def build_vertex(
                 # to the frontend
                 vertex.set_artifacts()
                 artifacts = vertex.artifacts
-                timedelta = time.perf_counter() - start_time
-                duration = format_elapsed_time(timedelta)
-                result_dict = ResultDict(
+                result_dict = ResultData(
                     results=result_dict,
                     artifacts=artifacts,
-                    duration=duration,
-                    timedelta=timedelta,
                 )
                 vertex.set_result(result_dict)
             elif vertex.result is not None:
@@ -364,7 +361,7 @@ async def build_vertex(
         except Exception as exc:
             params = repr(exc)
             valid = False
-            result_dict = ResultDict(results={})
+            result_dict = ResultData(results={})
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
@@ -377,6 +374,12 @@ async def build_vertex(
             data=result_dict,
             artifacts=artifacts,
         )
+
+        timedelta = time.perf_counter() - start_time
+        duration = format_elapsed_time(timedelta)
+        result_dict.duration = duration
+        result_dict.timedelta = timedelta
+
         return VertexBuildResponse(
             valid=valid,
             params=params,

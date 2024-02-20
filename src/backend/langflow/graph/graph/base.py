@@ -417,6 +417,7 @@ class Graph:
                 if edge not in edges:
                     edges.append(edge)
         vertices = self.layered_topological_sort(vertices, edges)
+        vertices = self.sort_interface_components_first(vertices)
         return self.sort_chat_inputs_first(vertices)
 
     def layered_topological_sort(
@@ -522,11 +523,23 @@ class Graph:
         # and sort the layers accordingly
         # InterfaceComponentTypes is an enum
         # check all values of the enum and sort the layers
-        for layer in vertices:
-            layer.sort(
-                key=lambda x: any(
-                    comp_type.value in x
-                    for comp_type in InterfaceComponentTypes.__members__.values()
-                )
-            )
+        vertices = self.sort_interface_components_first(vertices)
         return self.sort_chat_inputs_first(vertices)
+
+    def sort_interface_components_first(self, vertices: List[Vertex]) -> List[Vertex]:
+        """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
+
+        def contains_interface_component(vertex):
+            return any(
+                component.value in vertex for component in InterfaceComponentTypes
+            )
+
+        # Sort each inner list so that vertices containing ChatInput or ChatOutput come first
+        sorted_vertices = [
+            sorted(
+                inner_list,
+                key=lambda vertex: not contains_interface_component(vertex),
+            )
+            for inner_list in vertices
+        ]
+        return sorted_vertices

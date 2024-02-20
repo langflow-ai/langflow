@@ -14,7 +14,7 @@ from langflow.utils.util import sync_to_async
 from loguru import logger
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDict
+    from langflow.api.v1.schemas import ResultData
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
 
@@ -50,7 +50,7 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         self.should_run = True
-        self.result: Optional["ResultDict"] = None
+        self.result: Optional["ResultData"] = None
         try:
             self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
@@ -81,7 +81,7 @@ class Vertex:
                 )
         return edge_results
 
-    def set_result(self, result: "ResultDict") -> None:
+    def set_result(self, result: "ResultData") -> None:
         self.result = result
 
     def get_built_result(self):
@@ -306,7 +306,7 @@ class Vertex:
                     params.pop(key, None)
         # Add _type to params
         self.params = params
-        self._raw_params = params
+        self._raw_params = params.copy()
 
     async def _build(self, user_id=None):
         """
