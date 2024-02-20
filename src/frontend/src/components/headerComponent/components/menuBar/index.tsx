@@ -13,6 +13,8 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { cn } from "../../../../utils/utils";
+import Tooltip from "../../../TooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
@@ -26,6 +28,7 @@ export const MenuBar = ({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
+  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
   const n = useFlowStore((state) => state.nodes);
 
@@ -112,6 +115,27 @@ export const MenuBar = ({
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
       </div>
+      <Tooltip
+        title={
+          "Last saved at " +
+          new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+          })
+        }
+      >
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <IconComponent
+            name={saveLoading ? "Loader2" : "CheckCircle2"}
+            className={cn(
+              "h-4 w-4",
+              saveLoading ? "animate-spin" : "animate-wiggle"
+            )}
+          />
+          {saveLoading ? "Saving..." : "Saved"}
+        </div>
+      </Tooltip>
     </div>
   ) : (
     <></>
