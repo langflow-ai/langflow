@@ -157,7 +157,7 @@ export default function GenericNode({
     );
   };
 
-  const getIconComponent = (name, className) => (
+  const getIconPlayOrPauseComponent = (name, className) => (
     <IconComponent
       name={name}
       className={`absolute h-5 stroke-2 ${className} ml-0.5`}
@@ -179,20 +179,20 @@ export default function GenericNode({
     }
   };
 
-  const renderIconComponents = (
+  const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null,
     isBuilding: boolean
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return getIconComponent("Square", "red-status");
+      return getIconPlayOrPauseComponent("Square", "red-status");
     } else {
       const className = getStatusClassName(validationStatus, isBuilding);
-      return <>{getIconComponent("Play", className)}</>;
+      return <>{getIconPlayOrPauseComponent("Play", className)}</>;
     }
   };
 
-  const getSpecificClass = (
+  const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
@@ -209,7 +209,7 @@ export default function GenericNode({
     }
   };
 
-  const getNodeClassName = (
+  const getNodeBorderClassName = (
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
@@ -219,7 +219,7 @@ export default function GenericNode({
       getBaseBorderClass(selected),
       getNodeSizeClass(showNode),
       "generic-node-div",
-      getSpecificClass(buildStatus, validationStatus)
+      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
     );
   };
 
@@ -253,7 +253,7 @@ export default function GenericNode({
       </NodeToolbar>
 
       <div
-        className={getNodeClassName(
+        className={getNodeBorderClassName(
           selected,
           showNode,
           data?.build_status,
@@ -495,7 +495,7 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      {renderIconComponents(
+                      {renderIconPlayOrPauseComponents(
                         data?.build_status,
                         validationStatus,
                         isBuilding
