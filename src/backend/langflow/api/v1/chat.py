@@ -330,7 +330,7 @@ async def build_vertex(
                 f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
             )
             graph = build_and_cache_graph(
-                flow_id=flow_id, session=get_session(), chat_service=chat_service
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")
