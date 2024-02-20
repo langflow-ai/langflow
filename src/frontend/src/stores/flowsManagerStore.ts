@@ -52,6 +52,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     });
   },
   currentFlow: undefined,
+  saveLoading: false,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
@@ -82,7 +83,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (saveTimeoutId) {
       clearTimeout(saveTimeoutId);
     }
-
+    set({ saveLoading: true });
     // Set up a new timeout.
     saveTimeoutId = setTimeout(() => {
       if (get().currentFlow) {
@@ -94,6 +95,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     }, 300); // Delay of 300ms.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true })
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
         .then((updatedFlow) => {
@@ -115,6 +117,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             //update tabs state
 
             resolve();
+            set({ saveLoading: false })
           }
         })
         .catch((err) => {

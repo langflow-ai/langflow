@@ -17,21 +17,3 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
 checkHasStore().then((res) => {
   useStoreStore.setState({ hasStore: res?.enabled ?? false });
 });
-
-const fetchApiData = async () => {
-  useStoreStore.setState({ loadingApiKey: true });
-  try {
-    const res = await checkHasApiKey();
-
-    useStoreStore.setState({
-      loadingApiKey: false,
-      validApiKey: res?.is_valid ?? false,
-      hasApiKey: res?.has_api_key ?? false,
-    });
-  } catch (e) {
-    useStoreStore.setState({ loadingApiKey: false });
-    console.log(e);
-  }
-};
-
-fetchApiData();
