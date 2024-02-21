@@ -2,13 +2,13 @@ import { ReactNode, useState } from "react";
 import useFlowStore from "../../stores/flowStore";
 import { NodeType } from "../../types/flow";
 import { isInputType, isOutputType } from "../../utils/reactflowUtils";
-import { classNames } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
 import IOOutputView from "../IOOutputView";
 import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 
 export default function IOView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
@@ -18,14 +18,14 @@ export default function IOView(): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const categories = getCategories();
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    categories[0]
-  );
+  const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [showChat, setShowChat] = useState<boolean>(false);
   const [selectedView, setSelectedView] = useState<{
     type: string;
     id?: string;
   }>(handleInitialView());
+
+  type CategoriesType = { name: string; icon: string };
 
   function handleInitialView() {
     if (
@@ -38,10 +38,11 @@ export default function IOView(): JSX.Element {
   }
 
   function getCategories() {
-    const categories: string[] = [];
-    if (inputs.length > 0) categories.push("Inputs");
+    const categories: CategoriesType[] = [];
+    if (inputs.length > 0)
+      categories.push({ name: "Inputs", icon: "TextCursorInput" });
     if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
-      categories.push("Outputs");
+      categories.push({ name: "Outputs", icon: "TerminalSquare" });
     return categories;
   }
 
@@ -56,7 +57,7 @@ export default function IOView(): JSX.Element {
   }
 
   function UpdateAccordion() {
-    return selectedCategory === "Inputs" ? inputs : outputs;
+    return categories[selectedCategory].name === "Inputs" ? inputs : outputs;
   }
 
   return (
@@ -66,24 +67,19 @@ export default function IOView(): JSX.Element {
           {categories.map((category, index) => {
             return (
               //hide chat button if chat is alredy on the view
-              <button
-                onClick={() => setSelectedCategory(category)}
-                className={classNames(
-                  "cursor flex items-center rounded-md rounded-b-none px-1",
-                  category == selectedCategory
-                    ? "border border-b-0 border-muted-foreground"
-                    : "hover:bg-muted-foreground"
-                )}
+              <Button
+                onClick={() => setSelectedCategory(index)}
+                variant={index === selectedCategory ? "primary" : "secondary"}
                 key={index}
               >
                 <IconComponent
-                  name="Variable"
+                  name={category.icon}
                   className=" file-component-variable"
                 />
                 <span className="file-component-variables-span text-md">
-                  {category}
+                  {category.name}
                 </span>
-              </button>
+              </Button>
             );
           })}
           {(outputs.map((output) => output.type).includes("ChatOutput") ||
@@ -137,7 +133,7 @@ export default function IOView(): JSX.Element {
                 >
                   <div className="file-component-tab-column">
                     {node &&
-                      (selectedCategory === "Inputs" ? (
+                      (categories[selectedCategory].name === "Inputs" ? (
                         <IOInputField
                           inputType={input.type}
                           inputId={input.id}
