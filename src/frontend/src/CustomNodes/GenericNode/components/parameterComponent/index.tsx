@@ -406,10 +406,10 @@ export default function ParameterComponent({
         )}
         {proxy ? (
           <ShadTooltip content={<span>{proxy.id}</span>}>
-            <span className="z-50">{title}</span>
+            <span className="pointer-events-none z-50 ">{title}</span>
           </ShadTooltip>
         ) : (
-          <span className="z-50">{title}</span>
+          <span className="pointer-events-none z-50">{title}</span>
         )}
 
         {left === true &&
