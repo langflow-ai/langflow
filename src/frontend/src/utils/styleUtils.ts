@@ -34,6 +34,7 @@ import {
   FileSearch,
   FileSearch2,
   FileText,
+  Cable,
   FileUp,
   Fingerprint,
   FolderPlus,
@@ -70,6 +71,7 @@ import {
   Paperclip,
   Pencil,
   Pin,
+  Play,
   Plus,
   Redo,
   RefreshCcw,
@@ -108,6 +110,8 @@ import {
   X,
   XCircle,
   Zap,
+  FlaskConical,
+  AlertCircle,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -237,6 +241,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
@@ -394,7 +399,9 @@ export const nodeIconsLucide: iconsType = {
   Combine,
   TerminalIcon,
   Repeat,
-  io: ArrowDownUp,
+  io: Cable,
   ScreenShare,
   Code,
+  FlaskConical,
+  AlertCircle,
 };

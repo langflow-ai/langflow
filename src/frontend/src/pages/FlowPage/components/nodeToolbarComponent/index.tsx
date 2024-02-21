@@ -35,7 +35,6 @@ export default function NodeToolbarComponent({
   numberOfHandles,
   showNode,
   name = "code",
-  openAdvancedModal,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
@@ -81,11 +80,6 @@ export default function NodeToolbarComponent({
     window.open(url, "_blank", "noreferrer");
   };
 
-  useEffect(() => {
-    if (openAdvancedModal) {
-      setShowModalAdvanced(true);
-    }
-  }, [openAdvancedModal]);
 
   useEffect(() => {
     if (!showModalAdvanced) {

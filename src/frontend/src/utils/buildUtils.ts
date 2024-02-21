@@ -1,5 +1,7 @@
 import { AxiosError } from "axios";
+import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
+import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 
 type BuildVerticesParams = {
@@ -8,7 +10,8 @@ type BuildVerticesParams = {
   onProgressUpdate?: (progress: number) => void; // Replace number with the actual type if it's not a number
   onBuildUpdate?: (data: any) => void; // Replace any with the actual type of data
   onBuildComplete?: (allNodesValid: boolean) => void;
-  onBuildError?: (title, list) => void;
+  onBuildError?: (title, list, idList: string[]) => void;
+  onBuildStart?: (idList: string[]) => void;
 };
 
 export async function buildVertices({
@@ -18,59 +21,92 @@ export async function buildVertices({
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
+  onBuildStart,
 }: BuildVerticesParams) {
-  let orderResponse = await getVerticesOrder(flowId);
+  let orderResponse = await getVerticesOrder(flowId, nodeId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-  let vertices: Array<Array<string>> = [];
+  let vertices_layers: Array<Array<string>> = [];
+
   if (nodeId) {
     for (let i = 0; i < verticesOrder.length; i += 1) {
       const innerArray = verticesOrder[i];
       const idIndex = innerArray.indexOf(nodeId);
-
       if (idIndex !== -1) {
-        // If the targetId is found in the inner array, cut the array before the id
-        vertices.push(innerArray.slice(0, idIndex + 1));
+        // If there's a nodeId, we want to run just that component and not the entire layer
+        // because a layer contains dependencies for the next layer
+        // and we are stopping at the layer that contains the nodeId
+        vertices_layers.push([innerArray[idIndex]]);
         break; // Stop searching after finding the first occurrence
       }
       // If the targetId is not found, include the entire inner array
-      vertices.push(innerArray);
+      vertices_layers.push(innerArray);
     }
   } else {
-    vertices = verticesOrder;
+    vertices_layers = verticesOrder;
   }
 
+  const verticesIds = vertices_layers.flat();
+  useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
+  useFlowStore.getState().updateVerticesBuild(verticesIds);
+
+  // Set each vertex state to building
   const buildResults: Array<boolean> = [];
-  for (let i = 0; i < vertices.length; i += 1) {
-    await Promise.all(
-      vertices[i].map(async (id) => {
-        try {
-          const buildRes = await postBuildVertex(flowId, id);
-          const buildData: VertexBuildTypeAPI = buildRes.data;
-          if (onBuildUpdate) {
-            let data = {};
-            if (!buildData.valid) {
-              if (onBuildError) {
-                onBuildError("Error Building Component", [buildData.params]);
-              }
-            }
-            data[buildData.id] = buildData;
-            onBuildUpdate({ data, id: buildData.id });
-          }
-          buildResults.push(buildData.valid);
-        } catch (error) {
-          if (onBuildError) {
-            console.log(error);
-            onBuildError("Error Building Component", [
-              (error as AxiosError<any>).response?.data?.detail ??
-                "Unknown Error",
-            ]);
-          }
-        }
-      })
-    );
+  for (const layer of vertices_layers) {
+    if (onBuildStart) onBuildStart(layer);
+    for (const id of layer) {
+      await buildVertex({
+        flowId,
+        id,
+        onBuildUpdate,
+        onBuildError,
+        verticesIds,
+        buildResults,
+      });
+    }
   }
+
   if (onBuildComplete) {
     const allNodesValid = buildResults.every((result) => result);
     onBuildComplete(allNodesValid);
+  }
+}
+
+async function buildVertex({
+  flowId,
+  id,
+  onBuildUpdate,
+  onBuildError,
+  verticesIds,
+  buildResults,
+}: {
+  flowId: string;
+  id: string;
+  onBuildUpdate?: (data: any) => void;
+  onBuildError?: (title, list, idList: string[]) => void;
+  verticesIds: string[];
+  buildResults: boolean[];
+}) {
+  try {
+    const buildRes = await postBuildVertex(flowId, id);
+    const buildData: VertexBuildTypeAPI = buildRes.data;
+    if (onBuildUpdate) {
+      let data = {};
+      if (!buildData.valid) {
+        onBuildError!(
+          "Error Building Component",
+          [buildData.params],
+          verticesIds
+        );
+      }
+      data[buildData.id] = buildData;
+      onBuildUpdate({ data, id: buildData.id });
+    }
+    buildResults.push(buildData.valid);
+  } catch (error) {
+    onBuildError!(
+      "Error Building Component",
+      [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
+      verticesIds
+    );
   }
 }

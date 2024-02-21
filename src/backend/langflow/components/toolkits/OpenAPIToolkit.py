@@ -1,8 +1,7 @@
+from langchain_community.agent_toolkits.openapi.toolkit import BaseToolkit, OpenAPIToolkit
+from langchain_community.utilities.requests import TextRequestsWrapper
 from langflow import CustomComponent
 from langflow.field_typing import AgentExecutor
-from typing import Callable
-from langchain_community.utilities.requests import TextRequestsWrapper
-from langchain_community.agent_toolkits.openapi.toolkit import OpenAPIToolkit
 
 
 class OpenAPIToolkitComponent(CustomComponent):
@@ -19,5 +18,5 @@ class OpenAPIToolkitComponent(CustomComponent):
         self,
         json_agent: AgentExecutor,
         requests_wrapper: TextRequestsWrapper,
-    ) -> Callable:
+    ) -> BaseToolkit:
         return OpenAPIToolkit(json_agent=json_agent, requests_wrapper=requests_wrapper)

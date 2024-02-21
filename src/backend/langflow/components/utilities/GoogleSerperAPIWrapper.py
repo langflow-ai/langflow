@@ -1,9 +1,9 @@
-from langflow import CustomComponent
-from typing import Dict, Optional
+from typing import Dict
 
 # Assuming the existence of GoogleSerperAPIWrapper class in the serper module
 # If this class does not exist, you would need to create it or import the appropriate class from another module
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
+from langflow import CustomComponent
 
 
 class GoogleSerperAPIWrapperComponent(CustomComponent):
@@ -42,6 +42,5 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
     def build(
         self,
         serper_api_key: str,
-        result_key_for_type: Optional[Dict[str, str]] = None,
     ) -> GoogleSerperAPIWrapper:
-        return GoogleSerperAPIWrapper(result_key_for_type=result_key_for_type, serper_api_key=serper_api_key)
+        return GoogleSerperAPIWrapper(serper_api_key=serper_api_key)

@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic.v1.types import SecretStr
 from langflow import CustomComponent
 from typing import Optional, Union, Callable
 from langflow.field_typing import BaseLanguageModel

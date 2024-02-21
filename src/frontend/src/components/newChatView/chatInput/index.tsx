@@ -90,7 +90,7 @@ export default function ChatInput({
                 : "bg-chat-send text-background"
             )}
             disabled={lockChat}
-            onClick={(): void => sendMessage()}
+            onClick={(): void => sendMessage(repeat)}
           >
             {lockChat ? (
               <IconComponent

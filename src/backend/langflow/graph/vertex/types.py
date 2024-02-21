@@ -2,11 +2,12 @@ import ast
 import json
 from typing import Callable, Dict, List, Optional, Union
 
+import yaml
 from langchain_core.messages import AIMessage
-
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema import Record
 from langflow.utils.schemas import ChatOutputResponse
 
 
@@ -118,9 +119,11 @@ class DocumentLoaderVertex(StatefulVertex):
         # show how many documents are in the list?
 
         if not isinstance(self._built_object, UnbuiltObject):
-            avg_length = sum(len(doc.page_content) for doc in self._built_object if hasattr(doc, "page_content")) / len(
-                self._built_object
-            )
+            avg_length = sum(
+                len(doc.page_content)
+                for doc in self._built_object
+                if hasattr(doc, "page_content")
+            ) / len(self._built_object)
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             Documents: {self._built_object[:3]}..."""
@@ -193,7 +196,9 @@ class TextSplitterVertex(StatefulVertex):
         # show how many documents are in the list?
 
         if not isinstance(self._built_object, UnbuiltObject):
-            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(self._built_object)
+            avg_length = sum(len(doc.page_content) for doc in self._built_object) / len(
+                self._built_object
+            )
             return f"""{self.vertex_type}({len(self._built_object)} documents)
             \nAvg. Document Length (characters): {int(avg_length)}
             \nDocuments: {self._built_object[:3]}..."""
@@ -240,18 +245,27 @@ class PromptVertex(StatelessVertex):
         user_id = kwargs.get("user_id", None)
         tools = kwargs.get("tools", [])
         if not self._built or force:
-            if "input_variables" not in self.params or self.params["input_variables"] is None:
+            if (
+                "input_variables" not in self.params
+                or self.params["input_variables"] is None
+            ):
                 self.params["input_variables"] = []
             # Check if it is a ZeroShotPrompt and needs a tool
             if "ShotPrompt" in self.vertex_type:
-                tools = [tool_node.build(user_id=user_id) for tool_node in tools] if tools is not None else []
+                tools = (
+                    [tool_node.build(user_id=user_id) for tool_node in tools]
+                    if tools is not None
+                    else []
+                )
                 # flatten the list of tools if it is a list of lists
                 # first check if it is a list
                 if tools and isinstance(tools, list) and isinstance(tools[0], list):
                     tools = flatten_list(tools)
                 self.params["tools"] = tools
                 prompt_params = [
-                    key for key, value in self.params.items() if isinstance(value, str) and key != "format_instructions"
+                    key
+                    for key, value in self.params.items()
+                    if isinstance(value, str) and key != "format_instructions"
                 ]
             else:
                 prompt_params = ["template"]
@@ -261,14 +275,20 @@ class PromptVertex(StatelessVertex):
                     prompt_text = self.params[param]
                     variables = extract_input_variables_from_prompt(prompt_text)
                     self.params["input_variables"].extend(variables)
-                self.params["input_variables"] = list(set(self.params["input_variables"]))
+                self.params["input_variables"] = list(
+                    set(self.params["input_variables"])
+                )
             elif isinstance(self.params, dict):
                 self.params.pop("input_variables", None)
 
             await self._build(user_id=user_id)
 
     def _built_object_repr(self):
-        if not self.artifacts or self._built_object is None or not hasattr(self._built_object, "format"):
+        if (
+            not self.artifacts
+            or self._built_object is None
+            or not hasattr(self._built_object, "format")
+        ):
             return super()._built_object_repr()
         elif isinstance(self._built_object, UnbuiltObject):
             return super()._built_object_repr()
@@ -280,7 +300,9 @@ class PromptVertex(StatelessVertex):
         # so the prompt format doesn't break
         artifacts.pop("handle_keys", None)
         try:
-            if not hasattr(self._built_object, "template") and hasattr(self._built_object, "prompt"):
+            if not hasattr(self._built_object, "template") and hasattr(
+                self._built_object, "prompt"
+            ):
                 template = self._built_object.prompt.template
             else:
                 template = self._built_object.template
@@ -288,7 +310,11 @@ class PromptVertex(StatelessVertex):
                 if value:
                     replace_key = "{" + key + "}"
                     template = template.replace(replace_key, value)
-            return template if isinstance(template, str) else f"{self.vertex_type}({template})"
+            return (
+                template
+                if isinstance(template, str)
+                else f"{self.vertex_type}({template})"
+            )
         except KeyError:
             return str(self._built_object)
 
@@ -318,8 +344,11 @@ class ChatVertex(StatelessVertex):
                 return str(task.info)
             else:
                 return f"Task {self.task_id} is not running"
-        if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+        if self.artifacts:
+            # dump as a yaml string
+            yaml_str = yaml.dump(self.artifacts, default_flow_style=False)
+            return yaml_str
+        return super()._built_object_repr()
 
     async def _run(self, *args, **kwargs):
         if self.is_interface_component:
@@ -337,12 +366,16 @@ class ChatVertex(StatelessVertex):
                     if isinstance(self._built_object, dict):
                         # Turn the dict into a pleasing to
                         # read JSON inside a code block
-                        self._built_object = dict_to_codeblock(self._built_object)
+                        message = dict_to_codeblock(self._built_object)
+                    elif isinstance(self._built_object, Record):
+                        message = self._built_object.text
                     elif not isinstance(self._built_object, str):
-                        self._built_object = str(self._built_object)
+                        message = str(self._built_object)
+                    else:
+                        message = self._built_object
 
                     artifacts = ChatOutputResponse(
-                        message=self._built_object,
+                        message=message,
                         sender=sender,
                         sender_name=sender_name,
                     )
@@ -352,6 +385,52 @@ class ChatVertex(StatelessVertex):
 
         else:
             await super()._run(*args, **kwargs)
+
+
+class RoutingVertex(StatelessVertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="routing")
+        self.use_result = True
+        self.steps = [self._build, self._run]
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()
+        return super()._built_object_repr()
+
+    def _build(self, *args, **kwargs):
+        super()._build(*args, **kwargs)
+
+        # After building, the _built_object should be a dict with
+        # {"result": Any, "condition": bool}
+        # if true, we need to set should_run attr in the target of true edge
+        # to true and should_run attr in the target of false edge to false
+        # TODO: Add support for multiple conditions
+
+    def _run(self, *args, **kwargs):
+        if self._built_object:
+            condition = self._built_object.get("condition")
+            result = self._built_object.get("result")
+            if condition is not None:
+                for edge in self.edges:
+                    if edge.source_id == self.id:
+                        target_vertex = self.graph.get_vertex(edge.target_id)
+                        # source_handle.channel and condition should be the same
+                        channel_bool = edge.source_handle.channel == "true"
+                        if condition == channel_bool:
+                            target_vertex.should_run = True
+                        else:
+                            target_vertex.should_run = False
+            else:
+                raise ValueError(
+                    f"RoutingVertex {self.id} must have a condition in the _built_object"
+                )
+
+            self._built_result = result
+        else:
+            raise ValueError(
+                f"RoutingVertex {self.id} must have a _built_object with a condition and a result"
+            )
 
 
 def dict_to_codeblock(d: dict) -> str:

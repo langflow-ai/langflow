@@ -1,9 +1,9 @@
 from typing import Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, RangeSpec, TemplateField
+from langflow.field_typing import BaseLanguageModel, RangeSpec
+from pydantic.v1.types import SecretStr
 
 
 class GoogleGenerativeAIComponent(CustomComponent):
@@ -13,42 +13,42 @@ class GoogleGenerativeAIComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "google_api_key": TemplateField(
-                display_name="Google API Key",
-                info="The Google API Key to use for the Google Generative AI.",
-            ),
-            "max_output_tokens": TemplateField(
-                display_name="Max Output Tokens",
-                info="The maximum number of tokens to generate.",
-            ),
-            "temperature": TemplateField(
-                display_name="Temperature",
-                info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
-            ),
-            "top_k": TemplateField(
-                display_name="Top K",
-                info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
-                range_spec=RangeSpec(min=0, max=2, step=0.1),
-                advanced=True,
-            ),
-            "top_p": TemplateField(
-                display_name="Top P",
-                info="The maximum cumulative probability of tokens to consider when sampling.",
-                advanced=True,
-            ),
-            "n": TemplateField(
-                display_name="N",
-                info="Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
-                advanced=True,
-            ),
-            "model": TemplateField(
-                display_name="Model",
-                info="The name of the model to use. Supported examples: gemini-pro",
-                options=["gemini-pro", "gemini-pro-vision"],
-            ),
-            "code": TemplateField(
-                advanced=True,
-            ),
+            "google_api_key": {
+                "display_name": "Google API Key",
+                "info": "The Google API Key to use for the Google Generative AI.",
+            },
+            "max_output_tokens": {
+                "display_name": "Max Output Tokens",
+                "info": "The maximum number of tokens to generate.",
+            },
+            "temperature": {
+                "display_name": "Temperature",
+                "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+            },
+            "top_k": {
+                "display_name": "Top K",
+                "info": "Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
+                "range_spec": RangeSpec(min=0, max=2, step=0.1),
+                "advanced": True,
+            },
+            "top_p": {
+                "display_name": "Top P",
+                "info": "The maximum cumulative probability of tokens to consider when sampling.",
+                "advanced": True,
+            },
+            "n": {
+                "display_name": "N",
+                "info": "Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+                "advanced": True,
+            },
+            "model": {
+                "display_name": "Model",
+                "info": "The name of the model to use. Supported examples: gemini-pro",
+                "options": ["gemini-pro", "gemini-pro-vision"],
+            },
+            "code": {
+                "advanced": True,
+            },
         }
 
     def build(
@@ -63,10 +63,10 @@ class GoogleGenerativeAIComponent(CustomComponent):
     ) -> BaseLanguageModel:
         return ChatGoogleGenerativeAI(
             model=model,
-            max_output_tokens=max_output_tokens or None,
+            max_output_tokens=max_output_tokens or None,  # type: ignore
             temperature=temperature,
             top_k=top_k or None,
-            top_p=top_p or None,
+            top_p=top_p or None,  # type: ignore
             n=n or 1,
-            google_api_key=google_api_key,
+            google_api_key=SecretStr(google_api_key),
         )

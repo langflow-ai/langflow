@@ -1,12 +1,14 @@
 from collections import defaultdict, deque
-from typing import Dict, Generator, List, Type, Union
+from typing import Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
+from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, ToolkitVertex
+from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
+                                         ToolkitVertex)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from loguru import logger
@@ -71,6 +73,65 @@ class Graph:
             return False
         return self.__repr__() == other.__repr__()
 
+    # update this graph with another graph by comparing the __repr__ of each vertex
+    # and if the __repr__ of a vertex is not the same as the other
+    # then update the .data of the vertex to the self
+    # both graphs have the same vertices and edges
+    # but the data of the vertices might be different
+
+    def update(self, other: "Graph") -> None:
+        # Existing vertices in self graph
+        existing_vertex_ids = set(vertex.id for vertex in self.vertices)
+        # Vertex IDs in the other graph
+        other_vertex_ids = set(other.vertex_map.keys())
+
+        # Find vertices that are in other but not in self (new vertices)
+        new_vertex_ids = other_vertex_ids - existing_vertex_ids
+
+        # Find vertices that are in self but not in other (removed vertices)
+        removed_vertex_ids = existing_vertex_ids - other_vertex_ids
+
+        # Update existing vertices that have changed
+        for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
+            self_vertex = self.get_vertex(vertex_id)
+            other_vertex = other.get_vertex(vertex_id)
+            if self_vertex.__repr__() != other_vertex.__repr__():
+                self_vertex.data = other_vertex.data
+                self_vertex.params = {}
+                self_vertex._build_params()
+                self_vertex.graph = self
+                self_vertex._built = False
+                self.reset_all_edges_of_vertex(self_vertex)
+
+        # Remove vertices
+        for vertex_id in removed_vertex_ids:
+            self.remove_vertex(vertex_id)
+
+        # Add new vertices
+        for vertex_id in new_vertex_ids:
+            new_vertex = other.get_vertex(vertex_id)
+            self._add_vertex(new_vertex)
+
+        return self
+
+    def reset_all_edges_of_vertex(self, vertex: Vertex) -> None:
+        """Resets all the edges of a vertex."""
+        for edge in vertex.edges:
+            for vid in [edge.source_id, edge.target_id]:
+                if vid in self.vertex_map:
+                    _vertex = self.vertex_map[vid]
+                    if not _vertex.pinned:
+                        _vertex._build_params()
+
+    def _add_vertex(self, vertex: Vertex) -> None:
+        """Adds a new vertex to the graph."""
+        self.vertices.append(vertex)
+        self.vertex_map[vertex.id] = vertex
+        # Vertex has edges, so we need to update the edges
+        for edge in vertex.edges:
+            if edge.source_id in self.vertex_map and edge.target_id in self.vertex_map:
+                self.edges.append(edge)
+
     def _build_graph(self) -> None:
         """Builds the graph from the vertices and edges."""
         self.vertices = self._build_vertices()
@@ -108,6 +169,19 @@ class Graph:
                 source_vertex.has_external_output = True
                 self.outputs.append(target_vertex.id)
 
+    def remove_vertex(self, vertex_id: str) -> None:
+        """Removes a vertex from the graph."""
+        vertex = self.get_vertex(vertex_id)
+        if vertex is None:
+            return
+        self.vertices.remove(vertex)
+        self.vertex_map.pop(vertex_id)
+        self.edges = [
+            edge
+            for edge in self.edges
+            if edge.source_id != vertex_id and edge.target_id != vertex_id
+        ]
+
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
         llm_vertex = None
@@ -127,7 +201,9 @@ class Graph:
             return
         for vertex in self.vertices:
             if not self._validate_vertex(vertex):
-                raise ValueError(f"{vertex.vertex_type} is not connected to any other components")
+                raise ValueError(
+                    f"{vertex.vertex_type} is not connected to any other components"
+                )
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
@@ -136,11 +212,18 @@ class Graph:
 
     def get_vertex(self, vertex_id: str) -> Union[None, Vertex]:
         """Returns a vertex by id."""
-        return self.vertex_map.get(vertex_id)
+        try:
+            return self.vertex_map.get(vertex_id)
+        except KeyError:
+            raise ValueError(f"Vertex {vertex_id} not found")
 
     def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
-        return [edge for edge in self.edges if edge.source_id == vertex_id or edge.target_id == vertex_id]
+        return [
+            edge
+            for edge in self.edges
+            if edge.source_id == vertex_id or edge.target_id == vertex_id
+        ]
 
     def get_vertices_with_target(self, vertex_id: str) -> List[Vertex]:
         """Returns the vertices connected to a vertex."""
@@ -178,7 +261,9 @@ class Graph:
         def dfs(vertex):
             if state[vertex] == 1:
                 # We have a cycle
-                raise ValueError("Graph contains a cycle, cannot perform topological sort")
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
             if state[vertex] == 0:
                 state[vertex] = 1
                 for edge in vertex.edges:
@@ -237,7 +322,9 @@ class Graph:
             edges.append(ContractEdge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
+    def _get_vertex_class(
+        self, node_type: str, node_base_type: str, node_id: str
+    ) -> Type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -267,14 +354,18 @@ class Graph:
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+            VertexClass = self._get_vertex_class(
+                vertex_type, vertex_base_type, vertex_data["id"]
+            )
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
 
         return vertices
 
-    def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
+    def get_children_by_vertex_type(
+        self, vertex: Vertex, vertex_type: str
+    ) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
         children = []
         vertex_types = [vertex.data["type"]]
@@ -286,20 +377,70 @@ class Graph:
 
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
-        edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
+        edges_repr = "\n".join(
+            [f"{edge.source_id} --> {edge.target_id}" for edge in self.edges]
+        )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def layered_topological_sort(self):
-        in_degree = {vertex.id: 0 for vertex in self.vertices}  # Initialize in-degrees
+    def sort_up_to_vertex(self, vertex_id: str) -> "Graph":
+        """Cuts the graph up to a given vertex."""
+        # Get the vertices that are connected to the vertex
+        # and the vertex itself
+        vertex = self.get_vertex(vertex_id)
+        # We need to remove the edge coming from the vertex
+        # and all vertices after the vertex
+        edges = []
+        vertices_to_remove = []
+        for edge in vertex.edges:
+            if edge.source_id != vertex_id:
+                edges.append(edge)
+            if edge.target_id != vertex_id:
+                vertices_to_remove.append(self.get_vertex(edge.target_id))
+
+        for vertex in vertices_to_remove:
+            for edge in vertex.edges:
+                if edge.target_id == vertex.id:
+                    continue
+                vertices_to_remove.append(self.get_vertex(edge.target_id))
+        vertices_to_remove = set(vertices_to_remove)
+        vertices = []
+        edges_to_remove = {
+            edge for vertex in vertices_to_remove for edge in vertex.edges
+        }
+        for vertex in self.vertices:
+            if vertex in vertices_to_remove:
+                continue
+            vertices.append(vertex)
+            for edge in vertex.edges:
+                if edge in edges_to_remove:
+                    continue
+                if edge not in edges:
+                    edges.append(edge)
+        vertices = self.layered_topological_sort(vertices, edges)
+        vertices = self.sort_interface_components_first(vertices)
+        return self.sort_chat_inputs_first(vertices)
+
+    def layered_topological_sort(
+        self,
+        vertices: Optional[List[Vertex]] = None,
+        edges: Optional[List[ContractEdge]] = None,
+    ) -> List[List[str]]:
+        """Performs a layered topological sort of the vertices in the graph."""
+        if vertices is None:
+            vertices = self.vertices
+        if edges is None:
+            edges = self.edges
+
+        in_degree = {vertex.id: 0 for vertex in vertices}  # Initialize in-degrees
         graph = defaultdict(list)  # Adjacency list representation
 
         # Build graph and compute in-degrees
-        for edge in self.edges:
+        for edge in edges:
             graph[edge.source_id].append(edge.target_id)
             in_degree[edge.target_id] += 1
 
         # Queue for vertices with no incoming edges
-        queue = deque(vertex.id for vertex in self.vertices if in_degree[vertex.id] == 0)
+        queue = deque(vertex.id for vertex in vertices if in_degree[vertex.id] == 0)
         layers = []
 
         current_layer = 0
@@ -314,9 +455,91 @@ class Graph:
                     if in_degree[neighbor] == 0:
                         queue.append(neighbor)
             current_layer += 1  # Next layer
+        new_layers = self.refine_layers(graph, layers)
+        return new_layers
 
-        return layers
-        return layers
-        return layers
-        return layers
-        return layers
+    def refine_layers(self, graph, initial_layers):
+        # Map each vertex to its current layer
+        vertex_to_layer = {}
+        for layer_index, layer in enumerate(initial_layers):
+            for vertex in layer:
+                vertex_to_layer[vertex] = layer_index
+
+        # Build the adjacency list for reverse lookup (dependencies)
+
+        refined_layers = [[] for _ in initial_layers]  # Start with empty layers
+        new_layer_index_map = defaultdict(int)
+
+        # Map each vertex to its new layer index
+        # by finding the lowest layer index of its dependencies
+        # and subtracting 1
+        # If a vertex has no dependencies, it will be placed in the first layer
+        # If a vertex has dependencies, it will be placed in the lowest layer index of its dependencies
+        # minus 1
+        for vertex_id, deps in graph.items():
+            indexes = [vertex_to_layer[dep] for dep in deps]
+            new_layer_index = max(min(indexes, default=0) - 1, 0)
+            new_layer_index_map[vertex_id] = new_layer_index
+
+        for layer_index, layer in enumerate(initial_layers):
+            for vertex_id in layer:
+                # Place the vertex in the highest possible layer where its dependencies are met
+                new_layer_index = new_layer_index_map[vertex_id]
+                if new_layer_index > layer_index:
+                    refined_layers[new_layer_index].append(vertex_id)
+                    vertex_to_layer[vertex_id] = new_layer_index
+                else:
+                    refined_layers[layer_index].append(vertex_id)
+
+        # Remove empty layers if any
+        refined_layers = [layer for layer in refined_layers if layer]
+
+        return refined_layers
+
+    def sort_chat_inputs_first(self, vertices: List[List[str]]) -> List[List[str]]:
+
+        chat_inputs_first = []
+        for layer in vertices:
+            for vertex_id in layer:
+                if "ChatInput" in vertex_id:
+                    # Remove the ChatInput from the layer
+                    layer.remove(vertex_id)
+                    chat_inputs_first.append(vertex_id)
+        if not chat_inputs_first:
+            return vertices
+
+        vertices = [chat_inputs_first] + vertices
+
+        return vertices
+
+    def sort_vertices(self) -> List[List[str]]:
+        """Sorts the vertices in the graph."""
+        vertices = self.layered_topological_sort()
+        # Sort each layer to have ChatInput or ChatOutput first
+        # each layer consists of a list of vertex ids
+        # formatted as ComponentName-5letters
+        # e.g. ChatInput-abcde
+        # we just need to check if the vertex id contains ChatInput or ChatOutput
+        # and sort the layers accordingly
+        # InterfaceComponentTypes is an enum
+        # check all values of the enum and sort the layers
+        vertices = self.sort_interface_components_first(vertices)
+        return self.sort_chat_inputs_first(vertices)
+
+    def sort_interface_components_first(self, vertices: List[Vertex]) -> List[Vertex]:
+        """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
+
+        def contains_interface_component(vertex):
+            return any(
+                component.value in vertex for component in InterfaceComponentTypes
+            )
+
+        # Sort each inner list so that vertices containing ChatInput or ChatOutput come first
+        sorted_vertices = [
+            sorted(
+                inner_list,
+                key=lambda vertex: not contains_interface_component(vertex),
+            )
+            for inner_list in vertices
+        ]
+        return sorted_vertices

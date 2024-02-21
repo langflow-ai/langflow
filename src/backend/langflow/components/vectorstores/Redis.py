@@ -5,7 +5,6 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.redis import Redis
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-
 from langflow import CustomComponent
 
 
@@ -31,6 +30,7 @@ class RedisComponent(CustomComponent):
             "code": {"show": False, "display_name": "Code"},
             "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {"display_name": "Embedding"},
+            "schema": {"display_name": "Schema", "file_types": [".yaml"]},
             "redis_server_url": {
                 "display_name": "Redis Server Connection String",
                 "advanced": False,
@@ -43,6 +43,7 @@ class RedisComponent(CustomComponent):
         embedding: Embeddings,
         redis_server_url: str,
         redis_index_name: str,
+        schema: Optional[str] = None,
         documents: Optional[Document] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
@@ -58,10 +59,12 @@ class RedisComponent(CustomComponent):
         - VectorStore: The Vector Store object.
         """
         if documents is None:
+            if schema is None:
+                raise ValueError("If no documents are provided, a schema must be provided.")
             redis_vs = Redis.from_existing_index(
                 embedding=embedding,
                 index_name=redis_index_name,
-                schema=None,
+                schema=schema,
                 key_prefix=None,
                 redis_url=redis_server_url,
             )

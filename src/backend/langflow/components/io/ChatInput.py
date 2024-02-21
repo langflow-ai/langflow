@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langflow import CustomComponent
 from langflow.field_typing import Text
+from langflow.schema import Record
 
 
 class ChatInput(CustomComponent):
@@ -10,9 +11,20 @@ class ChatInput(CustomComponent):
 
     def build_config(self):
         return {
-            "message": {"input_types": ["Text"], "display_name": "Message"},
-            "sender": {"options": ["Machine", "User"], "display_name": "Sender Type"},
+            "message": {
+                "input_types": ["Text"],
+                "display_name": "Message",
+                "multiline": True,
+            },
+            "sender": {
+                "options": ["Machine", "User"],
+                "display_name": "Sender Type",
+            },
             "sender_name": {"display_name": "Sender Name"},
+            "as_record": {
+                "display_name": "As Record",
+                "info": "If true, the message will be returned as a Record.",
+            },
         }
 
     def build(
@@ -20,8 +32,19 @@ class ChatInput(CustomComponent):
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "You",
         message: Optional[str] = None,
-    ) -> Text:
-        self.repr_value = message
+        as_record: Optional[bool] = False,
+    ) -> Union[Text, Record]:
+        self.status = message
+        if as_record:
+            if isinstance(message, Record):
+                # Update the data of the record
+                message.data["sender"] = sender
+                message.data["sender_name"] = sender_name
+                return message
+            return Record(
+                text=message, data={"sender": sender, "sender_name": sender_name}
+            )
         if not message:
             message = ""
+        self.status = message
         return message

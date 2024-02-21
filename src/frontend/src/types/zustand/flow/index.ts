@@ -7,6 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "reactflow";
+import { BuildStatus } from "../../../constants/enums";
 import { FlowState } from "../../tabs";
 
 export type chatInputType = {
@@ -75,7 +76,8 @@ export type FlowStoreType = {
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
-    newSelection: { nodes: any; edges: any } | null
+    newSelection: { nodes: any; edges: any } | null,
+    isCrop?: boolean
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
@@ -86,4 +88,7 @@ export type FlowStoreType = {
   setLastEdges: (newState: any[]) => void;
   buildFlow: (nodeId?: string) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
+  updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  updateVerticesBuild: (vertices: string[]) => void;
+  verticesBuild: string[];
 };
