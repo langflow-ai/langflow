@@ -113,6 +113,14 @@ class Vertex:
     def edges(self) -> List["ContractEdge"]:
         return self.graph.get_vertex_edges(self.id)
 
+    @property
+    def predecessors(self) -> List["Vertex"]:
+        return self.graph.get_predecessors(self)
+
+    @property
+    def successors(self) -> List["Vertex"]:
+        return self.graph.get_successors(self)
+
     def __getstate__(self):
         return {
             "_data": self._data,
