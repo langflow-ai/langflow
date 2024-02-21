@@ -60,7 +60,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   }
 
   function UpdateAccordion() {
-    return categories[selectedCategory].name === "Inputs" ? inputs : outputs;
+    return (categories[selectedCategory]?.name ?? "Inputs") === "Inputs" ? inputs : outputs;
   }
 
   return (
