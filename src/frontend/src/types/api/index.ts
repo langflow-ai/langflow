@@ -55,6 +55,7 @@ export type TemplateVariableType = {
   display_name?: string;
   name?: string;
   [key: string]: any;
+  is_composition?: boolean;
 };
 export type sendAllProps = {
   nodes: Node[];

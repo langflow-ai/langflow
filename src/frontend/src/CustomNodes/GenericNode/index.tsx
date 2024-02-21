@@ -392,6 +392,7 @@ export default function GenericNode({
                               type: data.node!.template[templateField].type,
                               id: data.id,
                               fieldName: templateField,
+                              isComposition:data.node!.template[templateField].is_composition,
                             }}
                             left={true}
                             type={data.node?.template[templateField].type}

@@ -60,4 +60,5 @@ export type targetHandleType = {
   fieldName: string;
   id: string;
   proxy?: { field: string; id: string };
+  isComposition?: boolean;
 };
