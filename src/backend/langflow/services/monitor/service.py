@@ -165,4 +165,3 @@ class MonitorService(Service):
             df = conn.execute(query).df()
 
         return df.to_dict(orient="records")
-        return df.to_dict(orient="records")
