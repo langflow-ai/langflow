@@ -23,7 +23,6 @@ export default function ChatMessage({
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   const chat_message = chat.message.toString();
-
   return (
     <div
       className={classNames("form-modal-chat-position", chat.isSend ? "" : " ")}
