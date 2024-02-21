@@ -363,6 +363,7 @@ def create_component_template(component):
 
     component_template = build_custom_component_template(component_extractor)
     component_template["output_types"] = component_output_types
+
     return component_template
 
 
