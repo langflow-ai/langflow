@@ -68,6 +68,10 @@ class TemplateField(BaseModel):
     title_case: bool = True
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
+    is_composition: Optional[bool] = None
+    """Specifies if the field uses its input for composition.
+    This affects the style of the edge connected to the field. Defaults to None."""
+
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
