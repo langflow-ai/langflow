@@ -55,26 +55,28 @@ def add_messages(records: Union[list[Record], Record]):
     """
     Add a message to the monitor service.
     """
-    monitor_service = get_monitor_service()
+    try:
+        monitor_service = get_monitor_service()
 
-    if isinstance(records, Record):
-        records = [records]
+        if isinstance(records, Record):
+            records = [records]
 
-    if not all(isinstance(record, (Record, str)) for record in records):
-        raise ValueError("The records must be instances of Record.")
+        if not all(isinstance(record, (Record, str)) for record in records):
+            types = ", ".join([str(type(record)) for record in records])
+            raise ValueError(f"The records must be instances of Record. Found: {types}")
 
-    messages = []
-    for record in records:
-        if isinstance(record, Record):
+        messages: list[MessageModel] = []
+        for record in records:
             messages.append(MessageModel.from_record(record))
-        else:
-            raise ValueError("The record must be an instance of Record")
 
-    for message in messages:
-        try:
-            monitor_service.add_message(message)
-        except Exception as e:
-            logger.error(f"Error adding message to monitor service: {e}")
-            raise e
-
-    return records
+        for message in messages:
+            try:
+                monitor_service.add_message(message)
+            except Exception as e:
+                logger.error(f"Error adding message to monitor service: {e}")
+                logger.exception(e)
+                raise e
+        return records
+    except Exception as e:
+        logger.exception(e)
+        raise e
