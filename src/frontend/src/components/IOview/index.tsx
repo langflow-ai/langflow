@@ -155,7 +155,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                           >
                             <IconComponent
                               className="h-4 w-4"
-                              name="ScreenShare"
+                              name="ExternalLink"
                             ></IconComponent>
                           </div>
                         </div>
