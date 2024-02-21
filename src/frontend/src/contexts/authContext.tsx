@@ -92,7 +92,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setIsAdmin(isSuperUser);
       })
       .catch((error) => {
-        console.log("auth context");
         setLoading(false);
       });
   }

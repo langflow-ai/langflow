@@ -11,7 +11,6 @@ export default function IOInputField({
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const node = nodes.find((node) => node.id === inputId);
-  console.log(inputType);
   function handleInputType() {
     if (!node) return "no node found";
     switch (inputType) {
