@@ -30,7 +30,7 @@ export default function newChatView(): JSX.Element {
     getFlow,
     CleanFlowPool,
   } = useFlowStore();
-  const { setErrorData,setNoticeData } = useAlertStore();
+  const { setErrorData, setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -41,11 +41,10 @@ export default function newChatView(): JSX.Element {
   const outputTypes = outputs.map((obj) => obj.type);
 
   useEffect(() => {
-    if(!outputTypes.includes("ChatOutput"))
-    {
-      setNoticeData({title:"There is no ChatOutput node in the flow."})
+    if (!outputTypes.includes("ChatOutput")) {
+      setNoticeData({ title: "There is no ChatOutput node in the flow." });
     }
-  },[]);
+  }, []);
 
   //build chat history
   useEffect(() => {
@@ -68,15 +67,19 @@ export default function newChatView(): JSX.Element {
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       .filter((output) => !!output.data.artifacts?.message)
       .map((output) => {
-        try{
+        try {
           const { sender, message, sender_name } = output.data
-          .artifacts as ChatOutputType;
-        const is_ai = sender === "Machine";
-        return { isSend: !is_ai, message: message, sender_name };
-        }
-        catch(e){
+            .artifacts as ChatOutputType;
+
+          const is_ai = sender === "Machine" || sender === null;
+          return { isSend: !is_ai, message: message, sender_name };
+        } catch (e) {
           console.error(e);
-          return { isSend: false, message: "Error parsing message", sender_name: "Error" };
+          return {
+            isSend: false,
+            message: "Error parsing message",
+            sender_name: "Error",
+          };
         }
       });
     setChatHistory(chatMessages);
