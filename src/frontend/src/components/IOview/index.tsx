@@ -78,7 +78,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex-max-width mt-2">
+        <div className="flex-max-width mt-2 h-[80vh]">
           <div
             className={cn(
               "mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide",
