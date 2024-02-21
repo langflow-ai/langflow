@@ -14,7 +14,9 @@ INDEX_KEY = "index"
 
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
     result = conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()
-    return {row[1]: row[2].upper() for row in result}
+    schema = {row[1]: row[2].upper() for row in result}
+    schema.pop(INDEX_KEY, None)
+    return schema
 
 
 def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
@@ -56,6 +58,7 @@ def drop_and_create_table_if_schema_mismatch(
         desired_schema = model_to_sql_column_definitions(model)
 
         # Compare the current and desired schemas
+
         if current_schema != desired_schema:
             # If they don't match, drop the existing table and create a new one
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
