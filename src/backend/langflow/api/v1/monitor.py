@@ -41,14 +41,17 @@ async def delete_vertex_builds(
 @router.get("/messages")
 async def get_messages(
     session_id: Optional[str] = Query(None),
-    sender_type: Optional[str] = Query(None),
+    sender: Optional[str] = Query(None),
     sender_name: Optional[str] = Query(None),
     order_by: Optional[str] = Query("timestamp"),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
         return monitor_service.get_messages(
-            sender_type=sender_type, sender_name=sender_name, session_id=session_id, order_by=order_by
+            sender=sender,
+            sender_name=sender_name,
+            session_id=session_id,
+            order_by=order_by,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -63,6 +66,8 @@ async def get_transactions(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_transactions(source=source, target=target, status=status, order_by=order_by)
+        return monitor_service.get_transactions(
+            source=source, target=target, status=status, order_by=order_by
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
