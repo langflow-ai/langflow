@@ -681,4 +681,4 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
-export const OUTPUT_TYPES = new Set(["ChatOutput", "PromptTemplate"]);
+export const OUTPUT_TYPES = new Set(["ChatOutput"]);
