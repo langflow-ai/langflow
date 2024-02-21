@@ -46,7 +46,7 @@ This will install the following dependencies:
 - [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
 - [sentence-transformers](https://github.com/UKPLab/sentence-transformers)
 
-You can still use models from projects like LocalAI
+You can still use models from projects like LocalAI, Ollama, LM Studio, Jan and others.
 
 Next, run:
 
