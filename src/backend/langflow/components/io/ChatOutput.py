@@ -18,7 +18,7 @@ class ChatOutput(CustomComponent):
     def build_config(self):
         return {
             "message": {"input_types": ["Text"], "display_name": "Message"},
-            "sender_type": {
+            "sender": {
                 "options": ["Machine", "User"],
                 "display_name": "Sender Type",
             },
@@ -36,7 +36,7 @@ class ChatOutput(CustomComponent):
 
     def build(
         self,
-        sender_type: Optional[str] = "Machine",
+        sender: Optional[str] = "Machine",
         sender_name: Optional[str] = "AI",
         session_id: Optional[str] = None,
         message: Optional[str] = None,
@@ -46,7 +46,7 @@ class ChatOutput(CustomComponent):
         if as_record:
             if isinstance(message, Record):
                 # Update the data of the record
-                message.data["sender"] = sender_type
+                message.data["sender"] = sender
                 message.data["sender_name"] = sender_name
                 message.data["session_id"] = session_id
 
@@ -54,7 +54,7 @@ class ChatOutput(CustomComponent):
             return Record(
                 text=message,
                 data={
-                    "sender": sender_type,
+                    "sender": sender,
                     "sender_name": sender_name,
                     "session_id": session_id,
                 },
