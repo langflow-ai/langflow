@@ -35,7 +35,7 @@ const nodeTypes = {
   genericNode: GenericNode,
 };
 
-export default function Page({
+export default function   Page({
   flow,
   view,
 }: {
@@ -377,13 +377,7 @@ export default function Page({
                   zoomOnPinch={!view}
                   panOnDrag={!view}
                   proOptions={{ hideAttribution: true }}
-                  onPaneClick={onPaneClick}
-                  onEdgeMouseEnter={(event, edge) =>
-                    onMouseAction(edge, "#473A5C")
-                  }
-                  onEdgeMouseLeave={(event, edge) =>
-                    onMouseAction(edge, "#555")
-                  }
+                  onPaneClick={onPaneClick} 
                 >
                   <Background className="" />
                   {!view && (
