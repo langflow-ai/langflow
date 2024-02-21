@@ -26,6 +26,7 @@ export async function buildVertices({
   let orderResponse = await getVerticesOrder(flowId, nodeId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices_layers: Array<Array<string>> = [];
+  let stop = false;
 
   if (nodeId) {
     for (let i = 0; i < verticesOrder.length; i += 1) {
@@ -61,7 +62,14 @@ export async function buildVertices({
         onBuildError,
         verticesIds,
         buildResults,
+        stopBuild:()=>{stop=true}
       });
+      if(stop){
+        break;
+      }
+    }
+    if(stop){
+      break;
     }
   }
 
@@ -78,6 +86,7 @@ async function buildVertex({
   onBuildError,
   verticesIds,
   buildResults,
+  stopBuild,
 }: {
   flowId: string;
   id: string;
@@ -85,6 +94,7 @@ async function buildVertex({
   onBuildError?: (title, list, idList: string[]) => void;
   verticesIds: string[];
   buildResults: boolean[];
+  stopBuild:()=>void;
 }) {
   try {
     const buildRes = await postBuildVertex(flowId, id);
@@ -97,6 +107,7 @@ async function buildVertex({
           [buildData.params],
           verticesIds
         );
+        stopBuild();
       }
       data[buildData.id] = buildData;
       onBuildUpdate({ data, id: buildData.id });
@@ -108,5 +119,6 @@ async function buildVertex({
       [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
       verticesIds
     );
+    stopBuild();
   }
 }
