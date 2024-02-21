@@ -166,13 +166,12 @@ export default function GenericNode({
 
   const getStatusClassName = (
     validationStatus: validationStatusType | null,
-    isBuilding: boolean
   ) => {
     if (validationStatus && validationStatus.valid) {
       return "green-status";
     } else if (validationStatus && !validationStatus.valid) {
       return "red-status";
-    } else if (!validationStatus || isBuilding) {
+    } else if (!validationStatus) {
       return "yellow-status";
     } else {
       return "status-build-animation";
@@ -182,12 +181,11 @@ export default function GenericNode({
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null,
-    isBuilding: boolean
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return getIconPlayOrPauseComponent("Square", "red-status");
     } else {
-      const className = getStatusClassName(validationStatus, isBuilding);
+      const className = getStatusClassName(validationStatus);
       return <>{getIconPlayOrPauseComponent("Play", className)}</>;
     }
   };
@@ -469,7 +467,6 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      isBuilding ||
                       data?.build_status === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
@@ -497,9 +494,7 @@ export default function GenericNode({
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
                         data?.build_status,
-                        validationStatus,
-                        isBuilding
-                      )}
+                        validationStatus)}
                     </div>
                   </Tooltip>
                 </div>

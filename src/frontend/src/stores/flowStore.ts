@@ -123,12 +123,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-
-    flowsManager.autoSaveCurrentFlow(
-      newChange,
-      newEdges,
-      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-    );
+    if(!(get().isBuilding)){
+      flowsManager.autoSaveCurrentFlow(
+        newChange,
+        newEdges,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
+    }
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
@@ -138,12 +139,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-
-    flowsManager.autoSaveCurrentFlow(
-      get().nodes,
-      newChange,
-      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-    );
+    if(!(get().isBuilding)){
+      flowsManager.autoSaveCurrentFlow(
+        get().nodes,
+        newChange,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
+    }
   },
   setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
     let newChange =
@@ -375,6 +377,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async (nodeId?: string) => {
+    get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -394,7 +397,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       description: currentFlow!.description,
     });
     setNoticeData({ title: "Running components" });
-    return buildVertices({
+    await buildVertices({
       flowId: currentFlow!.id,
       nodeId,
       onBuildComplete: () => {
@@ -403,11 +406,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         } else {
           setSuccessData({ title: `Flow built successfully` });
         }
+        get().setIsBuilding(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list, idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
-
         setErrorData({ list, title });
       },
       onBuildStart: (idList) => {
