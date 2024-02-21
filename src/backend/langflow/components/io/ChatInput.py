@@ -16,7 +16,7 @@ class ChatInput(CustomComponent):
                 "display_name": "Message",
                 "multiline": True,
             },
-            "sender_type": {
+            "sender": {
                 "options": ["Machine", "User"],
                 "display_name": "Sender Type",
             },
@@ -29,7 +29,7 @@ class ChatInput(CustomComponent):
 
     def build(
         self,
-        sender_type: Optional[str] = "User",
+        sender: Optional[str] = "User",
         sender_name: Optional[str] = "You",
         message: Optional[str] = None,
         as_record: Optional[bool] = False,
@@ -38,11 +38,11 @@ class ChatInput(CustomComponent):
         if as_record:
             if isinstance(message, Record):
                 # Update the data of the record
-                message.data["sender"] = sender_type
+                message.data["sender"] = sender
                 message.data["sender_name"] = sender_name
                 return message
             return Record(
-                text=message, data={"sender": sender_type, "sender_name": sender_name}
+                text=message, data={"sender": sender, "sender_name": sender_name}
             )
         if not message:
             message = ""
