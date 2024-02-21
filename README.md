@@ -98,7 +98,7 @@ Each option is detailed below:
 - `--backend-only`: This parameter, with a default value of `False`, allows running only the backend server without the frontend. It can also be set using the `LANGFLOW_BACKEND_ONLY` environment variable.
 - `--store`: This parameter, with a default value of `True`, enables the store features, use `--no-store` to deactivate it. It can be configured using the `LANGFLOW_STORE` environment variable.
 
-These parameters are important for users who need to customize the behavior of Langflow, especially in development or specialized deployment scenarios. You may want to update the documentation to include these parameters for completeness and clarity.
+These parameters are important for users who need to customize the behavior of Langflow, especially in development or specialized deployment scenarios.
 
 ### Environment Variables
 
@@ -128,7 +128,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them to create your pipeline.
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
 
 Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
 
