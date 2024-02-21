@@ -86,7 +86,6 @@ class Component:
             "beta": self.getattr_return_str,
             "documentation": self.getattr_return_str,
             "icon": self.validate_icon,
-            "is_composition": self.getattr_return_bool,
         }
 
         for attribute, func in attributes_func_mapping.items():

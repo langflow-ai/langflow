@@ -35,9 +35,6 @@ class CustomComponent(Component):
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
-    is_composition: Optional[bool] = None
-    """Whether the component is used for composition.
-    This affects the style of the edge connecting the component to the next component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
