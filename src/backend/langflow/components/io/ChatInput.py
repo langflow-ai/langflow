@@ -21,6 +21,10 @@ class ChatInput(CustomComponent):
                 "display_name": "Sender Type",
             },
             "sender_name": {"display_name": "Sender Name"},
+            "session_id": {
+                "display_name": "Session ID",
+                "info": "Session ID of the chat history.",
+            },
             "as_record": {
                 "display_name": "As Record",
                 "info": "If true, the message will be returned as a Record.",
@@ -33,6 +37,7 @@ class ChatInput(CustomComponent):
         sender_name: Optional[str] = "You",
         message: Optional[str] = None,
         as_record: Optional[bool] = False,
+        session_id: Optional[str] = None,
     ) -> Union[Text, Record]:
         self.status = message
         if as_record:
@@ -40,9 +45,15 @@ class ChatInput(CustomComponent):
                 # Update the data of the record
                 message.data["sender"] = sender
                 message.data["sender_name"] = sender_name
+                message.data["session_id"] = session_id
                 return message
             return Record(
-                text=message, data={"sender": sender, "sender_name": sender_name}
+                text=message,
+                data={
+                    "sender": sender,
+                    "sender_name": sender_name,
+                    "session_id": session_id,
+                },
             )
         if not message:
             message = ""
