@@ -71,7 +71,6 @@ export default function newChatView(): JSX.Element {
         try{
           const { sender, message, sender_name } = output.data
           .artifacts as ChatOutputType;
-        console.log(output.data.artifacts);
         const is_ai = sender === "Machine";
         return { isSend: !is_ai, message: message, sender_name };
         }
