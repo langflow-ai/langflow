@@ -445,7 +445,7 @@ export default function GenericNode({
                   }));
                 }}
               >
-                <Tooltip title={<span>{pinned ? "Pinned" : "Unpinned"}</span>}>
+                <Tooltip title={<span>{pinned ? "Pin Output" : "Unpin Output"}</span>}>
                   <div className="generic-node-status-position flex items-center">
                     <IconComponent
                       name={"Pin"}
