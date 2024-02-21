@@ -682,3 +682,4 @@ export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
 export const OUTPUT_TYPES = new Set(["ChatOutput",]);
+export const NO_COMPOSITION_TYPE = new Set(["Records","Text","Record"])

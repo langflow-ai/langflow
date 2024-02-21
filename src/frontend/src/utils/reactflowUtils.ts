@@ -1,3 +1,4 @@
+import { NO_COMPOSITION_TYPE } from './../constants/constants';
 import { cloneDeep } from "lodash";
 import {
   Connection,
@@ -324,6 +325,7 @@ export function updateEdges(edges: Edge[]) {
         edge.targetHandle!
       );
       edge.className = "stroke-gray-900 stroke-connection";
+      edge.animated = ( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el)))
     });
 }
 
