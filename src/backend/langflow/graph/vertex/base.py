@@ -57,6 +57,14 @@ class Vertex:
             self.is_interface_component = False
 
         self.use_result = False
+        self.build_times: List[float] = []
+
+    @property
+    def avg_build_time(self):
+        return sum(self.build_times) / len(self.build_times) if self.build_times else 0
+
+    def add_build_time(self, time):
+        self.build_times.append(time)
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
