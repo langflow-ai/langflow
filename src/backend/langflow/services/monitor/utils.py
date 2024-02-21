@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 import duckdb
 from langflow.services.deps import get_monitor_service
@@ -79,10 +79,13 @@ def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
     model: Type[BaseModel],
-    monitor_data: Dict[str, Any],
+    monitor_data: Union[Dict[str, Any], BaseModel],
 ):
     # Validate the data with the Pydantic model
-    validated_data = model(**monitor_data)
+    if isinstance(monitor_data, model):
+        validated_data = monitor_data
+    else:
+        validated_data = model(**monitor_data)
 
     # Extract data for the insert statement
     validated_dict = validated_data.model_dump(exclude_unset=True)
@@ -107,7 +110,7 @@ def add_row_to_table(
 
 
 async def log_message(
-    sender_type: str,
+    sender: str,
     sender_name: str,
     message: str,
     session_id: str,
@@ -121,7 +124,7 @@ async def log_message(
 
         monitor_service = get_monitor_service()
         row = {
-            "sender_type": sender_type,
+            "sender": sender,
             "sender_name": sender_name,
             "message": message,
             "artifacts": artifacts or {},
