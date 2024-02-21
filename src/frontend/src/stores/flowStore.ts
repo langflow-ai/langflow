@@ -263,7 +263,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           data: cloneDeep(edge.data),
           style: { stroke: "#555" },
           className: "stroke-gray-900 ",
-          animated : ( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el))),
+          animated : targetHandleObject.isComposition!==undefined?targetHandleObject.isComposition:( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el))),
           selected: false,
         },
         newEdges.map((edge) => ({ ...edge, selected: false }))
@@ -352,7 +352,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
               .type === "Text"
               ? "stroke-foreground "
               : "stroke-foreground ") + " stroke-connection",
-              animated : ( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el))),
+              animated : targetHandleObject.isComposition!==undefined?targetHandleObject.isComposition:( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el))),
           markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
         },
         oldEdges

@@ -65,6 +65,7 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
         fieldName: field,
         id: targetNode.data.id,
         inputTypes: targetNode.data.node!.template[field]?.input_types,
+        isComposition: targetNode.data.node!.template[field]?.is_composition,
       };
       if (targetNode.data.node!.template[field]?.proxy) {
         id.proxy = targetNode.data.node!.template[field]?.proxy;
@@ -325,7 +326,7 @@ export function updateEdges(edges: Edge[]) {
         edge.targetHandle!
       );
       edge.className = "stroke-gray-900 stroke-connection";
-      edge.animated = ( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el)))
+      edge.animated = targetHandleObject.isComposition!==undefined?targetHandleObject.isComposition:( NO_COMPOSITION_TYPE.has(targetHandleObject.type) || targetHandleObject.inputTypes?.some(el=>NO_COMPOSITION_TYPE.has(el)))
     });
 }
 
@@ -807,6 +808,7 @@ function isHandleConnected(
             type: field.type,
             fieldName: key,
             id: nodeId,
+            isComposition: field.is_composition,
             proxy: { id: field.proxy!.id, field: field.proxy!.field },
             inputTypes: field.input_types,
           } as targetHandleType)
@@ -823,6 +825,7 @@ function isHandleConnected(
             type: field.type,
             fieldName: key,
             id: nodeId,
+            isComposition: field.is_composition,
             inputTypes: field.input_types,
           } as targetHandleType)
       )
@@ -970,6 +973,7 @@ export function expandGroupNode(
     if (newEdge.target === id) {
       const targetHandle: targetHandleType = newEdge.data.targetHandle;
       if (targetHandle.proxy) {
+        let is_composition = targetHandle.isComposition;
         let type = targetHandle.type;
         let field = targetHandle.proxy.field;
         let proxyId = targetHandle.proxy.id;
@@ -982,6 +986,7 @@ export function expandGroupNode(
             type,
             id: proxyId,
             inputTypes: inputTypes,
+            isComposition: is_composition,
           };
           if (node.data.node?.flow) {
             newTargetHandle.proxy = {
