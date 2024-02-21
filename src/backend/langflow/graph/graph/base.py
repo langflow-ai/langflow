@@ -7,8 +7,12 @@ from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
-                                         ToolkitVertex)
+from langflow.graph.vertex.types import (
+    ChatVertex,
+    FileToolVertex,
+    LLMVertex,
+    ToolkitVertex,
+)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 from loguru import logger
@@ -38,12 +42,32 @@ class Graph:
         self._edges = self._graph_data["edges"]
 
         self._build_graph()
+        self.build_graph_maps()
+
+    def build_graph_maps(self):
+        self.predecessor_map, self.successor_map = self.build_adjacency_maps()
+        self.in_degree_map = self.build_in_degree()
 
     def __getstate__(self):
         return self.raw_graph_data
 
     def __setstate__(self, state):
         self.__init__(**state)
+
+    def build_in_degree(self):
+        in_degree = defaultdict(int)
+        for edge in self.edges:
+            in_degree[edge.target_id] += 1
+        return in_degree
+
+    def build_adjacency_maps(self):
+        """Returns the adjacency maps for the graph."""
+        predecessor_map = defaultdict(list)
+        successor_map = defaultdict(list)
+        for edge in self.edges:
+            predecessor_map[edge.target_id].append(edge.source_id)
+            successor_map[edge.source_id].append(edge.target_id)
+        return predecessor_map, successor_map
 
     @classmethod
     def from_payload(cls, payload: Dict) -> "Graph":
@@ -112,6 +136,7 @@ class Graph:
             new_vertex = other.get_vertex(vertex_id)
             self._add_vertex(new_vertex)
 
+        self.build_graph_maps()
         return self
 
     def reset_all_edges_of_vertex(self, vertex: Vertex) -> None:
@@ -285,6 +310,20 @@ class Graph:
         logger.debug("There are %s vertices in the graph", len(sorted_vertices))
         yield from sorted_vertices
 
+    def get_predecessors(self, vertex):
+        """Returns the predecessors of a vertex."""
+        return [
+            self.get_vertex(source_id)
+            for source_id in self.predecessor_map.get(vertex.id, [])
+        ]
+
+    def get_successors(self, vertex):
+        """Returns the successors of a vertex."""
+        return [
+            self.get_vertex(target_id)
+            for target_id in self.successor_map.get(vertex.id, [])
+        ]
+
     def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
         neighbors: Dict[Vertex, int] = {}
@@ -383,40 +422,28 @@ class Graph:
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
     def sort_up_to_vertex(self, vertex_id: str) -> "Graph":
-        """Cuts the graph up to a given vertex."""
-        # Get the vertices that are connected to the vertex
-        # and the vertex itself
-        vertex = self.get_vertex(vertex_id)
-        # We need to remove the edge coming from the vertex
-        # and all vertices after the vertex
-        edges = []
-        vertices_to_remove = []
-        for edge in vertex.edges:
-            if edge.source_id != vertex_id:
-                edges.append(edge)
-            if edge.target_id != vertex_id:
-                vertices_to_remove.append(self.get_vertex(edge.target_id))
+        """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
+        # Initial setup
+        visited = set()  # To keep track of visited vertices
+        stack = [vertex_id]  # Use a list as a stack for DFS
 
-        for vertex in vertices_to_remove:
-            for edge in vertex.edges:
-                if edge.target_id == vertex.id:
-                    continue
-                vertices_to_remove.append(self.get_vertex(edge.target_id))
-        vertices_to_remove = set(vertices_to_remove)
-        vertices = []
-        edges_to_remove = {
-            edge for vertex in vertices_to_remove for edge in vertex.edges
-        }
-        for vertex in self.vertices:
-            if vertex in vertices_to_remove:
-                continue
-            vertices.append(vertex)
-            for edge in vertex.edges:
-                if edge in edges_to_remove:
-                    continue
-                if edge not in edges:
-                    edges.append(edge)
-        vertices = self.layered_topological_sort(vertices, edges)
+        # DFS to collect all vertices that can reach the specified vertex
+        while stack:
+            current_id = stack.pop()
+            if current_id not in visited:
+                visited.add(current_id)
+                current_vertex = self.get_vertex(current_id)
+                # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
+                for predecessor in current_vertex.predecessors:
+                    stack.append(predecessor.id)
+
+        # Filter the original graph's vertices and edges to keep only those in `visited`
+        vertices_to_keep = [self.get_vertex(vid) for vid in visited]
+        edges_to_keep = [
+            e for e in self.edges if e.target_id in visited and e.source_id in visited
+        ]
+
+        vertices = self.layered_topological_sort(vertices_to_keep, edges_to_keep)
         vertices = self.sort_interface_components_first(vertices)
         return self.sort_chat_inputs_first(vertices)
 
@@ -431,16 +458,10 @@ class Graph:
         if edges is None:
             edges = self.edges
 
-        in_degree = {vertex.id: 0 for vertex in vertices}  # Initialize in-degrees
-        graph = defaultdict(list)  # Adjacency list representation
-
-        # Build graph and compute in-degrees
-        for edge in edges:
-            graph[edge.source_id].append(edge.target_id)
-            in_degree[edge.target_id] += 1
-
         # Queue for vertices with no incoming edges
-        queue = deque(vertex.id for vertex in vertices if in_degree[vertex.id] == 0)
+        queue = deque(
+            vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0
+        )
         layers = []
 
         current_layer = 0
@@ -450,15 +471,15 @@ class Graph:
             for _ in range(layer_size):
                 vertex_id = queue.popleft()
                 layers[current_layer].append(vertex_id)
-                for neighbor in graph[vertex_id]:
-                    in_degree[neighbor] -= 1  # 'remove' edge
-                    if in_degree[neighbor] == 0:
+                for neighbor in self.successor_map[vertex_id]:
+                    self.in_degree_map[neighbor] -= 1  # 'remove' edge
+                    if self.in_degree_map[neighbor] == 0:
                         queue.append(neighbor)
             current_layer += 1  # Next layer
-        new_layers = self.refine_layers(graph, layers)
+        new_layers = self.refine_layers(layers)
         return new_layers
 
-    def refine_layers(self, graph, initial_layers):
+    def refine_layers(self, initial_layers):
         # Map each vertex to its current layer
         vertex_to_layer = {}
         for layer_index, layer in enumerate(initial_layers):
@@ -476,7 +497,7 @@ class Graph:
         # If a vertex has no dependencies, it will be placed in the first layer
         # If a vertex has dependencies, it will be placed in the lowest layer index of its dependencies
         # minus 1
-        for vertex_id, deps in graph.items():
+        for vertex_id, deps in self.successor_map.items():
             indexes = [vertex_to_layer[dep] for dep in deps]
             new_layer_index = max(min(indexes, default=0) - 1, 0)
             new_layer_index_map[vertex_id] = new_layer_index
