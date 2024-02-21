@@ -439,7 +439,7 @@ export default function FormModal({
             <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
           </DialogHeader>
 
-          <div className="form-modal-iv-box ">
+          <div className="flex-max-width mt-2 h-[80vh]">
             <div className="form-modal-iv-size">
               <div className="file-component-arrangement">
                 <IconComponent
