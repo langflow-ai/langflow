@@ -270,6 +270,7 @@ def sanitize_template_config(template_config):
         "documentation",
         "output_types",
         "icon",
+        "is_composition",
     }
     for key in template_config.copy():
         if key not in attributes:

@@ -20,7 +20,9 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class Component:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = (
+        "The name of the entrypoint function must be provided."
+    )
 
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"
@@ -67,6 +69,10 @@ class Component:
 
         return str(value) if value else ""
 
+    def getattr_return_bool(self, value):
+        if isinstance(value, bool):
+            return value
+
     def build_template_config(self) -> dict:
         if not self.code:
             return {}
@@ -80,6 +86,7 @@ class Component:
             "beta": self.getattr_return_str,
             "documentation": self.getattr_return_str,
             "icon": self.validate_icon,
+            "is_composition": self.getattr_return_bool,
         }
 
         for attribute, func in attributes_func_mapping.items():
