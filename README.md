@@ -1,46 +1,29 @@
-<!-- Title -->
+<!-- markdownlint-disable MD030 -->
 
 # ⛓️ Langflow
 
-~ An effortless way to experiment and prototype [LangChain](https://github.com/hwchase17/langchain) pipelines ~
+<h3>Discover a simpler & smarter way to build around Foundation Models</h3>
 
-<p>
-<img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/logspace-ai/langflow" />
-<img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/logspace-ai/langflow" />
-<img alt="" src="https://img.shields.io/github/repo-size/logspace-ai/langflow" />
-<img alt="GitHub Issues" src="https://img.shields.io/github/issues/logspace-ai/langflow" />
-<img alt="GitHub Pull Requests" src="https://img.shields.io/github/issues-pr/logspace-ai/langflow" />
-<img alt="Github License" src="https://img.shields.io/github/license/logspace-ai/langflow" />
-</p>
 
-<p>
-<a href="https://discord.gg/EqksyE2EX9"><img alt="Discord Server" src="https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat"/></a>
-<a href="https://huggingface.co/spaces/Logspace/Langflow"><img src="https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg" alt="HuggingFace Spaces"></a>
-</p>
+[![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
+[![Contributors](https://img.shields.io/github/contributors/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/contributors)
+[![Last Commit](https://img.shields.io/github/last-commit/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/last-commit)
+[![Open Issues](https://img.shields.io/github/issues-raw/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/issues)
+[![LRepo-size](https://img.shields.io/github/repo-size/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/repo-size)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/logspace-ai/langflow)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub star chart](https://img.shields.io/github/stars/logspace-ai/langflow?style=social)](https://star-history.com/#logspace-ai/langflow)
+[![GitHub fork](https://img.shields.io/github/forks/logspace-ai/langflow?style=social)](https://github.com/logspace-ai/langflow/fork)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow_ai.svg?style=social&label=Follow%20%40langflow_ai)](https://twitter.com/langflow_ai)
+[![](https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat)](https://discord.com/invite/EqksyE2EX9)
+[![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/Logspace/Langflow)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/logspace-ai/langflow)
+
+
+The easiest way to create and customize your flow
 
 <a href="https://github.com/logspace-ai/langflow">
-    <img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/img/langflow-demo.gif?raw=true"></a>
-
-<p>
-</p>
-
-# Table of Contents
-
-- [⛓️ Langflow](#️-langflow)
-- [Table of Contents](#table-of-contents)
-- [📦 Installation](#-installation)
-  - [Locally](#locally)
-  - [HuggingFace Spaces](#huggingface-spaces)
-- [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
-  - [Usage](#usage)
-    - [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-  - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
-  - [Deploy on Railway](#deploy-on-railway)
-  - [Deploy on Render](#deploy-on-render)
-- [🎨 Creating Flows](#-creating-flows)
-- [👋 Contributing](#-contributing)
-- [📄 License](#-license)
+<img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/img/new_langflow_demo.gif"></a>
 
 # 📦 Installation
 
@@ -147,13 +130,13 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://python.langchain.com/docs/integrations/components) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline.
 
-Explore by editing prompt parameters, link chains and agents, track an agent's thought process, and export your flow.
+Explore by editing prompt parameters, linking chains and agents, tracking an agent's thought process, and exporting your flow.
 
-Once you're done, you can export your flow as a JSON file to use with LangChain.
-To do so, click the "Export" button in the top right corner of the canvas, then
-in Python, you can load the flow with:
+Once you're done, you can export your flow as a JSON file.
+
+Load the flow with:
 
 ```python
 from langflow import load_flow_from_json
@@ -167,14 +150,15 @@ flow("Hey, have you heard of Langflow?")
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
 
+Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions, and showcase your projects! 🦾
+
 ---
 
-Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions and showcase your projects! 🦾
-
-<p>
-</p>
-
 [![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
+
+# 🌟 Contributors
+
+[![langflow contributors](https://contrib.rocks/image?repo=logspace-ai/langflow)](https://github.com/logspace-ai/langflow/graphs/contributors)
 
 # 📄 License
 
