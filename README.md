@@ -130,9 +130,9 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 # 🎨 Creating Flows
 
-Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them together to create your pipeline.
+Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them to create your pipeline.
 
-Explore by editing prompt parameters, linking chains and agents, tracking an agent's thought process, and exporting your flow.
+Explore by editing prompt parameters, linking chains and agents.
 
 Once you're done, you can export your flow as a JSON file.
 
