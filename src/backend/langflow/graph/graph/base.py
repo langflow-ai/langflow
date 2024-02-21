@@ -135,7 +135,8 @@ class Graph:
             self_vertex = self.get_vertex(vertex_id)
             other_vertex = other.get_vertex(vertex_id)
             if self_vertex.__repr__() != other_vertex.__repr__():
-                self_vertex.data = other_vertex.data
+                self_vertex._data = other_vertex._data
+                self_vertex._parse_data()
                 self_vertex.params = {}
                 self_vertex._build_params()
                 self_vertex.graph = self
