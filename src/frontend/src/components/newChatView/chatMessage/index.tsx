@@ -23,8 +23,14 @@ export default function ChatMessage({
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   const chat_message = chat.message.toString();
+  const element = document.getElementById("last-chat-message");
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <div
+      id={lastMessage ? "last-chat-message" : ""}
       className={classNames("form-modal-chat-position", chat.isSend ? "" : " ")}
     >
       <div className={classNames("form-modal-chatbot-icon ")}>
@@ -221,7 +227,7 @@ export default function ChatMessage({
               </span>
             </>
           ) : (
-            <span>{chat.message.toString()}</span>
+            <span id="last-chat-message">{chat.message.toString()}</span>
           )}
         </div>
       )}
