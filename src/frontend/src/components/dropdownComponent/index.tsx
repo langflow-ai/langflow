@@ -70,7 +70,7 @@ export default function Dropdown({
                         editNode
                           ? "dropdown-component-true-options nowheel custom-scroll"
                           : "dropdown-component-false-options nowheel custom-scroll",
-                        apiModal ? "mb-2 w-[250px]" : "absolute w-full"
+                        apiModal ? "mb-2 w-[250px] z-50" : "absolute w-full z-50"
                       )}
                     >
                       {options?.map((option, id) => (

@@ -635,6 +635,90 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
   return set;
 }
 
+export function shadeColor(color: string, percent: number) {
+
+  var R = parseInt(color.substring(1,3),16);
+  var G = parseInt(color.substring(3,5),16);
+  var B = parseInt(color.substring(5,7),16);
+
+  R = (R * (100 + percent) / 100);
+  G = (G * (100 + percent) / 100);
+  B = (B * (100 + percent) / 100);
+
+  R = (R<255)?R:255;  
+  G = (G<255)?G:255;  
+  B = (B<255)?B:255;  
+
+  R = Math.round(R)
+  G = Math.round(G)
+  B = Math.round(B)
+
+  var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+  var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+  var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+
+  return "#"+RR+GG+BB;
+}
+
+export function saturateColor(hex, saturationPercent) {
+  if (!/^#([0-9a-f]{6})$/i.test(hex)) {
+      throw('Unexpected color format');
+  }
+
+  if (saturationPercent < 0 || saturationPercent > 100) {
+      throw('Unexpected color format');
+  }
+
+  var saturationFloat   = saturationPercent / 100,
+      rgbIntensityFloat = [
+          parseInt(hex.substr(1,2), 16) / 255,
+          parseInt(hex.substr(3,2), 16) / 255,
+          parseInt(hex.substr(5,2), 16) / 255
+      ];
+
+  var rgbIntensityFloatSorted = rgbIntensityFloat.slice(0).sort(function(a, b){ return a - b; }),
+      maxIntensityFloat       = rgbIntensityFloatSorted[2],
+      mediumIntensityFloat    = rgbIntensityFloatSorted[1],
+      minIntensityFloat       = rgbIntensityFloatSorted[0];
+
+  if (maxIntensityFloat == minIntensityFloat) {
+      // All colors have same intensity, which means 
+      // the original color is gray, so we can't change saturation.
+      return hex;
+  }
+
+  // New color max intensity wont change. Lets find medium and weak intensities.
+  var newMediumIntensityFloat,
+      newMinIntensityFloat = maxIntensityFloat * (1 - saturationFloat);
+
+  if (mediumIntensityFloat == minIntensityFloat) {
+      // Weak colors have equal intensity.
+      newMediumIntensityFloat = newMinIntensityFloat;
+  }
+  else {
+      // Calculate medium intensity with respect to original intensity proportion.
+      var intensityProportion = (maxIntensityFloat - mediumIntensityFloat) / (mediumIntensityFloat - minIntensityFloat);
+      newMediumIntensityFloat = (intensityProportion * newMinIntensityFloat + maxIntensityFloat) / (intensityProportion + 1);
+  }
+
+  var newRgbIntensityFloat : Number[] = [],
+      newRgbIntensityFloatSorted = [newMinIntensityFloat, newMediumIntensityFloat, maxIntensityFloat];
+
+  // We've found new intensities, but we have then sorted from min to max.
+  // Now we have to restore original order.
+  rgbIntensityFloat.forEach(function(originalRgb) {
+      var rgbSortedIndex = rgbIntensityFloatSorted.indexOf(originalRgb);
+      newRgbIntensityFloat.push(newRgbIntensityFloatSorted[rgbSortedIndex]);
+  });
+
+  var floatToHex = function(val) { return ('0' + Math.round(val * 255).toString(16)).substr(-2); },
+      rgb2hex    = function(rgb) { return '#' + floatToHex(rgb[0]) + floatToHex(rgb[1]) + floatToHex(rgb[2]); };
+
+  var newHex = rgb2hex(newRgbIntensityFloat);
+
+  return newHex;
+}
+
 export function getFieldTitle(
   template: APITemplateType,
   templateField: string

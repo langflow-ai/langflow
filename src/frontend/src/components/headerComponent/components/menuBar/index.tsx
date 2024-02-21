@@ -49,7 +49,6 @@ export const MenuBar = ({
       setErrorData(err as { title: string; list?: Array<string> });
     }
   }
-  console.log(inputValue);
 
   return currentFlow ? (
     <div className="round-button-div">

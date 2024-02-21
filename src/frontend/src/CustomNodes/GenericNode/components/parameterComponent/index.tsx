@@ -15,6 +15,7 @@ import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Badge } from "../../../../components/ui/badge";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
@@ -58,6 +59,7 @@ export default function ParameterComponent({
   index = "",
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
+  const types = useTypesStore((state) => state.types);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -368,7 +370,7 @@ export default function ParameterComponent({
               return isValidConnectionValidation;
             }}
             className={classNames(
-              " left-[-0.4px] h-full w-full  bg-muted",
+              " h-full w-full bg-muted",
               left ? "gradient-border-input" : "gradient-border-output"
             )}
             onClick={() => {
@@ -377,30 +379,11 @@ export default function ParameterComponent({
           >
             <div
               className={
-                "pointer-events-none relative top-2.5 h-full w-full self-center truncate text-sm" +
+                "pointer-events-none h-full w-full self-center truncate text-sm" +
                 (left ? " left-6 " : " right-6 text-end ") +
                 (info !== "" ? " flex items-center " : "")
               }
-            >
-              {required && (
-                <span className="py-0.1 requiredBadge ml-2 rounded-full bg-red-400 px-1 text-center tracking-wide text-white">
-                  {required ? " Required" : ""}
-                </span>
-              )}
-              <div className="">
-                {info !== "" && (
-                  <ShadTooltip content={infoHtml.current}>
-                    {/* put div to avoid bug that does not display tooltip */}
-                    <div>
-                      <IconComponent
-                        name="Info"
-                        className="relative bottom-0.5 ml-1 h-3 w-4"
-                      />
-                    </div>
-                  </ShadTooltip>
-                )}
-              </div>
-            </div>
+            ></div>
           </Handle>
           // </ShadTooltip>
         )}
@@ -409,7 +392,61 @@ export default function ParameterComponent({
             <span className="pointer-events-none z-50 ">{title}</span>
           </ShadTooltip>
         ) : (
-          <span className="pointer-events-none z-50">{title}</span>
+          <span className="pointer-events-none z-10 flex flex-wrap gap-2">
+            {title.map((t) =>
+              required ? (
+                <ShadTooltip content="Required" styleClasses="text-red-500">
+                  {/* put div to avoid bug that does not display tooltip */}
+                  <div>
+                    <Badge
+                      variant="nonebg"
+                      size="md"
+                      className="font-normal"
+                      style={{
+                        backgroundColor: String(
+                          (!left
+                            ? nodeColors[t] ?? nodeColors[types[t]]
+                            : nodeColors[types[data.type]] ??
+                              nodeColors.unknown) + "35"
+                        ),
+                      }}
+                    >
+                      {t}{" "}
+                      <span className="ml-1 text-red-500">
+                        {" "}
+                        {required ? "*" : ""}{" "}
+                      </span>
+                    </Badge>
+                  </div>
+                </ShadTooltip>
+              ) : (
+                <Badge
+                  variant="nonebg"
+                  size="md"
+                  className="font-normal"
+                  style={{
+                    backgroundColor: String(
+                      (!left
+                        ? nodeColors[t] ?? nodeColors[types[t]]
+                        : nodeColors[types[data.type]] ?? nodeColors.unknown) +
+                        "35"
+                    ),
+                  }}
+                >
+                  {t}{" "}
+                  <span className="text-red-500"> {required ? "*" : ""} </span>
+                </Badge>
+              )
+            )}
+            {info !== "" && (
+              <ShadTooltip content={infoHtml.current}>
+                {/* put div to avoid bug that does not display tooltip */}
+                <div>
+                  <IconComponent name="Info" className=" h-3 w-4" />
+                </div>
+              </ShadTooltip>
+            )}
+          </span>
         )}
 
         {left === true &&

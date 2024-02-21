@@ -127,6 +127,14 @@ body {
 .react-flow__handle {
   border-radius: 0% !important;
 }
+.react-flow__handle-right {
+  left: 0px !important;
+  right: 0px !important;
+}
+.react-flow__handle-left {
+  left: 0px !important;
+  right: 0px !important;
+}
 
 .gradient-border-input-connected {
   border-left: 5px solid #5d00ff !important;
@@ -145,19 +153,19 @@ body {
 }
 
 .gradient-border-input:hover {
-  background-color: #5d00ff !important;
+  background-color: #5d00ff27 !important;
   color: #fff;
   font-weight: 500;
 }
 
 .gradient-border-output:hover {
-  background-color: #5d00ff !important;
+  background-color: #5d00ff27 !important;
   color: #fff;
   font-weight: 500;
 }
 
 .gradient-is-connectable:hover {
-  background-color: #157415 !important;
+  background-color: #15741527 !important;
   color: #fff;
   font-weight: 500;
   border: none !important;

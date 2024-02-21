@@ -312,32 +312,39 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <ShadTooltip content={data.node?.display_name}>
-                      <div
-                        className="flex items-center gap-2"
-                        onDoubleClick={(event) => {
-                          if (nameEditable) {
-                            setInputName(true);
-                          }
-                          takeSnapshot();
-                          event.stopPropagation();
-                          event.preventDefault();
-                        }}
-                      >
+                    <div className="group flex items-center gap-2.5">
+                      <ShadTooltip content={data.node?.display_name}>
                         <div
+                          onDoubleClick={(event) => {
+                            if (nameEditable) {
+                              setInputName(true);
+                            }
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
                           data-testid={"title-" + data.node?.display_name}
                           className="generic-node-tooltip-div text-primary"
                         >
                           {data.node?.display_name}
                         </div>
-                        {nameEditable && (
+                      </ShadTooltip>
+                      {nameEditable && (
+                        <div
+                          onClick={(event) => {
+                            setInputName(true);
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
+                        >
                           <IconComponent
                             name="Pencil"
-                            className="h-4 w-4 text-ring"
+                            className="hidden h-4 w-4 animate-pulse text-status-blue group-hover:block"
                           />
-                        )}
-                      </div>
-                    </ShadTooltip>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -371,10 +378,12 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                             }
-                            title={getFieldTitle(
-                              data.node?.template!,
-                              templateField
-                            )}
+                            title={[
+                              getFieldTitle(
+                                data.node?.template!,
+                                templateField
+                              ),
+                            ]}
                             info={data.node?.template[templateField].info}
                             name={templateField}
                             tooltipTitle={
@@ -414,8 +423,8 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
-                        : data.type
+                        ? data.node.output_types
+                        : [data.type]
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
                     id={{
@@ -452,8 +461,8 @@ export default function GenericNode({
                     <IconComponent
                       name={"Pin"}
                       className={cn(
-                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                        pinned ? "animate-wiggle fill-chat-trigger" : ""
+                        "h-5 fill-transparent stroke-status-blue stroke-2 transition-all",
+                        pinned ? "animate-wiggle fill-status-blue" : ""
                       )}
                     />
                   </div>
@@ -463,7 +472,10 @@ export default function GenericNode({
             {showNode && (
               <Button
                 variant="outline"
-                className="h-9 px-1.5"
+                className={cn(
+                  "group h-9 px-1.5",
+                  isBuilding ? "hover:border-status-red" : ""
+                )}
                 onClick={() => buildFlow(data.id)}
               >
                 <div>
@@ -633,10 +645,9 @@ export default function GenericNode({
                               ] ??
                               nodeColors.unknown
                         }
-                        title={getFieldTitle(
-                          data.node?.template!,
-                          templateField
-                        )}
+                        title={[
+                          getFieldTitle(data.node?.template!, templateField),
+                        ]}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
@@ -690,8 +701,8 @@ export default function GenericNode({
                   }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
-                      ? data.node.output_types.join(" | ")
-                      : data.type
+                      ? data.node.output_types
+                      : [data.type]
                   }
                   tooltipTitle={data.node?.base_classes.join("\n")}
                   id={{
