@@ -103,7 +103,7 @@ async def get_vertices(
         graph = build_and_cache_graph(flow_id, session, chat_service, graph)
         if component_id:
             try:
-                vertices = graph.sort_up_to_vertex(component_id)
+                vertices = graph.sort_vertices(component_id)
             except Exception as exc:
                 logger.error(f"IN DEVELOPMENT: Error getting vertices: {exc}")
                 logger.exception(exc)
