@@ -1,6 +1,6 @@
 import Convert from "ansi-to-html";
 import { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -22,6 +22,8 @@ export default function ChatMessage({
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
+  const chat_message = chat.message.toString();
+
   return (
     <div
       className={classNames("form-modal-chat-position", chat.isSend ? "" : " ")}
@@ -84,7 +86,7 @@ export default function ChatMessage({
                           className="h-8 w-8 animate-pulse"
                         />
                       ) : (
-                        <ReactMarkdown
+                        <Markdown
                           remarkPlugins={[remarkGfm, remarkMath]}
                           rehypePlugins={[rehypeMathjax]}
                           className="markdown prose min-w-full text-primary word-break-break-word
@@ -143,10 +145,10 @@ export default function ChatMessage({
                             },
                           }}
                         >
-                          {chat.message.toString()}
-                        </ReactMarkdown>
+                          {chat_message}
+                        </Markdown>
                       ),
-                    [chat.message, chat.message.toString()]
+                    [chat.message, chat_message]
                   )}
                 </div>
                 {chat.files && (
