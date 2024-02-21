@@ -311,29 +311,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   getFilterEdge: [],
   onConnect: (connection) => {
     const dark = useDarkStore.getState().dark;
-    const commonMarkerProps = {
-      type: MarkerType.ArrowClosed,
-      width: 20,
-      height: 20,
-      color: dark ? "#555555" : "#000000",
-    };
+    // const commonMarkerProps = {
+    //   type: MarkerType.ArrowClosed,
+    //   width: 20,
+    //   height: 20,
+    //   color: dark ? "#555555" : "#000000",
+    // };
 
-    const inputTypes = INPUT_TYPES;
-    const outputTypes = OUTPUT_TYPES;
+    // const inputTypes = INPUT_TYPES;
+    // const outputTypes = OUTPUT_TYPES;
 
-    const findNode = useFlowStore
-      .getState()
-      .nodes.find(
-        (node) => node.id === connection.source || node.id === connection.target
-      );
+    // const findNode = useFlowStore
+    //   .getState()
+    //   .nodes.find(
+    //     (node) => node.id === connection.source || node.id === connection.target
+    //   );
 
-    const sourceType = findNode?.data?.type;
-    let isIoIn = false;
-    let isIoOut = false;
-    if (sourceType) {
-      isIoIn = inputTypes.has(sourceType);
-      isIoOut = outputTypes.has(sourceType);
-    }
+    // const sourceType = findNode?.data?.type;
+    // let isIoIn = false;
+    // let isIoOut = false;
+    // if (sourceType) {
+    //   isIoIn = inputTypes.has(sourceType);
+    //   isIoOut = outputTypes.has(sourceType);
+    // }
 
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
@@ -345,12 +345,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
           style: { stroke: "#555" },
-          className:
-            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text"
-              ? "stroke-foreground "
-              : "stroke-foreground ") + " stroke-connection",
-          markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
+          className:"stroke-foreground stroke-connection",
         },
         oldEdges
       );
