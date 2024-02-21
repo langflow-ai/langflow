@@ -4,7 +4,6 @@
 
 <h3>Discover a simpler & smarter way to build around Foundation Models</h3>
 
-
 [![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
 [![Contributors](https://img.shields.io/github/contributors/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/contributors)
 [![Last Commit](https://img.shields.io/github/last-commit/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/last-commit)
@@ -18,7 +17,6 @@
 [![](https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat)](https://discord.com/invite/EqksyE2EX9)
 [![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/Logspace/Langflow)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/logspace-ai/langflow)
-
 
 The easiest way to create and customize your flow
 
@@ -132,9 +130,9 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 Creating flows with Langflow is easy. Simply drag sidebar components onto the canvas and connect them to create your pipeline.
 
-Explore by editing prompt parameters, linking chains and agents.
+Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
 
-Once you're done, you can export your flow as a JSON file.
+Once you’re done, you can export your flow as a JSON file.
 
 Load the flow with:
 
@@ -142,7 +140,7 @@ Load the flow with:
 from langflow import load_flow_from_json
 
 flow = load_flow_from_json("path/to/flow.json")
-# Now you can use it like any chain
+# Now you can use it
 flow("Hey, have you heard of Langflow?")
 ```
 
