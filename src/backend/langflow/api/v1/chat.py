@@ -105,8 +105,7 @@ async def get_vertices(
             try:
                 vertices = graph.sort_vertices(component_id)
             except Exception as exc:
-                logger.error(f"IN DEVELOPMENT: Error getting vertices: {exc}")
-                logger.exception(exc)
+                logger.error(exc)
                 vertices = graph.sort_vertices()
         else:
             vertices = graph.sort_vertices()
@@ -196,6 +195,7 @@ async def build_vertex(
         duration = format_elapsed_time(timedelta)
         result_dict.duration = duration
         result_dict.timedelta = timedelta
+        vertex.add_build_time(timedelta)
 
         return VertexBuildResponse(
             valid=valid,
