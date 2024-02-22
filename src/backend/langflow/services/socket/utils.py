@@ -95,9 +95,7 @@ async def build_vertex(
         )
 
         # Emit the vertex build response
-        response = VertexBuildResponse(
-            valid=valid, params=params, id=vertex.id, data=result_dict
-        )
+        response = VertexBuildResponse(valid=valid, params=params, id=vertex.id, data=result_dict)
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
     except Exception as exc:

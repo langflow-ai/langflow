@@ -19,7 +19,6 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Text:
-
         prompt_template = PromptTemplate.from_template(template)
 
         attributes_to_check = ["text", "page_content"]

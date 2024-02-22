@@ -80,7 +80,6 @@ export default function NodeToolbarComponent({
     window.open(url, "_blank", "noreferrer");
   };
 
-
   useEffect(() => {
     if (!showModalAdvanced) {
       onCloseAdvancedModal!(false);

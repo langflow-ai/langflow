@@ -47,4 +47,3 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result
-

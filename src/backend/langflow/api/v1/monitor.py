@@ -66,8 +66,6 @@ async def get_transactions(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_transactions(
-            source=source, target=target, status=status, order_by=order_by
-        )
+        return monitor_service.get_transactions(source=source, target=target, status=status, order_by=order_by)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

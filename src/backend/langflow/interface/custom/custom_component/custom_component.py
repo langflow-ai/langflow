@@ -100,8 +100,7 @@ class CustomComponent(Component):
                     detail={
                         "error": "Type hint Error",
                         "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
+                            "Prompt type is not supported in the build method." " Try using PromptTemplate instead."
                         ),
                     },
                 )
@@ -115,20 +114,14 @@ class CustomComponent(Component):
         if not self.code:
             return {}
 
-        component_classes = [
-            cls
-            for cls in self.tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return {}
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         return build_methods[0] if build_methods else {}
@@ -185,9 +178,7 @@ class CustomComponent(Component):
             # Retrieve and decrypt the credential by name for the current user
             db_service = get_db_service()
             with session_getter(db_service) as session:
-                return credential_service.get_credential(
-                    user_id=self._user_id or "", name=name, session=session
-                )
+                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
 
         return get_credential
 
@@ -197,9 +188,7 @@ class CustomComponent(Component):
         credential_service = get_credential_service()
         db_service = get_db_service()
         with session_getter(db_service) as session:
-            return credential_service.list_credentials(
-                user_id=self._user_id, session=session
-            )
+            return credential_service.list_credentials(user_id=self._user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable."""
@@ -250,11 +239,7 @@ class CustomComponent(Component):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = (
-                    session.query(Flow)
-                    .filter(Flow.name == flow_name)
-                    .filter(Flow.user_id == self.user_id)
-                ).first()
+                flow = (session.query(Flow).filter(Flow.name == flow_name).filter(Flow.user_id == self.user_id)).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 

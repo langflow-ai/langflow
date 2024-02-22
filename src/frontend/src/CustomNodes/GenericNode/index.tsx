@@ -5,6 +5,7 @@ import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
+import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
@@ -18,7 +19,6 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import Loading from "../../components/ui/loading";
 
 export default function GenericNode({
   data,
@@ -166,7 +166,7 @@ export default function GenericNode({
   );
 
   const getStatusClassName = (
-    validationStatus: validationStatusType | null,
+    validationStatus: validationStatusType | null
   ) => {
     if (validationStatus && validationStatus.valid) {
       return "green-status";
@@ -181,10 +181,10 @@ export default function GenericNode({
 
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
+    validationStatus: validationStatusType | null
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading/>
+      return <Loading />;
     } else {
       const className = getStatusClassName(validationStatus);
       return <>{getIconPlayOrPauseComponent("Play", className)}</>;
@@ -446,7 +446,9 @@ export default function GenericNode({
                   }));
                 }}
               >
-                <Tooltip title={<span>{pinned ? "Pin Output" : "Unpin Output"}</span>}>
+                <Tooltip
+                  title={<span>{pinned ? "Pin Output" : "Unpin Output"}</span>}
+                >
                   <div className="generic-node-status-position flex items-center">
                     <IconComponent
                       name={"Pin"}
@@ -461,12 +463,12 @@ export default function GenericNode({
             )}
             {showNode && (
               <Button
-                
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if(data?.build_status === BuildStatus.BUILDING || isBuilding) return;
-                  buildFlow(data.id)
+                  if (data?.build_status === BuildStatus.BUILDING || isBuilding)
+                    return;
+                  buildFlow(data.id);
                 }}
               >
                 <div>
@@ -499,7 +501,8 @@ export default function GenericNode({
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
                         data?.build_status,
-                        validationStatus)}
+                        validationStatus
+                      )}
                     </div>
                   </Tooltip>
                 </div>
