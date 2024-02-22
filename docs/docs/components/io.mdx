@@ -1,3 +1,4 @@
+
 import Admonition from '@theme/Admonition';
 
 # I/O
@@ -8,19 +9,19 @@ This component is designed to get user input from the chat.
 
 **Params**
 
-- **sender:** specifies the sender type. Defaults to _`"User"`_. Options are _`"Machine"`_ and _`"User"`_.
+- **Sender Type:** specifies the sender type. Defaults to _`"User"`_. Options are _`"Machine"`_ and _`"User"`_.
 
-- **sender_name:** specifies the name of the sender. Defaults to _`"User"`_.
+- **Sender Name:** specifies the name of the sender. Defaults to _`"User"`_.
 
-- **message:** specifies the message text. It is a multiline text input.
+- **Message:** specifies the message text. It is a multiline text input.
 
-- **session_id:** specifies the session ID of the chat history.
+- **Session ID:** specifies the session ID of the chat history.
 
-- **as_record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
+- **As Record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
 
 <Admonition type="note" title="Note">
     <p>
-        If _`as_record`_ is _`true`_ and the _`message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`sender`_, _`sender_name`_, and _`session_id`_.
+        If _`As Record`_ is _`true`_ and the _`Message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`Sender`_, _`Sender Name`_, and _`Session ID`_.
     </p>
 </Admonition>
 
@@ -30,40 +31,41 @@ This component is designed to send a message to the chat.
 
 **Params**
 
-- **sender:** specifies the sender type. Defaults to _`"Machine"`_. Options are _`"Machine"`_ and _`"User"`_.
+- **Sender Type:** specifies the sender type. Defaults to _`"Machine"`_. Options are _`"Machine"`_ and _`"User"`_.
 
-- **sender_name:** specifies the name of the sender. Defaults to _`"AI"`_.
+- **Sender Name:** specifies the name of the sender. Defaults to _`"AI"`_.
 
-- **session_id:** specifies the session ID of the chat history.
+- **Session ID:** specifies the session ID of the chat history.
 
-- **message:** specifies the message text.
+- **Message:** specifies the message text.
 
-- **as_record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
+- **As Record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
 
 <Admonition type="note" title="Note">
     <p>
-        If _`as_record`_ is _`true`_ and the _`message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`sender`_, _`sender_name`_, and _`session_id`_.
+        If _`As Record`_ is _`true`_ and the _`Message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`Sender`_, _`Sender Name`_, and _`Session ID`_.
     </p>
 </Admonition>
+
 ## StoreMessages
 
 This component is designed to store messages in a structured format. It can store messages provided directly as records or construct records from provided texts and metadata.
 
 **Params**
 
-- **records:** (Optional) Specifies the list of records to store. Each `Record` should contain the keys `'sender'`, `'sender_name'`, and `'session_id'`. If not provided, `texts` must be used along with `session_id`, `sender`, and `sender_name` to construct the records.
+- **Records:** (Optional) Specifies the list of records to store. Each `Record` should contain the keys `'sender'`, `'sender_name'`, and `'session_id'`. If not provided, `texts` must be used along with `session_id`, `sender`, and `sender_name` to construct the records.
 
-- **texts:** (Optional) Specifies the list of text messages to store. If `records` is not provided, `texts` must be provided along with `session_id`, `sender`, and `sender_name`.
+- **Texts:** (Optional) Specifies the list of text messages to store. If `records` is not provided, `texts` must be provided along with `session_id`, `sender`, and `sender_name`.
 
-- **session_id:** (Optional) Specifies the session ID associated with the messages. Required if `records` is not provided and `texts` are used.
+- **Session ID:** (Optional) Specifies the session ID associated with the messages. Required if `records` is not provided and `texts` are used.
 
-- **sender:** (Optional) Specifies the identifier of the sender. Required if `records` is not provided and `texts` are used.
+- **Sender:** (Optional) Specifies the identifier of the sender. Required if `records` is not provided and `texts` are used.
 
-- **sender_name:** (Optional) Specifies the name of the sender. Required if `records` is not provided and `texts` are used.
+- **Sender Name:** (Optional) Specifies the name of the sender. Required if `records` is not provided and `texts` are used.
 
 <Admonition type="note" title="Note">
     <p>
-        The component prioritizes the use of `records` for storing messages. If `records` are not provided, it requires `texts`, `session_id`, `sender`, and `sender_name` to construct and store records. Ensure that either `records` or the combination of `texts`, `session_id`, `sender`, and `sender_name` is provided.
+        The component prioritizes the use of `Records` for storing messages. If `Records` are not provided, it requires `Texts`, `Session ID`, `Sender`, and `Sender Name` to construct and store records. Ensure that either `Records` or the combination of `Texts`, `Session ID`, `Sender`, and `Sender Name` is provided.
     </p>
 </Admonition>
 
@@ -73,20 +75,21 @@ This component is designed to retrieve stored messages based on various filters 
 
 **Params**
 
-- **sender:** (Optional) Specifies the type of the sender. Options are _`"Machine"`_ or _`"User"`_. Filters the messages by the type of sender.
+- **Sender Type:** (Optional) Specifies the type of the sender. Options are _`"Machine"`_ or _`"User"`_. Filters the messages by the type of sender.
 
-- **sender_name:** (Optional) Specifies the name of the sender. Filters the messages by the name of the sender.
+- **Sender Name:** (Optional) Specifies the name of the sender. Filters the messages by the name of the sender.
 
-- **session_id:** (Optional) Specifies the session ID of the chat history. Filters the messages belonging to a specific session.
+- **Session ID:** (Optional) Specifies the session ID of the chat history. Filters the messages belonging to a specific session.
 
-- **n_messages:** Specifies the number of messages to retrieve. Defaults to _`5`_. Determines how many recent messages from the chat history to fetch.
+- **Number of Messages:** Specifies the number of messages to retrieve. Defaults to _`5`_. Determines how many recent messages from the chat history to fetch.
 
 <Admonition type="note" title="Note">
     <p>
         The component retrieves messages based on the provided criteria. If no specific criteria are provided, it will return the most recent messages up to the specified limit. This component can be used to review past interactions and analyze the flow of conversations.
-    </p>
-</Admonition>
 
+
+ </p>
+</Admonition>
 
 ## TextInput
 
@@ -94,7 +97,7 @@ This component is designed for simple text input, allowing users to pass textual
 
 **Params**
 
-- **value:** Specifies the text input value. This is where the user can input the text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
+- **Value:** Specifies the text input value. This is where the user can input the text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
 
 <Admonition type="note" title="Note">
     <p>
