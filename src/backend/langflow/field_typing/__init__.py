@@ -13,6 +13,7 @@ from .constants import (
     Callable,
     Chain,
     ChatPromptTemplate,
+    Code,
     Data,
     Document,
     Embeddings,
@@ -73,4 +74,5 @@ __all__ = [
     "Prompt",
     "RangeSpec",
     "TemplateField",
+    "Code",
 ]

@@ -34,6 +34,10 @@ class Prompt:
     pass
 
 
+class Code:
+    pass
+
+
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
     "AgentExecutor": AgentExecutor,
