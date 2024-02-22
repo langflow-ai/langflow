@@ -236,7 +236,7 @@ class ResultData(BaseModel):
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
-    successors: Optional[List[str]] = Field(default_factory=list)
+    next_vertex_id: Optional[str] = None
     valid: bool
     params: Optional[str]
     """JSON string of the params."""
