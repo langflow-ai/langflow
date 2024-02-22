@@ -1,7 +1,8 @@
 from typing import Optional
-from langflow import CustomComponent
-from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
+
 from langchain.llms.base import BaseLLM
+from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
+from langflow import CustomComponent
 
 
 class HuggingFaceEndpointsComponent(CustomComponent):
@@ -31,11 +32,11 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         model_kwargs: Optional[dict] = None,
     ) -> BaseLLM:
         try:
-            output = HuggingFaceEndpoint(
+            output = HuggingFaceEndpoint(  # type: ignore
                 endpoint_url=endpoint_url,
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
-                model_kwargs=model_kwargs,
+                model_kwargs=model_kwargs or {},
             )
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
