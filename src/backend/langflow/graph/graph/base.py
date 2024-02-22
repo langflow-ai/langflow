@@ -2,6 +2,8 @@ from collections import defaultdict, deque
 from typing import Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
+from loguru import logger
+
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
@@ -15,7 +17,6 @@ from langflow.graph.vertex.types import (
 )
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
-from loguru import logger
 
 
 class Graph:
@@ -140,7 +141,13 @@ class Graph:
                 self_vertex.params = {}
                 self_vertex._build_params()
                 self_vertex.graph = self
-                self_vertex._built = False
+                # If the vertex is pinned, we don't want
+                # to reset the results nor the _built attribute
+                if not self_vertex.pinned:
+                    self_vertex._built = False
+                    self_vertex.result = None
+                    self_vertex.artifacts = None
+                    self_vertex.set_top_level(self.top_level_vertices)
                 self.reset_all_edges_of_vertex(self_vertex)
 
         # Remove vertices
