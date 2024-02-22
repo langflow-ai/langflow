@@ -10,6 +10,9 @@ from fastapi import (
     WebSocketException,
     status,
 )
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.api.utils import build_and_cache_graph, format_elapsed_time
 from langflow.api.v1.schemas import (
     ResultData,
@@ -24,8 +27,6 @@ from langflow.services.auth.utils import (
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session
 from langflow.services.monitor.utils import log_vertex_build
-from loguru import logger
-from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -172,7 +173,7 @@ async def build_vertex(
                 raise ValueError(f"No result found for vertex {vertex_id}")
             chat_service.set_cache(flow_id, graph)
         except Exception as exc:
-            params = repr(exc)
+            params = str(exc)
             valid = False
             result_dict = ResultData(results={})
             artifacts = {}
