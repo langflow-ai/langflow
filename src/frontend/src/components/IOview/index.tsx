@@ -126,6 +126,16 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   </button>
                 )}
             </div>
+            <div className="flex font-semibold mt-4 mb-2 mx-2 gap-2 items-center">
+              {categories[selectedCategory].name === "Inputs" &&
+              <><IconComponent name={"FormInput"}/>
+              Text Inputs</>
+              }
+              {categories[selectedCategory].name === "Outputs" &&
+              <><IconComponent name={"ChevronRightSquare"}/>
+              Prompt Outputs</>
+              }
+            </div>
             {UpdateAccordion()
               .filter(
                 (input) =>
