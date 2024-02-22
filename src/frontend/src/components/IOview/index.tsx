@@ -131,13 +131,13 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                 )}
             </div>
             <div className="mx-2 mb-2 mt-4 flex items-center gap-2 font-semibold">
-              {categories[selectedCategory].name === "Inputs" && (
+              {categories[selectedCategory]?.name === "Inputs" && (
                 <>
                   <IconComponent name={"FormInput"} />
                   Text Inputs
                 </>
               )}
-              {categories[selectedCategory].name === "Outputs" && (
+              {categories[selectedCategory]?.name === "Outputs" && (
                 <>
                   <IconComponent name={"ChevronRightSquare"} />
                   Prompt Outputs
@@ -184,7 +184,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       <div className="file-component-tab-column">
                         <div className="">
                           {node &&
-                            (categories[selectedCategory].name === "Inputs" ? (
+                            (categories[selectedCategory]?.name === "Inputs" ? (
                               <IOInputField
                                 inputType={input.type}
                                 inputId={input.id}
@@ -206,7 +206,9 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             handleSelectChange()
           ) : (
             <div className="absolute bottom-8 right-8">
-              <Button className="px-3"><IconComponent name="Play" className="h-6 w-6"/></Button>
+              <Button className="px-3">
+                <IconComponent name="Play" className="h-6 w-6" />
+              </Button>
             </div>
           )}
         </div>
