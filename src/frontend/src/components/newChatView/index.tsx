@@ -35,6 +35,7 @@ export default function newChatView(): JSX.Element {
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
@@ -105,6 +106,7 @@ export default function newChatView(): JSX.Element {
   }, []);
 
   async function sendMessage(count = 1): Promise<void> {
+    if(isBuilding) return;
     const { nodes, edges } = getFlow();
     let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
