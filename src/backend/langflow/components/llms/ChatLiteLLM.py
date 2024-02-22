@@ -1,4 +1,3 @@
-import os
 from typing import Any, Callable, Dict, Optional, Union
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
@@ -26,6 +25,18 @@ class ChatLiteLLMComponent(CustomComponent):
                 "advanced": False,
                 "required": False,
                 "password": True,
+            },
+            "provider": {
+                "display_name": "Provider",
+                "info": "The provider of the API key.",
+                "options": [
+                    "OpenAI",
+                    "Azure",
+                    "Anthropic",
+                    "Replicate",
+                    "Cohere",
+                    "OpenRouter",
+                ],
             },
             "streaming": {
                 "display_name": "Streaming",
@@ -96,7 +107,8 @@ class ChatLiteLLMComponent(CustomComponent):
     def build(
         self,
         model: str,
-        api_key: str,
+        provider: str,
+        api_key: Optional[str] = None,
         streaming: bool = True,
         temperature: Optional[float] = 0.7,
         model_kwargs: Optional[Dict[str, Any]] = {},
@@ -114,13 +126,19 @@ class ChatLiteLLMComponent(CustomComponent):
             litellm.set_verbose = verbose
         except ImportError:
             raise ChatLiteLLMException(
-                "Could not import litellm python package. " "Please install it with `pip install litellm`"
+                "Could not import litellm python package. "
+                "Please install it with `pip install litellm`"
             )
-        if api_key:
-            if "perplexity" in model:
-                os.environ["PERPLEXITYAI_API_KEY"] = api_key
-            elif "replicate" in model:
-                os.environ["REPLICATE_API_KEY"] = api_key
+        provider_map = {
+            "OpenAI": "openai_api_key",
+            "Azure": "azure_api_key",
+            "Anthropic": "anthropic_api_key",
+            "Replicate": "replicate_api_key",
+            "Cohere": "cohere_api_key",
+            "OpenRouter": "openrouter_api_key",
+        }
+        # Set the API key based on the provider
+        kwarg = {provider_map[provider]: api_key}
 
         LLM = ChatLiteLLM(
             model=model,
@@ -133,5 +151,6 @@ class ChatLiteLLMComponent(CustomComponent):
             n=n,
             max_tokens=max_tokens,
             max_retries=max_retries,
+            **kwarg,
         )
         return LLM
