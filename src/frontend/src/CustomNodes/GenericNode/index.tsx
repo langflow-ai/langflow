@@ -465,7 +465,7 @@ export default function GenericNode({
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if(data?.build_status === BuildStatus.BUILDING) return;
+                  if(data?.build_status === BuildStatus.BUILDING || isBuilding) return;
                   buildFlow(data.id)
                 }}
               >
