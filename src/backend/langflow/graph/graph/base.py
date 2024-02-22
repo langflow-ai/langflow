@@ -43,6 +43,8 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self.vertices_layers = []
+        self.stop_vertex = None
 
         self._build_graph()
         self.build_graph_maps()
@@ -518,17 +520,20 @@ class Graph:
 
         return vertices_layers
 
-    def sort_vertices(self, component_id: Optional[str] = None) -> List[List[str]]:
+    def sort_vertices(self, stop_vertex_id: Optional[str] = None) -> List[List[str]]:
         """Sorts the vertices in the graph."""
-        if component_id:
-            vertices = self.sort_up_to_vertex(component_id)
+        if stop_vertex_id:
+            self.stop_vertex = stop_vertex_id
+            vertices = self.sort_up_to_vertex(stop_vertex_id)
         else:
             vertices = self.vertices
         vertices_layers = self.layered_topological_sort(vertices)
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
         vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         self.increment_run_count()
-        return vertices_layers
+        self.vertices_layers = vertices_layers
+        # Return just the first layer
+        return vertices_layers[0]
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
