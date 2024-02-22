@@ -520,11 +520,11 @@ class Graph:
 
         return vertices_layers
 
-    def sort_vertices(self, stop_vertex_id: Optional[str] = None) -> List[List[str]]:
+    def sort_vertices(self, stop_component_id: Optional[str] = None) -> List[List[str]]:
         """Sorts the vertices in the graph."""
-        if stop_vertex_id:
-            self.stop_vertex = stop_vertex_id
-            vertices = self.sort_up_to_vertex(stop_vertex_id)
+        if stop_component_id:
+            self.stop_vertex = stop_component_id
+            vertices = self.sort_up_to_vertex(stop_component_id)
         else:
             vertices = self.vertices
         vertices_layers = self.layered_topological_sort(vertices)

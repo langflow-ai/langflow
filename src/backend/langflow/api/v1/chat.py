@@ -85,7 +85,7 @@ async def try_running_celery_task(vertex, user_id):
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def get_vertices(
     flow_id: str,
-    stop_vertex_id: Optional[str] = None,
+    stop_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
 ):
@@ -96,9 +96,9 @@ async def get_vertices(
         if cache := chat_service.get_cache(flow_id):
             graph: Graph = cache.get("result")
         graph = build_and_cache_graph(flow_id, session, chat_service, graph)
-        if stop_vertex_id:
+        if stop_component_id:
             try:
-                vertices = graph.sort_vertices(stop_vertex_id)
+                vertices = graph.sort_vertices(stop_component_id)
             except Exception as exc:
                 logger.error(exc)
                 vertices = graph.sort_vertices()
