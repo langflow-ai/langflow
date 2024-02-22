@@ -1,4 +1,5 @@
 from collections import defaultdict, deque
+from itertools import chain
 from typing import Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
@@ -48,6 +49,14 @@ class Graph:
 
         self._build_graph()
         self.build_graph_maps()
+
+    # vertices_layers is a list of lists ordered by the order the vertices
+    # should be built.
+    # We need to create a new method that will take the vertices_layers
+    # and return the next vertex to be built.
+    def next_vertex_to_build(self):
+        """Returns the next vertex to be built."""
+        yield from chain.from_iterable(self.vertices_layers)
 
     @property
     def metadata(self):
@@ -531,9 +540,11 @@ class Graph:
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
         vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         self.increment_run_count()
-        self.vertices_layers = vertices_layers
+        first_layer = vertices_layers[0]
+        # save the only the rest
+        self.vertices_layers = vertices_layers[1:]
         # Return just the first layer
-        return vertices_layers[0]
+        return first_layer
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
