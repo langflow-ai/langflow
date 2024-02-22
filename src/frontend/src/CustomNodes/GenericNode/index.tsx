@@ -18,6 +18,7 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import Loading from "../../components/ui/loading";
 
 export default function GenericNode({
   data,
@@ -183,7 +184,7 @@ export default function GenericNode({
     validationStatus: validationStatusType | null,
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return getIconPlayOrPauseComponent("Square", "red-status");
+      return <Loading/>
     } else {
       const className = getStatusClassName(validationStatus);
       return <>{getIconPlayOrPauseComponent("Play", className)}</>;
@@ -460,9 +461,13 @@ export default function GenericNode({
             )}
             {showNode && (
               <Button
+                
                 variant="outline"
-                className="h-9 px-1.5"
-                onClick={() => buildFlow(data.id)}
+                className={"h-9 px-1.5"}
+                onClick={() => {
+                  if(data?.build_status === BuildStatus.BUILDING) return;
+                  buildFlow(data.id)
+                }}
               >
                 <div>
                   <Tooltip
