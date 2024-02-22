@@ -32,8 +32,6 @@ class ConversationChainComponent(CustomComponent):
         else:
             chain = ConversationChain(llm=llm, memory=memory)
         result = chain.invoke(inputs)
-        # result is an AIMessage which is a subclass of BaseMessage
-        # We need to check if it is a string or a BaseMessage
         if hasattr(result, "content") and isinstance(result.content, str):
             result = result.content
         elif isinstance(result, str):
