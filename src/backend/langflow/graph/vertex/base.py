@@ -3,6 +3,8 @@ import inspect
 import types
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
+from loguru import logger
+
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
@@ -11,7 +13,6 @@ from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultData
@@ -120,6 +121,10 @@ class Vertex:
     @property
     def successors(self) -> List["Vertex"]:
         return self.graph.get_successors(self)
+
+    @property
+    def successors_ids(self) -> List[str]:
+        return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
         return {
