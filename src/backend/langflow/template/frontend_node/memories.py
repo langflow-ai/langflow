@@ -4,7 +4,9 @@ from langchain_community.chat_message_histories.mongodb import (
     DEFAULT_COLLECTION_NAME,
     DEFAULT_DBNAME,
 )
-from langchain_community.chat_message_histories.postgres import DEFAULT_CONNECTION_STRING
+from langchain_community.chat_message_histories.postgres import (
+    DEFAULT_CONNECTION_STRING,
+)
 
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.base import FrontendNode
@@ -13,7 +15,9 @@ from langflow.template.template.base import Template
 
 
 class MemoryFrontendNode(FrontendNode):
-    #! Needs testing
+
+    pinned: bool = True
+
     def add_extra_fields(self) -> None:
         # chat history should have another way to add common field?
         # prevent adding incorect field in ChatMessageHistory
@@ -77,7 +81,9 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.value = ""
-            field.info = INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
+            field.info = (
+                INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
+            )
 
         if field.name == "memory_key":
             field.value = "chat_history"
