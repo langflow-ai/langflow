@@ -6,6 +6,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -35,6 +36,8 @@ class CustomComponent(Component):
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
+    pinned: Optional[bool] = False
+    """The default pinned state of the component. Defaults to False."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
