@@ -5,10 +5,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import (
-    CLASSES_TO_REMOVE,
-    FORCE_SHOW_FIELDS,
-)
+from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
@@ -88,7 +85,7 @@ class FrontendNode(BaseModel):
     def process_base_classes(self, base_classes: List[str]) -> List[str]:
         """Removes unwanted base classes from the list of base classes."""
 
-        return [base_class for base_class in base_classes if base_class not in CLASSES_TO_REMOVE]
+        return list(set(base_classes))
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
