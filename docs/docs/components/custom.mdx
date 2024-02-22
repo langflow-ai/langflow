@@ -81,7 +81,8 @@ The CustomComponent class serves as the foundation for creating custom component
   | _`required: bool`_         | Makes the field required.                                                                                                                                                                                                                                                   |
   | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
   | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
-  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                                     |
+  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                 |
+  | _`title_case: bool`_       | Formats the name of the field when _`display_name`_ is not defined. Set it to False to keep the name as you set it in the _`build`_ method.                                                                                                                                 |
 
   <Admonition type="info" label="Tip">
 
