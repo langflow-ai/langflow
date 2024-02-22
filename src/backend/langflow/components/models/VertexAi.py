@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from langchain_google_vertexai import ChatVertexAI
 from langchain_core.messages.base import BaseMessage
+
 from langflow import CustomComponent
 from langflow.field_typing import Text
 
@@ -62,7 +62,7 @@ class ChatVertexAIComponent(CustomComponent):
 
     def build(
         self,
-        inputs:str,
+        inputs: str,
         credentials: Optional[str],
         project: str,
         examples: Optional[List[BaseMessage]] = [],
@@ -74,7 +74,13 @@ class ChatVertexAIComponent(CustomComponent):
         top_p: float = 0.95,
         verbose: bool = False,
     ) -> Text:
-        output =  ChatVertexAI(
+        try:
+            from langchain_google_vertexai import ChatVertexAI
+        except ImportError:
+            raise ImportError(
+                "To use the ChatVertexAI model, you need to install the langchain-google-vertexai package."
+            )
+        output = ChatVertexAI(
             credentials=credentials,
             examples=examples,
             location=location,
