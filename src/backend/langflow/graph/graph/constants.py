@@ -15,7 +15,9 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
-chat_components = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
+chat_components = ["ChatInput", "ChatOutput", "TextInput"]
+# For now the only routing we support is to stop or run the next component
+routing_components = ["ShouldRunNext"]
 
 
 class VertexTypesDict(LazyLoadDictBase):
@@ -51,6 +53,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
             **{t: types.ChatVertex for t in chat_components},
+            **{t: types.RoutingVertex for t in routing_components},
         }
 
     def get_custom_component_vertex_type(self):
