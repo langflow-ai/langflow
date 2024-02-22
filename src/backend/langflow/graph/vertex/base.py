@@ -57,6 +57,14 @@ class Vertex:
             self.is_interface_component = False
 
         self.use_result = False
+        self.build_times: List[float] = []
+
+    @property
+    def avg_build_time(self):
+        return sum(self.build_times) / len(self.build_times) if self.build_times else 0
+
+    def add_build_time(self, time):
+        self.build_times.append(time)
 
     # Build a result dict for each edge
     # like so: {edge.target.id: {edge.target_param: self._built_object}}
@@ -112,6 +120,14 @@ class Vertex:
     @property
     def edges(self) -> List["ContractEdge"]:
         return self.graph.get_vertex_edges(self.id)
+
+    @property
+    def predecessors(self) -> List["Vertex"]:
+        return self.graph.get_predecessors(self)
+
+    @property
+    def successors(self) -> List["Vertex"]:
+        return self.graph.get_successors(self)
 
     def __getstate__(self):
         return {
@@ -228,7 +244,7 @@ class Vertex:
             for key, value in self.data["node"]["template"].items()
             if isinstance(value, dict)
         }
-        params = self.params.copy() if self.params else {}
+        params = {}
 
         for edge in self.edges:
             if not hasattr(edge, "target_param"):
@@ -271,8 +287,7 @@ class Vertex:
                 if value.get("type") == "code":
                     try:
                         params[key] = ast.literal_eval(val) if val else None
-                    except Exception as exc:
-                        logger.debug(f"Error parsing code: {exc}")
+                    except Exception:
                         params[key] = val
                 elif value.get("type") in ["dict", "NestedDict"]:
                     # When dict comes from the frontend it comes as a
@@ -296,6 +311,10 @@ class Vertex:
                         params[key] = float(val)
                     except ValueError:
                         params[key] = val
+                elif value.get("type") == "str" and val is not None:
+                    # val may contain escaped \n, \t, etc.
+                    # so we need to unescape it
+                    params[key] = val.encode().decode("unicode_escape")
                 elif val is not None and val != "":
                     params[key] = val
 

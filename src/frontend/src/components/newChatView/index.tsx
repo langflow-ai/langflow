@@ -32,6 +32,7 @@ export default function newChatView(): JSX.Element {
   } = useFlowStore();
   const { setErrorData, setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -107,10 +108,11 @@ export default function newChatView(): JSX.Element {
     const { nodes, edges } = getFlow();
     let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
+      setIsBuilding(true);
       setLockChat(true);
       setChatValue("");
       const chatInputId = inputIds.find((inputId) =>
-        inputId.includes("ChatInput")
+      inputId.includes("ChatInput")
       );
       const chatInput: NodeType = getNode(chatInputId!) as NodeType;
       if (chatInput) {

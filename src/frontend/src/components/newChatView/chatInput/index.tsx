@@ -100,7 +100,7 @@ export default function ChatInput({
               />
             ) : noInput ? (
               <IconComponent
-                name="Sparkles"
+                name="Play"
                 className="form-modal-play-icon"
                 aria-hidden="true"
               />
@@ -113,7 +113,7 @@ export default function ChatInput({
             )}
           </button>
         </div>
-      </div>
+      </div>{/* 
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="primary" className="h-13 px-4">
@@ -133,7 +133,7 @@ export default function ChatInput({
             />
           </div>
         </PopoverContent>
-      </Popover>
+      </Popover> */}
     </div>
   );
 }

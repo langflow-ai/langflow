@@ -123,12 +123,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-
-    flowsManager.autoSaveCurrentFlow(
-      newChange,
-      newEdges,
-      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-    );
+    if(!(get().isBuilding)){
+      flowsManager.autoSaveCurrentFlow(
+        newChange,
+        newEdges,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
+    }
   },
   setEdges: (change) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
@@ -138,12 +139,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-
-    flowsManager.autoSaveCurrentFlow(
-      get().nodes,
-      newChange,
-      get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
-    );
+    if(!(get().isBuilding)){
+      flowsManager.autoSaveCurrentFlow(
+        get().nodes,
+        newChange,
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+      );
+    }
   },
   setNode: (id: string, change: Node | ((oldState: Node) => Node)) => {
     let newChange =
@@ -309,29 +311,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   getFilterEdge: [],
   onConnect: (connection) => {
     const dark = useDarkStore.getState().dark;
-    const commonMarkerProps = {
-      type: MarkerType.ArrowClosed,
-      width: 20,
-      height: 20,
-      color: dark ? "#555555" : "#000000",
-    };
+    // const commonMarkerProps = {
+    //   type: MarkerType.ArrowClosed,
+    //   width: 20,
+    //   height: 20,
+    //   color: dark ? "#555555" : "#000000",
+    // };
 
-    const inputTypes = INPUT_TYPES;
-    const outputTypes = OUTPUT_TYPES;
+    // const inputTypes = INPUT_TYPES;
+    // const outputTypes = OUTPUT_TYPES;
 
-    const findNode = useFlowStore
-      .getState()
-      .nodes.find(
-        (node) => node.id === connection.source || node.id === connection.target
-      );
+    // const findNode = useFlowStore
+    //   .getState()
+    //   .nodes.find(
+    //     (node) => node.id === connection.source || node.id === connection.target
+    //   );
 
-    const sourceType = findNode?.data?.type;
-    let isIoIn = false;
-    let isIoOut = false;
-    if (sourceType) {
-      isIoIn = inputTypes.has(sourceType);
-      isIoOut = outputTypes.has(sourceType);
-    }
+    // const sourceType = findNode?.data?.type;
+    // let isIoIn = false;
+    // let isIoOut = false;
+    // if (sourceType) {
+    //   isIoIn = inputTypes.has(sourceType);
+    //   isIoOut = outputTypes.has(sourceType);
+    // }
 
     let newEdges: Edge[] = [];
     get().setEdges((oldEdges) => {
@@ -343,12 +345,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
           style: { stroke: "#555" },
-          className:
-            ((scapeJSONParse(connection.targetHandle!) as targetHandleType)
-              .type === "Text"
-              ? "stroke-foreground "
-              : "stroke-foreground ") + " stroke-connection",
-          markerEnd: isIoIn || isIoOut ? { ...commonMarkerProps } : undefined,
+          className:"stroke-foreground stroke-connection",
         },
         oldEdges
       );
@@ -375,6 +372,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async (nodeId?: string) => {
+    get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -394,7 +392,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       description: currentFlow!.description,
     });
     setNoticeData({ title: "Running components" });
-    return buildVertices({
+    await buildVertices({
       flowId: currentFlow!.id,
       nodeId,
       onBuildComplete: () => {
@@ -403,11 +401,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         } else {
           setSuccessData({ title: `Flow built successfully` });
         }
+        get().setIsBuilding(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title, list, idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
-
         setErrorData({ list, title });
       },
       onBuildStart: (idList) => {

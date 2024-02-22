@@ -926,9 +926,6 @@
   .form-modal-initial-prompt-btn {
     @apply mb-2 flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold shadow-sm;
   }
-  .form-modal-iv-box {
-    @apply flex-max-width mt-2 h-[80vh];
-  }
   .form-modal-iv-size {
     @apply mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide;
   }

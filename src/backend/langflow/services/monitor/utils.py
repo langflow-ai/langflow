@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 import duckdb
 from langflow.services.deps import get_monitor_service
@@ -14,7 +14,9 @@ INDEX_KEY = "index"
 
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
     result = conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()
-    return {row[1]: row[2].upper() for row in result}
+    schema = {row[1]: row[2].upper() for row in result}
+    schema.pop(INDEX_KEY, None)
+    return schema
 
 
 def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
@@ -56,6 +58,7 @@ def drop_and_create_table_if_schema_mismatch(
         desired_schema = model_to_sql_column_definitions(model)
 
         # Compare the current and desired schemas
+
         if current_schema != desired_schema:
             # If they don't match, drop the existing table and create a new one
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
@@ -79,10 +82,13 @@ def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
     model: Type[BaseModel],
-    monitor_data: Dict[str, Any],
+    monitor_data: Union[Dict[str, Any], BaseModel],
 ):
     # Validate the data with the Pydantic model
-    validated_data = model(**monitor_data)
+    if isinstance(monitor_data, model):
+        validated_data = monitor_data
+    else:
+        validated_data = model(**monitor_data)
 
     # Extract data for the insert statement
     validated_dict = validated_data.model_dump(exclude_unset=True)
@@ -107,7 +113,7 @@ def add_row_to_table(
 
 
 async def log_message(
-    sender_type: str,
+    sender: str,
     sender_name: str,
     message: str,
     session_id: str,
@@ -121,7 +127,7 @@ async def log_message(
 
         monitor_service = get_monitor_service()
         row = {
-            "sender_type": sender_type,
+            "sender": sender,
             "sender_name": sender_name,
             "message": message,
             "artifacts": artifacts or {},
