@@ -28,7 +28,6 @@ class ChromaComponent(CustomComponent):
         """
         return {
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
-            "persist": {"display_name": "Persist"},
             "index_directory": {"display_name": "Persist Directory"},
             "code": {"advanced": True, "display_name": "Code"},
             "documents": {"display_name": "Documents", "is_list": True},
@@ -52,7 +51,6 @@ class ChromaComponent(CustomComponent):
     def build(
         self,
         collection_name: str,
-        persist: bool,
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
         index_directory: Optional[str] = None,
@@ -107,7 +105,7 @@ class ChromaComponent(CustomComponent):
                 )
             chroma = Chroma.from_documents(
                 documents=documents,  # type: ignore
-                persist_directory=index_directory if persist else None,
+                persist_directory=index_directory,
                 collection_name=collection_name,
                 embedding=embedding,
                 client_settings=chroma_settings,

@@ -34,7 +34,7 @@ class ChatInput(CustomComponent):
     def build(
         self,
         sender: Optional[str] = "User",
-        sender_name: Optional[str] = "You",
+        sender_name: Optional[str] = "User",
         message: Optional[str] = None,
         as_record: Optional[bool] = False,
         session_id: Optional[str] = None,
