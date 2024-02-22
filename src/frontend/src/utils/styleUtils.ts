@@ -5,6 +5,7 @@ import {
   BookMarked,
   BookmarkPlus,
   Boxes,
+  Bot,
   Cable,
   Check,
   CheckCircle2,
@@ -293,7 +294,7 @@ export const nodeIconsLucide: iconsType = {
   WikipediaAPIWrapper: SvgWikipedia,
   chains: Link,
   memories: Cpu,
-  models: Lightbulb,
+  models: Bot,
   llms: Lightbulb,
   prompts: TerminalSquare,
   tools: Wrench,
@@ -414,4 +415,5 @@ export const nodeIconsLucide: iconsType = {
   Code,
   FlaskConical,
   AlertCircle,
+  Bot,
 };
