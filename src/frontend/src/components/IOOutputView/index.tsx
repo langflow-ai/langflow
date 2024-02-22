@@ -43,5 +43,10 @@ export default function IOOutputView({
         );
     }
   }
-  return <div className="h-full w-full">{handleOutputType()}</div>;
+  return (
+    <div className="font-xl flex h-full w-full flex-col gap-4 p-4 font-semibold">
+      {outputType}
+      {handleOutputType()}
+    </div>
+  );
 }

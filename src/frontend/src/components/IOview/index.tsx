@@ -182,6 +182,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       keyValue={input.id}
                     >
                       <div className="file-component-tab-column">
+                        <div className="">
                         {node &&
                           (categories[selectedCategory].name === "Inputs" ? (
                             <IOInputField
@@ -194,6 +195,8 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                               outputId={input.id}
                             />
                           ))}
+                        </div>
+                        
                       </div>
                     </AccordionComponent>
                   </div>
