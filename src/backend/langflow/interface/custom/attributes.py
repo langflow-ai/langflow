@@ -6,9 +6,14 @@ import emoji
 def validate_icon(value: str, *args, **kwargs):
     # we are going to use the emoji library to validate the emoji
     # emojis can be defined using the :emoji_name: syntax
-    if not value.startswith(":") or not value.endswith(":"):
-        warnings.warn("Invalid emoji. Please use the :emoji_name: syntax.")
+
+    if not value.startswith(":") and not value.endswith(":"):
         return value
+    elif not value.startswith(":") or not value.endswith(":"):
+        # emoji should have both starting and ending colons
+        # so if one of them is missing, we will raise
+        raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+
     emoji_value = emoji.emojize(value, variant="emoji_type")
     if value == emoji_value:
         warnings.warn(f"Invalid emoji. {value} is not a valid emoji.")
@@ -28,7 +33,7 @@ def getattr_return_bool(value):
 ATTR_FUNC_MAPPING = {
     "display_name": getattr_return_str,
     "description": getattr_return_str,
-    "beta": getattr_return_str,
+    "beta": getattr_return_bool,
     "documentation": getattr_return_str,
     "icon": validate_icon,
     "pinned": getattr_return_bool,
