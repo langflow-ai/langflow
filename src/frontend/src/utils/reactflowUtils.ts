@@ -743,7 +743,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
       template[key].advanced = true;
     }
     //prevent code fields from showing on the group node
-    if (type === "code") {
+    if (type === "code" && key === "code") {
       template[key].show = false;
     }
   });
