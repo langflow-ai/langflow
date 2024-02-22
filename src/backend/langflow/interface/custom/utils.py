@@ -121,7 +121,13 @@ def get_field_properties(extra_field):
 def process_type(field_type: str):
     if field_type.startswith("list") or field_type.startswith("List"):
         return extract_inner_type(field_type)
-    return "prompt" if field_type == "Prompt" else field_type
+
+    # field_type is a string can be Prompt or Code too
+    # so we just need to lower if it is the case
+    lowercase_type = field_type.lower()
+    if lowercase_type in ["prompt", "code"]:
+        return lowercase_type
+    return field_type
 
 
 def add_new_custom_field(
