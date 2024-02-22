@@ -7,7 +7,10 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader.utils import (
@@ -22,7 +25,6 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(
@@ -263,16 +265,9 @@ def run_build_config(
 
 def sanitize_template_config(template_config):
     """Sanitize the template config"""
-    attributes = {
-        "display_name",
-        "description",
-        "beta",
-        "documentation",
-        "output_types",
-        "icon",
-    }
+
     for key in template_config.copy():
-        if key not in attributes:
+        if key not in ATTR_FUNC_MAPPING.keys():
             template_config.pop(key, None)
 
     return template_config
