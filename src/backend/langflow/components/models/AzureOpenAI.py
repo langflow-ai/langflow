@@ -1,15 +1,15 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
+
+from langflow import CustomComponent
 
 
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureOpenAI model"
     description: str = "Generate text using LLM model from Azure OpenAI."
-    documentation: str = (
-        "https://python.langchain.com/docs/integrations/llms/azure_openai"
-    )
+    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
 
     AZURE_OPENAI_MODELS = [
@@ -71,7 +71,6 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "info": "Maximum number of tokens to generate.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
             "inputs": {"display_name": "Input"},
         }
 
