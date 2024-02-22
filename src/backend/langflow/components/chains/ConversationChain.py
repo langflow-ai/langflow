@@ -35,13 +35,10 @@ class ConversationChainComponent(CustomComponent):
         # result is an AIMessage which is a subclass of BaseMessage
         # We need to check if it is a string or a BaseMessage
         if hasattr(result, "content") and isinstance(result.content, str):
-            self.status = "is message"
             result = result.content
         elif isinstance(result, str):
-            self.status = "is_string"
             result = result
         else:
-            # is dict
             result = result.get("response")
         self.status = result
         return result
