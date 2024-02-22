@@ -10,6 +10,9 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.api.utils import (
     build_and_cache_graph,
     build_input_keys_response,
@@ -34,8 +37,6 @@ from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
 from langflow.services.monitor.utils import log_vertex_build
-from loguru import logger
-from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
@@ -355,6 +356,7 @@ async def build_vertex(
                 params = vertex._built_object_repr()
                 valid = True
                 result_dict = vertex.result
+                artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             chat_service.set_cache(flow_id, graph)
