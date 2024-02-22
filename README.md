@@ -21,7 +21,7 @@
 The easiest way to create and customize your flow
 
 <a href="https://github.com/logspace-ai/langflow">
-<img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/img/new_langflow_demo.gif"></a>
+<img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif"></a>
 
 # 📦 Installation
 

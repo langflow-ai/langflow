@@ -82,6 +82,16 @@ The CustomComponent class serves as the foundation for creating custom component
   | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
   | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
   | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                                     |
+
+  <Admonition type="info" label="Tip">
+
+  Keys _`options`_ and _`value`_ can receive a method or function that returns a list of strings or a string, respectively. This is useful when you want to dynamically generate the options or the default value of a field. A refresh button will appear next to the field in the component, allowing the user to update the options or the default value.
+
+  </Admonition>
+
+
+
+
 - The CustomComponent class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
 
   | Method Name    | Description                                                         |
@@ -96,6 +106,7 @@ The CustomComponent class serves as the foundation for creating custom component
   | -------------- | ----------------------------------------------------------------------------- |
   | _`status`_ | Displays the value it receives in the _`build`_ method. Useful for debugging. |
   | _`field_order`_ | Defines the order the fields will be displayed in the canvas.                  |
+  | _`icon`_ | Defines the emoji (for example, _`:rocket:`_) that will be displayed in the canvas. |
 
   <Admonition type="info" label="Tip">
 
