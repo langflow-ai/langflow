@@ -62,5 +62,10 @@ export default function IOInputField({
         );
     }
   }
-  return <div className="h-full w-full">{handleInputType()}</div>;
+  return (
+    <div className="font-xl flex h-full w-full flex-col gap-4 p-4 font-semibold">
+      {inputType}
+      {handleInputType()}
+    </div>
+  );
 }
