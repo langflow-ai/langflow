@@ -20,6 +20,7 @@ from langflow.api.v1.schemas import (
     VerticesOrderResponse,
 )
 from langflow.graph.graph.base import Graph
+from langflow.graph.vertex.types import RoutingVertex
 from langflow.services.auth.utils import (
     get_current_active_user,
     get_current_user_for_websocket,
@@ -161,6 +162,12 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
+            if isinstance(vertex, RoutingVertex):
+                if vertex._built_object is True:
+                    next_vertex_id = next(graph.next_vertex_to_build())
+                else:
+                    next_vertex_id = None
+
             chat_service.set_cache(flow_id, graph)
         except Exception as exc:
             params = str(exc)
@@ -189,7 +196,7 @@ async def build_vertex(
         vertex.add_build_time(timedelta)
 
         return VertexBuildResponse(
-            successors=vertex.successors_ids,
+            next_vertex_id=next_vertex_id,
             valid=valid,
             params=params,
             id=vertex.id,
