@@ -2,6 +2,8 @@ import re
 from collections import defaultdict
 from typing import ClassVar, Dict, List, Optional, Union
 
+from pydantic import BaseModel, Field, field_serializer, model_serializer
+
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.constants import (
     CLASSES_TO_REMOVE,
@@ -10,7 +12,6 @@ from langflow.template.frontend_node.constants import (
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
 from langflow.utils import constants
-from pydantic import BaseModel, Field, field_serializer, model_serializer
 
 
 class FieldFormatters(BaseModel):
@@ -44,17 +45,31 @@ class FieldFormatters(BaseModel):
 class FrontendNode(BaseModel):
     _format_template: bool = True
     template: Template
+    """Template for the frontend node."""
     description: Optional[str] = None
+    """Description of the frontend node."""
     icon: Optional[str] = None
+    """Icon of the frontend node."""
     is_composition: Optional[bool] = None
+    """Whether the frontend node is used for composition."""
     base_classes: List[str]
+    """List of base classes for the frontend node."""
     name: str = ""
+    """Name of the frontend node."""
     display_name: Optional[str] = ""
+    """Display name of the frontend node."""
     documentation: str = ""
+    """Documentation of the frontend node."""
     custom_fields: Optional[Dict] = defaultdict(list)
+    """Custom fields of the frontend node."""
     output_types: List[str] = []
+    """List of output types for the frontend node."""
     full_path: Optional[str] = None
+    """Full path of the frontend node."""
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
+    """Field formatters for the frontend node."""
+    pinned: bool = False
+    """Whether the frontend node is pinned."""
 
     beta: bool = False
     error: Optional[str] = None

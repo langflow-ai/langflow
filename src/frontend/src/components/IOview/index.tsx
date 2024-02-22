@@ -60,11 +60,17 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   }
 
   function UpdateAccordion() {
-    return (categories[selectedCategory]?.name ?? "Inputs") === "Inputs" ? inputs : outputs;
+    return (categories[selectedCategory]?.name ?? "Inputs") === "Inputs"
+      ? inputs
+      : outputs;
   }
 
   return (
-    <BaseModal size={handleSelectChange() ? "large" : "small"} open={open} setOpen={setOpen}>
+    <BaseModal
+      size={handleSelectChange() ? "large" : "small"}
+      open={open}
+      setOpen={setOpen}
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
@@ -85,46 +91,58 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
               handleSelectChange() ? "w-2/6" : "w-full"
             )}
           >
-            <div className="flex items-start gap-4 py-2">
-              {categories.map((category, index) => {
-                return (
-                  //hide chat button if chat is alredy on the view
-                  <Button
-                    onClick={() => setSelectedCategory(index)}
-                    variant={
-                      index === selectedCategory ? "primary" : "secondary"
-                    }
-                    key={index}
-                  >
-                    <IconComponent
-                      name={category.icon}
-                      className=" file-component-variable"
-                    />
-                    <span className="file-component-variables-span text-md">
-                      {category.name}
-                    </span>
-                  </Button>
-                );
-              })}
+            <div className="flex w-full items-center justify-between py-2">
+              <div className="flex items-start gap-4">
+                {categories.map((category, index) => {
+                  return (
+                    //hide chat button if chat is alredy on the view
+                    <Button
+                      onClick={() => setSelectedCategory(index)}
+                      variant={
+                        index === selectedCategory ? "primary" : "secondary"
+                      }
+                      key={index}
+                    >
+                      <IconComponent
+                        name={category.icon}
+                        className=" file-component-variable"
+                      />
+                      <span className="file-component-variables-span text-md">
+                        {category.name}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
               {(outputs.map((output) => output.type).includes("ChatOutput") ||
                 inputs.map((output) => output.type).includes("chatInput")) &&
                 selectedView.type !== "ChatOutput" && (
-                  <button
+                  <Button
                     onClick={() => setSelectedView({ type: "ChatOutput" })}
-                    className={
-                      "cursor flex items-center rounded-md rounded-b-none px-1 hover:bg-muted-foreground"
-                    }
+                    variant="outline"
                     key={"chat"}
+                    className="self-end px-2.5"
                   >
                     <IconComponent
-                      name="Variable"
-                      className=" file-component-variable"
+                      name="MessageSquareMore"
+                      className="h-5 w-5"
                     />
-                    <span className="file-component-variables-span text-md">
-                      Chat
-                    </span>
-                  </button>
+                  </Button>
                 )}
+            </div>
+            <div className="mx-2 mb-2 mt-4 flex items-center gap-2 font-semibold">
+              {categories[selectedCategory]?.name === "Inputs" && (
+                <>
+                  <IconComponent name={"FormInput"} />
+                  Text Inputs
+                </>
+              )}
+              {categories[selectedCategory]?.name === "Outputs" && (
+                <>
+                  <IconComponent name={"ChevronRightSquare"} />
+                  Prompt Outputs
+                </>
+              )}
             </div>
             {UpdateAccordion()
               .filter(
@@ -164,25 +182,35 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       keyValue={input.id}
                     >
                       <div className="file-component-tab-column">
-                        {node &&
-                          (categories[selectedCategory].name === "Inputs" ? (
-                            <IOInputField
-                              inputType={input.type}
-                              inputId={input.id}
-                            />
-                          ) : (
-                            <IOOutputView
-                              outputType={input.type}
-                              outputId={input.id}
-                            />
-                          ))}
+                        <div className="">
+                          {node &&
+                            (categories[selectedCategory]?.name === "Inputs" ? (
+                              <IOInputField
+                                inputType={input.type}
+                                inputId={input.id}
+                              />
+                            ) : (
+                              <IOOutputView
+                                outputType={input.type}
+                                outputId={input.id}
+                              />
+                            ))}
+                        </div>
                       </div>
                     </AccordionComponent>
                   </div>
                 );
               })}
           </div>
-          {handleSelectChange() && handleSelectChange()}
+          {handleSelectChange() ? (
+            handleSelectChange()
+          ) : (
+            <div className="absolute bottom-8 right-8">
+              <Button className="px-3">
+                <IconComponent name="Play" className="h-6 w-6" />
+              </Button>
+            </div>
+          )}
         </div>
       </BaseModal.Content>
     </BaseModal>
