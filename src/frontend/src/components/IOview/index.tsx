@@ -183,27 +183,32 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                     >
                       <div className="file-component-tab-column">
                         <div className="">
-                        {node &&
-                          (categories[selectedCategory].name === "Inputs" ? (
-                            <IOInputField
-                              inputType={input.type}
-                              inputId={input.id}
-                            />
-                          ) : (
-                            <IOOutputView
-                              outputType={input.type}
-                              outputId={input.id}
-                            />
-                          ))}
+                          {node &&
+                            (categories[selectedCategory].name === "Inputs" ? (
+                              <IOInputField
+                                inputType={input.type}
+                                inputId={input.id}
+                              />
+                            ) : (
+                              <IOOutputView
+                                outputType={input.type}
+                                outputId={input.id}
+                              />
+                            ))}
                         </div>
-                        
                       </div>
                     </AccordionComponent>
                   </div>
                 );
               })}
           </div>
-          {handleSelectChange() && handleSelectChange()}
+          {handleSelectChange() ? (
+            handleSelectChange()
+          ) : (
+            <div className="absolute bottom-8 right-8">
+              <Button className="px-3"><IconComponent name="Play" className="h-6 w-6"/></Button>
+            </div>
+          )}
         </div>
       </BaseModal.Content>
     </BaseModal>
