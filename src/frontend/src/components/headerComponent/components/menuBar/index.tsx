@@ -33,6 +33,7 @@ export const MenuBar = ({
   const n = useFlowStore((state) => state.nodes);
 
   const navigate = useNavigate();
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   function handleAddFlow() {
     try {
@@ -43,6 +44,15 @@ export const MenuBar = ({
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+  }
+
+  function printByBuildStatus() {
+    if (isBuilding) {
+      return "Building...";
+    } else if (saveLoading) {
+      return "Saving...";
+    }
+    return "Saved";
   }
 
   return currentFlow ? (
@@ -127,13 +137,13 @@ export const MenuBar = ({
       >
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <IconComponent
-            name={saveLoading ? "Loader2" : "CheckCircle2"}
+            name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
             className={cn(
               "h-4 w-4",
-              saveLoading ? "animate-spin" : "animate-wiggle"
+              isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
             )}
           />
-          {saveLoading ? "Saving..." : "Saved"}
+          {printByBuildStatus()}
         </div>
       </Tooltip>
     </div>
