@@ -60,9 +60,7 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    range_spec: Optional[RangeSpec] = Field(
-        default=None, serialization_alias="rangeSpec"
-    )
+    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
     title_case: bool = True

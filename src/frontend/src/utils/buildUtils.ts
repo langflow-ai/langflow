@@ -63,13 +63,15 @@ export async function buildVertices({
         onBuildError,
         verticesIds,
         buildResults,
-        stopBuild:()=>{stop=true}
+        stopBuild: () => {
+          stop = true;
+        },
       });
-      if(stop){
+      if (stop) {
         break;
       }
     }
-    if(stop){
+    if (stop) {
       break;
     }
   }
@@ -96,7 +98,7 @@ async function buildVertex({
   onBuildError?: (title, list, idList: string[]) => void;
   verticesIds: string[];
   buildResults: boolean[];
-  stopBuild:()=>void;
+  stopBuild: () => void;
 }) {
   try {
     const buildRes = await postBuildVertex(flowId, id);

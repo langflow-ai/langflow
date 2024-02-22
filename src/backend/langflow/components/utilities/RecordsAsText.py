@@ -27,9 +27,7 @@ class RecordsAsTextComponent(CustomComponent):
         if isinstance(records, Record):
             records = [records]
 
-        formated_records = [
-            template.format(text=record.text, **record.data) for record in records
-        ]
+        formated_records = [template.format(text=record.text, **record.data) for record in records]
         result_string = "\n".join(formated_records)
         self.status = result_string
         return result_string

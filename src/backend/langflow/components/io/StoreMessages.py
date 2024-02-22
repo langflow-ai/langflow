@@ -52,9 +52,7 @@ class StoreMessages(CustomComponent):
         if not records:
             records = []
             if not session_id or not sender or not sender_name:
-                raise ValueError(
-                    "If passing texts, session_id, sender, and sender_name must be provided."
-                )
+                raise ValueError("If passing texts, session_id, sender, and sender_name must be provided.")
             for text in texts:
                 record = Record(
                     text=text,

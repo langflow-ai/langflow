@@ -2,7 +2,6 @@ import { cloneDeep } from "lodash";
 import {
   Edge,
   EdgeChange,
-  MarkerType,
   Node,
   NodeChange,
   addEdge,
@@ -10,7 +9,6 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
-import { INPUT_TYPES, OUTPUT_TYPES } from "../constants/constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import {
@@ -123,7 +121,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if(!(get().isBuilding)){
+    if (!get().isBuilding) {
       flowsManager.autoSaveCurrentFlow(
         newChange,
         newEdges,
@@ -139,7 +137,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if(!(get().isBuilding)){
+    if (!get().isBuilding) {
       flowsManager.autoSaveCurrentFlow(
         get().nodes,
         newChange,
@@ -345,7 +343,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
           style: { stroke: "#555" },
-          className:"stroke-foreground stroke-connection",
+          className: "stroke-foreground stroke-connection",
         },
         oldEdges
       );

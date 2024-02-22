@@ -43,9 +43,7 @@ class MonitorService(Service):
 
     def ensure_tables_exist(self):
         for table_name, model in self.table_map.items():
-            drop_and_create_table_if_schema_mismatch(
-                str(self.db_path), table_name, model
-            )
+            drop_and_create_table_if_schema_mismatch(str(self.db_path), table_name, model)
 
     def add_row(
         self,

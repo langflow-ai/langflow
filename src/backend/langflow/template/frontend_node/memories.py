@@ -15,7 +15,6 @@ from langflow.template.template.base import Template
 
 
 class MemoryFrontendNode(FrontendNode):
-
     pinned: bool = True
 
     def add_extra_fields(self) -> None:
@@ -81,9 +80,7 @@ class MemoryFrontendNode(FrontendNode):
             field.show = True
             field.advanced = False
             field.value = ""
-            field.info = (
-                INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
-            )
+            field.info = INPUT_KEY_INFO if field.name == "input_key" else OUTPUT_KEY_INFO
 
         if field.name == "memory_key":
             field.value = "chat_history"

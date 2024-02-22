@@ -3,9 +3,6 @@ import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 
 export default function ChatInput({
   lockChat,
@@ -113,7 +110,8 @@ export default function ChatInput({
             )}
           </button>
         </div>
-      </div>{/* 
+      </div>
+      {/* 
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="primary" className="h-13 px-4">

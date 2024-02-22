@@ -171,7 +171,7 @@ class ChatOllamaComponent(CustomComponent):
         self,
         base_url: Optional[str],
         model: str,
-        inputs:str,
+        inputs: str,
         mirostat: Optional[str],
         mirostat_eta: Optional[float] = None,
         mirostat_tau: Optional[float] = None,

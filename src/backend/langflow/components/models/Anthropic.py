@@ -54,7 +54,7 @@ class AnthropicLLM(CustomComponent):
     def build(
         self,
         model: str,
-        inputs:str,
+        inputs: str,
         anthropic_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
@@ -78,4 +78,3 @@ class AnthropicLLM(CustomComponent):
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result
-

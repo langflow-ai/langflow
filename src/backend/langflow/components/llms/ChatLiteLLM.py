@@ -126,8 +126,7 @@ class ChatLiteLLMComponent(CustomComponent):
             litellm.set_verbose = verbose
         except ImportError:
             raise ChatLiteLLMException(
-                "Could not import litellm python package. "
-                "Please install it with `pip install litellm`"
+                "Could not import litellm python package. " "Please install it with `pip install litellm`"
             )
         provider_map = {
             "OpenAI": "openai_api_key",

@@ -35,7 +35,7 @@ export default function Chat({ flow }: ChatType): JSX.Element {
         {/* <BuildTrigger open={open} flow={flow} /> */}
         {hasIO && (
           <IOView open={open} setOpen={setOpen}>
-              <ChatTrigger />
+            <ChatTrigger />
           </IOView>
         )}
       </div>

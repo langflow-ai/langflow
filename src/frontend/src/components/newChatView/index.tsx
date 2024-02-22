@@ -106,7 +106,7 @@ export default function newChatView(): JSX.Element {
   }, []);
 
   async function sendMessage(count = 1): Promise<void> {
-    if(isBuilding) return;
+    if (isBuilding) return;
     const { nodes, edges } = getFlow();
     let nodeValidationErrors = validateNodes(nodes, edges);
     if (nodeValidationErrors.length === 0) {
@@ -114,7 +114,7 @@ export default function newChatView(): JSX.Element {
       setLockChat(true);
       setChatValue("");
       const chatInputId = inputIds.find((inputId) =>
-      inputId.includes("ChatInput")
+        inputId.includes("ChatInput")
       );
       const chatInput: NodeType = getNode(chatInputId!) as NodeType;
       if (chatInput) {
