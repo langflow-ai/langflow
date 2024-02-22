@@ -1,3 +1,8 @@
+import warnings
+
+import emoji
+
+
 def validate_icon(value: str, *args, **kwargs):
     # we are going to use the emoji library to validate the emoji
     # emojis can be defined using the :emoji_name: syntax
@@ -12,7 +17,6 @@ def validate_icon(value: str, *args, **kwargs):
 
 
 def getattr_return_str(value):
-
     return str(value) if value else ""
 
 
