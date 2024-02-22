@@ -1,8 +1,8 @@
 from typing import List, Optional
 
-from langchain.schema import Document
 from langflow import CustomComponent
-from langflow.services.deps import get_monitor_service
+from langflow.memory import get_messages
+from langflow.schema import Record
 
 
 class MessageHistoryComponent(CustomComponent):
@@ -11,7 +11,10 @@ class MessageHistoryComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "sender": {"options": ["Machine", "User"], "display_name": "Sender Type"},
+            "sender": {
+                "options": ["Machine", "User"],
+                "display_name": "Sender Type",
+            },
             "sender_name": {"display_name": "Sender Name"},
             "file_path": {
                 "display_name": "File Path",
@@ -34,26 +37,12 @@ class MessageHistoryComponent(CustomComponent):
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         n_messages: int = 5,
-    ) -> List[Document]:
-        # Load the chat history df
-        monitor_service = get_monitor_service()
-        chat_history_df = monitor_service.to_df("messages")
-
-        # Filter the df
-        if session_id:
-            chat_history_df = chat_history_df[chat_history_df["session_id"] == session_id]
-        if sender:
-            chat_history_df = chat_history_df[chat_history_df["sender_type"] == sender]
-        if sender_name:
-            chat_history_df = chat_history_df[chat_history_df["sender_name"] == sender_name]
-        # Sort the df
-        chat_history_df = chat_history_df.sort_values(by="timestamp")
-        # Get the last n messages
-        if n_messages:
-            chat_history_df = chat_history_df.tail(n_messages)
-        # Create a list of messages
-        messages = []
-        for _, row in chat_history_df.iterrows():
-            messages.append(Document(page_content=f"{row['sender_name']}: {row['message']}"))
-        # Return the list of messages
+    ) -> List[Record]:
+        messages = get_messages(
+            sender=sender,
+            sender_name=sender_name,
+            session_id=session_id,
+            limit=n_messages,
+        )
+        self.status = messages
         return messages

@@ -9,7 +9,10 @@ class RecordsAsTextComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "records": {"display_name": "Records", "info": "The records to convert to text."},
+            "records": {
+                "display_name": "Records",
+                "info": "The records to convert to text.",
+            },
             "template": {
                 "display_name": "Template",
                 "info": "The template to use for formatting the records. It must contain the keys {text} and {data}.",
@@ -23,5 +26,10 @@ class RecordsAsTextComponent(CustomComponent):
     ) -> Text:
         if isinstance(records, Record):
             records = [records]
-        formated_records = [template.format(text=record.text, data=record.data) for record in records]
-        return "\n".join(formated_records)
+
+        formated_records = [
+            template.format(text=record.text, **record.data) for record in records
+        ]
+        result_string = "\n".join(formated_records)
+        self.status = result_string
+        return result_string
