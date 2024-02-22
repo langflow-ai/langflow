@@ -1,5 +1,5 @@
 import Convert from "ansi-to-html";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
@@ -23,10 +23,15 @@ export default function ChatMessage({
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   const chat_message = chat.message.toString();
-  const element = document.getElementById("last-chat-message");
-  if (element) {
-    element.scrollIntoView({ behavior: "smooth" });
-  }
+
+  useEffect(() => {
+    const element = document.getElementById("last-chat-message");
+    if (element) {
+      setTimeout(() => {
+        element.scrollIntoView({ behavior: "smooth" });
+      }, 200);
+    }
+  }, [lastMessage]);
 
   return (
     <>
