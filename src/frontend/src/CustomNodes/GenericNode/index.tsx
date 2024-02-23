@@ -96,7 +96,6 @@ export default function GenericNode({
       return `Duration: ${duration}`;
     }
   };
-
   const durationString = getDurationString(validationStatus?.data.duration);
 
   useEffect(() => {
@@ -166,11 +165,16 @@ export default function GenericNode({
   );
 
   const getStatusClassName = (
+    buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
-    if (validationStatus && validationStatus.valid) {
+    const isValid = validationStatus && validationStatus.valid;
+
+    if (isValid) {
       return "green-status";
-    } else if (validationStatus && !validationStatus.valid) {
+    } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
+      return "gray-status";
+    } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
     } else if (!validationStatus) {
       return "yellow-status";
@@ -186,7 +190,7 @@ export default function GenericNode({
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading />;
     } else {
-      const className = getStatusClassName(validationStatus);
+      const className = getStatusClassName(buildStatus, validationStatus);
       return <>{getIconPlayOrPauseComponent("Play", className)}</>;
     }
   };
@@ -195,15 +199,16 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
-    if (
-      (buildStatus === BuildStatus.BUILT ||
-        buildStatus === BuildStatus.INACTIVE) &&
-      validationStatus &&
-      !validationStatus.valid
-    ) {
-      return "border-none ring ring-red-300";
+    let isInvalid = validationStatus && !validationStatus.valid;
+    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+      // INACTIVE should have its own class
+      // different from BUILT and TO_BUILD
+      return "inactive-status";
+    }
+    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+      return "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
-      return "border-none ring";
+      return "building-status";
     } else {
       return "";
     }
