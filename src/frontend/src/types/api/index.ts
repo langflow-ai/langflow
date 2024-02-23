@@ -139,8 +139,18 @@ export type VerticesOrderTypeAPI = {
 
 export type VertexBuildTypeAPI = {
   id: string;
+  inactive_vertices: Array<string> | null;
   valid: boolean;
   params: string;
+  data: VertexDataTypeAPI;
+  timestamp: string;
+};
+
+// data is the object received by the API
+// it has results, artifacts, timedelta, duration
+export type VertexDataTypeAPI = {
   results: { [key: string]: { [key: string]: string } };
   artifacts: { [key: string]: string };
+  timedelta?: number;
+  duration?: string;
 };
