@@ -3,6 +3,7 @@ from typing import Dict
 # Assuming the existence of GoogleSerperAPIWrapper class in the serper module
 # If this class does not exist, you would need to create it or import the appropriate class from another module
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
+
 from langflow import CustomComponent
 
 
@@ -17,20 +18,23 @@ class GoogleSerperAPIWrapperComponent(CustomComponent):
                 "show": True,
                 "multiline": False,
                 "password": False,
-                "name": "result_key_for_type",
                 "advanced": False,
                 "dynamic": False,
                 "info": "",
                 "field_type": "dict",
                 "list": False,
-                "value": {"news": "news", "places": "places", "images": "images", "search": "organic"},
+                "value": {
+                    "news": "news",
+                    "places": "places",
+                    "images": "images",
+                    "search": "organic",
+                },
             },
             "serper_api_key": {
                 "display_name": "Serper API Key",
                 "show": True,
                 "multiline": False,
                 "password": True,
-                "name": "serper_api_key",
                 "advanced": False,
                 "dynamic": False,
                 "info": "",
