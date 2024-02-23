@@ -17,7 +17,9 @@ from langflow.interface.custom.directory_reader.utils import (
 )
 from langflow.interface.importing.utils import eval_custom_component_code
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import (
+    CustomComponentFrontendNode,
+)
 from langflow.utils.util import get_base_classes
 from loguru import logger
 
@@ -41,6 +43,21 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: L
             return_type = str(return_type)
 
         frontend_node.add_output_type(return_type)
+
+
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List[str]):
+    """Reorder fields in the frontend node based on the specified field_order."""
+    if not field_order:
+        return
+
+    # Create a dictionary for O(1) lookup time.
+    field_dict = {field.name: field for field in frontend_node.template.fields}
+    reordered_fields = [field_dict[name] for name in field_order if name in field_dict]
+    # Add any fields that are not in the field_order list
+    for field in frontend_node.template.fields:
+        if field.name not in field_order:
+            reordered_fields.append(field)
+    frontend_node.template.fields = reordered_fields
 
 
 def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
@@ -106,7 +123,7 @@ def add_new_custom_field(
 ):
     # Check field_config if any of the keys are in it
     # if it is, update the value
-    display_name = field_config.pop("display_name", field_name)
+    display_name = field_config.pop("display_name", None)
     field_type = field_config.pop("field_type", field_type)
     field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
@@ -149,9 +166,6 @@ def add_extra_fields(frontend_node, field_config, function_args):
     if not function_args:
         return
 
-    # sort function_args which is a list of dicts
-    function_args.sort(key=lambda x: x["name"])
-
     for extra_field in function_args:
         if "name" not in extra_field or extra_field["name"] == "self":
             continue
@@ -175,7 +189,11 @@ def get_field_dict(field: Union[TemplateField, dict]):
     return field
 
 
-def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None, update_field=None):
+def run_build_config(
+    custom_component: CustomComponent,
+    user_id: Optional[Union[str, UUID]] = None,
+    update_field=None,
+):
     """Build the field configuration for a custom component"""
 
     try:
@@ -196,7 +214,8 @@ def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[
         ) from exc
 
     try:
-        build_config: Dict = custom_class(user_id=user_id).build_config()
+        custom_instance = custom_class(user_id=user_id)
+        build_config: Dict = custom_instance.build_config()
 
         for field_name, field in build_config.items():
             # Allow user to build TemplateField as well
@@ -210,7 +229,7 @@ def run_build_config(custom_component: CustomComponent, user_id: Optional[Union[
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
 
-        return build_config
+        return build_config, custom_instance
 
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
@@ -231,6 +250,7 @@ def sanitize_template_config(template_config):
         "beta",
         "documentation",
         "output_types",
+        "icon",
     }
     for key in template_config.copy():
         if key not in attributes:
@@ -280,7 +300,7 @@ def build_custom_component_template(
         logger.debug("Built base frontend node")
 
         logger.debug("Updated attributes")
-        field_config = run_build_config(custom_component, user_id=user_id, update_field=update_field)
+        field_config, custom_instance = run_build_config(custom_component, user_id=user_id, update_field=update_field)
         logger.debug("Built field config")
         entrypoint_args = custom_component.get_function_entrypoint_args
 
@@ -291,6 +311,9 @@ def build_custom_component_template(
         add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
         add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
         logger.debug("Added base classes")
+
+        reorder_fields(frontend_node, custom_instance._get_field_order())
+
         return frontend_node.to_dict(add_name=False)
     except Exception as exc:
         if isinstance(exc, HTTPException):
@@ -349,7 +372,7 @@ def update_field_dict(field_dict):
         field_dict["refresh"] = True
 
     if "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"](field_dict.get("options", []))
+        field_dict["value"] = field_dict["value"]()
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
@@ -359,7 +382,16 @@ def update_field_dict(field_dict):
 
 def sanitize_field_config(field_config: Dict):
     # If any of the already existing keys are in field_config, remove them
-    for key in ["name", "field_type", "value", "required", "placeholder", "display_name", "advanced", "show"]:
+    for key in [
+        "name",
+        "field_type",
+        "value",
+        "required",
+        "placeholder",
+        "display_name",
+        "advanced",
+        "show",
+    ]:
         field_config.pop(key, None)
     return field_config
 

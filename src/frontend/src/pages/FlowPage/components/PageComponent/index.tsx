@@ -24,6 +24,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  reconnectEdges,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -107,6 +108,13 @@ export default function Page({
         ) {
           event.preventDefault();
           setLastCopiedSelection(_.cloneDeep(lastSelection));
+        } else if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "x" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection), true);
         } else if (
           (event.ctrlKey || event.metaKey) &&
           event.key === "v" &&
@@ -379,7 +387,7 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const { newFlow } = generateFlow(
+                        const { newFlow, removedEdges } = generateFlow(
                           lastSelection!,
                           nodes,
                           edges,
@@ -388,6 +396,10 @@ export default function Page({
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId
+                        );
+                        const newEdges = reconnectEdges(
+                          newGroupNode,
+                          removedEdges
                         );
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
@@ -399,16 +411,17 @@ export default function Page({
                           ),
                           newGroupNode,
                         ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
+                        setEdges((oldEdges) => [
+                          ...oldEdges.filter(
                             (oldEdge) =>
                               !lastSelection!.nodes.some(
                                 (selectionNode) =>
                                   selectionNode.id === oldEdge.target ||
                                   selectionNode.id === oldEdge.source
                               )
-                          )
-                        );
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
                           title: "Invalid selection",

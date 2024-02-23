@@ -1,9 +1,9 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
-
 from langflow import CustomComponent
 from langflow.field_typing import NestedDict
+from pydantic.v1.types import SecretStr
 
 
 class OpenAIEmbeddingsComponent(CustomComponent):
@@ -67,7 +67,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             },
             "skip_empty": {"display_name": "Skip Empty", "advanced": True},
             "tiktoken_model_name": {"display_name": "TikToken Model Name"},
-            "tikToken_enable": {"display_name": "TikToken Enable"},
+            "tikToken_enable": {"display_name": "TikToken Enable", "advanced": True},
         }
 
     def build(
@@ -92,15 +92,21 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         request_timeout: Optional[float] = None,
         show_progress_bar: bool = False,
         skip_empty: bool = False,
-        tikToken_enable: bool = True,
+        tiktoken_enable: bool = True,
         tiktoken_model_name: Optional[str] = None,
     ) -> Union[OpenAIEmbeddings, Callable]:
+        # This is to avoid errors with Vector Stores (e.g Chroma)
+        if disallowed_special == ["all"]:
+            disallowed_special = "all"  # type: ignore
+
+        api_key = SecretStr(openai_api_key) if openai_api_key else None
+
         return OpenAIEmbeddings(
-            tiktoken_enabled=tikToken_enable,
+            tiktoken_enabled=tiktoken_enable,
             default_headers=default_headers,
             default_query=default_query,
             allowed_special=set(allowed_special),
-            disallowed_special=set(disallowed_special),
+            disallowed_special="all",
             chunk_size=chunk_size,
             client=client,
             deployment=deployment,
@@ -109,7 +115,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             model=model,
             model_kwargs=model_kwargs,
             base_url=openai_api_base,
-            api_key=openai_api_key,
+            api_key=api_key,
             openai_api_type=openai_api_type,
             api_version=openai_api_version,
             organization=openai_organization,

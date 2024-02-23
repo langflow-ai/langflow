@@ -136,17 +136,20 @@ export function groupByFamily(
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
-          template.input_types.some((inputType) => {
-            baseClassesSet.has(inputType);
-          })))
+          template.input_types.some((inputType) =>
+            baseClassesSet.has(inputType)
+          )))
     );
   };
 
   if (flow) {
+    // se existir o flow
     for (const node of flow) {
+      // para cada node do flow
+      if (node!.data!.node!.flow) break; // não faz nada se o node for um group
       const nodeData = node.data;
 
-      const foundNode = checkedNodes.get(nodeData.type);
+      const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
@@ -155,7 +158,7 @@ export function groupByFamily(
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
-          ),
+          ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
     }
