@@ -376,6 +376,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function handleBuildUpdate(data: any) {
+      const responseData = data.data[data.id];
+      // responseData MAY contain inactive_vertices or it
+      // may be null, so we need to check for it
+      if (responseData && responseData.inactive_vertices) {
+        useFlowStore
+          .getState()
+          .setInactiveNodes(responseData.inactive_vertices);
+      }
       get().addDataToFlowPool(data.data[data.id], data.id);
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
     }
@@ -431,6 +439,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
+  setInactiveNodes(newState) {
+    set({ inactiveNodes: newState });
+  },
+  inactiveNodes: [],
 }));
 
 export default useFlowStore;
