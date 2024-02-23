@@ -89,4 +89,6 @@ export type FlowStoreType = {
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   updateVerticesBuild: (vertices: string[]) => void;
   verticesBuild: string[];
+  inactiveNodes: string[];
+  setInactiveNodes: (newState: string[]) => void;
 };
