@@ -1,10 +1,8 @@
 from langflow.graph.vertex import types
 from langflow.interface.agents.base import agent_creator
-from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
-from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.prompts.base import prompt_creator
@@ -15,7 +13,8 @@ from langflow.interface.tools.base import tool_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
-chat_components = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
+CHAT_COMPONENTS = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
+ROUTING_COMPONENTS = ["ShouldRunNext"]
 
 
 class VertexTypesDict(LazyLoadDictBase):
@@ -37,11 +36,11 @@ class VertexTypesDict(LazyLoadDictBase):
         return {
             **{t: types.PromptVertex for t in prompt_creator.to_list()},
             **{t: types.AgentVertex for t in agent_creator.to_list()},
-            **{t: types.ChainVertex for t in chain_creator.to_list()},
+            # **{t: types.ChainVertex for t in chain_creator.to_list()},
             **{t: types.ToolVertex for t in tool_creator.to_list()},
             **{t: types.ToolkitVertex for t in toolkits_creator.to_list()},
             **{t: types.WrapperVertex for t in wrapper_creator.to_list()},
-            **{t: types.LLMVertex for t in llm_creator.to_list()},
+            # **{t: types.LLMVertex for t in llm_creator.to_list()},
             **{t: types.MemoryVertex for t in memory_creator.to_list()},
             **{t: types.EmbeddingVertex for t in embedding_creator.to_list()},
             # **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
@@ -50,7 +49,8 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
-            **{t: types.ChatVertex for t in chat_components},
+            **{t: types.ChatVertex for t in CHAT_COMPONENTS},
+            **{t: types.RoutingVertex for t in ROUTING_COMPONENTS},
         }
 
     def get_custom_component_vertex_type(self):
