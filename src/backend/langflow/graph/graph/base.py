@@ -400,11 +400,10 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in ["ChatOutput", "ChatInput"]:
             return ChatVertex
-        if node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
-
         if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
+        elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
 
         if node_type in FILE_TOOLS:
             return FileToolVertex
