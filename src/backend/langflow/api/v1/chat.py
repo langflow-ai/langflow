@@ -161,7 +161,7 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            chat_service.set_cache(flow_id, graph)
+
         except Exception as exc:
             params = str(exc)
             valid = False
@@ -191,6 +191,7 @@ async def build_vertex(
         if graph.inactive_vertices:
             inactive_vertices = list(graph.inactive_vertices)
             graph.reset_inactive_vertices()
+        chat_service.set_cache(flow_id, graph)
 
         return VertexBuildResponse(
             inactive_vertices=inactive_vertices,
