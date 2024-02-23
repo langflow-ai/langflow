@@ -1,9 +1,7 @@
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useFlowStore from "../../stores/flowStore";
-import { NodeType } from "../../types/flow";
-import { isInputType, isOutputType } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
@@ -14,60 +12,32 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 
 export default function IOView({ children, open, setOpen }): JSX.Element {
-  const inputs = useFlowStore((state) => state.inputs);
-  const outputs = useFlowStore((state) => state.outputs);
-  const inputIds = inputs.map((obj) => obj.id);
-  const outputIds = outputs.map((obj) => obj.id);
-  const nodes = useFlowStore((state) => state.nodes);
-  const setNode = useFlowStore((state) => state.setNode);
-  const categories = getCategories();
-  const [selectedCategory, setSelectedCategory] = useState<number>(0);
-  const [showChat, setShowChat] = useState<boolean>(false);
-  const [selectedView, setSelectedView] = useState<{
-    type: string;
-    id?: string;
-  }>(handleInitialView());
-
-  type CategoriesType = { name: string; icon: string };
-
-  function handleInitialView() {
-    if (
-      outputs.map((output) => output.type).includes("ChatOutput") ||
-      inputs.map((input) => input.type).includes("ChatInput")
-    ) {
-      return { type: "ChatOutput" };
-    }
-    return { type: "" };
-  }
-
-  function getCategories() {
-    const categories: CategoriesType[] = [];
-    if (inputs.filter((input) => input.type !== "ChatInput").length > 0)
-      categories.push({ name: "Inputs", icon: "TextCursorInput" });
-    if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
-      categories.push({ name: "Outputs", icon: "TerminalSquare" });
-    return categories;
-  }
-
-  function handleSelectChange(): ReactNode {
-    const { type, id } = selectedView;
-    if (type === "ChatOutput") return <NewChatView />;
-    if (isInputType(type))
-      return <IOInputField inputId={id!} inputType={type} />;
-    if (isOutputType(type))
-      return <IOOutputView outputId={id!} outputType={type} />;
-    else return undefined;
-  }
-
-  function UpdateAccordion() {
-    return (categories[selectedCategory]?.name ?? "Inputs") === "Inputs"
-      ? inputs
-      : outputs;
-  }
+  const inputs = useFlowStore((state) => state.inputs).filter(
+    (input) => input.type !== "ChatInput"
+  );
+  const outputs = useFlowStore((state) => state.outputs).filter(
+    (output) => output.type !== "ChatOutput"
+  );
+  const nodes = useFlowStore((state) => state.nodes).filter(
+    (node) =>
+      (inputs.some((input) => input.id === node.id) ||
+        outputs.some((output) => output.id === node.id)) &&
+      node.type !== "ChatInput" &&
+      node.type !== "ChatOutput"
+  );
+  const haveChat = useFlowStore((state) => state.outputs).some(
+    (output) => output.type === "ChatOutput"
+  );
+  const [selectedTab, setSelectedTab] = useState(
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+  );
+  const [selectedViewField, setSelectedViewField] = useState<
+    { type: string; id: string } | undefined
+  >(undefined);
 
   return (
     <BaseModal
-      size={handleSelectChange() ? "large" : "small"}
+      size={haveChat ? "large" : "small"}
       open={open}
       setOpen={setOpen}
     >
@@ -88,71 +58,72 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
           <div
             className={cn(
               "mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide",
-              handleSelectChange() ? "w-2/6" : "w-full"
+              haveChat ? "w-2/6" : "w-full"
             )}
           >
             <div className="flex w-full items-center justify-between py-2">
               <div className="flex items-start gap-4">
-                {categories.map((category, index) => {
-                  return (
-                    //hide chat button if chat is alredy on the view
-                    <Button
-                      onClick={() => setSelectedCategory(index)}
-                      variant={
-                        index === selectedCategory ? "primary" : "secondary"
-                      }
-                      key={index}
-                    >
-                      <IconComponent
-                        name={category.icon}
-                        className=" file-component-variable"
-                      />
-                      <span className="file-component-variables-span text-md">
-                        {category.name}
-                      </span>
-                    </Button>
-                  );
-                })}
+                <Button
+                  onClick={() => setSelectedTab(1)}
+                  variant={selectedTab === 1 ? "primary" : "secondary"}
+                >
+                  <IconComponent
+                    name="FormInput"
+                    className=" file-component-variable"
+                  />
+                  <span className="file-component-variables-span text-md">
+                    Inputs
+                  </span>
+                </Button>
+                <Button
+                  onClick={() => setSelectedTab(2)}
+                  variant={selectedTab === 2 ? "primary" : "secondary"}
+                >
+                  <IconComponent
+                    name="ChevronRightSquare"
+                    className=" file-component-variable"
+                  />
+                  <span className="file-component-variables-span text-md">
+                    Outputs
+                  </span>
+                </Button>
               </div>
-              {(outputs.map((output) => output.type).includes("ChatOutput") ||
-                inputs.map((output) => output.type).includes("chatInput")) &&
-                selectedView.type !== "ChatOutput" && (
-                  <Button
-                    onClick={() => setSelectedView({ type: "ChatOutput" })}
-                    variant="outline"
-                    key={"chat"}
-                    className="self-end px-2.5"
-                  >
-                    <IconComponent
-                      name="MessageSquareMore"
-                      className="h-5 w-5"
-                    />
-                  </Button>
-                )}
+              {selectedViewField && haveChat && (
+                <Button
+                  onClick={() => setSelectedViewField(undefined)}
+                  variant="outline"
+                  key={"chat"}
+                  className="self-end px-2.5"
+                >
+                  <IconComponent name="MessageSquareMore" className="h-5 w-5" />
+                </Button>
+              )}
             </div>
             <div className="mx-2 mb-2 mt-4 flex items-center gap-2 font-semibold">
-              {categories[selectedCategory]?.name === "Inputs" && (
+              {selectedTab === 1 && (
                 <>
                   <IconComponent name={"FormInput"} />
                   Text Inputs
                 </>
               )}
-              {categories[selectedCategory]?.name === "Outputs" && (
+              {selectedTab === 2 && (
                 <>
                   <IconComponent name={"ChevronRightSquare"} />
                   Prompt Outputs
                 </>
               )}
             </div>
-            {UpdateAccordion()
-              .filter(
-                (input) =>
-                  input.type !== "ChatInput" && input.type !== "ChatOutput"
+            {nodes
+              .filter((node) =>
+                selectedTab === 1
+                  ? inputs.some((input) => input.id === node.id)
+                  : outputs.some((output) => output.id === node.id)
               )
-              .map((input, index) => {
-                const node: NodeType = nodes.find(
-                  (node) => node.id === input.id
-                )!;
+              .map((node, index) => {
+                const input =
+                  selectedTab === 1
+                    ? inputs.find((input) => input.id === node.id)!
+                    : outputs.find((output) => output.id === node.id)!;
                 return (
                   <div className="file-component-accordion-div" key={index}>
                     <AccordionComponent
@@ -161,21 +132,20 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                           <Badge variant="gray" size="md">
                             {input.id}
                           </Badge>
-                          <div
-                            className="-mb-1 pr-4"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setSelectedView({
-                                type: input.type,
-                                id: input.id,
-                              });
-                            }}
-                          >
-                            <IconComponent
-                              className="h-4 w-4"
-                              name="ExternalLink"
-                            ></IconComponent>
-                          </div>
+                          {haveChat && (
+                            <div
+                              className="-mb-1 pr-4"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedViewField(input);
+                              }}
+                            >
+                              <IconComponent
+                                className="h-4 w-4"
+                                name="ExternalLink"
+                              ></IconComponent>
+                            </div>
+                          )}
                         </div>
                       }
                       key={index}
@@ -183,8 +153,8 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                     >
                       <div className="file-component-tab-column">
                         <div className="">
-                          {node &&
-                            (categories[selectedCategory]?.name === "Inputs" ? (
+                          {input &&
+                            (selectedTab === 1 ? (
                               <IOInputField
                                 inputType={input.type}
                                 inputId={input.id}
@@ -202,8 +172,22 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                 );
               })}
           </div>
-          {handleSelectChange() ? (
-            handleSelectChange()
+          {haveChat ? (
+            selectedViewField ? (
+              inputs.some((input) => input.id === selectedViewField.id) ? (
+                <IOInputField
+                  inputType={selectedViewField.type!}
+                  inputId={selectedViewField.id!}
+                />
+              ) : (
+                <IOOutputView
+                  outputType={selectedViewField.type!}
+                  outputId={selectedViewField.id!}
+                />
+              )
+            ) : (
+              <NewChatView />
+            )
           ) : (
             <div className="absolute bottom-8 right-8">
               <Button className="px-3">
