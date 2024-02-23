@@ -43,7 +43,7 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
-
+        self.inactive_vertices = set()
         self._build_graph()
         self.build_graph_maps()
 
@@ -52,11 +52,38 @@ class Graph:
         return {
             "runs": self._runs,
             "updates": self._updates,
+            "inactive_vertices": self.inactive_vertices,
         }
 
     def build_graph_maps(self):
         self.predecessor_map, self.successor_map = self.build_adjacency_maps()
         self.in_degree_map = self.build_in_degree()
+        self.parent_child_map = self.build_parent_child_map()
+
+    def reset_inactive_vertices(self):
+        self.inactive_vertices = set()
+
+    def mark_all_vertices(self, state: str):
+        """Marks all vertices in the graph."""
+        for vertex in self.vertices:
+            vertex.set_state(state)
+
+    def mark_vertex(self, vertex_id: str, state: str):
+        """Marks a vertex in the graph."""
+        vertex = self.get_vertex(vertex_id)
+        vertex.set_state(state)
+
+    def mark_branch(self, vertex_id: str, state: str):
+        """Marks a branch of the graph."""
+        self.mark_vertex(vertex_id, state)
+        for child_id in self.parent_child_map[vertex_id]:
+            self.mark_branch(child_id, state)
+
+    def build_parent_child_map(self):
+        parent_child_map = defaultdict(list)
+        for vertex in self.vertices:
+            parent_child_map[vertex.id] = [child.id for child in self.get_successors(vertex)]
+        return parent_child_map
 
     def increment_run_count(self):
         self._runs += 1
@@ -520,6 +547,7 @@ class Graph:
 
     def sort_vertices(self, component_id: Optional[str] = None) -> List[List[str]]:
         """Sorts the vertices in the graph."""
+        self.mark_all_vertices("ACTIVE")
         if component_id:
             vertices = self.sort_up_to_vertex(component_id)
         else:
