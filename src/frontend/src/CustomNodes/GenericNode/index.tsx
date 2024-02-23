@@ -89,8 +89,8 @@ export default function GenericNode({
 
   // should be empty string if no duration
   // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | null): string => {
-    if (duration === null) {
+  const getDurationString = (duration: number | undefined): string => {
+    if (duration === undefined) {
       return "";
     } else {
       return `Duration: ${duration}`;
