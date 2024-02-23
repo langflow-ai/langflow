@@ -22,6 +22,8 @@ services:
       dockerfile: ./cdk.Dockerfile
       args:
         - BACKEND_URL=http://backend:7860
+    depends_on:
+        - backend
     environment:
       - VITE_PROXY_TARGET=http://backend:7860
     ports:

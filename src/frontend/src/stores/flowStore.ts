@@ -247,7 +247,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     get().setEdges(newEdges);
   },
-  setLastCopiedSelection: (newSelection) => {
+  setLastCopiedSelection: (newSelection, isCrop = false) => {
+    if (isCrop) {
+      const nodesIdsSelected = newSelection!.nodes.map((node) => node.id);
+      const edgesIdsSelected = newSelection!.edges.map((edge) => edge.id);
+
+      nodesIdsSelected.forEach((id) => {
+        get().deleteNode(id);
+      });
+
+      edgesIdsSelected.forEach((id) => {
+        get().deleteEdge(id);
+      });
+
+      const newNodes = get().nodes.filter(
+        (node) => !nodesIdsSelected.includes(node.id)
+      );
+      const newEdges = get().edges.filter(
+        (edge) => !edgesIdsSelected.includes(edge.id)
+      );
+
+      set({ nodes: newNodes, edges: newEdges });
+    }
+
     set({ lastCopiedSelection: newSelection });
   },
   cleanFlow: () => {
