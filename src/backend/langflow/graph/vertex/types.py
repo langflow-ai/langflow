@@ -365,7 +365,7 @@ class ChatVertex(StatelessVertex):
 
 class RoutingVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="routing")
+        super().__init__(data, graph=graph, base_type="custom_components")
         self.use_result = True
         self.steps = [self._build, self._run]
 
