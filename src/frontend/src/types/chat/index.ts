@@ -9,6 +9,8 @@ export type ChatMessageType = {
   files?: Array<{ data: string; type: string; data_type: string }>;
   prompt?: string;
   chatKey?: string;
+  id?: string;
+  stream_url?: string | null;
   sender_name?: string;
 };
 
@@ -16,6 +18,7 @@ export type ChatOutputType = {
   message: string;
   sender: string;
   sender_name: string;
+  stream_url?: string;
 };
 
 export type chatInputType = {
