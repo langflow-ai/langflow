@@ -50,12 +50,21 @@ export async function buildVertices({
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().updateVerticesBuild(verticesIds);
   useFlowStore.getState().setIsBuilding(true);
+  useFlowStore.getState().setInactiveNodes([]);
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
   for (const layer of vertices_layers) {
     if (onBuildStart) onBuildStart(layer);
     for (const id of layer) {
+      // Check if id is in the list of inactive nodes
+      if (useFlowStore.getState().inactiveNodes.includes(id)) {
+        // If it is, skip building
+        // it should be true because it did
+        // what it was supposed to do
+        buildResults.push(true);
+        continue;
+      }
       await buildVertex({
         flowId,
         id,
