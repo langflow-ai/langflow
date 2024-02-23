@@ -50,7 +50,6 @@ export async function buildVertices({
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().updateVerticesBuild(verticesIds);
   useFlowStore.getState().setIsBuilding(true);
-  useFlowStore.getState().setInactiveNodes([]);
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
@@ -89,6 +88,7 @@ export async function buildVertices({
     const allNodesValid = buildResults.every((result) => result);
     onBuildComplete(allNodesValid);
     useFlowStore.getState().setIsBuilding(false);
+    useFlowStore.getState().setInactiveNodes([]);
   }
 }
 
