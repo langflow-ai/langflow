@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
+
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -385,6 +386,7 @@ class RoutingVertex(StatelessVertex):
                 self._built_result = result
             else:
                 self.graph.mark_branch(self.id, "INACTIVE")
+                self._built_result = None
 
 
 def dict_to_codeblock(d: dict) -> str:
