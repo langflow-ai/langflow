@@ -290,16 +290,33 @@
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply opacity-100 animate-wiggle;
+    @apply animate-wiggle opacity-100;
   }
   .green-status {
     @apply generic-node-status text-status-green;
   }
+  .gray-status {
+    @apply generic-node-status text-muted-foreground;
+  }
+
   .red-status {
     @apply generic-node-status text-status-red;
   }
   .yellow-status {
     @apply generic-node-status text-status-yellow;
+  }
+  .inactive-status {
+    /* what colour for inactive status?
+    muted-foreground is too strong, maybe use a lighter shade of it?
+
+     */
+    @apply border-none ring ring-muted-foreground;
+  }
+  .built-invalid-status {
+    @apply border-none ring ring-red-300;
+  }
+  .building-status {
+    @apply border-none ring;
   }
   .status-build-animation {
     @apply opacity-0;
@@ -1009,7 +1026,7 @@
   }
 
   .beta-badge-wrapper {
-    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg pointer-events-none;
+    @apply pointer-events-none absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
   }
   .beta-badge-content {
     @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;
