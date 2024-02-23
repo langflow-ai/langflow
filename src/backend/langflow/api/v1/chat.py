@@ -187,8 +187,13 @@ async def build_vertex(
         result_dict.duration = duration
         result_dict.timedelta = timedelta
         vertex.add_build_time(timedelta)
+        inactive_vertices = None
+        if graph.inactive_vertices:
+            inactive_vertices = list(graph.inactive_vertices)
+            graph.reset_inactive_vertices()
 
         return VertexBuildResponse(
+            inactive_vertices=inactive_vertices,
             valid=valid,
             params=params,
             id=vertex.id,
