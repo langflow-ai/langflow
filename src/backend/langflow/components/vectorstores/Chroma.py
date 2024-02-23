@@ -67,7 +67,6 @@ class ChromaComponent(CustomComponent):
         - collection_name (str): The name of the collection.
         - index_directory (Optional[str]): The directory to persist the Vector Store to.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - persist (bool): Whether to persist the Vector Store or not.
         - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
         - documents (Optional[Document]): The documents to use for the Vector Store.
         - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.
