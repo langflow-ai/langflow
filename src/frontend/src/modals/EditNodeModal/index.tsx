@@ -242,7 +242,11 @@ const EditNodeModal = forwardRef(
                                       />
                                     ) : (
                                       <InputComponent
-                                        id={"input-" + index}
+                                        id={
+                                          "input-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
                                         editNode={true}
                                         disabled={disabled}
                                         password={
@@ -338,7 +342,10 @@ const EditNodeModal = forwardRef(
                                   <div className="ml-auto">
                                     {" "}
                                     <ToggleShadComponent
-                                      id={"toggle-edit-" + index}
+                                      id={
+                                        "toggle-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       disabled={disabled}
                                       enabled={
                                         myData.node.template[templateParam]
@@ -391,14 +398,20 @@ const EditNodeModal = forwardRef(
                                         myData.node.template[templateParam]
                                           .value ?? "Choose an option"
                                       }
-                                      id={"dropdown-edit-" + index}
+                                      id={
+                                        "dropdown-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                     ></Dropdown>
                                   </div>
                                 ) : myData.node?.template[templateParam]
                                     .type === "int" ? (
                                   <div className="mx-auto">
                                     <IntComponent
-                                      id={"edit-int-input-" + index}
+                                      id={
+                                        "edit-int-input-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       disabled={disabled}
                                       editNode={true}
                                       value={
@@ -493,7 +506,10 @@ const EditNodeModal = forwardRef(
                                       onChange={(value: string | string[]) => {
                                         handleOnNewValue(value, templateParam);
                                       }}
-                                      id={"code-area-edit" + index}
+                                      id={
+                                        "code-area-edit" +
+                                        myData.node.template[templateParam].name
+                                      }
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]

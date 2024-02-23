@@ -18,15 +18,17 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTestId("prompt-input-0").click();
+  await page.getByTestId("prompt-input-template").click();
 
   // await page.getByTestId("edit-prompt-sanitized").click();
   // await page.getByTestId("modal-title").click();
   await page
-    .getByTestId("modal-prompt-input-0")
+    .getByTestId("modal-prompt-input-template")
     .fill("{prompt} example {prompt1}");
 
-  let value = await page.getByTestId("modal-prompt-input-0").inputValue();
+  let value = await page
+    .getByTestId("modal-prompt-input-template")
+    .inputValue();
 
   if (value != "{prompt} example {prompt1}") {
     expect(false).toBeTruthy();
