@@ -26,6 +26,7 @@ class Graph:
         self,
         nodes: List[Dict],
         edges: List[Dict[str, str]],
+        flow_id: Optional[str] = None,
     ) -> None:
         self.inputs = []
         self.outputs = []
@@ -34,6 +35,7 @@ class Graph:
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
         self._runs = 0
         self._updates = 0
+        self.flow_id = flow_id
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -113,7 +115,7 @@ class Graph:
         return predecessor_map, successor_map
 
     @classmethod
-    def from_payload(cls, payload: Dict) -> "Graph":
+    def from_payload(cls, payload: Dict, flow_id: str) -> "Graph":
         """
         Creates a graph from a payload.
 
@@ -128,7 +130,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            return cls(vertices, edges)
+            return cls(vertices, edges, flow_id)
         except KeyError as exc:
             logger.exception(exc)
             raise ValueError(
