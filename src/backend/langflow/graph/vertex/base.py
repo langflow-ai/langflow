@@ -1,7 +1,10 @@
 import ast
 import inspect
 import types
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+
+from loguru import logger
 
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
@@ -11,12 +14,19 @@ from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
-from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultData
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
+
+
+class VertexStates(Enum):
+    """Vertex are related to it being active, inactive, or in an error state."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    ERROR = "error"
 
 
 class Vertex:
@@ -58,6 +68,16 @@ class Vertex:
 
         self.use_result = False
         self.build_times: List[float] = []
+        self.state = VertexStates.ACTIVE
+
+    def set_state(self, state: str):
+        self.state = VertexStates[state]
+        if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] < 2:
+            # If the vertex is inactive and has only one in degree
+            # it means that it is not a merge point in the graph
+            self.graph.inactive_vertices.add(self.id)
+        elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactive_vertices:
+            self.graph.inactive_vertices.remove(self.id)
 
     @property
     def avg_build_time(self):
@@ -475,12 +495,23 @@ class Vertex:
         self.artifacts = {}
         self.steps_ran = []
 
+    def build_inactive(self):
+        # Just set the results to None
+        self._built = True
+        self._built_object = None
+        self._built_result = None
+
     async def build(
         self,
         user_id=None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
+        if self.state == VertexStates.INACTIVE:
+            # If the vertex is inactive, return None
+            self.build_inactive()
+            return
+
         if self.pinned and self._built:
             return self.get_requester_result(requester)
         self._reset()
