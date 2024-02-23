@@ -8,11 +8,29 @@ type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
   nodeId?: string | null; // Assuming nodeId is of type string, and it's optional
   onProgressUpdate?: (progress: number) => void; // Replace number with the actual type if it's not a number
-  onBuildUpdate?: (data: any) => void; // Replace any with the actual type of data
+  onBuildUpdate?: (data: VertexBuildTypeAPI, status: BuildStatus) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: string[]) => void;
   onBuildStart?: (idList: string[]) => void;
 };
+
+function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
+  // Build VertexBuildTypeAPI
+  let inactiveData = {
+    results: {},
+    artifacts: { repr: "Inactive" },
+  };
+  let inactiveVertexData = {
+    id: vertexId,
+    data: inactiveData,
+    params: "Inactive",
+    inactive_vertices: null,
+    valid: false,
+    timestamp: new Date().toISOString(),
+  };
+
+  return inactiveVertexData;
+}
 
 export async function buildVertices({
   flowId,
@@ -57,11 +75,13 @@ export async function buildVertices({
     if (onBuildStart) onBuildStart(layer);
     for (const id of layer) {
       // Check if id is in the list of inactive nodes
-      if (useFlowStore.getState().inactiveNodes.includes(id)) {
-        // If it is, skip building
-        // it should be true because it did
-        // what it was supposed to do
-        buildResults.push(true);
+      if (
+        !useFlowStore.getState().verticesBuild.includes(id) &&
+        onBuildUpdate
+      ) {
+        // If it is, skip building and set the state to inactive
+        onBuildUpdate(getInactiveVertexData(id), BuildStatus.INACTIVE);
+        buildResults.push(false);
         continue;
       }
       await buildVertex({
@@ -88,7 +108,6 @@ export async function buildVertices({
     const allNodesValid = buildResults.every((result) => result);
     onBuildComplete(allNodesValid);
     useFlowStore.getState().setIsBuilding(false);
-    useFlowStore.getState().setInactiveNodes([]);
   }
 }
 
@@ -103,7 +122,7 @@ async function buildVertex({
 }: {
   flowId: string;
   id: string;
-  onBuildUpdate?: (data: any) => void;
+  onBuildUpdate?: (data: any, status: BuildStatus) => void;
   onBuildError?: (title, list, idList: string[]) => void;
   verticesIds: string[];
   buildResults: boolean[];
@@ -113,7 +132,6 @@ async function buildVertex({
     const buildRes = await postBuildVertex(flowId, id);
     const buildData: VertexBuildTypeAPI = buildRes.data;
     if (onBuildUpdate) {
-      let data = {};
       if (!buildData.valid) {
         onBuildError!(
           "Error Building Component",
@@ -122,8 +140,7 @@ async function buildVertex({
         );
         stopBuild();
       }
-      data[buildData.id] = buildData;
-      onBuildUpdate({ data, id: buildData.id });
+      onBuildUpdate(buildData, BuildStatus.BUILT);
     }
     buildResults.push(buildData.valid);
   } catch (error) {
