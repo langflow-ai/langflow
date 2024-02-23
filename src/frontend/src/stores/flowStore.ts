@@ -11,6 +11,7 @@ import {
 import { create } from "zustand";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
+import { VertexBuildTypeAPI } from "../types/api";
 import {
   NodeDataType,
   NodeType,
@@ -151,7 +152,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
-    console.log(newChange);
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
@@ -375,17 +375,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
-    function handleBuildUpdate(data: any) {
-      const responseData = data.data[data.id];
-      // responseData MAY contain inactive_vertices or it
-      // may be null, so we need to check for it
-      if (responseData && responseData.inactive_vertices) {
-        useFlowStore
-          .getState()
-          .setInactiveNodes(responseData.inactive_vertices);
+    function handleBuildUpdate(
+      vertexBuildData: VertexBuildTypeAPI,
+      status: BuildStatus
+    ) {
+      if (vertexBuildData && vertexBuildData.inactive_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
       }
-      get().addDataToFlowPool(data.data[data.id], data.id);
-      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+      get().addDataToFlowPool(vertexBuildData, vertexBuildData.id);
+      useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await updateFlowInDatabase({
       data: {
@@ -418,6 +416,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
     });
+    get().revertAllVerticesToBuild();
   },
   getFlow: () => {
     return {
@@ -439,10 +438,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
-  setInactiveNodes(newState) {
-    set({ inactiveNodes: newState });
+  revertAllVerticesToBuild: () => {
+    // set all vertices to TO_BUILD
+    const verticesIds = get()
+      .nodes.filter((node) => node.data.build_status === BuildStatus.BUILDING)
+      .map((node) => node.id);
+    get().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   },
-  inactiveNodes: [],
+  removeFromVerticesBuild: (vertices: string[]) => {
+    set({
+      verticesBuild: get().verticesBuild.filter(
+        (vertex) => !vertices.includes(vertex)
+      ),
+    });
+  },
 }));
 
 export default useFlowStore;
