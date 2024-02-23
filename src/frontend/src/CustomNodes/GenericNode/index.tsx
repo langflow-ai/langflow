@@ -196,7 +196,8 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     if (
-      buildStatus === BuildStatus.BUILT &&
+      (buildStatus === BuildStatus.BUILT ||
+        buildStatus === BuildStatus.INACTIVE) &&
       validationStatus &&
       !validationStatus.valid
     ) {
