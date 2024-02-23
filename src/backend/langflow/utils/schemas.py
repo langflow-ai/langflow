@@ -10,6 +10,7 @@ class ChatOutputResponse(BaseModel):
     message: Union[str, List[Union[str, Dict]]]
     sender: Optional[str] = "Machine"
     sender_name: Optional[str] = "AI"
+    stream_url: Optional[str] = None
 
     @classmethod
     def from_message(
