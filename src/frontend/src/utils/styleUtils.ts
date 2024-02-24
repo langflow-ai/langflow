@@ -117,6 +117,7 @@ import {
   X,
   XCircle,
   Zap,
+  Delete,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -416,4 +417,5 @@ export const nodeIconsLucide: iconsType = {
   FlaskConical,
   AlertCircle,
   Bot,
+  Delete,
 };

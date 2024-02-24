@@ -388,13 +388,16 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem value={"delete"}>
-                <div className="font-red flex text-red-500 hover:text-red-500">
+              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+                <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
-                  Delete{" "}
+                  <span className="">Delete</span>{" "}
+                  <span>
+                    <IconComponent name="Delete" className="text-red-300 absolute right-2 top-2 h-4 w-4"></IconComponent>
+                  </span>
                 </div>
               </SelectItem>
             </SelectContent>
