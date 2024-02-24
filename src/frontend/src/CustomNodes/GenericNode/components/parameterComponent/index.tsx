@@ -324,7 +324,7 @@ export default function ParameterComponent({
           ) : (
             title
           )}
-          <span className="text-status-red">{required ? " *" : ""}</span>
+          <span className={(info === '' ? '' : 'ml-1 ') + " text-status-red"}>{required ? " *" : ""}</span>
           <div className="">
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
