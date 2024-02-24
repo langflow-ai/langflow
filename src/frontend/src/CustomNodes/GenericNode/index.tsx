@@ -174,6 +174,8 @@ export default function GenericNode({
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
       return "gray-status";
+    } else if (!validationStatus && buildStatus === BuildStatus.BUILT) {
+      return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
     } else if (!validationStatus) {
@@ -202,7 +204,6 @@ export default function GenericNode({
     let isInvalid = validationStatus && !validationStatus.valid;
     if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
       // INACTIVE should have its own class
-      // different from BUILT and TO_BUILD
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
