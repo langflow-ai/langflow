@@ -448,7 +448,7 @@ export default function GenericNode({
             </div>
             {showNode && (
               <Button
-                variant="outline"
+                variant="secondary"
                 className={"group h-9 px-1.5"}
                 onClick={() => {
                   if (data?.build_status === BuildStatus.BUILDING || isBuilding)
