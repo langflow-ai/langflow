@@ -312,7 +312,7 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <div className="group flex items-center gap-2.5">
+                    <div className="group flex items-start gap-1.5">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
                           onDoubleClick={(event) => {
@@ -339,8 +339,8 @@ export default function GenericNode({
                           }}
                         >
                           <IconComponent
-                            name="Pencil"
-                            className="hidden h-4 w-4 animate-pulse text-status-blue group-hover:block"
+                            name="PencilLine"
+                            className="hidden h-3 w-3 text-status-blue group-hover:block"
                           />
                         </div>
                       )}
