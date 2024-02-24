@@ -20,23 +20,22 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
+  const chatInput = useFlowStore((state) => state.inputs).find(
+    (input) => input.type === "ChatInput"
+  );
   const outputs = useFlowStore((state) => state.outputs).filter(
     (output) => output.type !== "ChatOutput"
+  );
+  const chatOutput = useFlowStore((state) => state.outputs).find(
+    (output) => output.type === "ChatOutput"
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       (inputs.some((input) => input.id === node.id) ||
-        outputs.some((output) => output.id === node.id)) &&
-      node.type !== "ChatInput" &&
-      node.type !== "ChatOutput"
+        outputs.some((output) => output.id === node.id))
   );
   const haveChat =
-    useFlowStore((state) => state.outputs).some(
-      (output) => output.type === "ChatOutput"
-    ) ||
-    useFlowStore((state) => state.inputs).some(
-      (input) => input.type === "ChatInput"
-    );
+    chatInput || chatOutput
   const [selectedTab, setSelectedTab] = useState(
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
@@ -59,14 +58,11 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       setIsBuilding(true);
       setLockChat(true);
       setChatValue("");
-      const chatInputId = inputs
-        .map((obj) => obj.id)
-        .find((inputId) => inputId.includes("ChatInput"));
-      const chatInput: NodeType = getNode(chatInputId!) as NodeType;
-      if (chatInput) {
-        let newNode = cloneDeep(chatInput);
+      const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+      if (chatInputNode) {
+        let newNode = cloneDeep(chatInputNode);
         newNode.data.node!.template["message"].value = chatValue;
-        setNode(chatInputId!, newNode);
+        setNode(chatInput!.id, newNode);
       }
       for (let i = 0; i < count; i++) {
         await buildFlow().catch((err) => {
