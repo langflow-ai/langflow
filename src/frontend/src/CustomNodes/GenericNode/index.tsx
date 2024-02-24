@@ -120,7 +120,6 @@ export default function GenericNode({
   }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
-  const pinned = data.node?.pinned ?? false;
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
@@ -160,7 +159,7 @@ export default function GenericNode({
   const getIconPlayOrPauseComponent = (name, className) => (
     <IconComponent
       name={name}
-      className={`absolute h-5 stroke-2 ${className} ml-0.5`}
+      className={`h-4 fill-current stroke-2 ${className}`}
     />
   );
 
@@ -193,7 +192,7 @@ export default function GenericNode({
       return <Loading />;
     } else {
       const className = getStatusClassName(buildStatus, validationStatus);
-      return <>{getIconPlayOrPauseComponent("Play", className)}</>;
+      return <>{getIconPlayOrPauseComponent("CircleDot", className)}</>;
     }
   };
 
@@ -439,39 +438,7 @@ export default function GenericNode({
             {showNode && (
               <Button
                 variant="outline"
-                className="h-9 px-1.5"
-                onClick={() => {
-                  setNode(data.id, (old) => ({
-                    ...old,
-                    data: {
-                      ...old.data,
-                      node: {
-                        ...old.data.node,
-                        pinned: old.data?.node?.pinned ? false : true,
-                      },
-                    },
-                  }));
-                }}
-              >
-                <Tooltip
-                  title={<span>{pinned ? "Pin Output" : "Unpin Output"}</span>}
-                >
-                  <div className="generic-node-status-position flex items-center">
-                    <IconComponent
-                      name={"Pin"}
-                      className={cn(
-                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                        pinned ? "animate-wiggle fill-chat-trigger" : ""
-                      )}
-                    />
-                  </div>
-                </Tooltip>
-              </Button>
-            )}
-            {showNode && (
-              <Button
-                variant="outline"
-                className={"h-9 px-1.5"}
+                className={"group h-9 px-1.5"}
                 onClick={() => {
                   if (data?.build_status === BuildStatus.BUILDING || isBuilding)
                     return;
@@ -485,12 +452,7 @@ export default function GenericNode({
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Play"
-                            className=" h-5 stroke-build-trigger stroke-2"
-                          />{" "}
-                          flow to validate status.
+                          Build flow to validate status.
                         </span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
@@ -506,15 +468,21 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      {renderIconPlayOrPauseComponents(
-                        data?.build_status,
-                        validationStatus
-                      )}
+                      <IconComponent
+                        name="Play"
+                        className="absolute ml-0.5 h-5 fill-current stroke-2 text-chat-trigger"
+                      />
                     </div>
                   </Tooltip>
                 </div>
               </Button>
             )}
+            <div className="">
+              {renderIconPlayOrPauseComponents(
+                data?.build_status,
+                validationStatus
+              )}
+            </div>
           </div>
         </div>
 
