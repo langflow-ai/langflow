@@ -201,7 +201,7 @@ export default function GenericNode({
       return (
         <IconComponent
           name="Play"
-          className="absolute ml-0.5 h-5 fill-current stroke-2 text-chat-trigger"
+          className="absolute ml-0.5 h-5 fill-current stroke-2 hover:text-medium-indigo text-muted-foreground"
         />
       );
     }
