@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from loguru import logger
+from pydantic import BaseModel, Field
+
 from langflow.graph.edge.utils import build_clean_params
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.utils import log_message
-from loguru import logger
-from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -135,11 +136,11 @@ class ContractEdge(Edge):
 
         log_transaction(self, source, target, "success")
         # If the target vertex is a power component we log messages
-        if (
-            target.vertex_type == "ChatOutput"
-            and isinstance(target.params.get("message"), str)
-            or isinstance(target.params.get("message"), dict)
+        if target.vertex_type == "ChatOutput" and (
+            isinstance(target.params.get("message"), str) or isinstance(target.params.get("message"), dict)
         ):
+            if target.params.get("message") == "":
+                return self.result
             await log_message(
                 sender=target.params.get("sender", ""),
                 sender_name=target.params.get("sender_name", ""),
@@ -167,4 +168,5 @@ def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", stat
         }
         monitor_service.add_row(table_name="transactions", data=data)
     except Exception as e:
+        logger.error(f"Error logging transaction: {e}")
         logger.error(f"Error logging transaction: {e}")

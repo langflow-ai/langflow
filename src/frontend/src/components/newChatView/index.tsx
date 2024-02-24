@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import _, { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { deleteFlowPool } from "../../controllers/API";
@@ -19,7 +19,6 @@ import ChatMessage from "./chatMessage";
 
 export default function NewChatView(): JSX.Element {
   const [chatValue, setChatValue] = useState("");
-  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const {
     flowPool,
     outputs,
@@ -36,6 +35,7 @@ export default function NewChatView(): JSX.Element {
   const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
@@ -67,20 +67,30 @@ export default function NewChatView(): JSX.Element {
     });
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-      .filter((output) => !!output.data.artifacts?.message)
-      .map((output) => {
+      //
+      .filter((output) => output.data.artifacts?.message !== null)
+      .map((output, index) => {
         try {
-          const { sender, message, sender_name } = output.data
+          const { sender, message, sender_name, stream_url } = output.data
             .artifacts as ChatOutputType;
 
+          const componentId = output.id + index;
+
           const is_ai = sender === "Machine" || sender === null;
-          return { isSend: !is_ai, message: message, sender_name };
+          return {
+            isSend: !is_ai,
+            message: message,
+            sender_name,
+            id: componentId,
+            stream_url: stream_url,
+          };
         } catch (e) {
           console.error(e);
           return {
             isSend: false,
             message: "Error parsing message",
             sender_name: "Error",
+            id: output.id + index,
           };
         }
       });
@@ -148,6 +158,32 @@ export default function NewChatView(): JSX.Element {
     if (lockChat) setLockChat(false);
   }
 
+  function updateChat(
+    chat: ChatMessageType,
+    message: string,
+    stream_url: string | null
+  ) {
+    if (message === "") return;
+    console.log(`updateChat: ${message}`);
+    console.log("chatHistory:", chatHistory);
+    chat.message = message;
+    chat.stream_url = stream_url;
+    // chat is one of the chatHistory
+    setChatHistory((oldChatHistory) => {
+      const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
+
+      if (index === -1) return oldChatHistory;
+      let newChatHistory = _.cloneDeep(oldChatHistory);
+      newChatHistory = [
+        ...newChatHistory.slice(0, index),
+        chat,
+        ...newChatHistory.slice(index + 1),
+      ];
+      console.log("newChatHistory:", newChatHistory);
+      return newChatHistory;
+    });
+  }
+
   return (
     <div className="eraser-column-arrangement">
       <div className="eraser-size">
@@ -172,7 +208,8 @@ export default function NewChatView(): JSX.Element {
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
-                key={index}
+                key={`${chat.id}-${index}`}
+                updateChat={updateChat}
               />
             ))
           ) : (
