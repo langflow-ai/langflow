@@ -360,9 +360,7 @@ export default function NodeToolbarComponent({
                     name="FileText"
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
-                  {data.node?.documentation === ""
-                    ? "Coming Soon"
-                    : "Documentation"}
+                  Docs
                 </div>{" "}
               </SelectItem>
               {isMinimal && (
