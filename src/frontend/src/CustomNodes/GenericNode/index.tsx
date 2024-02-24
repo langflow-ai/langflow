@@ -180,7 +180,7 @@ export default function GenericNode({
     } else if (!validationStatus) {
       return "yellow-status";
     } else {
-      return "status-build-animation";
+      return "yellow-status";
     }
   };
 
