@@ -289,11 +289,13 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
           </div>
           {!haveChat && (
             <div className="flex w-full justify-end pt-6">
-              <Button className="px-3" onClick={() => sendMessage(1)}>
+              <Button variant={"outline"} className="px-3 flex gap-2" onClick={() => sendMessage(1)}>
+                
                 <IconComponent
                   name={isBuilding ? "Loader2" : "Play"}
-                  className={cn("h-6 w-6", isBuilding ? "animate-spin" : "")}
+                  className={cn("h-4 w-4", isBuilding ? "animate-spin" : "fill-current text-medium-indigo")}
                 />
+                Run Flow
               </Button>
             </div>
           )}
