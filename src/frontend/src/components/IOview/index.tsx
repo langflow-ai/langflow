@@ -10,6 +10,7 @@ import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export default function IOView({ children, open, setOpen }): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
@@ -67,123 +68,147 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                 haveChat ? "w-2/6" : "w-full"
               )}
             >
-              <div className="flex w-full items-center justify-between py-2">
-                <div className="flex items-start gap-4">
-                  {inputs.length > 0 && (
-                    <Button
-                      onClick={() => setSelectedTab(1)}
-                      variant={selectedTab === 1 ? "primary" : "secondary"}
-                    >
-                      <IconComponent
-                        name="FormInput"
-                        className=" file-component-variable"
-                      />
-                      <span className="file-component-variables-span text-md">
-                        Inputs
-                      </span>
-                    </Button>
-                  )}
-                  {outputs.length > 0 && (
-                    <Button
-                      onClick={() => setSelectedTab(2)}
-                      variant={selectedTab === 2 ? "primary" : "secondary"}
-                    >
-                      <IconComponent
-                        name="ChevronRightSquare"
-                        className=" file-component-variable"
-                      />
-                      <span className="file-component-variables-span text-md">
-                        Outputs
-                      </span>
-                    </Button>
-                  )}
+              <Tabs
+                value={selectedTab.toString()}
+                className={"api-modal-tabs "}
+                onValueChange={(value) => {
+                  setSelectedTab(Number(value));
+                }}
+              >
+                <div className="api-modal-tablist-div">
+                  <TabsList>
+                    {inputs.length > 0 && (
+                      <TabsTrigger value={"1"}>Inputs</TabsTrigger>
+                    )}
+                    {outputs.length > 0 && (
+                      <TabsTrigger value={"2"}>Outputs</TabsTrigger>
+                    )}
+                  </TabsList>
                 </div>
-                {selectedViewField && haveChat && (
-                  <Button
-                    onClick={() => setSelectedViewField(undefined)}
-                    variant="outline"
-                    key={"chat"}
-                    className="self-end px-2.5"
-                  >
-                    <IconComponent
-                      name="MessageSquareMore"
-                      className="h-5 w-5"
-                    />
-                  </Button>
-                )}
-              </div>
-              <div className="mx-2 mb-2 mt-4 flex items-center gap-2 font-semibold">
-                {selectedTab === 1 && (
-                  <>
-                    <IconComponent name={"FormInput"} />
+
+                <TabsContent
+                  value={"1"}
+                  className="api-modal-tabs-content mt-4"
+                >
+                  <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                    <IconComponent className="h-4 w-4" name={"Type"} />
                     Text Inputs
-                  </>
-                )}
-                {selectedTab === 2 && (
-                  <>
-                    <IconComponent name={"ChevronRightSquare"} />
-                    Prompt Outputs
-                  </>
-                )}
-              </div>
-              {nodes
-                .filter((node) =>
-                  selectedTab === 1
-                    ? inputs.some((input) => input.id === node.id)
-                    : outputs.some((output) => output.id === node.id)
-                )
-                .map((node, index) => {
-                  const input =
-                    selectedTab === 1
-                      ? inputs.find((input) => input.id === node.id)!
-                      : outputs.find((output) => output.id === node.id)!;
-                  return (
-                    <div className="file-component-accordion-div" key={index}>
-                      <AccordionComponent
-                        trigger={
-                          <div className="file-component-badge-div">
-                            <Badge variant="gray" size="md">
-                              {input.id}
-                            </Badge>
-                            {haveChat && (
-                              <div
-                                className="-mb-1 pr-4"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelectedViewField(input);
-                                }}
-                              >
-                                <IconComponent
-                                  className="h-4 w-4"
-                                  name="ExternalLink"
-                                ></IconComponent>
+                  </div>
+                  {nodes
+                    .filter((node) =>
+                      inputs.some((input) => input.id === node.id)
+                    )
+                    .map((node, index) => {
+                      const input = inputs.find(
+                        (input) => input.id === node.id
+                      )!;
+                      return (
+                        <div
+                          className="file-component-accordion-div"
+                          key={index}
+                        >
+                          <AccordionComponent
+                            trigger={
+                              <div className="file-component-badge-div">
+                                <Badge variant="gray" size="md">
+                                  {input.id}
+                                </Badge>
+                                {haveChat && (
+                                  <div
+                                    className="-mb-1 pr-4"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedViewField(input);
+                                    }}
+                                  >
+                                    <IconComponent
+                                      className="h-4 w-4"
+                                      name="ExternalLink"
+                                    ></IconComponent>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        }
-                        key={index}
-                        keyValue={input.id}
-                      >
-                        <div className="file-component-tab-column">
-                          <div className="">
-                            {input &&
-                              (selectedTab === 1 ? (
-                                <IOInputField
-                                  inputType={input.type}
-                                  inputId={input.id}
-                                />
-                              ) : (
-                                <IOOutputView
-                                  outputType={input.type}
-                                  outputId={input.id}
-                                />
-                              ))}
-                          </div>
+                            }
+                            key={index}
+                            keyValue={input.id}
+                          >
+                            <div className="file-component-tab-column">
+                              <div className="">
+                                {input && (
+                                  <IOInputField
+                                    inputType={input.type}
+                                    inputId={input.id}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </AccordionComponent>
                         </div>
-                      </AccordionComponent>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                </TabsContent>
+                <TabsContent
+                  value={"2"}
+                  className="api-modal-tabs-content mt-4"
+                >
+                  <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                    <IconComponent className="h-4 w-4" name={"Braces"} />
+                    Prompt Outputs
+                  </div>
+                  {nodes
+                    .filter((node) =>
+                      outputs.some((output) => output.id === node.id)
+                    )
+                    .map((node, index) => {
+                      const output = outputs.find(
+                        (output) => output.id === node.id
+                      )!;
+                      return (
+                        <div
+                          className="file-component-accordion-div"
+                          key={index}
+                        >
+                          <AccordionComponent
+                            trigger={
+                              <div className="file-component-badge-div">
+                                <Badge variant="gray" size="md">
+                                  {output.id}
+                                </Badge>
+                                {haveChat && (
+                                  <div
+                                    className="-mb-1 pr-4"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedViewField(output);
+                                    }}
+                                  >
+                                    <IconComponent
+                                      className="h-4 w-4"
+                                      name="ExternalLink"
+                                    ></IconComponent>
+                                  </div>
+                                )}
+                              </div>
+                            }
+                            key={index}
+                            keyValue={output.id}
+                          >
+                            <div className="file-component-tab-column">
+                              <div className="">
+                                {output && (
+                                  <IOOutputView
+                                    outputType={output.type}
+                                    outputId={output.id}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </AccordionComponent>
+                        </div>
+                      );
+                    })}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

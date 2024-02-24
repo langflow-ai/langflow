@@ -845,7 +845,7 @@
     @apply flex h-full max-w-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
   }
   .api-modal-tablist-div {
-    @apply flex items-center justify-between px-2;
+    @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
     @apply -mt-1 h-full w-full overflow-hidden px-4 pb-4;
