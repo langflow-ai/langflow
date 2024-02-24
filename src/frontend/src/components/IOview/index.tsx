@@ -27,7 +27,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       node.type !== "ChatOutput"
   );
   const haveChat = useFlowStore((state) => state.outputs).some(
-    (output) => output.type === "ChatOutput"
+    (output) => output.type === "ChatOutput" || output.type === "ChatInput"
   );
   const [selectedTab, setSelectedTab] = useState(
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
