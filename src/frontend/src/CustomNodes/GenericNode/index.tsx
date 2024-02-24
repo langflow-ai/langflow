@@ -184,6 +184,13 @@ export default function GenericNode({
     }
   };
 
+  const renderIconStatusComponents = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    const className = getStatusClassName(buildStatus, validationStatus);
+    return <>{getIconPlayOrPauseComponent("CircleDot", className)}</>;
+  };
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -191,8 +198,12 @@ export default function GenericNode({
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading />;
     } else {
-      const className = getStatusClassName(buildStatus, validationStatus);
-      return <>{getIconPlayOrPauseComponent("CircleDot", className)}</>;
+      return (
+        <IconComponent
+          name="Play"
+          className="absolute ml-0.5 h-5 fill-current stroke-2 text-chat-trigger"
+        />
+      );
     }
   };
 
@@ -468,20 +479,17 @@ export default function GenericNode({
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      <IconComponent
-                        name="Play"
-                        className="absolute ml-0.5 h-5 fill-current stroke-2 text-chat-trigger"
-                      />
+                      {renderIconPlayOrPauseComponents(
+                        data?.build_status,
+                        validationStatus
+                      )}
                     </div>
                   </Tooltip>
                 </div>
               </Button>
             )}
             <div className="">
-              {renderIconPlayOrPauseComponents(
-                data?.build_status,
-                validationStatus
-              )}
+              {renderIconStatusComponents(data?.build_status, validationStatus)}
             </div>
           </div>
         </div>
