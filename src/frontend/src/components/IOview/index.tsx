@@ -89,7 +89,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
 
   return (
     <BaseModal
-      size={haveChat ? "large" : "small"}
+      size={haveChat ? (selectedTab === 0 ? "large-thin" : "large") : "small"}
       open={open}
       setOpen={setOpen}
     >

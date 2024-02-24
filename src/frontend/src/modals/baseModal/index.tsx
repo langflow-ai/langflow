@@ -66,6 +66,7 @@ interface BaseModalProps {
     | "small"
     | "medium"
     | "large"
+    | "large-thin"
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full"
@@ -128,6 +129,10 @@ function BaseModal({
       minWidth = "min-w-[80vw]";
       height = "h-[80vh]";
       break;
+    case "large-thin":
+        minWidth = "min-w-[65vw]";
+        height = "h-[80vh]";
+        break;
     case "large-h-full":
       minWidth = "min-w-[80vw]";
       break;
