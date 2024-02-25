@@ -425,25 +425,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       viewport: get().reactFlowInstance?.getViewport()!,
     };
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-    nodeIdList.forEach((id) => {
-      const nodeToUpdate = get().nodes.find((node) => node.id === id);
-      if (nodeToUpdate) {
-        nodeToUpdate.data.build_status = status;
-        get().setNodes(get().nodes);
-      }
-    });
-  },
   updateVerticesBuild: (vertices: string[]) => {
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
   revertAllVerticesToBuild: () => {
     // set all vertices to TO_BUILD
-    const verticesIds = get()
-      .nodes.filter((node) => node.data.build_status === BuildStatus.BUILDING)
-      .map((node) => node.id);
+    let verticesIds: string[] = [];
+    Object.keys(get().buildStatus).forEach((id) => {
+      if (get().buildStatus[id] !== BuildStatus.TO_BUILD) {
+        verticesIds.push(id);
+      }
+    });
     get().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
+    // additional code logic here
   },
   removeFromVerticesBuild: (vertices: string[]) => {
     set({
@@ -451,6 +446,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         (vertex) => !vertices.includes(vertex)
       ),
     });
+  },
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    let newBuildStatus = cloneDeep(get().buildStatus);
+    // check if nodeIdList is an array
+    if (!Array.isArray(nodeIdList)) {
+      nodeIdList = [nodeIdList];
+    }
+    nodeIdList.forEach((id) => {
+      newBuildStatus[id] = status;
+    });
+    set({ buildStatus: newBuildStatus });
+  },
+  buildStatus: {},
+  getBuildStatus: (nodeId: string) => {
+    // if the node is not in the buildStatus object, set it to TO_BUILD
+    if (!get().buildStatus[nodeId]) {
+      get().buildStatus[nodeId] = BuildStatus.TO_BUILD;
+    }
+    return get().buildStatus[nodeId];
   },
 }));
 
