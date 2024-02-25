@@ -36,6 +36,7 @@ export default function GenericNode({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const getBuildStatus = useFlowStore((state) => state.getBuildStatus);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -262,7 +263,7 @@ export default function GenericNode({
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.build_status,
+          getBuildStatus(data.id),
           validationStatus
         )}
       >
@@ -473,7 +474,10 @@ export default function GenericNode({
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.build_status === BuildStatus.BUILDING || isBuilding)
+                  if (
+                    getBuildStatus(data.id) === BuildStatus.BUILDING ||
+                    isBuilding
+                  )
                     return;
                   buildFlow(data.id);
                 }}
@@ -481,7 +485,7 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      data?.build_status === BuildStatus.BUILDING ? (
+                      getBuildStatus(data.id) === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -507,7 +511,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        data?.build_status,
+                        getBuildStatus(data.id),
                         validationStatus
                       )}
                     </div>
