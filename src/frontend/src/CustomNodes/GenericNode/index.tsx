@@ -170,7 +170,6 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     const isValid = validationStatus && validationStatus.valid;
-
     if (isValid) {
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
@@ -181,8 +180,10 @@ export default function GenericNode({
       return "red-status";
     } else if (!validationStatus) {
       return "yellow-status";
-    } else {
+    } else if (buildStatus === BuildStatus.BUILDING) {
       return "status-build-animation";
+    } else {
+      return "green-status";
     }
   };
 
@@ -203,6 +204,7 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
+
     if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
       // INACTIVE should have its own class
       return "inactive-status";
@@ -222,11 +224,17 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
+      buildStatus,
+      validationStatus
+    );
+    const baseBorderClass = getBaseBorderClass(selected);
+    const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
-      getBaseBorderClass(selected),
-      getNodeSizeClass(showNode),
+      baseBorderClass,
+      nodeSizeClass,
       "generic-node-div",
-      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
+      specificClassFromBuildStatus
     );
   };
 
@@ -479,6 +487,7 @@ export default function GenericNode({
                     isBuilding
                   )
                     return;
+
                   buildFlow(data.id);
                 }}
               >
