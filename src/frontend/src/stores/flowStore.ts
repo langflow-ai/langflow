@@ -416,7 +416,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
     });
-    get().revertAllVerticesToBuild();
   },
   getFlow: () => {
     return {
@@ -429,17 +428,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
-  revertAllVerticesToBuild: () => {
-    // set all vertices to TO_BUILD
-    let verticesIds: string[] = [];
-    Object.keys(get().buildStatus).forEach((id) => {
-      if (get().buildStatus[id] !== BuildStatus.TO_BUILD) {
-        verticesIds.push(id);
-      }
-    });
-    get().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
-    // additional code logic here
-  },
+
   removeFromVerticesBuild: (vertices: string[]) => {
     set({
       verticesBuild: get().verticesBuild.filter(

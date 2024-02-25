@@ -88,7 +88,6 @@ export type FlowStoreType = {
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (vertices: string[]) => void;
   removeFromVerticesBuild: (vertices: string[]) => void;
-  revertAllVerticesToBuild: () => void;
   verticesBuild: string[];
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   buildStatus: { [key: string]: BuildStatus };
