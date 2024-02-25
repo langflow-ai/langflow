@@ -25,6 +25,7 @@ import {
   Compass,
   Copy,
   Cpu,
+  Delete,
   Download,
   DownloadCloud,
   Edit,
@@ -117,7 +118,6 @@ import {
   X,
   XCircle,
   Zap,
-  Delete,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
