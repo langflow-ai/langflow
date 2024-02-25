@@ -178,7 +178,7 @@ export default function GenericNode({
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
-    } else if (!validationStatus) {
+    } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
       return "green-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "status-build-animation";
