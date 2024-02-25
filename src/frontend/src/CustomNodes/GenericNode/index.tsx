@@ -179,7 +179,7 @@ export default function GenericNode({
     } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
     } else if (!validationStatus) {
-      return "yellow-status";
+      return "green-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "status-build-animation";
     } else {
@@ -501,7 +501,7 @@ export default function GenericNode({
                           Build{" "}
                           <IconComponent
                             name="Play"
-                            className=" h-5 stroke-build-trigger stroke-2"
+                            className=" h-5 stroke-status-green stroke-2"
                           />{" "}
                           flow to validate status.
                         </span>
