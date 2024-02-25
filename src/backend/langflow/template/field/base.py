@@ -1,7 +1,8 @@
 from typing import Any, Callable, Optional, Union
 
-from langflow.field_typing.range_spec import RangeSpec
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_serializer
+
+from langflow.field_typing.range_spec import RangeSpec
 
 
 class TemplateField(BaseModel):
@@ -63,7 +64,7 @@ class TemplateField(BaseModel):
     range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
-    title_case: bool = True
+    title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
     def to_dict(self):
@@ -100,4 +101,5 @@ class TemplateField(BaseModel):
             value = self.name.replace("_", " ")
             if self.title_case:
                 value = value.title()
+        return value
         return value
