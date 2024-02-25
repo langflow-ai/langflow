@@ -396,7 +396,10 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span>
-                    <IconComponent name="Delete" className="text-red-300 absolute right-2 top-2 h-4 w-4"></IconComponent>
+                    <IconComponent
+                      name="Delete"
+                      className="absolute right-2 top-2 h-4 w-4 text-red-300"
+                    ></IconComponent>
                   </span>
                 </div>
               </SelectItem>
