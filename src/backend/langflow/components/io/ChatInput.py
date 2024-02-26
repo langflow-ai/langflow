@@ -1,7 +1,6 @@
-from typing import Optional, Union
+from typing import Optional
 
 from langflow import CustomComponent
-from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -25,6 +24,10 @@ class ChatInput(CustomComponent):
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
             },
+            "return_record": {
+                "display_name": "Return Record",
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+            },
         }
 
     def build(
@@ -33,21 +36,23 @@ class ChatInput(CustomComponent):
         sender_name: Optional[str] = "User",
         message: Optional[str] = None,
         session_id: Optional[str] = None,
+        return_record: Optional[bool] = False,
     ) -> Record:
-        if isinstance(message, Record):
-            # Update the data of the record
-            message.data["sender"] = sender
-            message.data["sender_name"] = sender_name
-            message.data["session_id"] = session_id
-        else:
-            message = Record(
-                text=message,
-                data={
-                    "sender": sender,
-                    "sender_name": sender_name,
-                    "session_id": session_id,
-                },
-            )
+        if return_record:
+            if isinstance(message, Record):
+                # Update the data of the record
+                message.data["sender"] = sender
+                message.data["sender_name"] = sender_name
+                message.data["session_id"] = session_id
+            else:
+                message = Record(
+                    text=message,
+                    data={
+                        "sender": sender,
+                        "sender_name": sender_name,
+                        "session_id": session_id,
+                    },
+                )
         if not message:
             message = ""
         self.status = message
