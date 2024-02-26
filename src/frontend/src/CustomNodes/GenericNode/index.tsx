@@ -135,7 +135,6 @@ export default function GenericNode({
     const iconClassName = `generic-node-icon ${
       !showNode ? "absolute inset-x-6 h-12 w-12" : ""
     }`;
-
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
     } else {

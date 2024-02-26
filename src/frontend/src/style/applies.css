@@ -276,7 +276,7 @@
     @apply h-10 w-10 rounded p-1;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 truncate;
+    @apply ml-2 max-w-[220px] truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
