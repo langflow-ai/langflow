@@ -8,6 +8,7 @@ import useFlowStore from "../../../stores/flowStore";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
+import { MISSED_ERROR_ALERT } from "../../../alerts_constants";
 
 export default function BuildTrigger({
   open,
@@ -36,7 +37,7 @@ export default function BuildTrigger({
       const errors = validateNodes(nodes, edges);
       if (errors.length > 0) {
         setErrorData({
-          title: "Oops! Looks like you missed something",
+          title: MISSED_ERROR_ALERT,
           list: errors,
         });
         return;

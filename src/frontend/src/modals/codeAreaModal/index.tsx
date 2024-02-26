@@ -16,6 +16,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import { BUG_ALERT, CODE_ERROR_ALERT, CODE_SUCCESS_ALERT, FUNC_ERROR_ALERT, IMPORT_ERROR_ALERT } from "../../alerts_constants";
 
 export default function CodeAreaModal({
   value,
@@ -58,7 +59,7 @@ export default function CodeAreaModal({
           let funcErrors = apiReturn.data.function.errors;
           if (funcErrors.length === 0 && importsErrors.length === 0) {
             setSuccessData({
-              title: "Code is ready to run",
+              title: CODE_SUCCESS_ALERT,
             });
             setOpen(false);
             setValue(code);
@@ -66,26 +67,26 @@ export default function CodeAreaModal({
           } else {
             if (funcErrors.length !== 0) {
               setErrorData({
-                title: "There is an error in your function",
+                title: FUNC_ERROR_ALERT,
                 list: funcErrors,
               });
             }
             if (importsErrors.length !== 0) {
               setErrorData({
-                title: "There is an error in your imports",
+                title: IMPORT_ERROR_ALERT,
                 list: importsErrors,
               });
             }
           }
         } else {
           setErrorData({
-            title: "Something went wrong, please try again",
+            title: BUG_ALERT,
           });
         }
       })
       .catch((_) => {
         setErrorData({
-          title: "There is something wrong with this code, please review it",
+          title: CODE_ERROR_ALERT,
         });
       });
   }

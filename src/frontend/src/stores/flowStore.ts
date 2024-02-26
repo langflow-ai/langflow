@@ -31,6 +31,7 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -404,7 +405,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (nodeId) {
           setSuccessData({ title: `${get().nodes.find((node) => node.id === nodeId)?.data.node?.display_name} built successfully` });
         } else {
-          setSuccessData({ title: `Flow built successfully` });
+          setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
         }
         get().setIsBuilding(false);
       },

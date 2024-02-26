@@ -9,6 +9,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { API_WARNING_NOTICE_ALERT } from "../../alerts_constants";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
@@ -78,7 +79,7 @@ const ExportModal = forwardRef(
                 );
                 setNoticeData({
                   title:
-                    "Warning: Critical data, JSON file may include API keys.",
+                    API_WARNING_NOTICE_ALERT,
                 });
               } else
                 downloadFlow(

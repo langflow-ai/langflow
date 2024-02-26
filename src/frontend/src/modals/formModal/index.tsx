@@ -27,6 +27,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { FlowState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
+import { CHAT_ERROR_ALERT, INFO_MISSING_ALERT, MSG_ERROR_ALERT } from "../../alerts_constants";
 
 export default function FormModal({
   flow,
@@ -169,7 +170,7 @@ export default function FormModal({
             connectWS();
           } else {
             setErrorData({
-              title: "Please build the flow again before using the chat.",
+              title: CHAT_ERROR_ALERT,
             });
           }
         })
@@ -356,7 +357,7 @@ export default function FormModal({
       }
     } catch (error) {
       setErrorData({
-        title: "There was an error sending the message",
+        title: MSG_ERROR_ALERT,
         list: [(error as { message: string }).message],
       });
       setChatValue(data.inputs);
@@ -401,7 +402,7 @@ export default function FormModal({
       }
     } else {
       setErrorData({
-        title: "Oops! Looks like you missed some required information:",
+        title: INFO_MISSING_ALERT,
         list: nodeValidationErrors,
       });
     }

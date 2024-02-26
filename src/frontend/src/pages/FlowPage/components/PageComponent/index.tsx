@@ -31,6 +31,7 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { INVALID_SELECTION_ERROR_ALERT, UPLOAD_ALERT_LIST, UPLOAD_ERROR_ALERT, WRONG_FILE_ERROR_ALERT } from "../../../../alerts_constants";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -257,14 +258,14 @@ export default function Page({
             position: position,
           }).catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: UPLOAD_ERROR_ALERT,
               list: [error],
             });
           });
         } else {
           setErrorData({
-            title: "Invalid file type",
-            list: ["Please upload a JSON file"],
+            title: WRONG_FILE_ERROR_ALERT,
+            list: [UPLOAD_ALERT_LIST],
           });
         }
       }
@@ -432,7 +433,7 @@ export default function Page({
                         ]);
                       } else {
                         setErrorData({
-                          title: "Invalid selection",
+                          title: INVALID_SELECTION_ERROR_ALERT,
                           list: validateSelection(lastSelection!, edges),
                         });
                       }

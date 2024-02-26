@@ -32,6 +32,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+import { APIKEY_ERROR_ALERT, COMPONENTS_ERROR_ALERT, INVALID_API_ERROR_ALERT, NOAPI_ERROR_ALERT } from "../../alerts_constants";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -71,17 +72,17 @@ export default function StorePage(): JSX.Element {
     if (!loadingApiKey) {
       if (!hasApiKey) {
         setErrorData({
-          title: "API Key Error",
+          title: APIKEY_ERROR_ALERT,
           list: [
-            "You don't have an API Key. Please add one to use the Langflow Store.",
+            NOAPI_ERROR_ALERT,
           ],
         });
         setLoading(false);
       } else if (!validApiKey) {
         setErrorData({
-          title: "API Key Error",
+          title: APIKEY_ERROR_ALERT,
           list: [
-            "Your API Key is not valid. Please add a valid API Key to use the Langflow Store.",
+            INVALID_API_ERROR_ALERT,
           ],
         });
       }
@@ -159,7 +160,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(0);
           setLoading(false);
           setErrorData({
-            title: "Error getting components.",
+            title: COMPONENTS_ERROR_ALERT,
             list: [err["response"]["data"]["detail"]],
           });
         }
