@@ -44,6 +44,7 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const buildStatus = useFlowStore((state) =>state.flowBuildStatus[data.id]);
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
@@ -274,7 +275,7 @@ export default function GenericNode({
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.buildStatus,
+          buildStatus,
           validationStatus
         )}
       >
@@ -485,7 +486,7 @@ export default function GenericNode({
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
+                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
 
                   buildFlow(data.id);
@@ -494,7 +495,7 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      data?.buildStatus === BuildStatus.BUILDING ? (
+                      buildStatus === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -520,7 +521,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        data?.buildStatus,
+                        buildStatus,
                         validationStatus
                       )}
                     </div>
