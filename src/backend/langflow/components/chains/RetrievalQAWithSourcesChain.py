@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langchain.chains import RetrievalQAWithSourcesChain
-from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
@@ -18,6 +17,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             "chain_type": {
                 "display_name": "Chain Type",
                 "options": ["stuff", "map_reduce", "map_rerank", "refine"],
+                "info": "The type of chain to use to combined Documents.",
             },
             "memory": {"display_name": "Memory"},
             "return_source_documents": {"display_name": "Return Source Documents"},
@@ -27,7 +27,6 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         self,
         retriever: BaseRetriever,
         llm: BaseLanguageModel,
-        combine_documents_chain: BaseCombineDocumentsChain,
         chain_type: str,
         memory: Optional[BaseMemory] = None,
         return_source_documents: Optional[bool] = True,
@@ -35,7 +34,6 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         runnable = RetrievalQAWithSourcesChain.from_chain_type(
             llm=llm,
             chain_type=chain_type,
-            combine_documents_chain=combine_documents_chain,
             memory=memory,
             return_source_documents=return_source_documents,
             retriever=retriever,

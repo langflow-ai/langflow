@@ -175,7 +175,7 @@
     @apply fixed bottom-4 right-4;
   }
   .message-button-icon {
-    @apply fill-chat-trigger stroke-chat-trigger stroke-1;
+    @apply fill-medium-indigo stroke-medium-indigo stroke-1;
   }
   .disabled-message-button-icon {
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
@@ -276,7 +276,7 @@
     @apply h-10 w-10 rounded p-1;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 truncate;
+    @apply ml-2 max-w-[220px] truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
