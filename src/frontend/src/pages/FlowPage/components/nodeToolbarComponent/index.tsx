@@ -26,6 +26,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import { useUpdateNodeInternals } from "reactflow";
 
 export default function NodeToolbarComponent({
   data,
@@ -86,6 +87,8 @@ export default function NodeToolbarComponent({
       onCloseAdvancedModal!(false);
     }
   }, [showModalAdvanced]);
+  const updateNodeInternals = useUpdateNodeInternals();
+
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -191,6 +194,7 @@ export default function NodeToolbarComponent({
 
       return newNode;
     });
+    updateNodeInternals(data.id);
   };
 
   const [openModal, setOpenModal] = useState(false);
