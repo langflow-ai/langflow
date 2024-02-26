@@ -67,7 +67,7 @@ class LLMVertex(StatelessVertex):
     class_built_object = None
 
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
-        super().__init__(data, graph=graph, base_type="llms", params=params)
+        super().__init__(data, graph=graph, base_type="models", params=params)
         self.steps: List[Callable] = [self._custom_build]
 
     async def _custom_build(self, *args, **kwargs):

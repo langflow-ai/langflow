@@ -37,6 +37,7 @@ export default function GenericNode({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const getBuildStatus = useFlowStore((state) => state.getBuildStatus);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -170,7 +171,6 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     const isValid = validationStatus && validationStatus.valid;
-
     if (isValid) {
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
@@ -179,10 +179,12 @@ export default function GenericNode({
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
-    } else if (!validationStatus) {
-      return "yellow-status";
-    } else {
+    } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
+      return "green-status";
+    } else if (buildStatus === BuildStatus.BUILDING) {
       return "status-build-animation";
+    } else {
+      return "green-status";
     }
   };
 
@@ -205,6 +207,7 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
+
     if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
       // INACTIVE should have its own class
       return "inactive-status";
@@ -224,11 +227,17 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
+      buildStatus,
+      validationStatus
+    );
+    const baseBorderClass = getBaseBorderClass(selected);
+    const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
-      getBaseBorderClass(selected),
-      getNodeSizeClass(showNode),
+      baseBorderClass,
+      nodeSizeClass,
       "generic-node-div",
-      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
+      specificClassFromBuildStatus
     );
   };
 
@@ -265,7 +274,7 @@ export default function GenericNode({
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.build_status,
+          getBuildStatus(data.id),
           validationStatus
         )}
       >
@@ -476,22 +485,26 @@ export default function GenericNode({
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.build_status === BuildStatus.BUILDING || isBuilding)
+                  if (
+                    getBuildStatus(data.id) === BuildStatus.BUILDING ||
+                    isBuilding
+                  )
                     return;
+
                   buildFlow(data.id);
                 }}
               >
                 <div>
                   <Tooltip
                     title={
-                      data?.build_status === BuildStatus.BUILDING ? (
+                      getBuildStatus(data.id) === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
                           Build{" "}
                           <IconComponent
                             name="Play"
-                            className=" h-5 stroke-build-trigger stroke-2"
+                            className=" h-5 stroke-status-green stroke-2"
                           />{" "}
                           flow to validate status.
                         </span>
@@ -510,7 +523,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        data?.build_status,
+                        getBuildStatus(data.id),
                         validationStatus
                       )}
                     </div>
