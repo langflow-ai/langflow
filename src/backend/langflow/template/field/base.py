@@ -68,9 +68,7 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    range_spec: Optional[RangeSpec] = Field(
-        default=None, serialization_alias="rangeSpec"
-    )
+    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
     title_case: bool = False
@@ -117,10 +115,6 @@ class TemplateField(BaseModel):
         if not isinstance(value, list):
             raise ValueError("file_types must be a list")
         return [
-            (
-                f".{file_type}"
-                if isinstance(file_type, str) and not file_type.startswith(".")
-                else file_type
-            )
+            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
         ]
