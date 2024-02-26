@@ -19,7 +19,11 @@ from langflow.interface.custom.utils import get_function
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 from langflow.interface.initialize.vector_store import vecstore_initializer
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
@@ -105,7 +109,7 @@ async def instantiate_based_on_type(class_object, base_type, node_type, params, 
         return instantiate_chains(node_type, class_object, params)
     elif base_type == "output_parsers":
         return instantiate_output_parser(node_type, class_object, params)
-    elif base_type == "llms":
+    elif base_type == "models":
         return instantiate_llm(node_type, class_object, params)
     elif base_type == "retrievers":
         return instantiate_retriever(node_type, class_object, params)

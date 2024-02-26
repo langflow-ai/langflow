@@ -3,6 +3,7 @@ from typing import Callable, Optional, Union
 from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA, RetrievalQA
 from langchain_core.documents import Document
+
 from langflow import CustomComponent
 from langflow.field_typing import BaseMemory, BaseRetriever, Text
 
@@ -47,4 +48,11 @@ class RetrievalQAComponent(CustomComponent):
         result = result.content if hasattr(result, "content") else result
         # Result is a dict with keys "query",  "result" and "source_documents"
         # for now we just return the result
-        return result.get("result")
+        records = self.to_records(result.get("source_documents"))
+        references_str = ""
+        if return_source_documents:
+            references_str = self.create_references_from_records(records)
+        result_str = result.get("result")
+        final_result = "\n".join([result_str, references_str])
+        self.status = final_result
+        return final_result

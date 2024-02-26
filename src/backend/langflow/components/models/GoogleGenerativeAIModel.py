@@ -1,14 +1,14 @@
 from typing import Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-from langflow import CustomComponent
-from langflow.field_typing import RangeSpec
 from pydantic.v1.types import SecretStr
-from langflow.field_typing import Text
+
+from langflow import CustomComponent
+from langflow.field_typing import RangeSpec, Text
 
 
 class GoogleGenerativeAIComponent(CustomComponent):
-    display_name: str = "Google Generative AI model"
+    display_name: str = "Google Generative AIModel"
     description: str = "Generate text using Google Generative AI to generate text."
     documentation: str = "http://docs.langflow.org/components/custom"
 

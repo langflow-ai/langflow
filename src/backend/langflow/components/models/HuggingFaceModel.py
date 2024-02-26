@@ -1,7 +1,10 @@
 from typing import Optional
-from langflow import CustomComponent
-from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
+
 from langchain_community.chat_models.huggingface import ChatHuggingFace
+from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
+
+from langflow import CustomComponent
+
 from langflow.field_typing import Text
 
 
