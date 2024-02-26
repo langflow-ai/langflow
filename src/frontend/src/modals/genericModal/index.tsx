@@ -182,7 +182,7 @@ export default function GenericModal({
           {myModalTitle}
         </span>
         <IconComponent
-          name="FileText"
+          name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
           className="h-6 w-6 pl-1 text-primary "
           aria-hidden="true"
         />
