@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -475,8 +474,9 @@ export default function GenericNode({
                 }}
               >
                 <div>
-                  <Tooltip
-                    title={
+                  <ShadTooltip
+                    styleClasses="cursor-default"
+                    content={
                       buildStatus === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
@@ -500,6 +500,7 @@ export default function GenericNode({
                         </div>
                       )
                     }
+                    side="bottom"
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
@@ -507,13 +508,14 @@ export default function GenericNode({
                         validationStatus
                       )}
                     </div>
-                  </Tooltip>
+                  </ShadTooltip>
                 </div>
               </Button>
             )}
             <div className="">
-              <Tooltip
-                title={
+              <ShadTooltip
+                styleClasses="cursor-default"
+                content={
                   data?.buildStatus === BuildStatus.BUILDING ? (
                     <span>Building...</span>
                   ) : !validationStatus ? (
@@ -528,6 +530,7 @@ export default function GenericNode({
                     </div>
                   )
                 }
+                side="bottom"
               >
                 <div>
                   {renderIconStatusComponents(
@@ -535,7 +538,7 @@ export default function GenericNode({
                     validationStatus
                   )}
                 </div>
-              </Tooltip>
+              </ShadTooltip>
             </div>
           </div>
         </div>
