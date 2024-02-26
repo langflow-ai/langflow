@@ -265,28 +265,25 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       </button>
                       {selectedViewField.type}
                     </div>
-                    <div className="flex h-full w-full">
-                      {inputs.some(
-                        (input) => input.id === selectedViewField.id
-                      ) ? (
-                        <IOInputField
-                          inputType={selectedViewField.type!}
-                          inputId={selectedViewField.id!}
-                        />
-                      ) : (
-                        <IOOutputView
-                          outputType={selectedViewField.type!}
-                          outputId={selectedViewField.id!}
-                        />
-                      )}
+                    <div className="h-full">
+                    {inputs.some(
+                      (input) => input.id === selectedViewField.id
+                    ) ? (
+                      <IOInputField
+                        inputType={selectedViewField.type!}
+                        inputId={selectedViewField.id!}
+                      />
+                    ) : (
+                      <IOOutputView
+                        outputType={selectedViewField.type!}
+                        outputId={selectedViewField.id!}
+                      />
+                    )}
                     </div>
                   </div>
                 )}
                 <div
-                  className={cn(
-                    "flex h-full w-full",
-                    selectedViewField ? "hidden" : ""
-                  )}
+                  className={cn("flex w-full h-full",selectedViewField ? "hidden" : "")}
                 >
                   <NewChatView
                     sendMessage={sendMessage}
