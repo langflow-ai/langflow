@@ -1,7 +1,9 @@
 from typing import Optional
 
 from langchain.llms.base import BaseLLM
-from langchain.llms.bedrock import Bedrock
+from langchain_community.llms.bedrock import Bedrock
+
+
 from langflow import CustomComponent
 
 
