@@ -255,7 +255,7 @@ export default function GenericModal({
                   >
                     <div className="flex flex-wrap items-center">
                       <IconComponent
-                        name="Variable"
+                        name="Braces"
                         className=" -ml-px mr-1 flex h-4 w-4 text-primary"
                       />
                       <span className="text-md font-semibold text-primary">

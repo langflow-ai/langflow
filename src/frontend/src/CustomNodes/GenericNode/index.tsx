@@ -121,7 +121,6 @@ export default function GenericNode({
   }, [flowPool, data.id]);
 
   const showNode = data.showNode ?? true;
-  const pinned = data.node?.pinned ?? false;
 
   const nameEditable = data.node?.flow || data.type === "CustomComponent";
 
@@ -161,7 +160,7 @@ export default function GenericNode({
   const getIconPlayOrPauseComponent = (name, className) => (
     <IconComponent
       name={name}
-      className={`absolute h-5 stroke-2 ${className} ml-0.5`}
+      className={`h-4 fill-current stroke-2 ${className}`}
     />
   );
 
@@ -180,15 +179,18 @@ export default function GenericNode({
       return "red-status";
     } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
       return "green-status";
-    } else if (buildStatus === BuildStatus.BUILDING) {
-      return "status-build-animation";
     } else {
-      return "green-status";
+      return "yellow-status";
     }
   };
-
   const isDark = useDarkStore((state) => state.dark);
-  console.log(isDark);
+  const renderIconStatusComponents = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    const className = getStatusClassName(buildStatus, validationStatus);
+    return <>{getIconPlayOrPauseComponent("CircleDot", className)}</>;
+  };
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -196,8 +198,12 @@ export default function GenericNode({
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading />;
     } else {
-      const className = getStatusClassName(buildStatus, validationStatus);
-      return <>{getIconPlayOrPauseComponent("Play", className)}</>;
+      return (
+        <IconComponent
+          name="Play"
+          className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground hover:text-medium-indigo"
+        />
+      );
     }
   };
 
@@ -450,72 +456,18 @@ export default function GenericNode({
             </div>
             {showNode && (
               <Button
-                variant="outline"
-                className="h-9 px-1.5"
-                onClick={() => {
-                  setNode(data.id, (old) => ({
-                    ...old,
-                    data: {
-                      ...old.data,
-                      node: {
-                        ...old.data.node,
-                        pinned: old.data?.node?.pinned ? false : true,
-                      },
-                    },
-                  }));
-                }}
-              >
-                <Tooltip
-                  title={<span>{pinned ? "Pin Output" : "Unpin Output"}</span>}
-                >
-                  <div className="generic-node-status-position flex items-center">
-                    <IconComponent
-                      name={"Pin"}
-                      className={cn(
-                        "h-5 fill-transparent stroke-chat-trigger stroke-2 transition-all",
-                        pinned ? "animate-wiggle fill-chat-trigger" : ""
-                      )}
-                    />
-                  </div>
-                </Tooltip>
-              </Button>
-            )}
-            {showNode && (
-              <Button
-                variant="outline"
-                className={"h-9 px-1.5"}
+                variant="secondary"
+                className={"group h-9 px-1.5"}
                 onClick={() => {
                   if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
-
                   buildFlow(data.id);
                 }}
               >
                 <div>
                   <Tooltip
                     title={
-                      data?.buildStatus === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Play"
-                            className=" h-5 stroke-status-green stroke-2"
-                          />{" "}
-                          flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
-                        </div>
-                      )
+                      "Build"
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
@@ -528,6 +480,32 @@ export default function GenericNode({
                 </div>
               </Button>
             )}
+            <div className="">
+              <Tooltip
+                title={
+                  data?.buildStatus === BuildStatus.BUILDING ? (
+                    <span>Building...</span>
+                  ) : !validationStatus ? (
+                    <span className="flex">Build to validate status.</span>
+                  ) : (
+                    <div className="max-h-96 overflow-auto">
+                      {typeof validationStatus.params === "string"
+                        ? `${durationString}\n${validationStatus.params}`
+                            .split("\n")
+                            .map((line, index) => <div key={index}>{line}</div>)
+                        : durationString}
+                    </div>
+                  )
+                }
+              >
+                <div>
+                  {renderIconStatusComponents(
+                    data?.buildStatus,
+                    validationStatus
+                  )}
+                </div>
+              </Tooltip>
+            </div>
           </div>
         </div>
 

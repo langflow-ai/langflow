@@ -44,7 +44,7 @@ export default function IOOutputView({
     }
   }
   return (
-    <div className="font-xl flex h-full w-full flex-col gap-4 p-4 font-semibold">
+    <div className="font-xl flex h-full items-start w-full flex-col gap-4 p-4 font-semibold">
       {outputType}
       {handleOutputType()}
     </div>
