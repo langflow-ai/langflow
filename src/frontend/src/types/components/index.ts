@@ -524,7 +524,7 @@ export type chatMessagePropsType = {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
-  updateChat: (
+  updateChat?: (
     chat: ChatMessageType,
     message: string,
     stream_url: string | null
