@@ -226,7 +226,7 @@ export default function NodeToolbarComponent({
                     id={"code-input-node-toolbar-" + name}
                   />
                 </div>
-                <IconComponent name="Code2" className="h-4 w-4" />
+                <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (
