@@ -1,6 +1,13 @@
 from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.field_typing.range_spec import RangeSpec
 
@@ -29,7 +36,7 @@ class TemplateField(BaseModel):
     """The value of the field. Default is None."""
 
     file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
-    """List of file types associated with the field. Default is an empty list. (duplicate)"""
+    """List of file types associated with the field . Default is an empty list."""
 
     file_path: Optional[str] = ""
     """The file path of the field if it is a file. Defaults to None."""
@@ -102,4 +109,12 @@ class TemplateField(BaseModel):
             if self.title_case:
                 value = value.title()
         return value
-        return value
+
+    @field_validator("file_types")
+    def validate_file_types(cls, value):
+        if not isinstance(value, list):
+            raise ValueError("file_types must be a list")
+        return [
+            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
+            for file_type in value
+        ]
