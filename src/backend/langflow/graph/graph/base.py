@@ -9,13 +9,8 @@ from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    ChatVertex,
-    FileToolVertex,
-    LLMVertex,
-    RoutingVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
+                                         RoutingVertex, ToolkitVertex)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -307,7 +302,7 @@ class Graph:
         for vertex in self.vertices:
             if not self._validate_vertex(vertex):
                 raise ValueError(
-                    f"{vertex.vertex_type} is not connected to any other components"
+                    f"{vertex.display_name} is not connected to any other components"
                 )
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
