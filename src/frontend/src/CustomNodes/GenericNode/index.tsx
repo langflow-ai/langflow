@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
+import Xmark from "../../components/ui/xmark";
 import { priorityFields } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -20,7 +21,6 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import Xmark from "../../components/ui/xmark";
 
 export default function GenericNode({
   data,

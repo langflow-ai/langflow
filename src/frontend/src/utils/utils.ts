@@ -58,12 +58,15 @@ export function normalCaseToSnakeCase(str: string): string {
     .join("_");
 }
 
-export function toTitleCase(str: string | undefined, isNodeField?: boolean): string {
+export function toTitleCase(
+  str: string | undefined,
+  isNodeField?: boolean
+): string {
   if (!str) return "";
   let result = str
     .split("_")
     .map((word, index) => {
-      if (isNodeField) return word
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
@@ -76,7 +79,7 @@ export function toTitleCase(str: string | undefined, isNodeField?: boolean): str
   return result
     .split("-")
     .map((word, index) => {
-      if (isNodeField) return word
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
