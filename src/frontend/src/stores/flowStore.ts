@@ -35,6 +35,7 @@ import useFlowsManagerStore from "./flowsManagerStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowState: undefined,
+  flowBuildStatus:{},
   nodes: [],
   edges: [],
   isBuilding: false,
@@ -438,21 +439,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      const nodeToUpdate = get().nodes.find((node) => node.id === id);
-      if (nodeToUpdate) {
-        nodeToUpdate.data.buildStatus = status;
-        set({ nodes: get().nodes });
-      }
+      newFlowBuildStatus[id] = status;
     });
+    set({ flowBuildStatus: newFlowBuildStatus });
   },
   revertBuiltStatusFromBuilding: () => {
-    get().nodes.forEach((node) => {
-      if (node.data.buildStatus === BuildStatus.BUILDING) {
-        node.data.buildStatus = BuildStatus.TO_BUILD;
+    const newFlowBuildStatus = { ...get().flowBuildStatus };
+    Object.keys(newFlowBuildStatus).forEach((id) => {
+      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id] = BuildStatus.BUILT;
       }
     });
-    set({ nodes: get().nodes });
   },
 }));
 
