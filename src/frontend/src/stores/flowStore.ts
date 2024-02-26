@@ -26,6 +26,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
@@ -377,6 +378,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
+    function validateSubgraph(nodes:string[]){
+      const errors = validateNodes(get().nodes.filter(node=>nodes.includes(node.id)), get().edges);
+      if (errors.length > 0) {
+        setErrorData({
+          title: "Oops! Looks like you missed something",
+          list: errors,
+        });
+        get().setIsBuilding(false);
+        throw new Error("Invalid nodes");
+      }
+    }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus
@@ -422,6 +434,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildStart: (idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
+      validateNodes: validateSubgraph,
     });
     get().revertBuiltStatusFromBuilding();
   },
