@@ -9,9 +9,7 @@ from langflow import CustomComponent
 class AzureChatOpenAIComponent(CustomComponent):
     display_name: str = "AzureOpenAI Model"
     description: str = "Generate text using LLM model from Azure OpenAI."
-    documentation: str = (
-        "https://python.langchain.com/docs/integrations/llms/azure_openai"
-    )
+    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
 
     AZURE_OPENAI_MODELS = [
