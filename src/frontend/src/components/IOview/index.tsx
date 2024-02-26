@@ -4,7 +4,6 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { validateNodes } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
@@ -51,8 +50,6 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
     const { nodes, edges } = getFlow();
-    let nodeValidationErrors = validateNodes(nodes, edges);
-    if (nodeValidationErrors.length === 0) {
       setIsBuilding(true);
       setLockChat(true);
       setChatValue("");
@@ -70,14 +67,6 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       }
       setLockChat(false);
 
-      //set chat message in the flow and run build
-      //@ts-ignore
-    } else {
-      setErrorData({
-        title: "Oops! Looks like you missed some required information:",
-        list: nodeValidationErrors,
-      });
-    }
   }
 
   useEffect(() => {

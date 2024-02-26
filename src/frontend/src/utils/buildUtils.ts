@@ -12,6 +12,7 @@ type BuildVerticesParams = {
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: string[]) => void;
   onBuildStart?: (idList: string[]) => void;
+  validateNodes?: (nodes:string[])=>void;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -40,12 +41,19 @@ export async function buildVertices({
   onBuildComplete,
   onBuildError,
   onBuildStart,
+  validateNodes
 }: BuildVerticesParams) {
   let orderResponse = await getVerticesOrder(flowId, nodeId);
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices_layers: Array<Array<string>> = [];
   let stop = false;
-
+  if(validateNodes){
+    try{
+      validateNodes(verticesOrder.flatMap(id=>id))
+    } catch(e){
+      return;
+    }
+  }
   if (nodeId) {
     for (let i = 0; i < verticesOrder.length; i += 1) {
       const innerArray = verticesOrder[i];
