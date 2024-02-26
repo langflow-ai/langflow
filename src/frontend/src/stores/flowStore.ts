@@ -36,7 +36,7 @@ import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowState: undefined,
-  flowBuildStatus:{},
+  flowBuildStatus: {},
   nodes: [],
   edges: [],
   isBuilding: false,
@@ -403,7 +403,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodeId,
       onBuildComplete: () => {
         if (nodeId) {
-          setSuccessData({ title: `${get().nodes.find((node) => node.id === nodeId)?.data.node?.display_name} built successfully` });
+          setSuccessData({
+            title: `${
+              get().nodes.find((node) => node.id === nodeId)?.data.node
+                ?.display_name
+            } built successfully`,
+          });
         } else {
           setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
         }

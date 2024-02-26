@@ -4,7 +4,6 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { NodeType } from "../../types/flow";
 import { validateNodes } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
@@ -31,11 +30,10 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
-      (inputs.some((input) => input.id === node.id) ||
-        outputs.some((output) => output.id === node.id))
+      inputs.some((input) => input.id === node.id) ||
+      outputs.some((output) => output.id === node.id)
   );
-  const haveChat =
-    chatInput || chatOutput
+  const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
@@ -289,11 +287,19 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
           </div>
           {!haveChat && (
             <div className="flex w-full justify-end pt-6">
-              <Button variant={"outline"} className="px-3 flex gap-2" onClick={() => sendMessage(1)}>
-                
+              <Button
+                variant={"outline"}
+                className="flex gap-2 px-3"
+                onClick={() => sendMessage(1)}
+              >
                 <IconComponent
                   name={isBuilding ? "Loader2" : "Play"}
-                  className={cn("h-4 w-4", isBuilding ? "animate-spin" : "fill-current text-medium-indigo")}
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding
+                      ? "animate-spin"
+                      : "fill-current text-medium-indigo"
+                  )}
                 />
                 Run Flow
               </Button>

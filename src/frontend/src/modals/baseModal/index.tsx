@@ -130,9 +130,9 @@ function BaseModal({
       height = "h-[80vh]";
       break;
     case "large-thin":
-        minWidth = "min-w-[65vw]";
-        height = "h-[80vh]";
-        break;
+      minWidth = "min-w-[65vw]";
+      height = "h-[80vh]";
+      break;
     case "large-h-full":
       minWidth = "min-w-[80vw]";
       break;
