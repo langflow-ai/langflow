@@ -1,14 +1,15 @@
-from typing import Callable, Union
-
 from langchain.chains import LLMCheckerChain
+
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, Chain
+from langflow.field_typing import BaseLanguageModel, Text
 
 
 class LLMCheckerChainComponent(CustomComponent):
     display_name = "LLMCheckerChain"
     description = ""
-    documentation = "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
+    documentation = (
+        "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
+    )
 
     def build_config(self):
         return {
@@ -17,6 +18,12 @@ class LLMCheckerChainComponent(CustomComponent):
 
     def build(
         self,
+        inputs: str,
         llm: BaseLanguageModel,
-    ) -> Union[Chain, Callable]:
-        return LLMCheckerChain.from_llm(llm=llm)
+    ) -> Text:
+
+        chain = LLMCheckerChain.from_llm(llm=llm)
+        response = chain.invoke({chain.input_key: inputs})
+        result = response.get(chain.output_key)
+        self.status = result
+        return result
