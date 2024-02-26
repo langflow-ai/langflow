@@ -313,7 +313,7 @@
     @apply border-none ring ring-muted-foreground;
   }
   .built-invalid-status {
-    @apply border-none ring ring-red-300;
+    @apply border-none ring ring-[#FF9090];
   }
   .building-status {
     @apply border-none ring;

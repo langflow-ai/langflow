@@ -19,6 +19,7 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import { useDarkStore } from "../../stores/darkStore";
 
 export default function GenericNode({
   data,
@@ -185,6 +186,8 @@ export default function GenericNode({
     }
   };
 
+  const isDark = useDarkStore(state => state.dark);
+  console.log(isDark)
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -207,7 +210,7 @@ export default function GenericNode({
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
-      return "built-invalid-status";
+      return isDark ? "border-none ring ring-[#751C1C]" : "built-invalid-status" ;
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
     } else {
