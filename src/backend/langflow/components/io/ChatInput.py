@@ -25,10 +25,6 @@ class ChatInput(CustomComponent):
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
             },
-            "as_record": {
-                "display_name": "As Record",
-                "info": "If true, the message will be returned as a Record.",
-            },
         }
 
     def build(
@@ -36,18 +32,15 @@ class ChatInput(CustomComponent):
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
         message: Optional[str] = None,
-        as_record: Optional[bool] = False,
         session_id: Optional[str] = None,
-    ) -> Union[Text, Record]:
-        self.status = message
-        if as_record:
-            if isinstance(message, Record):
-                # Update the data of the record
-                message.data["sender"] = sender
-                message.data["sender_name"] = sender_name
-                message.data["session_id"] = session_id
-                return message
-            return Record(
+    ) -> Record:
+        if isinstance(message, Record):
+            # Update the data of the record
+            message.data["sender"] = sender
+            message.data["sender_name"] = sender_name
+            message.data["session_id"] = session_id
+        else:
+            message = Record(
                 text=message,
                 data={
                     "sender": sender,

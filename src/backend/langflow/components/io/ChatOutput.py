@@ -1,7 +1,6 @@
-from typing import Optional, Union
+from typing import Optional
 
 from langflow import CustomComponent
-from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -28,10 +27,6 @@ class ChatOutput(CustomComponent):
                 "info": "Session ID of the chat history.",
                 "input_types": ["Text"],
             },
-            "as_record": {
-                "display_name": "As Record",
-                "info": "If true, the message will be returned as a Record.",
-            },
         }
 
     def build(
@@ -40,18 +35,14 @@ class ChatOutput(CustomComponent):
         sender_name: Optional[str] = "AI",
         session_id: Optional[str] = None,
         message: Optional[str] = None,
-        as_record: Optional[bool] = False,
-    ) -> Union[Text, Record]:
-        self.status = message
-        if as_record:
-            if isinstance(message, Record):
-                # Update the data of the record
-                message.data["sender"] = sender
-                message.data["sender_name"] = sender_name
-                message.data["session_id"] = session_id
-
-                return message
-            return Record(
+    ) -> Record:
+        if isinstance(message, Record):
+            # Update the data of the record
+            message.data["sender"] = sender
+            message.data["sender_name"] = sender_name
+            message.data["session_id"] = session_id
+        else:
+            message = Record(
                 text=message,
                 data={
                     "sender": sender,
