@@ -89,6 +89,7 @@ function ConfirmationModal({
             setModalOpen(false);
             onConfirm(index, data);
           }}
+          data-testid="replace-button"
         >
           {confirmationText}
         </Button>

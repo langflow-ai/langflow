@@ -358,6 +358,7 @@ const EditNodeModal = forwardRef(
                                         );
                                       }}
                                       size="small"
+                                      editNode={true}
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]
@@ -535,6 +536,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                     disabled={disabled}
                                     size="small"
+                                    editNode={true}
                                   />
                                 </div>
                               </TableCell>

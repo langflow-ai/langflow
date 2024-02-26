@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -26,7 +27,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
-import { useUpdateNodeInternals } from "reactflow";
 
 export default function NodeToolbarComponent({
   data,
@@ -88,7 +88,6 @@ export default function NodeToolbarComponent({
     }
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
-
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -366,7 +365,7 @@ export default function NodeToolbarComponent({
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
-                  <div className="flex" data-testid="save-button-modal">
+                  <div className="flex" data-testid="share-button-modal">
                     <IconComponent
                       name="Share3"
                       className="relative top-0.5 -m-1 mr-1 h-6 w-6"

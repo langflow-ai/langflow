@@ -439,6 +439,7 @@ export default function ParameterComponent({
               enabled={data.node?.template[name].value ?? false}
               setEnabled={handleOnNewValue}
               size="large"
+              editNode={false}
             />
           </div>
         ) : left === true && type === "float" ? (

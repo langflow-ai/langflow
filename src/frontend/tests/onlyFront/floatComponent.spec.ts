@@ -23,7 +23,7 @@ test("FloatComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="llmsLlamaCpp"]')
+    .locator('//*[@id="model_specsLlamaCpp"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -100,18 +100,6 @@ test("FloatComponent", async ({ page }) => {
   await page.locator('//*[@id="showmax_tokens"]').click();
   expect(
     await page.locator('//*[@id="showmax_tokens"]').isChecked()
-  ).toBeTruthy();
-
-  // showmetadata
-  await page.locator('//*[@id="showmetadata"]').click();
-  expect(
-    await page.locator('//*[@id="showmetadata"]').isChecked()
-  ).toBeTruthy();
-
-  // showmodel_kwargs
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
   ).toBeTruthy();
 
   // showmodel_path
@@ -269,16 +257,6 @@ test("FloatComponent", async ({ page }) => {
   await page.locator('//*[@id="showmax_tokens"]').click();
   expect(
     await page.locator('//*[@id="showmax_tokens"]').isChecked()
-  ).toBeFalsy();
-
-  // showmetadata
-  await page.locator('//*[@id="showmetadata"]').click();
-  expect(await page.locator('//*[@id="showmetadata"]').isChecked()).toBeFalsy();
-
-  // showmodel_kwargs
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
   ).toBeFalsy();
 
   // showmodel_path

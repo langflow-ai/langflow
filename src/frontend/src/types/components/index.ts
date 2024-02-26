@@ -27,6 +27,7 @@ export type ToggleComponentType = {
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
+  editNode?: boolean;
 };
 export type DropDownComponentType = {
   value: string;
