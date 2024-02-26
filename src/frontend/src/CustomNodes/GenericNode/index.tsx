@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -44,6 +43,7 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const buildStatus = useFlowStore((state) => state.flowBuildStatus[data.id]);
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
@@ -280,7 +280,7 @@ export default function GenericNode({
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.buildStatus,
+          buildStatus,
           validationStatus
         )}
       >
@@ -468,26 +468,54 @@ export default function GenericNode({
                 variant="secondary"
                 className={"group h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
+                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
                   buildFlow(data.id);
                 }}
               >
                 <div>
-                  <Tooltip title={"Build"}>
+                  <ShadTooltip
+                    styleClasses="cursor-default"
+                    content={
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span>Building...</span>
+                      ) : !validationStatus ? (
+                        <span className="flex">
+                          Build{" "}
+                          <IconComponent
+                            name="Play"
+                            className=" h-5 stroke-status-green stroke-2"
+                          />{" "}
+                          flow to validate status.
+                        </span>
+                      ) : (
+                        <div className="max-h-96 overflow-auto">
+                          {typeof validationStatus.params === "string"
+                            ? `${durationString}\n${validationStatus.params}`
+                                .split("\n")
+                                .map((line, index) => (
+                                  <div key={index}>{line}</div>
+                                ))
+                            : durationString}
+                        </div>
+                      )
+                    }
+                    side="bottom"
+                  >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        data?.buildStatus,
+                        buildStatus,
                         validationStatus
                       )}
                     </div>
-                  </Tooltip>
+                  </ShadTooltip>
                 </div>
               </Button>
             )}
             <div className="">
-              <Tooltip
-                title={
+              <ShadTooltip
+                styleClasses="cursor-default"
+                content={
                   data?.buildStatus === BuildStatus.BUILDING ? (
                     <span>Building...</span>
                   ) : !validationStatus ? (
@@ -502,6 +530,7 @@ export default function GenericNode({
                     </div>
                   )
                 }
+                side="bottom"
               >
                 <div>
                   {renderIconStatusComponents(
@@ -509,7 +538,7 @@ export default function GenericNode({
                     validationStatus
                   )}
                 </div>
-              </Tooltip>
+              </ShadTooltip>
             </div>
           </div>
         </div>
