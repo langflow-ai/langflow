@@ -401,7 +401,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodeId,
       onBuildComplete: () => {
         if (nodeId) {
-          setSuccessData({ title: `${nodeId} built successfully` });
+          setSuccessData({ title: `${get().nodes.find((node) => node.id === nodeId)?.data.node?.display_name} built successfully` });
         } else {
           setSuccessData({ title: `Flow built successfully` });
         }
