@@ -70,7 +70,7 @@ export default function ChatMessage({
 
   useEffect(() => {
     // This effect is specifically for calling updateChat after streaming ends
-    if (!isStreaming && streamUrl === null) {
+    if (!isStreaming && streamUrl) {
       if (updateChat) {
         updateChat(chat, chatMessage, streamUrl);
       }
