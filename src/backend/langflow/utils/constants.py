@@ -158,8 +158,8 @@ LOADERS_INFO: List[Dict[str, Any]] = [
         "loader": "UnstructuredMarkdownLoader",
         "name": "Unstructured Markdown (.md)",
         "import": "langchain_community.document_loaders.UnstructuredMarkdownLoader",
-        "defaultFor": ["md"],
-        "allowdTypes": ["md"],
+        "defaultFor": ["md", "mdx"],
+        "allowdTypes": ["md", "mdx"],
     },
     {
         "loader": "UnstructuredPowerPointLoader",

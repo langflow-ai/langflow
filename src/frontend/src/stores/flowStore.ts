@@ -401,7 +401,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodeId,
       onBuildComplete: () => {
         if (nodeId) {
-          setSuccessData({ title: `${nodeId} built successfully` });
+          setSuccessData({ title: `${get().nodes.find((node) => node.id === nodeId)?.data.node?.display_name} built successfully` });
         } else {
           setSuccessData({ title: `Flow built successfully` });
         }
@@ -416,7 +416,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
     });
-    get().revertAllVerticesToBuild();
+    get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
     return {
@@ -425,32 +425,34 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       viewport: get().reactFlowInstance?.getViewport()!,
     };
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-    nodeIdList.forEach((id) => {
-      const nodeToUpdate = get().nodes.find((node) => node.id === id);
-      if (nodeToUpdate) {
-        nodeToUpdate.data.build_status = status;
-        get().setNodes(get().nodes);
-      }
-    });
-  },
   updateVerticesBuild: (vertices: string[]) => {
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
-  revertAllVerticesToBuild: () => {
-    // set all vertices to TO_BUILD
-    const verticesIds = get()
-      .nodes.filter((node) => node.data.build_status === BuildStatus.BUILDING)
-      .map((node) => node.id);
-    get().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
-  },
+
   removeFromVerticesBuild: (vertices: string[]) => {
     set({
       verticesBuild: get().verticesBuild.filter(
         (vertex) => !vertices.includes(vertex)
       ),
     });
+  },
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    nodeIdList.forEach((id) => {
+      const nodeToUpdate = get().nodes.find((node) => node.id === id);
+      if (nodeToUpdate) {
+        nodeToUpdate.data.buildStatus = status;
+        set({ nodes: get().nodes });
+      }
+    });
+  },
+  revertBuiltStatusFromBuilding: () => {
+    get().nodes.forEach((node) => {
+      if (node.data.buildStatus === BuildStatus.BUILDING) {
+        node.data.buildStatus = BuildStatus.TO_BUILD;
+      }
+    });
+    set({ nodes: get().nodes });
   },
 }));
 

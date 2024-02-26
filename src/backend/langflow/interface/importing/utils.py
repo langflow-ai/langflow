@@ -35,7 +35,7 @@ def import_by_type(_type: str, name: str) -> Any:
     func_dict = {
         "agents": import_agent,
         "prompts": import_prompt,
-        "llms": {"llm": import_llm, "chat": import_chat_llm},
+        "models": {"llm": import_llm, "chat": import_chat_llm},
         "tools": import_tool,
         "chains": import_chain,
         "toolkits": import_toolkit,
@@ -50,7 +50,7 @@ def import_by_type(_type: str, name: str) -> Any:
         "retrievers": import_retriever,
         "custom_components": import_custom_component,
     }
-    if _type == "llms":
+    if _type == "models":
         key = "chat" if "chat" in name.lower() else "llm"
         loaded_func = func_dict[_type][key]  # type: ignore
     else:

@@ -10,6 +10,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
@@ -168,7 +169,6 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     const isValid = validationStatus && validationStatus.valid;
-
     if (isValid) {
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
@@ -177,13 +177,15 @@ export default function GenericNode({
       return "green-status";
     } else if (!isValid && buildStatus === BuildStatus.BUILT) {
       return "red-status";
-    } else if (!validationStatus) {
-      return "yellow-status";
+    } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
+      return "green-status";
+    } else if (buildStatus === BuildStatus.BUILDING) {
+      return "status-build-animation";
     } else {
       return "yellow-status";
     }
   };
-
+  const isDark = useDarkStore((state) => state.dark);
   const renderIconStatusComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -212,12 +214,15 @@ export default function GenericNode({
     validationStatus: validationStatusType | null
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
+
     if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
       // INACTIVE should have its own class
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
-      return "built-invalid-status";
+      return isDark
+        ? "border-none ring ring-[#751C1C]"
+        : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
     } else {
@@ -231,11 +236,17 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
+      buildStatus,
+      validationStatus
+    );
+    const baseBorderClass = getBaseBorderClass(selected);
+    const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
-      getBaseBorderClass(selected),
-      getNodeSizeClass(showNode),
+      baseBorderClass,
+      nodeSizeClass,
       "generic-node-div",
-      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
+      specificClassFromBuildStatus
     );
   };
 
@@ -267,12 +278,11 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
         ></NodeToolbarComponent>
       </NodeToolbar>
-
       <div
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.build_status,
+          data?.buildStatus,
           validationStatus
         )}
       >
@@ -451,7 +461,7 @@ export default function GenericNode({
                 variant="secondary"
                 className={"group h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.build_status === BuildStatus.BUILDING || isBuilding)
+                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
                   buildFlow(data.id);
                 }}
@@ -459,7 +469,7 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      data?.build_status === BuildStatus.BUILDING ? (
+                      data?.buildStatus === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -480,7 +490,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        data?.build_status,
+                        data?.buildStatus,
                         validationStatus
                       )}
                     </div>
@@ -489,7 +499,7 @@ export default function GenericNode({
               </Button>
             )}
             <div className="">
-              {renderIconStatusComponents(data?.build_status, validationStatus)}
+              {renderIconStatusComponents(data?.buildStatus, validationStatus)}
             </div>
           </div>
         </div>
