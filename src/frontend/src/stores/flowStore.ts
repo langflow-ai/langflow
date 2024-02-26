@@ -437,23 +437,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-    let newBuildStatus = cloneDeep(get().buildStatus);
-    // check if nodeIdList is an array
-    if (!Array.isArray(nodeIdList)) {
-      nodeIdList = [nodeIdList];
-    }
     nodeIdList.forEach((id) => {
-      newBuildStatus[id] = status;
+      const nodeToUpdate = get().nodes.find((node) => node.id === id);
+      if (nodeToUpdate) {
+        nodeToUpdate.data.buildStatus = status;
+        set({ nodes: get().nodes });
+      }
     });
-    set({ buildStatus: newBuildStatus });
-  },
-  buildStatus: {},
-  getBuildStatus: (nodeId: string) => {
-    // if the node is not in the buildStatus object, set it to TO_BUILD
-    if (!get().buildStatus[nodeId]) {
-      get().buildStatus[nodeId] = BuildStatus.TO_BUILD;
-    }
-    return get().buildStatus[nodeId];
   },
 }));
 
