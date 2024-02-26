@@ -175,7 +175,7 @@
     @apply fixed bottom-4 right-4;
   }
   .message-button-icon {
-    @apply fill-chat-trigger stroke-chat-trigger stroke-1;
+    @apply fill-medium-indigo stroke-medium-indigo stroke-1;
   }
   .disabled-message-button-icon {
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;

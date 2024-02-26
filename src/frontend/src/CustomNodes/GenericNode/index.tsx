@@ -168,6 +168,7 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    console.log(buildStatus);
     const isValid = validationStatus && validationStatus.valid;
     if (isValid) {
       return "green-status";
@@ -193,7 +194,6 @@ export default function GenericNode({
   };
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading />;
@@ -201,7 +201,7 @@ export default function GenericNode({
       return (
         <IconComponent
           name="Play"
-          className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground hover:text-medium-indigo"
+          className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground group-hover:text-medium-indigo"
         />
       );
     }
@@ -468,44 +468,21 @@ export default function GenericNode({
                 variant="secondary"
                 className={"group h-9 px-1.5"}
                 onClick={() => {
-                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
                   buildFlow(data.id);
                 }}
               >
                 <div>
                   <ShadTooltip
-                    styleClasses="cursor-default"
                     content={
-                      buildStatus === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Play"
-                            className=" h-5 stroke-status-green stroke-2"
-                          />{" "}
-                          flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
-                        </div>
-                      )
+                      "Build"
                     }
                     side="bottom"
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
                         buildStatus,
-                        validationStatus
                       )}
                     </div>
                   </ShadTooltip>
@@ -514,7 +491,6 @@ export default function GenericNode({
             )}
             <div className="">
               <ShadTooltip
-                styleClasses="cursor-default"
                 content={
                   data?.buildStatus === BuildStatus.BUILDING ? (
                     <span>Building...</span>
@@ -530,7 +506,6 @@ export default function GenericNode({
                     </div>
                   )
                 }
-                side="bottom"
               >
                 <div>
                   {renderIconStatusComponents(
