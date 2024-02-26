@@ -1,13 +1,17 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.llms.base import BaseLanguageModel
 from langchain_community.chat_models.azure_openai import AzureChatOpenAI
 
+from langflow import CustomComponent
 
-class AzureChatOpenAIComponent(CustomComponent):
+
+class AzureChatOpenAISpecsComponent(CustomComponent):
     display_name: str = "AzureChatOpenAI"
     description: str = "LLM model from Azure OpenAI."
-    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    documentation: str = (
+        "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    )
     beta = False
 
     AZURE_OPENAI_MODELS = [
