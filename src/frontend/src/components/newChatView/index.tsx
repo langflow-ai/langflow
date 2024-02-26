@@ -17,7 +17,7 @@ import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 
-export default function newChatView(): JSX.Element {
+export default function NewChatView(): JSX.Element {
   const [chatValue, setChatValue] = useState("");
   const {
     flowPool,

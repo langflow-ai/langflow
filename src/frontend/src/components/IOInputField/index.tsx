@@ -63,7 +63,7 @@ export default function IOInputField({
     }
   }
   return (
-    <div className="font-xl flex h-full w-full flex-col gap-4 p-4 font-semibold">
+    <div className="font-xl flex items-start h-full w-full flex-col gap-4 p-4 font-semibold">
       {inputType}
       {handleInputType()}
     </div>
