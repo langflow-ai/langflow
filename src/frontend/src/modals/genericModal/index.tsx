@@ -19,6 +19,7 @@ import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { BUG_ALERT, PROMPT_ERROR_ALERT, PROMPT_SUCCESS_ALERT, TEMP_NOTICE_ALERT } from "../../alerts_constants";
 
 export default function GenericModal({
   field_name = "",
@@ -133,17 +134,17 @@ export default function GenericModal({
           }
           if (!inputVariables || inputVariables.length === 0) {
             setNoticeData({
-              title: "Your template does not have any variables.",
+              title: TEMP_NOTICE_ALERT,
             });
           } else {
             setSuccessData({
-              title: "Prompt is ready",
+              title: PROMPT_SUCCESS_ALERT,
             });
           }
         } else {
           setIsEdit(true);
           setErrorData({
-            title: "Something went wrong, please try again",
+            title: BUG_ALERT,
           });
         }
       })
@@ -151,7 +152,7 @@ export default function GenericModal({
         console.log(error);
         setIsEdit(true);
         return setErrorData({
-          title: "There is something wrong with this prompt, please review it",
+          title: PROMPT_ERROR_ALERT,
           list: [error.toString()],
         });
       });

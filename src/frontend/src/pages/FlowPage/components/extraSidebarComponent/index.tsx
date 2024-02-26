@@ -25,6 +25,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { UPLOAD_ERROR_ALERT } from "../../../../alerts_constants";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -255,7 +256,7 @@ export default function ExtraSidebar(): JSX.Element {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
                   (error) => {
                     setErrorData({
-                      title: "Error uploading file",
+                      title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
                   }

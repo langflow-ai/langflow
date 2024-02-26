@@ -26,6 +26,7 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ApiKey } from "../../types/components";
+import { DEL_KEY_ERROR_ALERT, DEL_KEY_SUCCESS_ALERT } from "../../alerts_constants";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -63,12 +64,12 @@ export default function ApiKeysPage() {
       .then((res) => {
         resetFilter();
         setSuccessData({
-          title: "Success! Key deleted!",
+          title: DEL_KEY_SUCCESS_ALERT,
         });
       })
       .catch((error) => {
         setErrorData({
-          title: "Error on delete key",
+          title: DEL_KEY_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });

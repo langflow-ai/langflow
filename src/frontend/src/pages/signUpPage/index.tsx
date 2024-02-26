@@ -15,6 +15,7 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
+import { SIGNUP_ERROR_ALERT } from "../../alerts_constants";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -60,7 +61,7 @@ export default function SignUp(): JSX.Element {
           },
         } = error;
         setErrorData({
-          title: "Error signing up",
+          title: SIGNUP_ERROR_ALERT,
           list: [detail],
         });
         return;

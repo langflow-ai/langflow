@@ -16,6 +16,7 @@ import { validateNodes } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../alerts_constants";
 
 export default function NewChatView(): JSX.Element {
   const [chatValue, setChatValue] = useState("");
@@ -44,7 +45,7 @@ export default function NewChatView(): JSX.Element {
 
   useEffect(() => {
     if (!outputTypes.includes("ChatOutput")) {
-      setNoticeData({ title: "There is no ChatOutput node in the flow." });
+      setNoticeData({ title: NOCHATOUTPUT_NOTICE_ALERT });
     }
   }, []);
 
@@ -144,7 +145,7 @@ export default function NewChatView(): JSX.Element {
       //@ts-ignore
     } else {
       setErrorData({
-        title: "Oops! Looks like you missed some required information:",
+        title: INFO_MISSING_ALERT,
         list: nodeValidationErrors,
       });
     }

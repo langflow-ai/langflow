@@ -10,6 +10,7 @@ import { USER_PROJECTS_HEADER } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
+import { CONSOLE_ERROR_MSG } from "../../alerts_constants";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -40,7 +41,7 @@ export default function HomePage(): JSX.Element {
           })
           .catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: CONSOLE_ERROR_MSG,
               list: [error],
             });
           });
