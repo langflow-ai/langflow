@@ -1,18 +1,19 @@
 import { AxiosError } from "axios";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
+import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
   nodeId?: string | null; // Assuming nodeId is of type string, and it's optional
-  onProgressUpdate?: (progress: number) => void; // Replace number with the actual type if it's not a number
+  onGetOrderSuccess?: () => void;
   onBuildUpdate?: (data: VertexBuildTypeAPI, status: BuildStatus) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: string[]) => void;
   onBuildStart?: (idList: string[]) => void;
-  validateNodes?: (nodes:string[])=>void;
+  validateNodes?: (nodes: string[]) => void;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -36,21 +37,34 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 export async function buildVertices({
   flowId,
   nodeId = null,
-  onProgressUpdate,
+  onGetOrderSuccess,
   onBuildUpdate,
   onBuildComplete,
   onBuildError,
   onBuildStart,
-  validateNodes
+  validateNodes,
 }: BuildVerticesParams) {
-  let orderResponse = await getVerticesOrder(flowId, nodeId);
+  const setErrorData = useAlertStore.getState().setErrorData;
+  let orderResponse;
+  try {
+    orderResponse = await getVerticesOrder(flowId, nodeId);
+  } catch (error) {
+    console.log(error);
+    setErrorData({
+      title: "Oops! Looks like you missed something",
+      list: [error.response?.data?.detail ?? "Unknown Error"],
+    });
+    useFlowStore.getState().setIsBuilding(false);
+    throw new Error("Invalid nodes");
+  }
+  if (onGetOrderSuccess) onGetOrderSuccess();
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
   let vertices_layers: Array<Array<string>> = [];
   let stop = false;
-  if(validateNodes){
-    try{
-      validateNodes(verticesOrder.flatMap(id=>id))
-    } catch(e){
+  if (validateNodes) {
+    try {
+      validateNodes(verticesOrder.flatMap((id) => id));
+    } catch (e) {
       return;
     }
   }
