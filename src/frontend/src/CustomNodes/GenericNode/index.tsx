@@ -4,6 +4,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
+import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
@@ -19,6 +20,7 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import Xmark from "../../components/ui/xmark";
 
 export default function GenericNode({
   data,
@@ -118,7 +120,7 @@ export default function GenericNode({
     } else {
       setValidationStatus(null);
     }
-  }, [flowPool, data.id]);
+  }, [flowPool[data.id], data.id]);
 
   const showNode = data.showNode ?? true;
 
@@ -156,52 +158,44 @@ export default function GenericNode({
     );
   };
 
-  const getIconPlayOrPauseComponent = (name, className) => (
-    <IconComponent
-      name={name}
-      className={`h-4 fill-current stroke-2 ${className}`}
-    />
-  );
-
-  const getStatusClassName = (
-    buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
-  ) => {
-    console.log(buildStatus);
-    const isValid = validationStatus && validationStatus.valid;
-    if (isValid) {
-      return "green-status";
-    } else if (!isValid && buildStatus === BuildStatus.INACTIVE) {
-      return "gray-status";
-    } else if (!validationStatus && buildStatus === BuildStatus.BUILT) {
-      return "green-status";
-    } else if (!isValid && buildStatus === BuildStatus.BUILT) {
-      return "red-status";
-    } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
-      return "green-status";
-    } else {
-      return "yellow-status";
-    }
-  };
   const isDark = useDarkStore((state) => state.dark);
-  const renderIconStatusComponents = (
+  const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
-  ) => {
-    const className = getStatusClassName(buildStatus, validationStatus);
-    return <>{getIconPlayOrPauseComponent("CircleDot", className)}</>;
-  };
-  const renderIconPlayOrPauseComponents = (
-    buildStatus: BuildStatus | undefined,
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading />;
+      return <Loading className="text-medium-indigo" />;
     } else {
       return (
-        <IconComponent
-          name="Play"
-          className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground group-hover:text-medium-indigo"
-        />
+        <>
+          <IconComponent
+            name="Play"
+            className="absolute ml-0.5 h-5 fill-current stroke-2 text-medium-indigo opacity-0 transition-all group-hover:opacity-100"
+          />
+          {validationStatus && validationStatus.valid ? (
+            <Checkmark
+              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover:opacity-0"
+              isVisible={true}
+            />
+          ) : validationStatus &&
+            !validationStatus.valid &&
+            buildStatus === BuildStatus.INACTIVE ? (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
+            />
+          ) : validationStatus && !validationStatus.valid ? (
+            <Xmark
+              isVisible={true}
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
+            />
+          ) : (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground opacity-100 transition-all group-hover:opacity-0"
+            />
+          )}
+        </>
       );
     }
   };
@@ -467,53 +461,40 @@ export default function GenericNode({
                 variant="secondary"
                 className={"group h-9 px-1.5"}
                 onClick={() => {
-                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
+                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
+                  setValidationStatus(null);
                   buildFlow(data.id);
                 }}
               >
                 <div>
                   <ShadTooltip
                     content={
-                      "Build"
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span>Building...</span>
+                      ) : !validationStatus ? (
+                        <span className="flex">Build to validate status.</span>
+                      ) : (
+                        <div className="max-h-96 overflow-auto">
+                          {typeof validationStatus.params === "string"
+                            ? `${durationString}\n${validationStatus.params}`
+                                .split("\n")
+                                .map((line, index) => (
+                                  <div key={index}>{line}</div>
+                                ))
+                            : durationString}
+                        </div>
+                      )
                     }
                     side="bottom"
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
-                      {renderIconPlayOrPauseComponents(
-                        buildStatus,
-                      )}
+                      {renderIconStatus(buildStatus, validationStatus)}
                     </div>
                   </ShadTooltip>
                 </div>
               </Button>
             )}
-            <div className="">
-              <ShadTooltip
-                content={
-                  data?.buildStatus === BuildStatus.BUILDING ? (
-                    <span>Building...</span>
-                  ) : !validationStatus ? (
-                    <span className="flex">Build to validate status.</span>
-                  ) : (
-                    <div className="max-h-96 overflow-auto">
-                      {typeof validationStatus.params === "string"
-                        ? `${durationString}\n${validationStatus.params}`
-                            .split("\n")
-                            .map((line, index) => <div key={index}>{line}</div>)
-                        : durationString}
-                    </div>
-                  )
-                }
-              >
-                <div>
-                  {renderIconStatusComponents(
-                    data?.buildStatus,
-                    validationStatus
-                  )}
-                </div>
-              </ShadTooltip>
-            </div>
           </div>
         </div>
 
