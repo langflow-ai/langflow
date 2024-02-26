@@ -168,6 +168,7 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    console.log(buildStatus);
     const isValid = validationStatus && validationStatus.valid;
     if (isValid) {
       return "green-status";
@@ -179,8 +180,6 @@ export default function GenericNode({
       return "red-status";
     } else if (!validationStatus && buildStatus === BuildStatus.TO_BUILD) {
       return "green-status";
-    } else if (buildStatus === BuildStatus.BUILDING) {
-      return "status-build-animation";
     } else {
       return "yellow-status";
     }
@@ -203,7 +202,7 @@ export default function GenericNode({
       return (
         <IconComponent
           name="Play"
-          className="absolute ml-0.5 h-5 fill-current stroke-2 hover:text-medium-indigo text-muted-foreground"
+          className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground hover:text-medium-indigo"
         />
       );
     }
@@ -469,23 +468,7 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      data?.buildStatus === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
-                        </div>
-                      )
+                      "Build"
                     }
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
@@ -499,7 +482,30 @@ export default function GenericNode({
               </Button>
             )}
             <div className="">
-              {renderIconStatusComponents(data?.buildStatus, validationStatus)}
+              <Tooltip
+                title={
+                  data?.buildStatus === BuildStatus.BUILDING ? (
+                    <span>Building...</span>
+                  ) : !validationStatus ? (
+                    <span className="flex">Build to validate status.</span>
+                  ) : (
+                    <div className="max-h-96 overflow-auto">
+                      {typeof validationStatus.params === "string"
+                        ? `${durationString}\n${validationStatus.params}`
+                            .split("\n")
+                            .map((line, index) => <div key={index}>{line}</div>)
+                        : durationString}
+                    </div>
+                  )
+                }
+              >
+                <div>
+                  {renderIconStatusComponents(
+                    data?.buildStatus,
+                    validationStatus
+                  )}
+                </div>
+              </Tooltip>
             </div>
           </div>
         </div>
