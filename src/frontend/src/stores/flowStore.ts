@@ -416,6 +416,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
     });
+    get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
     return {
@@ -444,6 +445,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         set({ nodes: get().nodes });
       }
     });
+  },
+  revertBuiltStatusFromBuilding: () => {
+    get().nodes.forEach((node) => {
+      if (node.data.buildStatus === BuildStatus.BUILDING) {
+        node.data.buildStatus = BuildStatus.TO_BUILD;
+      }
+    });
+    set({ nodes: get().nodes });
   },
 }));
 
