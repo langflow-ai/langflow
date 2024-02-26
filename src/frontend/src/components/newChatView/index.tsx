@@ -1,4 +1,4 @@
-import _, { cloneDeep } from "lodash";
+import _ from "lodash";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { deleteFlowPool } from "../../controllers/API";
@@ -11,31 +11,22 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
 } from "../../types/chat";
-import { NodeType } from "../../types/flow";
-import { validateNodes } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
 import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../alerts_constants";
 
-export default function NewChatView(): JSX.Element {
-  const [chatValue, setChatValue] = useState("");
-  const {
-    flowPool,
-    outputs,
-    inputs,
-    getNode,
-    setNode,
-    buildFlow,
-    getFlow,
-    CleanFlowPool,
-  } = useFlowStore();
-  const { setErrorData, setNoticeData } = useAlertStore();
+export default function NewChatView({
+  sendMessage,
+  chatValue,
+  setChatValue,
+  lockChat,
+  setLockChat,
+}): JSX.Element {
+  const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
+  const { setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 
   const inputTypes = inputs.map((obj) => obj.type);
@@ -116,40 +107,6 @@ export default function NewChatView(): JSX.Element {
     }
   }, []);
 
-  async function sendMessage(count = 1): Promise<void> {
-    if (isBuilding) return;
-    const { nodes, edges } = getFlow();
-    let nodeValidationErrors = validateNodes(nodes, edges);
-    if (nodeValidationErrors.length === 0) {
-      setIsBuilding(true);
-      setLockChat(true);
-      setChatValue("");
-      const chatInputId = inputIds.find((inputId) =>
-        inputId.includes("ChatInput")
-      );
-      const chatInput: NodeType = getNode(chatInputId!) as NodeType;
-      if (chatInput) {
-        let newNode = cloneDeep(chatInput);
-        newNode.data.node!.template["message"].value = chatValue;
-        setNode(chatInputId!, newNode);
-      }
-      for (let i = 0; i < count; i++) {
-        await buildFlow().catch((err) => {
-          console.error(err);
-          setLockChat(false);
-        });
-      }
-      setLockChat(false);
-
-      //set chat message in the flow and run build
-      //@ts-ignore
-    } else {
-      setErrorData({
-        title: INFO_MISSING_ALERT,
-        list: nodeValidationErrors,
-      });
-    }
-  }
   function clearChat(): void {
     setChatHistory([]);
     deleteFlowPool(currentFlowId).then((_) => {

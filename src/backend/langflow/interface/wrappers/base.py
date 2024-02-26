@@ -4,7 +4,7 @@ from langchain_community.utilities import requests
 from loguru import logger
 
 from langflow.interface.base import LangChainTypeCreator
-from langflow.utils.util import build_template_from_class, build_template_from_method
+from langflow.utils.util import build_template_from_class
 
 
 class WrapperCreator(LangChainTypeCreator):
@@ -20,14 +20,6 @@ class WrapperCreator(LangChainTypeCreator):
 
     def get_signature(self, name: str) -> Optional[Dict]:
         try:
-            if name in self.from_method_nodes:
-                return build_template_from_method(
-                    name,
-                    type_to_cls_dict=self.type_to_loader_dict,
-                    add_function=True,
-                    method_name=self.from_method_nodes[name],
-                )
-
             return build_template_from_class(name, self.type_to_loader_dict)
         except ValueError as exc:
             raise ValueError("Wrapper not found") from exc

@@ -577,6 +577,7 @@ export default function FormModal({
                           chatHistory.length - 1 === index ? true : false
                         }
                         key={index}
+                        updateChat={() => {}}
                       />
                     ))
                   ) : (

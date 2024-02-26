@@ -341,7 +341,10 @@ class Vertex:
                 elif value.get("type") == "str" and val is not None:
                     # val may contain escaped \n, \t, etc.
                     # so we need to unescape it
-                    params[key] = val.encode().decode("unicode_escape")
+                    if isinstance(val, list):
+                        params[key] = [v.encode().decode("unicode_escape") for v in val]
+                    elif isinstance(val, str):
+                        params[key] = val.encode().decode("unicode_escape")
                 elif val is not None and val != "":
                     params[key] = val
 

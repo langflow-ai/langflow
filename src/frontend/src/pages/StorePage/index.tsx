@@ -40,14 +40,15 @@ export default function StorePage(): JSX.Element {
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
 
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
-  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
-  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
 
   const { apiKey } = useContext(AuthContext);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
+  );
+  const currentFlowId = useFlowsManagerStore(
+    (state) => state.currentFlowId
   );
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
@@ -63,10 +64,6 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
-
-  useEffect(() => {
-    handleGetTags();
-  }, []);
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -87,9 +84,10 @@ export default function StorePage(): JSX.Element {
         });
       }
     }
-  }, [loadingApiKey, validApiKey, hasApiKey]);
+  }, [loadingApiKey, validApiKey, hasApiKey, currentFlowId]);
 
   useEffect(() => {
+    handleGetTags();
     handleGetComponents();
   }, [
     tabActive,
@@ -120,7 +118,7 @@ export default function StorePage(): JSX.Element {
   }
 
   function handleGetComponents() {
-    if (!hasApiKey || loadingApiKey) return;
+    if (loadingApiKey) return;
     setLoading(true);
     getStoreComponents({
       component_id: id,
@@ -176,23 +174,6 @@ export default function StorePage(): JSX.Element {
     setPageIndex(1);
     setPageSize(12);
   }
-
-  const fetchApiData = async () => {
-    setLoadingApiKey(true);
-    try {
-      const res = await checkHasApiKey();
-      setHasApiKey(res?.has_api_key ?? false);
-      setValidApiKey(res?.is_valid ?? false);
-      setLoadingApiKey(false);
-    } catch (e) {
-      setLoadingApiKey(false);
-      console.log(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchApiData();
-  }, [apiKey]);
 
   return (
     <PageLayout
