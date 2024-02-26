@@ -10,6 +10,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { priorityFields } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
@@ -19,7 +20,6 @@ import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn, getFieldTitle } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
-import { useDarkStore } from "../../stores/darkStore";
 
 export default function GenericNode({
   data,
@@ -37,7 +37,6 @@ export default function GenericNode({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
-  const getBuildStatus = useFlowStore((state) => state.getBuildStatus);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -188,8 +187,8 @@ export default function GenericNode({
     }
   };
 
-  const isDark = useDarkStore(state => state.dark);
-  console.log(isDark)
+  const isDark = useDarkStore((state) => state.dark);
+  console.log(isDark);
   const renderIconPlayOrPauseComponents = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -213,7 +212,9 @@ export default function GenericNode({
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
-      return isDark ? "border-none ring ring-[#751C1C]" : "built-invalid-status" ;
+      return isDark
+        ? "border-none ring ring-[#751C1C]"
+        : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
     } else {
@@ -269,12 +270,11 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
         ></NodeToolbarComponent>
       </NodeToolbar>
-
       <div
         className={getNodeBorderClassName(
           selected,
           showNode,
-          getBuildStatus(data.id),
+          data?.buildStatus,
           validationStatus
         )}
       >
@@ -485,10 +485,7 @@ export default function GenericNode({
                 variant="outline"
                 className={"h-9 px-1.5"}
                 onClick={() => {
-                  if (
-                    getBuildStatus(data.id) === BuildStatus.BUILDING ||
-                    isBuilding
-                  )
+                  if (data?.buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
 
                   buildFlow(data.id);
@@ -497,7 +494,7 @@ export default function GenericNode({
                 <div>
                   <Tooltip
                     title={
-                      getBuildStatus(data.id) === BuildStatus.BUILDING ? (
+                      data?.buildStatus === BuildStatus.BUILDING ? (
                         <span>Building...</span>
                       ) : !validationStatus ? (
                         <span className="flex">
@@ -523,7 +520,7 @@ export default function GenericNode({
                   >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconPlayOrPauseComponents(
-                        getBuildStatus(data.id),
+                        data?.buildStatus,
                         validationStatus
                       )}
                     </div>
