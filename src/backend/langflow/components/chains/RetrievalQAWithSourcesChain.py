@@ -21,10 +21,12 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             },
             "memory": {"display_name": "Memory"},
             "return_source_documents": {"display_name": "Return Source Documents"},
+            "retriever": {"display_name": "Retriever"},
         }
 
     def build(
         self,
+        inputs: str,
         retriever: BaseRetriever,
         llm: BaseLanguageModel,
         chain_type: str,
@@ -50,7 +52,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         references_str = ""
         if return_source_documents:
             references_str = self.create_references_from_records(records)
-        result_str = result.get("result")
+        result_str = result.get("answer")
         final_result = "\n".join([result_str, references_str])
         self.status = final_result
         return final_result
