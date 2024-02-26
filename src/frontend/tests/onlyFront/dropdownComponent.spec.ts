@@ -24,7 +24,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .getByTestId("llmsAmazon Bedrock")
+    .getByTestId("model_specsAmazon Bedrock")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();

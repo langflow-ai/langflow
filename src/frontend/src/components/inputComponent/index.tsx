@@ -91,6 +91,7 @@ export default function InputComponent({
             handleKeyDown(e, value, "");
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
+          data-testid={editNode ? id + "-edit" : id}
         />
       )}
       {password && (

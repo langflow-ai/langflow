@@ -28,12 +28,12 @@ test("InputComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.locator("#input-8").click();
+  await page.getByTestId("input-collection_name").click();
   await page
-    .locator("#input-8")
+    .getByTestId("input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  let value = await page.locator("#input-8").inputValue();
+  let value = await page.getByTestId("input-collection_name").inputValue();
 
   if (value != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
@@ -61,9 +61,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showchroma_server_http_port"]').click();
+  await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
@@ -76,18 +76,10 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showcollection_name"]').isChecked()
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showpersist"]').click();
-  expect(await page.locator('//*[@id="showpersist"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showpersist_directory"]').click();
+  await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showpersist_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked()
   ).toBeFalsy();
-
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
@@ -106,9 +98,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked()
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showchroma_server_http_port"]').click();
+  await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
@@ -116,33 +108,27 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked()
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showpersist"]').click();
-  expect(await page.locator('//*[@id="showpersist"]').isChecked()).toBeTruthy();
-
-  await page.locator('//*[@id="showpersist_directory"]').click();
+  await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showpersist_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeFalsy();
-
-  let valueEditNode = await page.locator('//*[@id="input-5"]').inputValue();
+  let valueEditNode = await page
+    .getByTestId("input-collection_name-edit")
+    .inputValue();
 
   if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="input-5"]').click();
+  await page.getByTestId("input-collection_name-edit").click();
   await page
-    .locator('//*[@id="input-5"]')
+    .getByTestId("input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  const plusButtonLocator = page.locator("#input-8");
+  const plusButtonLocator = page.getByTestId("input-collection_name");
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -159,7 +145,7 @@ test("InputComponent", async ({ page }) => {
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    let value = await page.locator("#input-8").inputValue();
+    let value = await page.getByTestId("input-collection_name").inputValue();
 
     if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@") {
       expect(false).toBeTruthy();

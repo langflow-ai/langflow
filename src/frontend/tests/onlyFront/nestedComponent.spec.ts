@@ -31,75 +31,17 @@ test("NestedComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
+  //showpool_threads
+  await page.locator('//*[@id="showpool_threads"]').click();
 
   expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeFalsy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeFalsy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
+    await page.locator('//*[@id="showpool_threads"]').isChecked()
   ).toBeTruthy();
 
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
+  //showtext_key
+  await page.locator('//*[@id="showtext_key"]').click();
 
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeTruthy();
-
-  // showsearch_kwargs
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeTruthy();
-
-  // showindex_name
-  await page.locator('//*[@id="showindex_name"]').click();
-
-  expect(
-    await page.locator('//*[@id="showindex_name"]').isChecked()
-  ).toBeTruthy();
-
-  // shownamespace
-  await page.locator('//*[@id="shownamespace"]').click();
-
-  expect(
-    await page.locator('//*[@id="shownamespace"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_api_key
-  await page.locator('//*[@id="showpinecone_api_key"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeFalsy();
-
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeFalsy();
-
-  // showsearch_kwargs
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeFalsy();
+  expect(await page.locator('//*[@id="showtext_key"]').isChecked()).toBeFalsy();
 
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
@@ -120,21 +62,14 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   // showpinecone_env
   await page.locator('//*[@id="showpinecone_env"]').click();
 
   expect(
     await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeTruthy();
-
-  // showsearch_kwargs
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
@@ -155,21 +90,14 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   // showpinecone_env
   await page.locator('//*[@id="showpinecone_env"]').click();
 
   expect(
     await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeFalsy();
-
-  // showsearch_kwargs
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
@@ -190,21 +118,14 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   // showpinecone_env
   await page.locator('//*[@id="showpinecone_env"]').click();
 
   expect(
     await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeTruthy();
-
-  // showsearch_kwargs
-  await page.locator('//*[@id="showsearch_kwargs"]').click();
-
-  expect(
-    await page.locator('//*[@id="showsearch_kwargs"]').isChecked()
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
@@ -225,6 +146,34 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
+  ).toBeTruthy();
+
+  // showpinecone_env
+  await page.locator('//*[@id="showpinecone_env"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_env"]').isChecked()
+  ).toBeTruthy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked()
+  ).toBeFalsy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked()
+  ).toBeFalsy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
   ).toBeFalsy();
 
   // showpinecone_env
@@ -233,8 +182,48 @@ test("NestedComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showpinecone_env"]').isChecked()
   ).toBeFalsy();
+
+  // showindex_name
+  await page.locator('//*[@id="showindex_name"]').click();
+
+  expect(
+    await page.locator('//*[@id="showindex_name"]').isChecked()
+  ).toBeTruthy();
+
+  // shownamespace
+  await page.locator('//*[@id="shownamespace"]').click();
+
+  expect(
+    await page.locator('//*[@id="shownamespace"]').isChecked()
+  ).toBeTruthy();
+
+  // showpinecone_api_key
+  await page.locator('//*[@id="showpinecone_api_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
+  ).toBeTruthy();
+
+  // showpinecone_env
+  await page.locator('//*[@id="showpinecone_env"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpinecone_env"]').isChecked()
+  ).toBeTruthy();
+
+  //showpool_threads
+  await page.locator('//*[@id="showpool_threads"]').click();
+
+  expect(
+    await page.locator('//*[@id="showpool_threads"]').isChecked()
+  ).toBeFalsy();
+
+  //showtext_key
+  await page.locator('//*[@id="showtext_key"]').click();
+
+  expect(
+    await page.locator('//*[@id="showtext_key"]').isChecked()
+  ).toBeTruthy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
-
-  await page.getByTestId("div-dict-input").click();
 });

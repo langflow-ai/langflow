@@ -30,21 +30,21 @@ test("IntComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.locator('//*[@id="int-input-2"]').click();
+  await page.getByTestId("int-input-timeout").click();
   await page
-    .locator('//*[@id="int-input-2"]')
+    .getByTestId("int-input-timeout")
     .fill("123456789123456789123456789");
 
-  let value = await page.locator('//*[@id="int-input-2"]').inputValue();
+  let value = await page.getByTestId("int-input-timeout").inputValue();
 
   if (value != "123456789123456789123456789") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="int-input-2"]').click();
-  await page.locator('//*[@id="int-input-2"]').fill("0");
+  await page.getByTestId("int-input-timeout").click();
+  await page.getByTestId("int-input-timeout").fill("0");
 
-  value = await page.locator('//*[@id="int-input-2"]').inputValue();
+  value = await page.getByTestId("int-input-timeout").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
@@ -53,15 +53,15 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.locator('//*[@id="edit-int-input-2"]').inputValue();
+  value = await page.getByTestId("edit-int-input-timeout").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="edit-int-input-2"]').click();
+  await page.getByTestId("edit-int-input-timeout").click();
   await page
-    .locator('//*[@id="edit-int-input-2"]')
+    .getByTestId("edit-int-input-timeout")
     .fill("123456789123456789123456789");
 
   await page.locator('//*[@id="showheaders"]').click();
@@ -81,7 +81,7 @@ test("IntComponent", async ({ page }) => {
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  const plusButtonLocator = page.locator('//*[@id="int-input-2"]');
+  const plusButtonLocator = page.getByTestId("int-input-timeout");
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -95,7 +95,7 @@ test("IntComponent", async ({ page }) => {
     ).toBeTruthy();
 
     const valueEditNode = await page
-      .locator('//*[@id="edit-int-input-2"]')
+      .getByTestId("edit-int-input-timeout")
       .inputValue();
 
     if (valueEditNode != "123456789123456789123456789") {
@@ -103,19 +103,19 @@ test("IntComponent", async ({ page }) => {
     }
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
-    await page.locator('//*[@id="int-input-2"]').click();
-    await page.locator('//*[@id="int-input-2"]').fill("3");
+    await page.getByTestId("int-input-timeout").click();
+    await page.getByTestId("int-input-timeout").fill("3");
 
-    let value = await page.locator('//*[@id="int-input-2"]').inputValue();
+    let value = await page.getByTestId("int-input-timeout").inputValue();
 
     if (value != "3") {
       expect(false).toBeTruthy();
     }
 
-    await page.locator('//*[@id="int-input-2"]').click();
-    await page.locator('//*[@id="int-input-2"]').fill("-3");
+    await page.getByTestId("int-input-timeout").click();
+    await page.getByTestId("int-input-timeout").fill("-3");
 
-    value = await page.locator('//*[@id="int-input-2"]').inputValue();
+    value = await page.getByTestId("int-input-timeout").inputValue();
 
     if (value != "0") {
       expect(false).toBeTruthy();
