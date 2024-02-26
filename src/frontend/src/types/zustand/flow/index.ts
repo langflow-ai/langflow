@@ -90,4 +90,5 @@ export type FlowStoreType = {
   removeFromVerticesBuild: (vertices: string[]) => void;
   verticesBuild: string[];
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  revertBuiltStatusFromBuilding: () => void;
 };
