@@ -2,7 +2,8 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from loguru import logger
 
@@ -540,6 +541,7 @@ class Vertex:
         self._built_result = UnbuiltResult()
         self.artifacts = {}
         self.steps_ran = []
+        self._build_params()
 
     def build_inactive(self):
         # Just set the results to None
