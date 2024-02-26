@@ -1,13 +1,13 @@
 from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
-from langflow.field_typing import Text
 
 from langflow import CustomComponent
+from langflow.field_typing import Text
 
 
 class AmazonBedrockComponent(CustomComponent):
-    display_name: str = "Amazon Bedrock model"
+    display_name: str = "Amazon Bedrock Model"
     description: str = "Generate text using LLM model from Amazon Bedrock."
 
     def build_config(self):

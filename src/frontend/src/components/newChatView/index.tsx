@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import _ from "lodash";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { deleteFlowPool } from "../../controllers/API";
@@ -11,31 +11,23 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
 } from "../../types/chat";
-import { NodeType } from "../../types/flow";
-import { validateNodes } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../alerts_constants";
 
-export default function newChatView(): JSX.Element {
-  const [chatValue, setChatValue] = useState("");
-  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
-  const {
-    flowPool,
-    outputs,
-    inputs,
-    getNode,
-    setNode,
-    buildFlow,
-    getFlow,
-    CleanFlowPool,
-  } = useFlowStore();
-  const { setErrorData, setNoticeData } = useAlertStore();
+export default function NewChatView({
+  sendMessage,
+  chatValue,
+  setChatValue,
+  lockChat,
+  setLockChat,
+}): JSX.Element {
+  const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
+  const { setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const [lockChat, setLockChat] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const inputIds = inputs.map((obj) => obj.id);
@@ -44,7 +36,7 @@ export default function newChatView(): JSX.Element {
 
   useEffect(() => {
     if (!outputTypes.includes("ChatOutput")) {
-      setNoticeData({ title: "There is no ChatOutput node in the flow." });
+      setNoticeData({ title: NOCHATOUTPUT_NOTICE_ALERT });
     }
   }, []);
 
@@ -67,20 +59,30 @@ export default function newChatView(): JSX.Element {
     });
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
-      .filter((output) => !!output.data.artifacts?.message)
-      .map((output) => {
+      //
+      .filter((output) => output.data.artifacts?.message !== null)
+      .map((output, index) => {
         try {
-          const { sender, message, sender_name } = output.data
+          const { sender, message, sender_name, stream_url } = output.data
             .artifacts as ChatOutputType;
 
+          const componentId = output.id + index;
+
           const is_ai = sender === "Machine" || sender === null;
-          return { isSend: !is_ai, message: message, sender_name };
+          return {
+            isSend: !is_ai,
+            message: message,
+            sender_name,
+            id: componentId,
+            stream_url: stream_url,
+          };
         } catch (e) {
           console.error(e);
           return {
             isSend: false,
             message: "Error parsing message",
             sender_name: "Error",
+            id: output.id + index,
           };
         }
       });
@@ -105,40 +107,6 @@ export default function newChatView(): JSX.Element {
     }
   }, []);
 
-  async function sendMessage(count = 1): Promise<void> {
-    if (isBuilding) return;
-    const { nodes, edges } = getFlow();
-    let nodeValidationErrors = validateNodes(nodes, edges);
-    if (nodeValidationErrors.length === 0) {
-      setIsBuilding(true);
-      setLockChat(true);
-      setChatValue("");
-      const chatInputId = inputIds.find((inputId) =>
-        inputId.includes("ChatInput")
-      );
-      const chatInput: NodeType = getNode(chatInputId!) as NodeType;
-      if (chatInput) {
-        let newNode = cloneDeep(chatInput);
-        newNode.data.node!.template["message"].value = chatValue;
-        setNode(chatInputId!, newNode);
-      }
-      for (let i = 0; i < count; i++) {
-        await buildFlow().catch((err) => {
-          console.error(err);
-          setLockChat(false);
-        });
-      }
-      setLockChat(false);
-
-      //set chat message in the flow and run build
-      //@ts-ignore
-    } else {
-      setErrorData({
-        title: "Oops! Looks like you missed some required information:",
-        list: nodeValidationErrors,
-      });
-    }
-  }
   function clearChat(): void {
     setChatHistory([]);
     deleteFlowPool(currentFlowId).then((_) => {
@@ -146,6 +114,32 @@ export default function newChatView(): JSX.Element {
     });
     //TODO tell backend to clear chat session
     if (lockChat) setLockChat(false);
+  }
+
+  function updateChat(
+    chat: ChatMessageType,
+    message: string,
+    stream_url: string | null
+  ) {
+    if (message === "") return;
+    console.log(`updateChat: ${message}`);
+    console.log("chatHistory:", chatHistory);
+    chat.message = message;
+    chat.stream_url = stream_url;
+    // chat is one of the chatHistory
+    setChatHistory((oldChatHistory) => {
+      const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
+
+      if (index === -1) return oldChatHistory;
+      let newChatHistory = _.cloneDeep(oldChatHistory);
+      newChatHistory = [
+        ...newChatHistory.slice(0, index),
+        chat,
+        ...newChatHistory.slice(index + 1),
+      ];
+      console.log("newChatHistory:", newChatHistory);
+      return newChatHistory;
+    });
   }
 
   return (
@@ -172,7 +166,8 @@ export default function newChatView(): JSX.Element {
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
-                key={index}
+                key={`${chat.id}-${index}`}
+                updateChat={updateChat}
               />
             ))
           ) : (

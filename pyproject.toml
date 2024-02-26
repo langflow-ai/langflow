@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.6.7a5"
+version = "0.6.7"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -39,14 +39,12 @@ gunicorn = "^21.2.0"
 langchain = "~0.1.0"
 openai = "^1.12.0"
 pandas = "2.2.0"
-chromadb = "^0.4.0"
+chromadb = "^0.4.23"
 huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
 rich = "^13.7.0"
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
-unstructured = "^0.12.0"
 pypdf = "^4.0.0"
-lxml = "^4.9.2"
 pysrt = "^1.1.2"
 fake-useragent = "^1.4.0"
 docstring-parser = "^0.15"
@@ -63,7 +61,7 @@ python-multipart = "^0.0.7"
 sqlmodel = "^0.0.14"
 faiss-cpu = "^1.7.4"
 anthropic = "^0.15.0"
-orjson = "3.9.3"
+orjson = "^3.9.3"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
 types-cachetools = "^5.3.0.5"
@@ -107,6 +105,7 @@ pytube = "^15.0.0"
 python-socketio = "^5.11.0"
 llama-index = "0.9.48"
 langchain-openai = "^0.0.6"
+unstructured = "^0.12.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"

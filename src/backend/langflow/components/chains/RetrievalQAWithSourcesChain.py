@@ -1,11 +1,10 @@
 from typing import Optional
 
 from langchain.chains import RetrievalQAWithSourcesChain
-from langchain.chains.qa_with_sources.base import BaseQAWithSourcesChain
-from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
+from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever
+from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
 
 
 class RetrievalQAWithSourcesChainComponent(CustomComponent):
@@ -18,25 +17,42 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             "chain_type": {
                 "display_name": "Chain Type",
                 "options": ["stuff", "map_reduce", "map_rerank", "refine"],
+                "info": "The type of chain to use to combined Documents.",
             },
             "memory": {"display_name": "Memory"},
             "return_source_documents": {"display_name": "Return Source Documents"},
+            "retriever": {"display_name": "Retriever"},
         }
 
     def build(
         self,
+        inputs: str,
         retriever: BaseRetriever,
         llm: BaseLanguageModel,
-        combine_documents_chain: BaseCombineDocumentsChain,
         chain_type: str,
         memory: Optional[BaseMemory] = None,
         return_source_documents: Optional[bool] = True,
-    ) -> BaseQAWithSourcesChain:
-        return RetrievalQAWithSourcesChain.from_chain_type(
+    ) -> Text:
+        runnable = RetrievalQAWithSourcesChain.from_chain_type(
             llm=llm,
             chain_type=chain_type,
-            combine_documents_chain=combine_documents_chain,
             memory=memory,
             return_source_documents=return_source_documents,
             retriever=retriever,
         )
+        if isinstance(inputs, Document):
+            inputs = inputs.page_content
+        self.status = runnable
+        input_key = runnable.input_keys[0]
+        result = runnable.invoke({input_key: inputs})
+        result = result.content if hasattr(result, "content") else result
+        # Result is a dict with keys "query",  "result" and "source_documents"
+        # for now we just return the result
+        records = self.to_records(result.get("source_documents"))
+        references_str = ""
+        if return_source_documents:
+            references_str = self.create_references_from_records(records)
+        result_str = result.get("answer")
+        final_result = "\n".join([result_str, references_str])
+        self.status = final_result
+        return final_result

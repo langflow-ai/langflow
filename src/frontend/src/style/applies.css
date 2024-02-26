@@ -175,7 +175,7 @@
     @apply fixed bottom-4 right-4;
   }
   .message-button-icon {
-    @apply fill-chat-trigger stroke-chat-trigger stroke-1;
+    @apply fill-medium-indigo stroke-medium-indigo stroke-1;
   }
   .disabled-message-button-icon {
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
@@ -276,7 +276,7 @@
     @apply h-10 w-10 rounded p-1;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 truncate;
+    @apply ml-2 max-w-[220px] truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
@@ -290,16 +290,33 @@
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply opacity-100 animate-wiggle;
+    @apply animate-wiggle opacity-100;
   }
   .green-status {
     @apply generic-node-status text-status-green;
   }
+  .gray-status {
+    @apply generic-node-status text-status-gray;
+  }
+
   .red-status {
     @apply generic-node-status text-status-red;
   }
   .yellow-status {
     @apply generic-node-status text-status-yellow;
+  }
+  .inactive-status {
+    /* what colour for inactive status?
+    muted-foreground is too strong, maybe use a lighter shade of it?
+
+     */
+    @apply border-none ring ring-muted-foreground;
+  }
+  .built-invalid-status {
+    @apply border-none ring ring-[#FF9090];
+  }
+  .building-status {
+    @apply border-none ring;
   }
   .status-build-animation {
     @apply opacity-0;
@@ -828,7 +845,7 @@
     @apply flex h-full max-w-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
   }
   .api-modal-tablist-div {
-    @apply flex items-center justify-between px-2;
+    @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
     @apply -mt-1 h-full w-full overflow-hidden px-4 pb-4;
@@ -1009,7 +1026,7 @@
   }
 
   .beta-badge-wrapper {
-    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg pointer-events-none;
+    @apply pointer-events-none absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
   }
   .beta-badge-content {
     @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;

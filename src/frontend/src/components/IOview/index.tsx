@@ -1,9 +1,9 @@
-import { ReactNode, useState } from "react";
+import { cloneDeep } from "lodash";
+import { useEffect, useState } from "react";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
+import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { NodeType } from "../../types/flow";
-import { isInputType, isOutputType } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
@@ -12,62 +12,70 @@ import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export default function IOView({ children, open, setOpen }): JSX.Element {
-  const inputs = useFlowStore((state) => state.inputs);
-  const outputs = useFlowStore((state) => state.outputs);
-  const inputIds = inputs.map((obj) => obj.id);
-  const outputIds = outputs.map((obj) => obj.id);
-  const nodes = useFlowStore((state) => state.nodes);
-  const setNode = useFlowStore((state) => state.setNode);
-  const categories = getCategories();
-  const [selectedCategory, setSelectedCategory] = useState<number>(0);
-  const [showChat, setShowChat] = useState<boolean>(false);
-  const [selectedView, setSelectedView] = useState<{
-    type: string;
-    id?: string;
-  }>(handleInitialView());
+  const inputs = useFlowStore((state) => state.inputs).filter(
+    (input) => input.type !== "ChatInput"
+  );
+  const chatInput = useFlowStore((state) => state.inputs).find(
+    (input) => input.type === "ChatInput"
+  );
+  const outputs = useFlowStore((state) => state.outputs).filter(
+    (output) => output.type !== "ChatOutput"
+  );
+  const chatOutput = useFlowStore((state) => state.outputs).find(
+    (output) => output.type === "ChatOutput"
+  );
+  const nodes = useFlowStore((state) => state.nodes).filter(
+    (node) =>
+      inputs.some((input) => input.id === node.id) ||
+      outputs.some((output) => output.id === node.id)
+  );
+  const haveChat = chatInput || chatOutput;
+  const [selectedTab, setSelectedTab] = useState(
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+  );
+  const [selectedViewField, setSelectedViewField] = useState<
+    { type: string; id: string } | undefined
+  >(undefined);
 
-  type CategoriesType = { name: string; icon: string };
+  const { getNode, setNode, buildFlow, getFlow } = useFlowStore();
+  const { setErrorData } = useAlertStore();
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const [lockChat, setLockChat] = useState(false);
+  const [chatValue, setChatValue] = useState("");
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  function handleInitialView() {
-    if (
-      outputs.map((output) => output.type).includes("ChatOutput") ||
-      inputs.map((input) => input.type).includes("ChatInput")
-    ) {
-      return { type: "ChatOutput" };
+  async function sendMessage(count = 1): Promise<void> {
+    if (isBuilding) return;
+    const { nodes, edges } = getFlow();
+    setIsBuilding(true);
+    setLockChat(true);
+    setChatValue("");
+    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+    if (chatInputNode) {
+      let newNode = cloneDeep(chatInputNode);
+      newNode.data.node!.template["message"].value = chatValue;
+      setNode(chatInput!.id, newNode);
     }
-    return { type: "" };
+    for (let i = 0; i < count; i++) {
+      await buildFlow().catch((err) => {
+        console.error(err);
+        setLockChat(false);
+      });
+    }
+    setLockChat(false);
   }
 
-  function getCategories() {
-    const categories: CategoriesType[] = [];
-    if (inputs.filter((input) => input.type !== "ChatInput").length > 0)
-      categories.push({ name: "Inputs", icon: "TextCursorInput" });
-    if (outputs.filter((output) => output.type !== "ChatOutput").length > 0)
-      categories.push({ name: "Outputs", icon: "TerminalSquare" });
-    return categories;
-  }
-
-  function handleSelectChange(): ReactNode {
-    const { type, id } = selectedView;
-    if (type === "ChatOutput") return <NewChatView />;
-    if (isInputType(type))
-      return <IOInputField inputId={id!} inputType={type} />;
-    if (isOutputType(type))
-      return <IOOutputView outputId={id!} outputType={type} />;
-    else return undefined;
-  }
-
-  function UpdateAccordion() {
-    return (categories[selectedCategory]?.name ?? "Inputs") === "Inputs"
-      ? inputs
-      : outputs;
-  }
+  useEffect(() => {
+    setSelectedViewField(undefined);
+    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
+  }, [inputs.length, outputs.length]);
 
   return (
     <BaseModal
-      size={handleSelectChange() ? "large" : "small"}
+      size={haveChat ? (selectedTab === 0 ? "large-thin" : "large") : "small"}
       open={open}
       setOpen={setOpen}
     >
@@ -84,130 +92,229 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex-max-width mt-2 h-[80vh]">
-          <div
-            className={cn(
-              "mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide",
-              handleSelectChange() ? "w-2/6" : "w-full"
-            )}
-          >
-            <div className="flex w-full items-center justify-between py-2">
-              <div className="flex items-start gap-4">
-                {categories.map((category, index) => {
-                  return (
-                    //hide chat button if chat is alredy on the view
-                    <Button
-                      onClick={() => setSelectedCategory(index)}
-                      variant={
-                        index === selectedCategory ? "primary" : "secondary"
-                      }
-                      key={index}
-                    >
-                      <IconComponent
-                        name={category.icon}
-                        className=" file-component-variable"
-                      />
-                      <span className="file-component-variables-span text-md">
-                        {category.name}
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-              {(outputs.map((output) => output.type).includes("ChatOutput") ||
-                inputs.map((output) => output.type).includes("chatInput")) &&
-                selectedView.type !== "ChatOutput" && (
-                  <Button
-                    onClick={() => setSelectedView({ type: "ChatOutput" })}
-                    variant="outline"
-                    key={"chat"}
-                    className="self-end px-2.5"
-                  >
-                    <IconComponent
-                      name="MessageSquareMore"
-                      className="h-5 w-5"
-                    />
-                  </Button>
+        <div className="flex h-full flex-col">
+          <div className="flex-max-width mt-2 h-full">
+            {selectedTab !== 0 && (
+              <div
+                className={cn(
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start overflow-auto scrollbar-hide",
+                  haveChat ? "w-2/6" : "w-full"
                 )}
-            </div>
-            <div className="mx-2 mb-2 mt-4 flex items-center gap-2 font-semibold">
-              {categories[selectedCategory]?.name === "Inputs" && (
-                <>
-                  <IconComponent name={"FormInput"} />
-                  Text Inputs
-                </>
-              )}
-              {categories[selectedCategory]?.name === "Outputs" && (
-                <>
-                  <IconComponent name={"ChevronRightSquare"} />
-                  Prompt Outputs
-                </>
-              )}
-            </div>
-            {UpdateAccordion()
-              .filter(
-                (input) =>
-                  input.type !== "ChatInput" && input.type !== "ChatOutput"
-              )
-              .map((input, index) => {
-                const node: NodeType = nodes.find(
-                  (node) => node.id === input.id
-                )!;
-                return (
-                  <div className="file-component-accordion-div" key={index}>
-                    <AccordionComponent
-                      trigger={
-                        <div className="file-component-badge-div">
-                          <Badge variant="gray" size="md">
-                            {input.id}
-                          </Badge>
-                          <div
-                            className="-mb-1 pr-4"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setSelectedView({
-                                type: input.type,
-                                id: input.id,
-                              });
-                            }}
-                          >
-                            <IconComponent
-                              className="h-4 w-4"
-                              name="ExternalLink"
-                            ></IconComponent>
-                          </div>
-                        </div>
-                      }
-                      key={index}
-                      keyValue={input.id}
-                    >
-                      <div className="file-component-tab-column">
-                        <div className="">
-                          {node &&
-                            (categories[selectedCategory]?.name === "Inputs" ? (
-                              <IOInputField
-                                inputType={input.type}
-                                inputId={input.id}
-                              />
-                            ) : (
-                              <IOOutputView
-                                outputType={input.type}
-                                outputId={input.id}
-                              />
-                            ))}
-                        </div>
-                      </div>
-                    </AccordionComponent>
+              >
+                <Tabs
+                  value={selectedTab.toString()}
+                  className={
+                    "flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center"
+                  }
+                  onValueChange={(value) => {
+                    setSelectedTab(Number(value));
+                  }}
+                >
+                  <div className="api-modal-tablist-div">
+                    <TabsList>
+                      {inputs.length > 0 && (
+                        <TabsTrigger value={"1"}>Inputs</TabsTrigger>
+                      )}
+                      {outputs.length > 0 && (
+                        <TabsTrigger value={"2"}>Outputs</TabsTrigger>
+                      )}
+                    </TabsList>
                   </div>
-                );
-              })}
+
+                  <TabsContent
+                    value={"1"}
+                    className="api-modal-tabs-content mt-4"
+                  >
+                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                      <IconComponent className="h-4 w-4" name={"Type"} />
+                      Text Inputs
+                    </div>
+                    {nodes
+                      .filter((node) =>
+                        inputs.some((input) => input.id === node.id)
+                      )
+                      .map((node, index) => {
+                        const input = inputs.find(
+                          (input) => input.id === node.id
+                        )!;
+                        return (
+                          <div
+                            className="file-component-accordion-div"
+                            key={index}
+                          >
+                            <AccordionComponent
+                              trigger={
+                                <div className="file-component-badge-div">
+                                  <Badge variant="gray" size="md">
+                                    {input.id}
+                                  </Badge>
+                                  {haveChat && (
+                                    <div
+                                      className="-mb-1 pr-4"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setSelectedViewField(input);
+                                      }}
+                                    >
+                                      <IconComponent
+                                        className="h-4 w-4"
+                                        name="ExternalLink"
+                                      ></IconComponent>
+                                    </div>
+                                  )}
+                                </div>
+                              }
+                              key={index}
+                              keyValue={input.id}
+                            >
+                              <div className="file-component-tab-column">
+                                <div className="">
+                                  {input && (
+                                    <IOInputField
+                                      inputType={input.type}
+                                      inputId={input.id}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionComponent>
+                          </div>
+                        );
+                      })}
+                  </TabsContent>
+                  <TabsContent
+                    value={"2"}
+                    className="api-modal-tabs-content mt-4"
+                  >
+                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                      <IconComponent className="h-4 w-4" name={"Braces"} />
+                      Prompt Outputs
+                    </div>
+                    {nodes
+                      .filter((node) =>
+                        outputs.some((output) => output.id === node.id)
+                      )
+                      .map((node, index) => {
+                        const output = outputs.find(
+                          (output) => output.id === node.id
+                        )!;
+                        return (
+                          <div
+                            className="file-component-accordion-div"
+                            key={index}
+                          >
+                            <AccordionComponent
+                              trigger={
+                                <div className="file-component-badge-div">
+                                  <Badge variant="gray" size="md">
+                                    {output.id}
+                                  </Badge>
+                                  {haveChat && (
+                                    <div
+                                      className="-mb-1 pr-4"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setSelectedViewField(output);
+                                      }}
+                                    >
+                                      <IconComponent
+                                        className="h-4 w-4"
+                                        name="ExternalLink"
+                                      ></IconComponent>
+                                    </div>
+                                  )}
+                                </div>
+                              }
+                              key={index}
+                              keyValue={output.id}
+                            >
+                              <div className="file-component-tab-column">
+                                <div className="">
+                                  {output && (
+                                    <IOOutputView
+                                      outputType={output.type}
+                                      outputId={output.id}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionComponent>
+                          </div>
+                        );
+                      })}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {haveChat ? (
+              <div className="flex h-full w-full">
+                {selectedViewField && (
+                  <div
+                    className={cn(
+                      "flex h-full w-full flex-col items-start gap-4 p-4",
+                      !selectedViewField ? "hidden" : ""
+                    )}
+                  >
+                    <div className="font-xl flex items-center justify-center gap-3 font-semibold">
+                      <button onClick={() => setSelectedViewField(undefined)}>
+                        <IconComponent
+                          name={"ArrowLeft"}
+                          className="h-6 w-6"
+                        ></IconComponent>
+                      </button>
+                      {selectedViewField.type}
+                    </div>
+                    <div className="h-full">
+                    {inputs.some(
+                      (input) => input.id === selectedViewField.id
+                    ) ? (
+                      <IOInputField
+                        inputType={selectedViewField.type!}
+                        inputId={selectedViewField.id!}
+                      />
+                    ) : (
+                      <IOOutputView
+                        outputType={selectedViewField.type!}
+                        outputId={selectedViewField.id!}
+                      />
+                    )}
+                    </div>
+                  </div>
+                )}
+                <div
+                  className={cn("flex w-full h-full",selectedViewField ? "hidden" : "")}
+                >
+                  <NewChatView
+                    sendMessage={sendMessage}
+                    chatValue={chatValue}
+                    setChatValue={setChatValue}
+                    lockChat={lockChat}
+                    setLockChat={setLockChat}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="absolute bottom-8 right-8"></div>
+            )}
           </div>
-          {handleSelectChange() ? (
-            handleSelectChange()
-          ) : (
-            <div className="absolute bottom-8 right-8">
-              <Button className="px-3">
-                <IconComponent name="Play" className="h-6 w-6" />
+          {!haveChat && (
+            <div className="flex w-full justify-end pt-6">
+              <Button
+                variant={"outline"}
+                className="flex gap-2 px-3"
+                onClick={() => sendMessage(1)}
+              >
+                <IconComponent
+                  name={isBuilding ? "Loader2" : "Play"}
+                  className={cn(
+                    "h-4 w-4",
+                    isBuilding
+                      ? "animate-spin"
+                      : "fill-current text-medium-indigo"
+                  )}
+                />
+                Run Flow
               </Button>
             </div>
           )}

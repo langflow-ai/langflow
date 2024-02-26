@@ -2,14 +2,13 @@ from typing import Optional
 
 from langchain_community.chat_models.anthropic import ChatAnthropic
 from pydantic.v1 import SecretStr
+
+from langflow import CustomComponent
 from langflow.field_typing import Text
 
 
-from langflow import CustomComponent
-
-
 class AnthropicLLM(CustomComponent):
-    display_name: str = "Anthropic model"
+    display_name: str = "AnthropicModel"
     description: str = "Generate text using Anthropic Chat&Completion large language models."
 
     def build_config(self):
@@ -67,7 +66,7 @@ class AnthropicLLM(CustomComponent):
         try:
             output = ChatAnthropic(
                 model_name=model,
-                anthropic_api_key=SecretStr(anthropic_api_key) if anthropic_api_key else None,
+                anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=api_endpoint,

@@ -1,11 +1,13 @@
-from typing import Optional, List, Dict, Any
-from langflow import CustomComponent
+from typing import Any, Dict, List, Optional
+
 from langchain_community.llms.llamacpp import LlamaCpp
+
+from langflow import CustomComponent
 from langflow.field_typing import Text
 
 
 class LlamaCppComponent(CustomComponent):
-    display_name = "LlamaCpp model"
+    display_name = "LlamaCppModel"
     description = "Generate text using llama.cpp model."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
 
@@ -17,7 +19,10 @@ class LlamaCppComponent(CustomComponent):
             "echo": {"display_name": "Echo", "advanced": True},
             "f16_kv": {"display_name": "F16 KV", "advanced": True},
             "grammar_path": {"display_name": "Grammar Path", "advanced": True},
-            "last_n_tokens_size": {"display_name": "Last N Tokens Size", "advanced": True},
+            "last_n_tokens_size": {
+                "display_name": "Last N Tokens Size",
+                "advanced": True,
+            },
             "logits_all": {"display_name": "Logits All", "advanced": True},
             "logprobs": {"display_name": "Logprobs", "advanced": True},
             "lora_base": {"display_name": "Lora Base", "advanced": True},
@@ -132,5 +137,7 @@ class LlamaCppComponent(CustomComponent):
         )
         message = output.invoke(inputs)
         result = message.content if hasattr(message, "content") else message
+        self.status = result
+        return result
         self.status = result
         return result

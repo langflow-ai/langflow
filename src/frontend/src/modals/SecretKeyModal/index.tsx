@@ -8,6 +8,7 @@ import useAlertStore from "../../stores/alertStore";
 import { ApiKeyType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
+import { COPIED_NOTICE_ALERT } from "../../alerts_constants";
 
 export default function SecretKeyModal({
   title,
@@ -47,7 +48,7 @@ export default function SecretKeyModal({
       inputRef?.current?.focus();
       inputRef?.current?.select();
       setSuccessData({
-        title: "API Key copied!",
+        title: COPIED_NOTICE_ALERT,
       });
       setTextCopied(false);
 

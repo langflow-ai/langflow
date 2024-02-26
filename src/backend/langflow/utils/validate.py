@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Union
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
-
 PROMPT_INPUT_TYPES = ["Document", "BaseOutputParser", "Text", "Record"]
 
 
@@ -204,7 +203,9 @@ def prepare_global_scope(code, module):
                 for alias in node.names:
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
             except ModuleNotFoundError as e:
-                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again.") from e
+                raise ModuleNotFoundError(
+                    f"Module {node.module} not found. Please install it and try again. Error: {repr(e)}"
+                )
     return exec_globals
 
 

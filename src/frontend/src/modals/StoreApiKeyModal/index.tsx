@@ -9,6 +9,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
+import { API_ERROR_ALERT, API_SUCCESS_ALERT } from "../../alerts_constants";
 
 export default function StoreApiKeyModal({
   children,
@@ -32,7 +33,7 @@ export default function StoreApiKeyModal({
       addApiKeyStore(apiKeyValue).then(
         () => {
           setSuccessData({
-            title: "Success! Your API Key has been saved.",
+            title: API_SUCCESS_ALERT,
           });
           storeApiKey(apiKeyValue);
           setOpen(false);
@@ -42,7 +43,7 @@ export default function StoreApiKeyModal({
         },
         (error) => {
           setErrorData({
-            title: "There was an error saving the API Key, please try again.",
+            title: API_ERROR_ALERT,
             list: [error["response"]["data"]["detail"]],
           });
           setHasApiKey(false);

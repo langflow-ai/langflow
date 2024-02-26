@@ -13,6 +13,7 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
+import { SIGNIN_ERROR_ALERT } from "../../alerts_constants";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
@@ -42,7 +43,7 @@ export default function LoginPage(): JSX.Element {
       })
       .catch((error) => {
         setErrorData({
-          title: "Error signing in",
+          title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });

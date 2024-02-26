@@ -39,6 +39,7 @@
     "clsx": "^1.2.1",
     "dompurify": "^3.0.5",
     "esbuild": "^0.17.19",
+    "framer-motion": "^11.0.6",
     "lodash": "^4.17.21",
     "lucide-react": "^0.331.0",
     "moment": "^2.29.4",

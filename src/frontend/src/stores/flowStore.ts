@@ -9,8 +9,10 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
+import { VertexBuildTypeAPI } from "../types/api";
 import {
   NodeDataType,
   NodeType,
@@ -25,6 +27,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
@@ -34,6 +37,7 @@ import useFlowsManagerStore from "./flowsManagerStore";
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowState: undefined,
+  flowBuildStatus: {},
   nodes: [],
   edges: [],
   isBuilding: false,
@@ -151,7 +155,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
-    console.log(newChange);
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
@@ -375,17 +378,29 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
-    function handleBuildUpdate(data: any) {
-      const responseData = data.data[data.id];
-      // responseData MAY contain inactive_vertices or it
-      // may be null, so we need to check for it
-      if (responseData && responseData.inactive_vertices) {
-        useFlowStore
-          .getState()
-          .setInactiveNodes(responseData.inactive_vertices);
+    function validateSubgraph(nodes: string[]) {
+      const errors = validateNodes(
+        get().nodes.filter((node) => nodes.includes(node.id)),
+        get().edges
+      );
+      if (errors.length > 0) {
+        setErrorData({
+          title: "Oops! Looks like you missed something",
+          list: errors,
+        });
+        get().setIsBuilding(false);
+        throw new Error("Invalid nodes");
       }
-      get().addDataToFlowPool(data.data[data.id], data.id);
-      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+    }
+    function handleBuildUpdate(
+      vertexBuildData: VertexBuildTypeAPI,
+      status: BuildStatus
+    ) {
+      if (vertexBuildData && vertexBuildData.inactive_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
+      }
+      get().addDataToFlowPool(vertexBuildData, vertexBuildData.id);
+      useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await updateFlowInDatabase({
       data: {
@@ -397,15 +412,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       name: currentFlow!.name,
       description: currentFlow!.description,
     });
-    setNoticeData({ title: "Running components" });
     await buildVertices({
       flowId: currentFlow!.id,
       nodeId,
+      onGetOrderSuccess: () => {
+        setNoticeData({ title: "Running components" });
+      },
       onBuildComplete: () => {
         if (nodeId) {
-          setSuccessData({ title: `${nodeId} built successfully` });
+          setSuccessData({
+            title: `${
+              get().nodes.find((node) => node.id === nodeId)?.data.node
+                ?.display_name
+            } built successfully`,
+          });
         } else {
-          setSuccessData({ title: `Flow built successfully` });
+          setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
         }
         get().setIsBuilding(false);
       },
@@ -417,7 +439,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildStart: (idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
+      validateNodes: validateSubgraph,
     });
+    get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
     return {
@@ -426,23 +450,33 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       viewport: get().reactFlowInstance?.getViewport()!,
     };
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-    nodeIdList.forEach((id) => {
-      const nodeToUpdate = get().nodes.find((node) => node.id === id);
-      if (nodeToUpdate) {
-        nodeToUpdate.data.build_status = status;
-        get().setNodes(get().nodes);
-      }
-    });
-  },
   updateVerticesBuild: (vertices: string[]) => {
     set({ verticesBuild: vertices });
   },
   verticesBuild: [],
-  setInactiveNodes(newState) {
-    set({ inactiveNodes: newState });
+
+  removeFromVerticesBuild: (vertices: string[]) => {
+    set({
+      verticesBuild: get().verticesBuild.filter(
+        (vertex) => !vertices.includes(vertex)
+      ),
+    });
   },
-  inactiveNodes: [],
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    const newFlowBuildStatus = { ...get().flowBuildStatus };
+    nodeIdList.forEach((id) => {
+      newFlowBuildStatus[id] = status;
+    });
+    set({ flowBuildStatus: newFlowBuildStatus });
+  },
+  revertBuiltStatusFromBuilding: () => {
+    const newFlowBuildStatus = { ...get().flowBuildStatus };
+    Object.keys(newFlowBuildStatus).forEach((id) => {
+      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id] = BuildStatus.BUILT;
+      }
+    });
+  },
 }));
 
 export default useFlowStore;

@@ -1,13 +1,13 @@
 from typing import Optional
-from langflow import CustomComponent
+
+from langchain.llms.base import BaseLLM
 from langchain.llms.huggingface_endpoint import HuggingFaceEndpoint
-from langchain_community.chat_models.huggingface import ChatHuggingFace
-from langflow.field_typing import Text
+from langflow import CustomComponent
 
 
 class HuggingFaceEndpointsComponent(CustomComponent):
-    display_name: str = "Hugging Face Inference API models"
-    description: str = "Generate text using LLM model from Hugging Face Inference API."
+    display_name: str = "Hugging Face Inference API"
+    description: str = "LLM model from Hugging Face Inference API."
 
     def build_config(self):
         return {
@@ -22,28 +22,22 @@ class HuggingFaceEndpointsComponent(CustomComponent):
                 "field_type": "code",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
         }
 
     def build(
         self,
-        inputs: str,
         endpoint_url: str,
         task: str = "text2text-generation",
         huggingfacehub_api_token: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
-    ) -> Text:
+    ) -> BaseLLM:
         try:
-            llm = HuggingFaceEndpoint(
+            output = HuggingFaceEndpoint(  # type: ignore
                 endpoint_url=endpoint_url,
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
-                model_kwargs=model_kwargs,
+                model_kwargs=model_kwargs or {},
             )
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
-        output = ChatHuggingFace(llm=llm)
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+        return output
