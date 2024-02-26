@@ -19,6 +19,7 @@ import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import { BUG_ALERT, PROMPT_ERROR_ALERT, PROMPT_SUCCESS_ALERT, TEMP_NOTICE_ALERT } from "../../alerts_constants";
 
 export default function GenericModal({
   field_name = "",
@@ -133,17 +134,17 @@ export default function GenericModal({
           }
           if (!inputVariables || inputVariables.length === 0) {
             setNoticeData({
-              title: "Your template does not have any variables.",
+              title: TEMP_NOTICE_ALERT,
             });
           } else {
             setSuccessData({
-              title: "Prompt is ready",
+              title: PROMPT_SUCCESS_ALERT,
             });
           }
         } else {
           setIsEdit(true);
           setErrorData({
-            title: "Something went wrong, please try again",
+            title: BUG_ALERT,
           });
         }
       })
@@ -151,7 +152,7 @@ export default function GenericModal({
         console.log(error);
         setIsEdit(true);
         return setErrorData({
-          title: "There is something wrong with this prompt, please review it",
+          title: PROMPT_ERROR_ALERT,
           list: [error.toString()],
         });
       });
@@ -182,7 +183,7 @@ export default function GenericModal({
           {myModalTitle}
         </span>
         <IconComponent
-          name="FileText"
+          name={myModalTitle === "Edit Prompt" ? "TerminalSquare" : "FileText"}
           className="h-6 w-6 pl-1 text-primary "
           aria-hidden="true"
         />
@@ -255,7 +256,7 @@ export default function GenericModal({
                   >
                     <div className="flex flex-wrap items-center">
                       <IconComponent
-                        name="Variable"
+                        name="Braces"
                         className=" -ml-px mr-1 flex h-4 w-4 text-primary"
                       />
                       <span className="text-md font-semibold text-primary">

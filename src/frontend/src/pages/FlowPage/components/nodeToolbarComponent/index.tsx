@@ -25,7 +25,8 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, cn } from "../../../../utils/utils";
+import { useUpdateNodeInternals } from "reactflow";
 
 export default function NodeToolbarComponent({
   data,
@@ -60,6 +61,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
+  const pinned = data.node?.pinned ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -85,6 +87,8 @@ export default function NodeToolbarComponent({
       onCloseAdvancedModal!(false);
     }
   }, [showModalAdvanced]);
+  const updateNodeInternals = useUpdateNodeInternals();
+
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -106,6 +110,9 @@ export default function NodeToolbarComponent({
       case "show":
         takeSnapshot();
         setShowNode(data.showNode ?? true ? false : true);
+        break;
+      case "Share":
+        if (hasApiKey || hasStore) setShowconfirmShare(true);
         break;
       case "Download":
         downloadNode(flowComponent!);
@@ -187,6 +194,7 @@ export default function NodeToolbarComponent({
 
       return newNode;
     });
+    updateNodeInternals(data.id);
   };
 
   const [openModal, setOpenModal] = useState(false);
@@ -222,7 +230,7 @@ export default function NodeToolbarComponent({
                     id={"code-input-node-toolbar-" + name}
                   />
                 </div>
-                <IconComponent name="Code2" className="h-4 w-4" />
+                <IconComponent name="Code" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (
@@ -269,22 +277,35 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
           </ShadTooltip>
-          {hasStore && (
-            <ShadTooltip content="Share" side="top">
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  !hasApiKey || !validApiKey ? " text-muted-foreground" : ""
+
+          <ShadTooltip content="Pin" side="top">
+            <button
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                setNode(data.id, (old) => ({
+                  ...old,
+                  data: {
+                    ...old.data,
+                    node: {
+                      ...old.data.node,
+                      pinned: old.data?.node?.pinned ? false : true,
+                    },
+                  },
+                }));
+              }}
+            >
+              <IconComponent
+                name="Pin"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  pinned ? "animate-wiggle fill-current" : ""
                 )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  if (hasApiKey || hasStore) setShowconfirmShare(true);
-                }}
-              >
-                <IconComponent name="Share3" className="-m-1 h-6 w-6" />
-              </button>
-            </ShadTooltip>
-          )}
+              />
+            </button>
+          </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
@@ -340,6 +361,20 @@ export default function NodeToolbarComponent({
                   </SelectItem>
                 )
               )}
+              {hasStore && (
+                <SelectItem
+                  value={"Share"}
+                  disabled={!hasApiKey || !validApiKey}
+                >
+                  <div className="flex" data-testid="save-button-modal">
+                    <IconComponent
+                      name="Share3"
+                      className="relative top-0.5 -m-1 mr-1 h-6 w-6"
+                    />{" "}
+                    Share{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
               {!hasStore && (
                 <SelectItem value={"Download"}>
                   <div className="flex">
@@ -360,9 +395,7 @@ export default function NodeToolbarComponent({
                     name="FileText"
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
-                  {data.node?.documentation === ""
-                    ? "Coming Soon"
-                    : "Documentation"}
+                  Docs
                 </div>{" "}
               </SelectItem>
               {isMinimal && (
@@ -388,13 +421,19 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem value={"delete"}>
-                <div className="font-red flex text-red-500 hover:text-red-500">
+              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+                <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
-                  Delete{" "}
+                  <span className="">Delete</span>{" "}
+                  <span>
+                    <IconComponent
+                      name="Delete"
+                      className="absolute right-2 top-2 h-4 w-4 text-red-300"
+                    ></IconComponent>
+                  </span>
                 </div>
               </SelectItem>
             </SelectContent>

@@ -1,12 +1,14 @@
 from typing import Optional
-from langflow import CustomComponent
+
 from langchain.llms.base import BaseLanguageModel
-from langchain_community.chat_models.azure_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
+
+from langflow import CustomComponent
 
 
 class AzureChatOpenAIComponent(CustomComponent):
-    display_name: str = "AzureChatOpenAI"
-    description: str = "LLM model from Azure OpenAI."
+    display_name: str = "AzureOpenAI Model"
+    description: str = "Generate text using LLM model from Azure OpenAI."
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
 
@@ -69,12 +71,14 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "info": "Maximum number of tokens to generate.",
             },
             "code": {"show": False},
+            "inputs": {"display_name": "Input"},
         }
 
     def build(
         self,
         model: str,
         azure_endpoint: str,
+        inputs: str,
         azure_deployment: str,
         api_key: str,
         api_version: str,
@@ -82,7 +86,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
         try:
-            llm = AzureChatOpenAI(
+            output = AzureChatOpenAI(
                 model=model,
                 azure_endpoint=azure_endpoint,
                 azure_deployment=azure_deployment,
@@ -93,4 +97,7 @@ class AzureChatOpenAIComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
-        return llm
+        message = output.invoke(inputs)
+        result = message.content if hasattr(message, "content") else message
+        self.status = result
+        return result

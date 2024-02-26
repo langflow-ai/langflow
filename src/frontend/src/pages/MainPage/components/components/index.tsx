@@ -9,6 +9,7 @@ import { Button } from "../../../../components/ui/button";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
+import { CONSOLE_ERROR_MSG, UPLOAD_ALERT_LIST, WRONG_FILE_ERROR_ALERT } from "../../../../alerts_constants";
 
 export default function ComponentsComponent({
   is_component = true,
@@ -76,14 +77,14 @@ export default function ComponentsComponent({
           })
           .catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: CONSOLE_ERROR_MSG,
               list: [error],
             });
           });
       } else {
         setErrorData({
-          title: "Invalid file type",
-          list: ["Please upload a JSON file"],
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
         });
       }
     }

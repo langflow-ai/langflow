@@ -21,17 +21,14 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { AuthContext } from "../../contexts/authContext";
-import {
-  checkHasApiKey,
-  getStoreComponents,
-  getStoreTags,
-} from "../../controllers/API";
+import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+import { APIKEY_ERROR_ALERT, COMPONENTS_ERROR_ALERT, INVALID_API_ERROR_ALERT, NOAPI_ERROR_ALERT } from "../../alerts_constants";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -39,8 +36,6 @@ export default function StorePage(): JSX.Element {
   const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
 
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
-  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
-  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
 
   const { apiKey } = useContext(AuthContext);
 
@@ -48,6 +43,7 @@ export default function StorePage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
   const { id } = useParams();
@@ -64,31 +60,28 @@ export default function StorePage(): JSX.Element {
   const [selectFilter, setSelectFilter] = useState("all");
 
   useEffect(() => {
-    handleGetTags();
-  }, []);
-
-  useEffect(() => {
     if (!loadingApiKey) {
       if (!hasApiKey) {
         setErrorData({
-          title: "API Key Error",
+          title: APIKEY_ERROR_ALERT,
           list: [
-            "You don't have an API Key. Please add one to use the Langflow Store.",
+            NOAPI_ERROR_ALERT,
           ],
         });
         setLoading(false);
       } else if (!validApiKey) {
         setErrorData({
-          title: "API Key Error",
+          title: APIKEY_ERROR_ALERT,
           list: [
-            "Your API Key is not valid. Please add a valid API Key to use the Langflow Store.",
+            INVALID_API_ERROR_ALERT,
           ],
         });
       }
     }
-  }, [loadingApiKey, validApiKey, hasApiKey]);
+  }, [loadingApiKey, validApiKey, hasApiKey, currentFlowId]);
 
   useEffect(() => {
+    handleGetTags();
     handleGetComponents();
   }, [
     tabActive,
@@ -119,7 +112,7 @@ export default function StorePage(): JSX.Element {
   }
 
   function handleGetComponents() {
-    if (!hasApiKey || loadingApiKey) return;
+    if (loadingApiKey) return;
     setLoading(true);
     getStoreComponents({
       component_id: id,
@@ -159,7 +152,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(0);
           setLoading(false);
           setErrorData({
-            title: "Error getting components.",
+            title: COMPONENTS_ERROR_ALERT,
             list: [err["response"]["data"]["detail"]],
           });
         }
@@ -175,23 +168,6 @@ export default function StorePage(): JSX.Element {
     setPageIndex(1);
     setPageSize(12);
   }
-
-  const fetchApiData = async () => {
-    setLoadingApiKey(true);
-    try {
-      const res = await checkHasApiKey();
-      setHasApiKey(res?.has_api_key ?? false);
-      setValidApiKey(res?.is_valid ?? false);
-      setLoadingApiKey(false);
-    } catch (e) {
-      setLoadingApiKey(false);
-      console.log(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchApiData();
-  }, [apiKey]);
 
   return (
     <PageLayout

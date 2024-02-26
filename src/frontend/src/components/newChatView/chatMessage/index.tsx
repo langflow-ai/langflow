@@ -17,12 +17,65 @@ export default function ChatMessage({
   chat,
   lockChat,
   lastMessage,
+  updateChat,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
-  const chat_message = chat.message.toString();
+  const [streamUrl, setStreamUrl] = useState(chat.stream_url);
+  const [chatMessage, setChatMessage] = useState(chat.message.toString());
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
+  // probably the message is empty when we have a stream_url
+  // what we need is to update the chat_message with the SSE data
+  const streamChunks = (url: string) => {
+    setIsStreaming(true); // Streaming starts
+    return new Promise<boolean>((resolve, reject) => {
+      const eventSource = new EventSource(url);
+      eventSource.onmessage = (event) => {
+        let parsedData = JSON.parse(event.data);
+        if (parsedData.chunk) {
+          setChatMessage((prev) => prev + parsedData.chunk);
+        }
+      };
+      eventSource.onerror = (event) => {
+        reject(new Error("Streaming failed"));
+        setIsStreaming(false);
+        eventSource.close();
+      };
+      eventSource.addEventListener("close", (event) => {
+        setStreamUrl(null); // Update state to reflect the stream is closed
+        resolve(true);
+        setIsStreaming(false);
+        eventSource.close();
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (streamUrl && chat.message === "") {
+      streamChunks(streamUrl)
+        .then(() => {
+          if (updateChat) {
+            updateChat(chat, chatMessage, streamUrl);
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+  }, [streamUrl]);
+
+  useEffect(() => {
+    // This effect is specifically for calling updateChat after streaming ends
+    if (!isStreaming && streamUrl) {
+      if (updateChat) {
+        updateChat(chat, chatMessage, streamUrl);
+      }
+    }
+  }, [isStreaming]);
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
@@ -103,7 +156,7 @@ export default function ChatMessage({
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
                             className="markdown prose min-w-full text-primary word-break-break-word
-                     dark:prose-invert"
+dark:prose-invert"
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -161,10 +214,10 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chat_message}
+                            {chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chat_message]
+                      [chat.message, chatMessage]
                     )}
                   </div>
                   {chat.files && (

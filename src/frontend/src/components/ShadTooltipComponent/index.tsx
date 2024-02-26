@@ -1,4 +1,5 @@
 import { ShadToolTipType } from "../../types/components";
+import { cn } from "../../utils/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export default function ShadTooltip({
@@ -14,7 +15,7 @@ export default function ShadTooltip({
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
 
       <TooltipContent
-        className={styleClasses}
+        className={cn(styleClasses, "max-w-96") }
         side={side}
         avoidCollisions={false}
         sticky="always"

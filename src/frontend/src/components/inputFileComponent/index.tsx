@@ -4,6 +4,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
+import { CONSOLE_ERROR_MSG, CONSOLE_SUCCESS_MSG, INVALID_FILE_ALERT } from "../../alerts_constants";
 
 export default function InputFileComponent({
   value,
@@ -61,7 +62,7 @@ export default function InputFileComponent({
         uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
-            console.log("File uploaded successfully");
+            console.log(CONSOLE_SUCCESS_MSG);
             // Get the file name from the response
             const { file_path } = data;
             console.log("File name:", file_path);
@@ -75,14 +76,13 @@ export default function InputFileComponent({
             setLoading(false);
           })
           .catch(() => {
-            console.error("Error occurred while uploading file");
+            console.error(CONSOLE_ERROR_MSG);
             setLoading(false);
           });
       } else {
         // Show an error if the file type is not allowed
         setErrorData({
-          title:
-            "Please select a valid file. Only these file types are allowed:",
+          title: INVALID_FILE_ALERT,
           list: fileTypes,
         });
         setLoading(false);

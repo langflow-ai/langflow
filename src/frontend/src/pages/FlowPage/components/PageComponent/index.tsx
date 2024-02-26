@@ -24,12 +24,14 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  reconnectEdges,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import { INVALID_SELECTION_ERROR_ALERT, UPLOAD_ALERT_LIST, UPLOAD_ERROR_ALERT, WRONG_FILE_ERROR_ALERT } from "../../../../alerts_constants";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -256,14 +258,14 @@ export default function Page({
             position: position,
           }).catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: UPLOAD_ERROR_ALERT,
               list: [error],
             });
           });
         } else {
           setErrorData({
-            title: "Invalid file type",
-            list: ["Please upload a JSON file"],
+            title: WRONG_FILE_ERROR_ALERT,
+            list: [UPLOAD_ALERT_LIST],
           });
         }
       }
@@ -394,7 +396,7 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const { newFlow } = generateFlow(
+                        const { newFlow, removedEdges } = generateFlow(
                           lastSelection!,
                           nodes,
                           edges,
@@ -403,6 +405,10 @@ export default function Page({
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId
+                        );
+                        const newEdges = reconnectEdges(
+                          newGroupNode,
+                          removedEdges
                         );
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
@@ -414,19 +420,20 @@ export default function Page({
                           ),
                           newGroupNode,
                         ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
+                        setEdges((oldEdges) => [
+                          ...oldEdges.filter(
                             (oldEdge) =>
                               !lastSelection!.nodes.some(
                                 (selectionNode) =>
                                   selectionNode.id === oldEdge.target ||
                                   selectionNode.id === oldEdge.source
                               )
-                          )
-                        );
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
-                          title: "Invalid selection",
+                          title: INVALID_SELECTION_ERROR_ALERT,
                           list: validateSelection(lastSelection!, edges),
                         });
                       }

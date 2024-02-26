@@ -21,7 +21,7 @@ export default function ChatTrigger({}): JSX.Element {
       >
         <div className="flex gap-3">
           <IconComponent
-            name="Sliders"
+            name="Zap"
             className={"message-button-icon h-6 w-6 transition-all"}
           />
         </div>
