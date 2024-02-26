@@ -1,4 +1,5 @@
 from langchain_core.documents import Document
+
 from langflow import CustomComponent
 from langflow.utils.constants import LOADERS_INFO
 
@@ -38,6 +39,7 @@ class FileLoaderComponent(CustomComponent):
                     "srt",
                     "eml",
                     "md",
+                    "mdx",
                     "pptx",
                     "docx",
                 ],
@@ -55,6 +57,7 @@ class FileLoaderComponent(CustomComponent):
                     ".srt",
                     ".eml",
                     ".md",
+                    ".mdx",
                     ".pptx",
                     ".docx",
                 ],
@@ -74,7 +77,7 @@ class FileLoaderComponent(CustomComponent):
     def build(self, file_path: str, loader: str) -> Document:
         file_type = file_path.split(".")[-1]
 
-        # Mapeie o nome do loader selecionado para suas informações
+        # Map the loader to the correct loader class
         selected_loader_info = None
         for loader_info in LOADERS_INFO:
             if loader_info["name"] == loader:
@@ -85,7 +88,7 @@ class FileLoaderComponent(CustomComponent):
             raise ValueError(f"Loader {loader} not found in the loader info list")
 
         if loader == "Automatic":
-            # Determine o loader automaticamente com base na extensão do arquivo
+            # Determine the loader based on the file type
             default_loader_info = None
             for info in LOADERS_INFO:
                 if "defaultFor" in info and file_type in info["defaultFor"]:
@@ -103,7 +106,7 @@ class FileLoaderComponent(CustomComponent):
         module_name, class_name = loader_import.rsplit(".", 1)
 
         try:
-            # Importe o loader dinamicamente
+            # Import the loader class
             loader_module = __import__(module_name, fromlist=[class_name])
             loader_instance = getattr(loader_module, class_name)
         except ImportError as e:
