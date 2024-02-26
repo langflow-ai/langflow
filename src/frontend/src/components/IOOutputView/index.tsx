@@ -11,17 +11,16 @@ export default function IOOutputView({
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
   const node = nodes.find((node) => node.id === outputId);
-  console.log(flowPool[node!.id][flowPool[node!.id].length - 1])
   function handleOutputType() {
-    if (!node) return "no node found";
+    if (!node) return <>"No node found!"</>;
     switch (outputType) {
       case "TextOutput":
         return (
           <Textarea
-            className="h-full w-full custom-scroll"
+            className="w-full custom-scroll"
             placeholder={"Empty"}
             // update to real value on flowPool
-            value={flowPool[node.id][flowPool[node.id].length - 1].params}
+            value={((flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1])?.params ?? ""}
             readOnly
           />
         );
@@ -29,7 +28,7 @@ export default function IOOutputView({
       default:
         return (
           <Textarea
-            className="h-full w-full custom-scroll"
+            className="w-full custom-scroll"
             placeholder={"Enter text..."}
             value={node.data.node!.template["value"]}
             onChange={(e) => {
@@ -44,10 +43,5 @@ export default function IOOutputView({
         );
     }
   }
-  return (
-    <div className="font-xl flex h-full w-full flex-col items-start gap-4 p-4 font-semibold">
-      {outputType}
-      {handleOutputType()}
-    </div>
-  );
+  return handleOutputType();
 }
