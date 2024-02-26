@@ -4,9 +4,9 @@ from langflow import CustomComponent
 from langflow.field_typing import Text
 
 
-class TextInput(CustomComponent):
-    display_name = "Text Input"
-    description = "Used to pass text input to the next component."
+class TextOutput(CustomComponent):
+    display_name = "Text Output"
+    description = "Used to pass text output to the next component."
 
     field_config = {
         "value": {"display_name": "Value"},

@@ -25,6 +25,7 @@ import {
   Compass,
   Copy,
   Cpu,
+  Delete,
   Download,
   DownloadCloud,
   Edit,
@@ -117,7 +118,6 @@ import {
   X,
   XCircle,
   Zap,
-  Delete,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -195,7 +195,7 @@ export const gradients = [
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   models: "#AA2411",
-  llms: "#6344BE",
+  model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
   list: "#9AAE42",
@@ -224,7 +224,7 @@ export const nodeColors: { [char: string]: string } = {
 export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
   models: "Language Models",
-  llms: "Model Settings",
+  model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
   tools: "Tools",
@@ -296,7 +296,7 @@ export const nodeIconsLucide: iconsType = {
   chains: Link,
   memories: Cpu,
   models: Bot,
-  llms: Lightbulb,
+  model_specs: Lightbulb,
   prompts: TerminalSquare,
   tools: Wrench,
   advanced: Laptop2,

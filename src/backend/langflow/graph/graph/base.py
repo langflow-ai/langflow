@@ -13,6 +13,7 @@ from langflow.graph.vertex.types import (
     ChatVertex,
     FileToolVertex,
     LLMVertex,
+    RoutingVertex,
     ToolkitVertex,
 )
 from langflow.interface.tools.constants import FILE_TOOLS
@@ -402,10 +403,12 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in ["ChatOutput", "ChatInput"]:
             return ChatVertex
-        if node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
-            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
+        elif node_name in ["ShouldRunNext"]:
+            return RoutingVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
+        elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+            return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
 
         if node_type in FILE_TOOLS:
             return FileToolVertex
