@@ -162,7 +162,10 @@ class Graph:
         self.edges = new_edges
 
     def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
-        return vertex.__repr__() == other_vertex.__repr__()
+        data_is_equivalent = vertex.__repr__() == other_vertex.__repr__()
+        if not data_is_equivalent:
+            return False
+        return self.vertex_edges_are_identical(vertex, other_vertex)
 
     def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)

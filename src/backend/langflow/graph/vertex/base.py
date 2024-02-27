@@ -516,6 +516,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
+
             raise ValueError(
                 f"Error building node {self.display_name}: {str(exc)}"
             ) from exc
