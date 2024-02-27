@@ -6,6 +6,7 @@ import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
 
+from langflow.graph.schema import INPUT_FIELD_NAME
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
