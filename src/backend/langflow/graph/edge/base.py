@@ -137,14 +137,15 @@ class ContractEdge(Edge):
         log_transaction(self, source, target, "success")
         # If the target vertex is a power component we log messages
         if target.vertex_type == "ChatOutput" and (
-            isinstance(target.params.get("message"), str) or isinstance(target.params.get("message"), dict)
+            isinstance(target.params.get("input_value"), str)
+            or isinstance(target.params.get("input_value"), dict)
         ):
             if target.params.get("message") == "":
                 return self.result
             await log_message(
                 sender=target.params.get("sender", ""),
                 sender_name=target.params.get("sender_name", ""),
-                message=target.params.get("message", {}),
+                message=target.params.get("input_value", {}),
                 session_id=target.params.get("session_id", ""),
                 artifacts=target.artifacts,
             )
