@@ -18,6 +18,7 @@ export type ChatOutputType = {
   message: string;
   sender: string;
   sender_name: string;
+  stream_url?: string;
 };
 
 export type FlowPoolObjectType = {
@@ -25,9 +26,10 @@ export type FlowPoolObjectType = {
   valid: boolean;
   params: any;
   data: { artifacts: any | ChatOutputType | chatInputType; results: any | ChatOutputType | chatInputType };
-  duration: string;
-  progress: number;
+  duration?: string;
+  progress?: number;
   id: string;
+  buildId: string;
 };
 
 export type FlowPoolType = {
@@ -40,7 +42,7 @@ export type FlowStoreType = {
   outputs: Array<{ type: string; id: string }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
-  addDataToFlowPool: (data: any, nodeId: string) => void;
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
   isPending: boolean;
