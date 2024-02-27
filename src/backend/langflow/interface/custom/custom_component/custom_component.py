@@ -35,6 +35,7 @@ from langflow.utils import validate
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
+    from langflow.graph.vertex.base import Vertex
 
 
 class CustomComponent(Component):
@@ -44,6 +45,12 @@ class CustomComponent(Component):
     """The description of the component. Defaults to None."""
     icon: Optional[str] = None
     """The icon of the component. It should be an emoji. Defaults to None."""
+    is_input: Optional[bool] = None
+    """The input state of the component. Defaults to None.
+    If True, the component must have a field named 'message'."""
+    is_output: Optional[bool] = None
+    """The output state of the component. Defaults to None.
+    If True, the component must have a field named 'message'."""
     code: Optional[str] = None
     """The code of the component. Defaults to None."""
     field_config: dict = {}
@@ -56,7 +63,7 @@ class CustomComponent(Component):
     """The build parameters of the component. Defaults to None."""
     selected_output_type: Optional[str] = None
     """The selected output type of the component. Defaults to None."""
-    outgoing_edges: Optional[List["ContractEdge"]] = None
+    vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
@@ -65,6 +72,7 @@ class CustomComponent(Component):
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
+
     _tree: Optional[dict] = None
 
     def __init__(self, **data):
