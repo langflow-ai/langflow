@@ -16,7 +16,7 @@ import {
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
-import { EDIT_PASSWORD_ALERT_LIST, EDIT_PASSWORD_ERROR_ALERT, SAVE_ERROR_ALERT, SAVE_SUCCESS_ALERT } from "../../alerts_constants";
+import { EDIT_PASSWORD_ALERT_LIST, EDIT_PASSWORD_ERROR_ALERT, SAVE_ERROR_ALERT, SAVE_SUCCESS_ALERT } from "../../constants/alerts_constants";
 export default function ProfileSettingsPage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId

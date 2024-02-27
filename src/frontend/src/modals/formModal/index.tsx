@@ -20,14 +20,14 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import { CHAT_FORM_DIALOG_SUBTITLE, chatFirstInitialText, chatSecondInitialText, langflowChatTitle } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { FlowState } from "../../types/tabs";
 import { validateNodes } from "../../utils/reactflowUtils";
-import { CHAT_ERROR_ALERT, INFO_MISSING_ALERT, MSG_ERROR_ALERT } from "../../alerts_constants";
+import { CHAT_ERROR_ALERT, INFO_MISSING_ALERT, MSG_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function FormModal({
   flow,
@@ -585,20 +585,20 @@ export default function FormModal({
                       <span>
                         👋{" "}
                         <span className="langflow-chat-span">
-                          Langflow Chat
+                          {langflowChatTitle}
                         </span>
                       </span>
                       <br />
                       <div className="langflow-chat-desc">
                         <span className="langflow-chat-desc-span">
-                          Start a conversation and click the agent's thoughts{" "}
+                          {chatFirstInitialText} {" "}
                           <span>
                             <IconComponent
                               name="MessageSquare"
                               className="mx-1 inline h-5 w-5 animate-bounce "
                             />
                           </span>{" "}
-                          to inspect the chaining process.
+                          {chatSecondInitialText}
                         </span>
                       </div>
                     </div>

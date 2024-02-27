@@ -13,6 +13,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
   specialCharsRegex,
+  successBuild,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
 import {
@@ -1087,7 +1088,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } }
 ) {
-  let status = { valid: true, params: "Built sucessfully ✨" };
+  let status = { valid: true, params: successBuild };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
   ids.forEach((id) => {

@@ -9,7 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
-import { FLOW_BUILD_SUCCESS_ALERT, MISSED_ERROR_ALERT } from "../alerts_constants";
+import { FLOW_BUILD_SUCCESS_ALERT, MISSED_ERROR_ALERT } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";

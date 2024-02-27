@@ -6,11 +6,11 @@ import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
-import { USER_PROJECTS_HEADER } from "../../constants/constants";
+import { USER_PROJECTS_HEADER, myCollectionDesc } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
-import { CONSOLE_ERROR_MSG } from "../../alerts_constants";
+import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -72,7 +72,7 @@ export default function HomePage(): JSX.Element {
   return (
     <PageLayout
       title={USER_PROJECTS_HEADER}
-      description="Manage your personal projects. Download or upload your collection."
+      description={myCollectionDesc}
       button={
         <div className="flex gap-2">
           <Button

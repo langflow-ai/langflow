@@ -26,7 +26,7 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ApiKey } from "../../types/components";
-import { DEL_KEY_ERROR_ALERT, DEL_KEY_SUCCESS_ALERT } from "../../alerts_constants";
+import { DEL_KEY_ERROR_ALERT, DEL_KEY_SUCCESS_ALERT } from "../../constants/alerts_constants";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);

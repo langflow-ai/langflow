@@ -15,7 +15,7 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-import { SIGNUP_ERROR_ALERT } from "../../alerts_constants";
+import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =

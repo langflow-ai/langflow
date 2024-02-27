@@ -8,7 +8,7 @@ import useAlertStore from "../../stores/alertStore";
 import { ApiKeyType } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
-import { COPIED_NOTICE_ALERT } from "../../alerts_constants";
+import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 
 export default function SecretKeyModal({
   title,

@@ -3,13 +3,13 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { EXPORT_DIALOG_SUBTITLE, alertSaveWApi, saveWApiCheckbox } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
-import { API_WARNING_NOTICE_ALERT } from "../../alerts_constants";
+import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
@@ -52,12 +52,11 @@ const ExportModal = forwardRef(
               }}
             />
             <label htmlFor="terms" className="export-modal-save-api text-sm ">
-              Save with my API keys
+              {saveWApiCheckbox}
             </label>
           </div>
           <span className=" text-xs text-destructive ">
-            Caution: Uncheck this box only removes API keys from fields
-            specifically designated for API keys.
+            {alertSaveWApi}
           </span>
         </BaseModal.Content>
 
