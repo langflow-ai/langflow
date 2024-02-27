@@ -1,10 +1,10 @@
 import ast
 import json
-from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
+from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
+                    Union)
 
 import yaml
 from langchain_core.messages import AIMessage
-from loguru import logger
 
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
@@ -343,17 +343,6 @@ class ChatVertex(StatelessVertex):
 
     def build_stream_url(self):
         return f"/api/v1/build/{self.graph.flow_id}/{self.id}/stream"
-
-    async def _build(self, user_id=None):
-        """
-        Initiate the build process.
-        """
-        logger.debug(f"Building {self.vertex_type}")
-        await self._build_each_node_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id)
-        self._validate_built_object()
-
-        self._built = True
 
     def _built_object_repr(self):
         if self.task_id and self.is_task:
