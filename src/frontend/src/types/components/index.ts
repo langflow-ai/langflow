@@ -527,7 +527,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url: string
+    stream_url?: string
   ) => void;
 };
 
@@ -632,9 +632,9 @@ export type validationStatusType = {
   id: string;
   data: object | any;
   params: string;
-  progress: number;
+  progress?: number;
   valid: boolean;
-  duration: string;
+  duration?: string;
 };
 
 export type ApiKey = {

@@ -51,7 +51,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: any, nodeId: string) => {
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
@@ -416,12 +416,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
-      status: BuildStatus
+      status: BuildStatus,
+      buildId:string
     ) {
       if (vertexBuildData && vertexBuildData.inactive_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
       }
-      get().addDataToFlowPool(vertexBuildData, vertexBuildData.id);
+      get().addDataToFlowPool({...vertexBuildData,buildId}, vertexBuildData.id);
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await updateFlowInDatabase({
