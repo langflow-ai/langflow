@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
 
 
-class VertexStates(Enum):
+class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
     ACTIVE = "active"
