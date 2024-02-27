@@ -12,6 +12,7 @@ from langflow.api import router
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
+from langflow.slack_app import app_handler
 from langflow.utils.logger import configure
 
 
@@ -54,6 +55,10 @@ def create_app():
     def health():
         return {"status": "ok"}
 
+    @app.post("/slack/events")
+    async def slack_events(req: Request):
+        return await app_handler.handle(req)
+
     app.include_router(router)
 
     return app
@@ -87,7 +92,9 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(
+    static_files_dir: Optional[Path] = None, backend_only: bool = False
+) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:
