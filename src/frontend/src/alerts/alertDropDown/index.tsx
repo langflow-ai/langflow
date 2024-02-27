@@ -8,6 +8,7 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
+import { zeroNotifications } from "../../constants/constants";
 
 export default function AlertDropdown({
   children,
@@ -68,7 +69,7 @@ export default function AlertDropdown({
             ))
           ) : (
             <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
-              No new notifications
+              {zeroNotifications}
             </div>
           )}
         </div>

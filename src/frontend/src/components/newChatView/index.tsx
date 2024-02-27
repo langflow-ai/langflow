@@ -14,7 +14,8 @@ import {
 import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
-import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../alerts_constants";
+import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../constants/alerts_constants";
+import { chatFirstInitialText, chatSecondInitialText } from "../../constants/constants";
 
 export default function NewChatView({
   sendMessage,
@@ -178,14 +179,14 @@ export default function NewChatView({
               <br />
               <div className="langflow-chat-desc">
                 <span className="langflow-chat-desc-span">
-                  Start a conversation and click the agent's thoughts{" "}
+                  {chatFirstInitialText}{" "}
                   <span>
                     <IconComponent
                       name="MessageSquare"
                       className="mx-1 inline h-5 w-5 animate-bounce "
                     />
                   </span>{" "}
-                  to inspect the chaining process.
+                  {chatSecondInitialText}
                 </span>
               </div>
             </div>

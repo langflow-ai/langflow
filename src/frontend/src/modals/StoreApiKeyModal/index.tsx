@@ -9,7 +9,8 @@ import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
-import { API_ERROR_ALERT, API_SUCCESS_ALERT } from "../../alerts_constants";
+import { API_ERROR_ALERT, API_SUCCESS_ALERT } from "../../constants/alerts_constants";
+import { createApi, insertApi, invalidApi, noApi } from "../../constants/constants";
 
 export default function StoreApiKeyModal({
   children,
@@ -60,10 +61,10 @@ export default function StoreApiKeyModal({
       <BaseModal.Header
         description={
           (hasApiKey && !validApiKey
-            ? "Your API key is not valid. "
+            ? invalidApi
             : !hasApiKey
-            ? "You don't have an API key. "
-            : "") + "Insert your Langflow API key."
+            ? noApi
+            : "") + insertApi
         }
       >
         <span className="pr-2">API Key</span>
@@ -98,7 +99,7 @@ export default function StoreApiKeyModal({
           </div>
           <div className="flex items-end justify-between">
             <span className="pr-1 text-xs text-muted-foreground">
-              Don’t have an API key? Sign up at{" "}
+              {createApi} {" "}
               <a
                 className="text-high-indigo underline"
                 href="https://langflow.store/"

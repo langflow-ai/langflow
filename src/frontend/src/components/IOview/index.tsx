@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import { CHAT_FORM_DIALOG_SUBTITLE, outputsModalTitle, textInputModalTitle } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -127,7 +127,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Type"} />
-                      Text Inputs
+                      {textInputModalTitle}
                     </div>
                     {nodes
                       .filter((node) =>
@@ -188,7 +188,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Braces"} />
-                      Prompt Outputs
+                      {outputsModalTitle}
                     </div>
                     {nodes
                       .filter((node) =>

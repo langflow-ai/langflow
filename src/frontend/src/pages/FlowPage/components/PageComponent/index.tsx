@@ -31,7 +31,7 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { INVALID_SELECTION_ERROR_ALERT, UPLOAD_ALERT_LIST, UPLOAD_ERROR_ALERT, WRONG_FILE_ERROR_ALERT } from "../../../../alerts_constants";
+import { INVALID_SELECTION_ERROR_ALERT, UPLOAD_ALERT_LIST, UPLOAD_ERROR_ALERT, WRONG_FILE_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 const nodeTypes = {
   genericNode: GenericNode,

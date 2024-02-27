@@ -8,7 +8,7 @@ import useFlowStore from "../../../stores/flowStore";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import { MISSED_ERROR_ALERT } from "../../../alerts_constants";
+import { MISSED_ERROR_ALERT } from "../../../constants/alerts_constants";
 
 export default function BuildTrigger({
   open,
