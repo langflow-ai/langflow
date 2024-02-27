@@ -431,7 +431,7 @@ export default function NodeToolbarComponent({
                   <span>
                     <IconComponent
                       name="Delete"
-                      className="absolute right-2 top-2 h-4 w-4 text-red-300"
+                      className="absolute right-2 top-2 h-4 w-4 text-red-400"
                     ></IconComponent>
                   </span>
                 </div>
