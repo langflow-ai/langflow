@@ -9,7 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
-import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
+import { FLOW_BUILD_SUCCESS_ALERT, MISSED_ERROR_ALERT } from "../alerts_constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -385,7 +385,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
       if (errors.length > 0) {
         setErrorData({
-          title: "Oops! Looks like you missed something",
+          title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
