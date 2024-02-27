@@ -24,7 +24,7 @@ class LLMMathChainComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         llm: BaseLanguageModel,
         llm_chain: LLMChain,
         input_key: str = "question",

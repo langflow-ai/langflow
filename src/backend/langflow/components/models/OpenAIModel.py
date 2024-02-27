@@ -1,6 +1,7 @@
 from typing import Optional
 
 from langchain_openai import ChatOpenAI
+
 from langflow import CustomComponent
 from langflow.field_typing import NestedDict, Text
 
@@ -60,7 +61,7 @@ class OpenAIModelComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
         model_name: str = "gpt-4-1106-preview",

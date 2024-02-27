@@ -62,7 +62,7 @@ class ChatVertexAIComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         credentials: Optional[str],
         project: str,
         examples: Optional[List[BaseMessage]] = [],

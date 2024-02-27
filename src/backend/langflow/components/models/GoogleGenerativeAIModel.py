@@ -57,7 +57,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
         self,
         google_api_key: str,
         model: str,
-        inputs: str,
+        input_value: str,
         max_output_tokens: Optional[int] = None,
         temperature: float = 0.1,
         top_k: Optional[int] = None,
