@@ -2,8 +2,7 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
-                    Optional)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from loguru import logger
 
@@ -41,6 +40,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
+        self._custom_component = None
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
@@ -202,6 +202,7 @@ class Vertex:
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"]["display_name"]
         self.pinned = self.data["node"].get("pinned", False)
+        self.selected_output_type = self.data["node"].get("selected_output_type")
         template_dicts = {
             key: value
             for key, value in self.data["node"]["template"].items()
@@ -500,11 +501,17 @@ class Vertex:
         if self.base_type is None:
             raise ValueError(f"Base type for node {self.display_name} not found")
         try:
+            outgoing_edges = self.graph.get_vertex_edges(
+                self.id, is_source=True, is_target=False
+            )
+
             result = await loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
                 user_id=user_id,
+                outgoing_edges=outgoing_edges,
+                selected_output_type=self.selected_output_type,
             )
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
@@ -518,7 +525,10 @@ class Vertex:
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            self._built_object, self.artifacts = result
+            if len(result) == 2:
+                self._built_object, self.artifacts = result
+            elif len(result) == 3:
+                self._custom_component, self._built_object, self.artifacts = result
         else:
             self._built_object = result
 
