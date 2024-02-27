@@ -315,6 +315,9 @@
   .built-invalid-status {
     @apply border-none ring ring-[#FF9090];
   }
+  .built-invalid-status-dark {
+    @apply border-none ring ring-[#751C1C]
+  }
   .building-status {
     @apply border-none ring;
   }

@@ -212,7 +212,7 @@ export default function GenericNode({
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
       return isDark
-        ? "border-none ring ring-[#751C1C]"
+        ? "built-invalid-status-dark"
         : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
