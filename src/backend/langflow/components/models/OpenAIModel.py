@@ -80,7 +80,7 @@ class OpenAIModelComponent(CustomComponent):
             temperature=temperature,
         )
 
-        message = model.invoke(inputs)
+        message = model.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result

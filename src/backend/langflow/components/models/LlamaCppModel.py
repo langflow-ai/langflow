@@ -135,7 +135,7 @@ class LlamaCppComponent(CustomComponent):
             verbose=verbose,
             vocab_only=vocab_only,
         )
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result
