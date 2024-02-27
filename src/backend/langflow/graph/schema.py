@@ -35,3 +35,5 @@ OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
     InterfaceComponentTypes.TextOutput,
 ]
+
+INPUT_FIELD_NAME = "input_value"
