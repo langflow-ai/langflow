@@ -97,14 +97,14 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start overflow-auto scrollbar-hide",
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start",
                   haveChat ? "w-2/6" : "w-full"
                 )}
               >
                 <Tabs
                   value={selectedTab.toString()}
                   className={
-                    "flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center"
+                    "flex h-full flex-col overflow-y-auto custom-scroll rounded-md border bg-muted text-center"
                   }
                   onValueChange={(value) => {
                     setSelectedTab(Number(value));

@@ -181,7 +181,7 @@ export default function CodeTabsComponent({
       {tabs.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content"
+          className="api-modal-tabs-content overflow-hidden"
           key={idx} // Remember to add a unique key prop
         >
           {idx < 4 ? (
