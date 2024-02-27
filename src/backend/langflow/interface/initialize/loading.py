@@ -1,6 +1,6 @@
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Type
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -35,16 +35,7 @@ from langflow.utils import validate
 if TYPE_CHECKING:
     from langflow import CustomComponent
     from langflow.graph.edge.base import ContractEdge
-
-
-def build_vertex_in_params(params: Dict) -> Dict:
     from langflow.graph.vertex.base import Vertex
-
-    # If any of the values in params is a Vertex, we will build it
-    return {
-        key: value.build() if isinstance(value, Vertex) else value
-        for key, value in params.items()
-    }
 
 
 async def instantiate_class(
@@ -52,8 +43,7 @@ async def instantiate_class(
     base_type: str,
     params: Dict,
     user_id=None,
-    outgoing_edges: Optional[List["ContractEdge"]] = None,
-    selected_output_type: Optional[str] = None,
+    vertex: Optional["Vertex"] = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
@@ -67,13 +57,12 @@ async def instantiate_class(
     logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
     return await instantiate_based_on_type(
-        class_object,
-        base_type,
-        node_type,
-        params,
+        class_object=class_object,
+        base_type=base_type,
+        node_type=node_type,
+        params=params,
         user_id=user_id,
-        outgoing_edges=outgoing_edges,
-        selected_output_type=selected_output_type,
+        vertex=vertex,
     )
 
 
@@ -107,8 +96,7 @@ async def instantiate_based_on_type(
     node_type,
     params,
     user_id,
-    outgoing_edges,
-    selected_output_type,
+    vertex,
 ):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
@@ -148,8 +136,7 @@ async def instantiate_based_on_type(
             class_object,
             params,
             user_id,
-            outgoing_edges,
-            selected_output_type,
+            vertex,
         )
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
@@ -158,7 +145,7 @@ async def instantiate_based_on_type(
 
 
 async def instantiate_custom_component(
-    node_type, class_object, params, user_id, outgoing_edges, selected_output_type
+    node_type, class_object, params, user_id, vertex
 ):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(
@@ -167,8 +154,8 @@ async def instantiate_custom_component(
     custom_component: "CustomComponent" = class_object(
         user_id=user_id,
         parameters=params_copy,
-        outgoing_edges=outgoing_edges,
-        selected_output_type=selected_output_type,
+        vertex=vertex,
+        selected_output_type=vertex.selected_output_type,
     )
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
