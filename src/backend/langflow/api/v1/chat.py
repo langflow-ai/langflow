@@ -14,7 +14,11 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import Session
 
-from langflow.api.utils import build_and_cache_graph, format_elapsed_time
+from langflow.api.utils import (
+    build_and_cache_graph,
+    format_elapsed_time,
+    format_exception_message,
+)
 from langflow.api.v1.schemas import (
     ResultData,
     StreamData,
@@ -45,9 +49,13 @@ async def chat(
         user = await get_current_user_for_websocket(websocket, db)
         await websocket.accept()
         if not user:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
         elif not user.is_active:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
 
         if client_id in chat_service.cache_service:
             await chat_service.handle_websocket(client_id, websocket)
@@ -63,7 +71,9 @@ async def chat(
         logger.error(f"Error in chat websocket: {exc}")
         messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
         if "Could not validate credentials" in str(exc):
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized")
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
+            )
         else:
             await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
@@ -133,8 +143,12 @@ async def build_vertex(
         cache = chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
-            logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
-            graph = build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
+            logger.warning(
+                f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
+            )
+            graph = build_and_cache_graph(
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
+            )
         else:
             graph = cache.get("result")
         result_dict = {}
@@ -165,7 +179,8 @@ async def build_vertex(
                 raise ValueError(f"No result found for vertex {vertex_id}")
 
         except Exception as exc:
-            params = str(exc)
+            #
+            params = format_exception_message(exc)
             valid = False
             result_dict = ResultData(results={})
             artifacts = {}
