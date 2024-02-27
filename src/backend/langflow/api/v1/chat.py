@@ -1,6 +1,6 @@
 import time
-from typing import Optional
 import uuid
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import (
     APIRouter,
@@ -34,6 +34,9 @@ from langflow.services.auth.utils import (
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session
 from langflow.services.monitor.utils import log_vertex_build
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.types import ChatVertex
 
 router = APIRouter(tags=["Chat"])
 
@@ -237,27 +240,40 @@ async def build_vertex_stream(
                 else:
                     graph = cache.get("result")
 
-                vertex = graph.get_vertex(vertex_id)
+                vertex: "ChatVertex" = graph.get_vertex(vertex_id)
+                if not hasattr(vertex, "stream"):
+                    raise ValueError(f"Vertex {vertex_id} does not support streaming")
                 if not vertex.pinned or not vertex._built:
+                    logger.debug(f"Streaming vertex {vertex_id}")
                     stream_data = StreamData(
                         event="message",
-                        data={"message": "Building vertex"},
+                        data={"message": f"Streaming vertex {vertex_id}"},
                     )
                     yield str(stream_data)
-
+                    number_of_chunks = 0
                     async for chunk in vertex.stream():
                         stream_data = StreamData(
                             event="message",
                             data={"chunk": chunk},
                         )
+                        number_of_chunks += 1
                         yield str(stream_data)
+                    logger.debug(f"Number of chunks: {number_of_chunks}")
+                elif vertex.result is not None:
+                    stream_data = StreamData(
+                        event="message",
+                        data={"chunk": vertex._built_result},
+                    )
+                    yield str(stream_data)
                 else:
                     raise ValueError(f"No result found for vertex {vertex_id}")
 
             except Exception as exc:
+                logger.error(f"Error building vertex: {exc}")
                 yield str(StreamData(event="error", data={"error": str(exc)}))
-
-            yield str(StreamData(event="close", data={"message": "Stream closed"}))
+            finally:
+                logger.debug("Closing stream")
+                yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
         return StreamingResponse(stream_vertex(), media_type="text/event-stream")
     except Exception as exc:
