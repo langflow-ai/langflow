@@ -4,6 +4,7 @@ from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Unio
 
 import yaml
 from langchain_core.messages import AIMessage
+from loguru import logger
 
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
@@ -361,7 +362,7 @@ class ChatVertex(StatelessVertex):
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                message = self.params.get("input_value", None)
+                message = self.params.get(INPUT_FIELD_NAME, None)
                 stream_url = None
                 if isinstance(self._built_object, AIMessage):
                     artifacts = ChatOutputResponse.from_message(
@@ -405,7 +406,7 @@ class ChatVertex(StatelessVertex):
             await super()._run(*args, **kwargs)
 
     async def stream(self):
-        iterator = self.params.get("input_value", None)
+        iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, (AsyncIterator, Iterator)):
             raise ValueError("The message must be an iterator or an async iterator.")
         is_async = isinstance(iterator, AsyncIterator)
@@ -431,6 +432,7 @@ class ChatVertex(StatelessVertex):
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
         ).model_dump()
+        logger.debug(f"Streamed message: {complete_message}")
 
         await log_message(
             sender=self.params.get("sender", ""),
