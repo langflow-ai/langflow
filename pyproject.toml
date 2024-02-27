@@ -103,9 +103,9 @@ langchain-google-genai = "^0.0.6"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 python-socketio = "^5.11.0"
-llama-index = "0.9.48"
+llama-index = "^0.10.13"
 langchain-openai = "^0.0.6"
-unstructured = {extras = ["md"], version = "^0.12.4"}
+unstructured = { extras = ["md"], version = "^0.12.4" }
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
