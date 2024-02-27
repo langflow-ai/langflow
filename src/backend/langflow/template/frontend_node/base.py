@@ -47,6 +47,12 @@ class FrontendNode(BaseModel):
     """Description of the frontend node."""
     icon: Optional[str] = None
     """Icon of the frontend node."""
+    is_input: Optional[bool] = None
+    """Whether the frontend node is used as an input when processing the Graph.
+    If True, there should be a field named 'message'."""
+    is_output: Optional[bool] = None
+    """Whether the frontend node is used as an output when processing the Graph.
+    If True, there should be a field named 'message'."""
     is_composition: Optional[bool] = None
     """Whether the frontend node is used for composition."""
     base_classes: List[str]
@@ -165,7 +171,9 @@ class FrontendNode(BaseModel):
         return _type
 
     @staticmethod
-    def handle_special_field(field, key: str, _type: str, SPECIAL_FIELD_HANDLERS) -> str:
+    def handle_special_field(
+        field, key: str, _type: str, SPECIAL_FIELD_HANDLERS
+    ) -> str:
         """Handles special field by using the respective handler if present."""
         handler = SPECIAL_FIELD_HANDLERS.get(key)
         return handler(field) if handler else _type
@@ -176,7 +184,11 @@ class FrontendNode(BaseModel):
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
             field.file_types = [".json", ".yaml", ".yml"]
-        elif _type.startswith("Dict") or _type.startswith("Mapping") or _type.startswith("dict"):
+        elif (
+            _type.startswith("Dict")
+            or _type.startswith("Mapping")
+            or _type.startswith("dict")
+        ):
             field.field_type = "dict"
         return _type
 
@@ -187,7 +199,9 @@ class FrontendNode(BaseModel):
             field.value = value["default"]
 
     @staticmethod
-    def handle_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def handle_specific_field_values(
+        field: TemplateField, key: str, name: Optional[str] = None
+    ) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
             field.value = """{"Authorization": "Bearer <token>"}"""
@@ -195,7 +209,9 @@ class FrontendNode(BaseModel):
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
     @staticmethod
-    def _handle_model_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def _handle_model_specific_field_values(
+        field: TemplateField, key: str, name: Optional[str] = None
+    ) -> None:
         """Handles specific field values related to models."""
         model_dict = {
             "OpenAI": constants.OPENAI_MODELS,
@@ -208,7 +224,9 @@ class FrontendNode(BaseModel):
             field.is_list = True
 
     @staticmethod
-    def _handle_api_key_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def _handle_api_key_specific_field_values(
+        field: TemplateField, key: str, name: Optional[str] = None
+    ) -> None:
         """Handles specific field values related to API keys."""
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
@@ -248,7 +266,10 @@ class FrontendNode(BaseModel):
     @staticmethod
     def should_be_password(key: str, show: bool) -> bool:
         """Determines whether the field should be a password field."""
-        return any(text in key.lower() for text in {"password", "token", "api", "key"}) and show
+        return (
+            any(text in key.lower() for text in {"password", "token", "api", "key"})
+            and show
+        )
 
     @staticmethod
     def should_be_multiline(key: str) -> bool:

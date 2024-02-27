@@ -37,4 +37,6 @@ ATTR_FUNC_MAPPING = {
     "documentation": getattr_return_str,
     "icon": validate_icon,
     "pinned": getattr_return_bool,
+    "is_input": getattr_return_bool,
+    "is_output": getattr_return_bool,
 }
