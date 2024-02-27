@@ -66,6 +66,14 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: Optional[List[Any]] = None
+    status: Optional[str] = None
+    session_id: Optional[str] = None
+
+
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
