@@ -405,7 +405,7 @@ class ChatVertex(StatelessVertex):
             await super()._run(*args, **kwargs)
 
     async def stream(self):
-        iterator = self.params.get("message", None)
+        iterator = self.params.get("input_value", None)
         if not isinstance(iterator, (AsyncIterator, Iterator)):
             raise ValueError("The message must be an iterator or an async iterator.")
         is_async = isinstance(iterator, AsyncIterator)
