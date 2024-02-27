@@ -20,7 +20,7 @@ from langflow.api.utils import (
     format_exception_message,
 )
 from langflow.api.v1.schemas import (
-    ResultData,
+    ResultDataResponse,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
@@ -151,26 +151,15 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-        result_dict = {}
+        result_data_response = {}
         duration = ""
 
         vertex = graph.get_vertex(vertex_id)
         try:
             if not vertex.pinned or not vertex._built:
                 await vertex.build(user_id=current_user.id)
-                params = vertex._built_object_repr()
-                valid = True
-                result_dict = vertex.get_built_result()
-                # We need to set the artifacts to pass information
-                # to the frontend
-                vertex.set_artifacts()
-                artifacts = vertex.artifacts
-                result_dict = ResultData(
-                    results=result_dict,
-                    artifacts=artifacts,
-                )
-                vertex.set_result(result_dict)
-            elif vertex.result is not None:
+
+            if vertex.result is not None:
                 params = vertex._built_object_repr()
                 valid = True
                 result_dict = vertex.result
@@ -178,11 +167,13 @@ async def build_vertex(
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
 
+            result_data_response = ResultDataResponse(**result_dict.model_dump())
+
         except Exception as exc:
-            #
+            logger.error(f"Error building vertex: {exc}")
             params = format_exception_message(exc)
             valid = False
-            result_dict = ResultData(results={})
+            result_data_response = ResultDataResponse(results={})
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
@@ -195,14 +186,14 @@ async def build_vertex(
             vertex_id=vertex_id,
             valid=valid,
             params=params,
-            data=result_dict,
+            data=result_data_response,
             artifacts=artifacts,
         )
 
         timedelta = time.perf_counter() - start_time
         duration = format_elapsed_time(timedelta)
-        result_dict.duration = duration
-        result_dict.timedelta = timedelta
+        result_data_response.duration = duration
+        result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
         inactive_vertices = None
         if graph.inactive_vertices:
@@ -215,7 +206,7 @@ async def build_vertex(
             valid=valid,
             params=params,
             id=vertex.id,
-            data=result_dict,
+            data=result_data_response,
         )
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
