@@ -361,7 +361,7 @@ class ChatVertex(StatelessVertex):
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                message = self.params.get("message", None)
+                message = self.params.get("input_value", None)
                 stream_url = None
                 if isinstance(self._built_object, AIMessage):
                     artifacts = ChatOutputResponse.from_message(
