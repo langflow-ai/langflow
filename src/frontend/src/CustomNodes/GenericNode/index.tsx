@@ -331,7 +331,7 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div className="group flex items-center gap-2.5">
-                        <ShadTooltip content={data.node?.display_name}>
+
                           <div
                             onDoubleClick={(event) => {
                               if (nameEditable) {
@@ -346,7 +346,7 @@ export default function GenericNode({
                           >
                             {data.node?.display_name}
                           </div>
-                        </ShadTooltip>
+
                         {nameEditable && (
                           <div
                             onClick={(event) => {
