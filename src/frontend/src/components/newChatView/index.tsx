@@ -160,6 +160,7 @@ export default function NewChatView({
           {chatHistory?.length > 0 ? (
             chatHistory.map((chat, index) => (
               <ChatMessage
+              setLockChat={setLockChat}
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
