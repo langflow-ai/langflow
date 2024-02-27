@@ -211,9 +211,7 @@ export default function GenericNode({
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
-      return isDark
-        ? "built-invalid-status-dark"
-        : "built-invalid-status";
+      return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
     } else {
@@ -246,6 +244,8 @@ export default function GenericNode({
 
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
+
+  console.log(data.node?.template);
 
   return (
     <>
@@ -331,21 +331,20 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div className="group flex items-center gap-2.5">
-
-                          <div
-                            onDoubleClick={(event) => {
-                              if (nameEditable) {
-                                setInputName(true);
-                              }
-                              takeSnapshot();
-                              event.stopPropagation();
-                              event.preventDefault();
-                            }}
-                            data-testid={"title-" + data.node?.display_name}
-                            className="generic-node-tooltip-div text-primary"
-                          >
-                            {data.node?.display_name}
-                          </div>
+                        <div
+                          onDoubleClick={(event) => {
+                            if (nameEditable) {
+                              setInputName(true);
+                            }
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
+                          data-testid={"title-" + data.node?.display_name}
+                          className="generic-node-tooltip-div text-primary"
+                        >
+                          {data.node?.display_name}
+                        </div>
 
                         {nameEditable && (
                           <div
@@ -477,11 +476,11 @@ export default function GenericNode({
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
-                            ? (`${durationString}\n${validationStatus.params}`
+                            ? `${durationString}\n${validationStatus.params}`
                                 .split("\n")
                                 .map((line, index) => (
                                   <div key={index}>{line}</div>
-                                )))
+                                ))
                             : durationString}
                         </div>
                       )

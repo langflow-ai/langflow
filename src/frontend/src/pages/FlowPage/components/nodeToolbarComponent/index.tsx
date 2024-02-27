@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -26,7 +27,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
-import { useUpdateNodeInternals } from "reactflow";
 
 export default function NodeToolbarComponent({
   data,
@@ -88,7 +88,6 @@ export default function NodeToolbarComponent({
     }
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
-
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -230,7 +229,7 @@ export default function NodeToolbarComponent({
                     id={"code-input-node-toolbar-" + name}
                   />
                 </div>
-                <IconComponent name="Code" className="h-4 w-4" />
+                <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (

@@ -223,6 +223,7 @@ export const nodeColors: { [char: string]: string } = {
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
   io: "#e6b25a",
+  text: "#049524",
 };
 
 export const nodeNames: { [char: string]: string } = {
