@@ -11,7 +11,7 @@ class ChatInput(CustomComponent):
 
     def build_config(self):
         return {
-            "message": {
+            "input_value": {
                 "input_types": ["Text"],
                 "display_name": "Message",
                 "multiline": True,
@@ -35,26 +35,26 @@ class ChatInput(CustomComponent):
         self,
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
-        message: Optional[str] = None,
+        input_value: Optional[str] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
     ) -> Union[Text, Record]:
         if return_record:
-            if isinstance(message, Record):
+            if isinstance(input_value, Record):
                 # Update the data of the record
-                message.data["sender"] = sender
-                message.data["sender_name"] = sender_name
-                message.data["session_id"] = session_id
+                input_value.data["sender"] = sender
+                input_value.data["sender_name"] = sender_name
+                input_value.data["session_id"] = session_id
             else:
-                message = Record(
-                    text=message,
+                input_value = Record(
+                    text=input_value,
                     data={
                         "sender": sender,
                         "sender_name": sender_name,
                         "session_id": session_id,
                     },
                 )
-        if not message:
-            message = ""
-        self.status = message
-        return message
+        if not input_value:
+            input_value = ""
+        self.status = input_value
+        return input_value

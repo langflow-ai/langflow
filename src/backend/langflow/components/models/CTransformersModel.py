@@ -35,11 +35,13 @@ class CTransformersComponent(CustomComponent):
         self,
         model: str,
         model_file: str,
-        inputs: str,
+        input_value: str,
         model_type: str,
         config: Optional[Dict] = None,
     ) -> Text:
-        output = CTransformers(model=model, model_file=model_file, model_type=model_type, config=config)
+        output = CTransformers(
+            model=model, model_file=model_file, model_type=model_type, config=config
+        )
         message = output.invoke(inputs)
         result = message.content if hasattr(message, "content") else message
         self.status = result

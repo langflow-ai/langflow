@@ -27,7 +27,7 @@ class RetrievalQAComponent(CustomComponent):
         self,
         combine_documents_chain: BaseCombineDocumentsChain,
         retriever: BaseRetriever,
-        inputs: str = "",
+        input_value: str = "",
         memory: Optional[BaseMemory] = None,
         input_key: str = "query",
         output_key: str = "result",

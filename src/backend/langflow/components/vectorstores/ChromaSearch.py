@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
+
 from langflow import CustomComponent
 from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record, docs_to_records
@@ -57,7 +58,7 @@ class ChromaSearchComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         search_type: str,
         collection_name: str,
         embedding: Embeddings,
@@ -92,7 +93,8 @@ class ChromaSearchComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
+                or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
