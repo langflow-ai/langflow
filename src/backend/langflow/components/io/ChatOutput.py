@@ -1,11 +1,11 @@
 from typing import Optional, Union
 
-from langflow import CustomComponent
 from langflow.field_typing import Text
+from langflow.io.schema import ChatComponent
 from langflow.schema import Record
 
 
-class ChatOutput(CustomComponent):
+class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Used to send a message to the chat."
 
