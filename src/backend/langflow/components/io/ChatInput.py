@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langflow import CustomComponent
+from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -37,7 +38,7 @@ class ChatInput(CustomComponent):
         message: Optional[str] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
-    ) -> Record:
+    ) -> Union[Text, Record]:
         if return_record:
             if isinstance(message, Record):
                 # Update the data of the record
