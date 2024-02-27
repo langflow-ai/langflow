@@ -4,9 +4,8 @@
 
 This guide will help you set up a Langflow development VM in a Google Cloud Platform project using Google Cloud Shell.
 
-:::note
-When Cloud Shell opens, be sure to select **Trust repo**. Some `gcloud` commands might not run in an ephemeral Cloud Shell environment.
-:::
+> Note: When Cloud Shell opens, be sure to select **Trust repo**. Some `gcloud` commands might not run in an ephemeral Cloud Shell environment.
+
 
 
 ## Standard VM 
