@@ -39,7 +39,7 @@ class AmazonBedrockComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         model_id: str = "anthropic.claude-instant-v1",
         credentials_profile_name: Optional[str] = None,
         region_name: Optional[str] = None,

@@ -47,10 +47,10 @@ class CustomComponent(Component):
     """The icon of the component. It should be an emoji. Defaults to None."""
     is_input: Optional[bool] = None
     """The input state of the component. Defaults to None.
-    If True, the component must have a field named 'message'."""
+    If True, the component must have a field named 'input_value'."""
     is_output: Optional[bool] = None
     """The output state of the component. Defaults to None.
-    If True, the component must have a field named 'message'."""
+    If True, the component must have a field named 'input_value'."""
     code: Optional[str] = None
     """The code of the component. Defaults to None."""
     field_config: dict = {}

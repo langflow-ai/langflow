@@ -23,7 +23,7 @@ class ConversationChainComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
     ) -> Text:

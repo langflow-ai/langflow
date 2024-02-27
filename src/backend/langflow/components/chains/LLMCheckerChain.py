@@ -18,7 +18,7 @@ class LLMCheckerChainComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         llm: BaseLanguageModel,
     ) -> Text:
 

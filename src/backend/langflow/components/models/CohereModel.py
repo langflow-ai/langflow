@@ -34,7 +34,7 @@ class CohereComponent(CustomComponent):
     def build(
         self,
         cohere_api_key: str,
-        inputs: str,
+        input_value: str,
         max_tokens: int = 256,
         temperature: float = 0.75,
     ) -> Text:

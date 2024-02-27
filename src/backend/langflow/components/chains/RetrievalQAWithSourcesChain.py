@@ -26,7 +26,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         retriever: BaseRetriever,
         llm: BaseLanguageModel,
         chain_type: str,
