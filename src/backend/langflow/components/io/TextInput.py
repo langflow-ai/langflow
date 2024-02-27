@@ -9,7 +9,7 @@ class TextInput(CustomComponent):
     description = "Used to pass text input to the next component."
 
     field_config = {
-        "value": {"display_name": "Value"},
+        "value": {"display_name": "Value", "multiline": True},
     }
 
     def build(self, value: Optional[str] = "") -> Text:
