@@ -78,10 +78,13 @@ export default function ChatMessage({
           console.error(error);
         });
     }
+  }, [streamUrl,chatMessage]);
+
+  useEffect(()=>{
     return () => {
       eventSource.current?.close();
     }
-  }, [streamUrl,chatMessage]);
+  },[])
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
