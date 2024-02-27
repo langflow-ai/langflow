@@ -424,15 +424,16 @@ class ChatVertex(StatelessVertex):
                 message = message.text if hasattr(message, "text") else message
                 yield message
                 complete_message += message
-        self._built_object = Record(text=complete_message, data=self.artifacts)
-        self._built_result = complete_message
-        # Update artifacts with the message
-        # and remove the stream_url
         self.artifacts = ChatOutputResponse(
             message=complete_message,
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
         ).model_dump()
+        self.params[INPUT_FIELD_NAME] = complete_message
+        self._built_object = Record(text=complete_message, data=self.artifacts)
+        self._built_result = complete_message
+        # Update artifacts with the message
+        # and remove the stream_url
         logger.debug(f"Streamed message: {complete_message}")
 
         await log_message(
@@ -442,6 +443,9 @@ class ChatVertex(StatelessVertex):
             session_id=self.params.get("session_id", ""),
             artifacts=self.artifacts,
         )
+
+        self._validate_built_object()
+        self._built = True
 
 
 class RoutingVertex(StatelessVertex):
