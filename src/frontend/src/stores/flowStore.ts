@@ -9,6 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
+import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -26,12 +27,12 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -377,6 +378,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
+    function validateSubgraph(nodes: string[]) {
+      const errors = validateNodes(
+        get().nodes.filter((node) => nodes.includes(node.id)),
+        get().edges
+      );
+      if (errors.length > 0) {
+        setErrorData({
+          title: "Oops! Looks like you missed something",
+          list: errors,
+        });
+        get().setIsBuilding(false);
+        throw new Error("Invalid nodes");
+      }
+    }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus
@@ -397,10 +412,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       name: currentFlow!.name,
       description: currentFlow!.description,
     });
-    setNoticeData({ title: "Running components" });
     await buildVertices({
       flowId: currentFlow!.id,
       nodeId,
+      onGetOrderSuccess: () => {
+        setNoticeData({ title: "Running components" });
+      },
       onBuildComplete: () => {
         if (nodeId) {
           setSuccessData({
@@ -422,6 +439,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildStart: (idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
+      validateNodes: validateSubgraph,
     });
     get().revertBuiltStatusFromBuilding();
   },

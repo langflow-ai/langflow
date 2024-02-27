@@ -3682,6 +3682,24 @@ lingua = ["lingua"]
 testing = ["pytest"]
 
 [[package]]
+name = "markdown"
+version = "3.5.2"
+description = "Python implementation of John Gruber's Markdown."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "Markdown-3.5.2-py3-none-any.whl", hash = "sha256:d43323865d89fc0cb9b20c75fc8ad313af307cc087e84b657d9eec768eddeadd"},
+    {file = "Markdown-3.5.2.tar.gz", hash = "sha256:e1ac7b3dc550ee80e602e71c1d168002f062e49f1b11e26a36264dafd4df2ef8"},
+]
+
+[package.dependencies]
+importlib-metadata = {version = ">=4.4", markers = "python_version < \"3.10\""}
+
+[package.extras]
+docs = ["mdx-gh-links (>=0.2)", "mkdocs (>=1.5)", "mkdocs-gen-files", "mkdocs-literate-nav", "mkdocs-nature (>=0.6)", "mkdocs-section-index", "mkdocstrings[python]"]
+testing = ["coverage", "pyyaml"]
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
@@ -8212,6 +8230,7 @@ emoji = "*"
 filetype = "*"
 langdetect = "*"
 lxml = "*"
+markdown = {version = "*", optional = true, markers = "extra == \"md\""}
 nltk = "*"
 numpy = "*"
 python-iso639 = "*"
@@ -9026,4 +9045,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "1462954b3befc2989ae226f2214111be786eb05bade578c9c80b4ed80d5b59ff"
+content-hash = "b35a356770d3425f524b0c46a449696db1fa7c13fae77324188cb6ffa4a4c5a7"

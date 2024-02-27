@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowUpToLine,
   Bell,
   BookMarked,
@@ -340,6 +341,7 @@ export const nodeIconsLucide: iconsType = {
   Bell,
   ChevronLeft,
   ChevronDown,
+  ArrowLeft,
   Shield,
   Plus,
   Redo,
