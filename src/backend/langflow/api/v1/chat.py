@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+import uuid
 
 from fastapi import (
     APIRouter,
@@ -120,7 +121,8 @@ async def get_vertices(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        return VerticesOrderResponse(ids=vertices)
+        run_id = uuid.uuid4()
+        return VerticesOrderResponse(ids=vertices, run_id=run_id)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
