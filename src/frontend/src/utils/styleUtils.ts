@@ -218,12 +218,11 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   utilities: "#31A3CC",
   output_parsers: "#E6A627",
-  str: "#049524",
+  str: "#31a3cc",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
   io: "#e6b25a",
-  text: "#049524",
 };
 
 export const nodeNames: { [char: string]: string } = {
