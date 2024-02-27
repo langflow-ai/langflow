@@ -19,6 +19,7 @@ export default function ChatMessage({
   lockChat,
   lastMessage,
   updateChat,
+  setLockChat
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -73,14 +74,17 @@ export default function ChatMessage({
   useEffect(() => {
     console.log("chatMessage", chatMessage);
     if (streamUrl && !isStreaming) {
+      setLockChat(true);
       streamChunks(streamUrl)
         .then(() => {
+          setLockChat(false);
           if (updateChat) {
             updateChat(chat, chatMessageRef.current);
           }
         })
         .catch((error) => {
           console.error(error);
+          setLockChat(false);
         });
     }
   }, [streamUrl, chatMessage]);
