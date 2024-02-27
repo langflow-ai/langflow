@@ -1,6 +1,15 @@
 import operator
 from pathlib import Path
-from typing import Any, Callable, ClassVar, List, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 from uuid import UUID
 
 import yaml
@@ -24,6 +33,9 @@ from langflow.services.deps import (
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 
+if TYPE_CHECKING:
+    from langflow.graph.edge.base import ContractEdge
+
 
 class CustomComponent(Component):
     display_name: Optional[str] = None
@@ -40,6 +52,12 @@ class CustomComponent(Component):
     """The field order of the component. Defaults to an empty list."""
     pinned: Optional[bool] = False
     """The default pinned state of the component. Defaults to False."""
+    build_parameters: Optional[dict] = None
+    """The build parameters of the component. Defaults to None."""
+    selected_output_type: Optional[str] = None
+    """The selected output type of the component. Defaults to None."""
+    outgoing_edges: Optional[List["ContractEdge"]] = None
+    """The edge target parameter of the component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
@@ -88,7 +106,9 @@ class CustomComponent(Component):
     def tree(self):
         return self.get_code_tree(self.code or "")
 
-    def to_records(self, data: Any, text_key: str = "text", data_key: str = "data") -> List[dict]:
+    def to_records(
+        self, data: Any, text_key: str = "text", data_key: str = "data"
+    ) -> List[dict]:
         """
         Convert data into a list of records.
 
@@ -115,7 +135,9 @@ class CustomComponent(Component):
 
         return records
 
-    def create_references_from_records(self, records: List[dict], include_data: bool = False) -> str:
+    def create_references_from_records(
+        self, records: List[dict], include_data: bool = False
+    ) -> str:
         """
         Create references from a list of records.
 
@@ -150,7 +172,8 @@ class CustomComponent(Component):
                     detail={
                         "error": "Type hint Error",
                         "traceback": (
-                            "Prompt type is not supported in the build method." " Try using PromptTemplate instead."
+                            "Prompt type is not supported in the build method."
+                            " Try using PromptTemplate instead."
                         ),
                     },
                 )
@@ -164,14 +187,20 @@ class CustomComponent(Component):
         if not self.code:
             return {}
 
-        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
+        component_classes = [
+            cls
+            for cls in self.tree["classes"]
+            if self.code_class_base_inheritance in cls["bases"]
+        ]
         if not component_classes:
             return {}
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
+            method
+            for method in component_class["methods"]
+            if method["name"] == self.function_entrypoint_name
         ]
 
         return build_methods[0] if build_methods else {}
@@ -228,7 +257,9 @@ class CustomComponent(Component):
             # Retrieve and decrypt the credential by name for the current user
             db_service = get_db_service()
             with session_getter(db_service) as session:
-                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
+                return credential_service.get_credential(
+                    user_id=self._user_id or "", name=name, session=session
+                )
 
         return get_credential
 
@@ -238,7 +269,9 @@ class CustomComponent(Component):
         credential_service = get_credential_service()
         db_service = get_db_service()
         with session_getter(db_service) as session:
-            return credential_service.list_credentials(user_id=self._user_id, session=session)
+            return credential_service.list_credentials(
+                user_id=self._user_id, session=session
+            )
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable."""
@@ -289,7 +322,11 @@ class CustomComponent(Component):
             if flow_id:
                 flow = session.query(Flow).get(flow_id)
             elif flow_name:
-                flow = (session.query(Flow).filter(Flow.name == flow_name).filter(Flow.user_id == self.user_id)).first()
+                flow = (
+                    session.query(Flow)
+                    .filter(Flow.name == flow_name)
+                    .filter(Flow.user_id == self.user_id)
+                ).first()
             else:
                 raise ValueError("Either flow_name or flow_id must be provided")
 
