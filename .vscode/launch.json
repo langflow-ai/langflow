@@ -17,6 +17,9 @@
       ],
       "jinja": true,
       "justMyCode": true,
+      "env": {
+        "LANGFLOW_LOG_LEVEL": "debug"
+      },
       "envFile": "${workspaceFolder}/.env"
     },
     {
