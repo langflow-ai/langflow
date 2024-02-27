@@ -24,7 +24,10 @@ export default function ChatMessage({
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
-  const [chatMessage, setChatMessage] = useState(chat.message.toString());
+  // We need to check if message is not undefined because
+  // we need to run .toString() on it
+  const chatMessageString = chat.message ? chat.message.toString() : "";
+  const [chatMessage, setChatMessage] = useState(chatMessageString);
   const [isStreaming, setIsStreaming] = useState(false);
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
@@ -146,7 +149,7 @@ export default function ChatMessage({
                   <div className="w-full">
                     {useMemo(
                       () =>
-                        chat.message.toString() === "" && lockChat ? (
+                        chatMessage === "" && lockChat ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
@@ -288,11 +291,11 @@ dark:prose-invert"
                         }
                         return <p>{parts}</p>;
                       })
-                    : chat.message.toString()}
+                    : chatMessage}
                 </span>
               </>
             ) : (
-              <span>{chat.message.toString()}</span>
+              <span>{chatMessage}</span>
             )}
           </div>
         )}
