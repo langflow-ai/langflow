@@ -53,6 +53,7 @@ class Vertex:
             output_component_name in self.id
             for output_component_name in OUTPUT_COMPONENTS
         )
+        self.has_session_id = None
         self._custom_component = None
         self.has_external_input = False
         self.has_external_output = False
@@ -222,6 +223,8 @@ class Vertex:
             for key, value in self.data["node"]["template"].items()
             if isinstance(value, dict)
         }
+
+        self.has_session_id = "session_id" in template_dicts
 
         self.required_inputs = [
             template_dicts[key]["type"]
