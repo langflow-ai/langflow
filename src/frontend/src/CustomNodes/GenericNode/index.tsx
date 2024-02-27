@@ -135,7 +135,7 @@ export default function GenericNode({
     const iconName =
       iconElement || (data.node?.flow ? "group_components" : name);
     const iconClassName = `generic-node-icon ${
-      !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+      !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
     }`;
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
@@ -295,7 +295,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center")
               }
             >
               {iconNodeRender()}
