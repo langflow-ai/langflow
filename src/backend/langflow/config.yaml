@@ -11,31 +11,6 @@ agents:
     documentation: ""
   SQLAgent:
     documentation: ""
-chains:
-  # LLMChain:
-  #   documentation: "https://python.langchain.com/docs/modules/chains/foundational/llm_chain"
-  LLMMathChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_math"
-  LLMCheckerChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/additional/llm_checker"
-  # ConversationChain:
-  #   documentation: ""
-  SeriesCharacterChain:
-    documentation: ""
-  MidJourneyPromptChain:
-    documentation: ""
-  TimeTravelGuideChain:
-    documentation: ""
-  SQLDatabaseChain:
-    documentation: ""
-  RetrievalQA:
-    documentation: "https://python.langchain.com/docs/modules/chains/popular/vector_db_qa"
-  RetrievalQAWithSourcesChain:
-    documentation: ""
-  ConversationalRetrievalChain:
-    documentation: "https://python.langchain.com/docs/modules/chains/popular/chat_vector_db"
-  CombineDocsChain:
-    documentation: ""
 documentloaders:
   AirbyteJSONLoader:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"

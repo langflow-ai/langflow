@@ -12,12 +12,12 @@ export default function IOInputField({
   const setNode = useFlowStore((state) => state.setNode);
   const node = nodes.find((node) => node.id === inputId);
   function handleInputType() {
-    if (!node) return "no node found";
+    if (!node) return <>"No node found!"</>;
     switch (inputType) {
       case "TextInput":
         return (
           <Textarea
-            className="h-full w-full custom-scroll"
+            className="w-full"
             placeholder={"Enter text..."}
             value={node.data.node!.template["value"].value}
             onChange={(e) => {
@@ -47,7 +47,7 @@ export default function IOInputField({
       default:
         return (
           <Textarea
-            className="h-full w-full custom-scroll"
+            className="w-full custom-scroll"
             placeholder={"Enter text..."}
             value={node.data.node!.template["value"]}
             onChange={(e) => {
@@ -62,10 +62,5 @@ export default function IOInputField({
         );
     }
   }
-  return (
-    <div className="font-xl flex h-full w-full flex-col items-start gap-4 p-4 font-semibold">
-      {inputType}
-      {handleInputType()}
-    </div>
-  );
+  return handleInputType();
 }

@@ -4,7 +4,6 @@ import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { validateNodes } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
@@ -51,33 +50,22 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
     const { nodes, edges } = getFlow();
-    let nodeValidationErrors = validateNodes(nodes, edges);
-    if (nodeValidationErrors.length === 0) {
-      setIsBuilding(true);
-      setLockChat(true);
-      setChatValue("");
-      const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-      if (chatInputNode) {
-        let newNode = cloneDeep(chatInputNode);
-        newNode.data.node!.template["message"].value = chatValue;
-        setNode(chatInput!.id, newNode);
-      }
-      for (let i = 0; i < count; i++) {
-        await buildFlow().catch((err) => {
-          console.error(err);
-          setLockChat(false);
-        });
-      }
-      setLockChat(false);
-
-      //set chat message in the flow and run build
-      //@ts-ignore
-    } else {
-      setErrorData({
-        title: "Oops! Looks like you missed some required information:",
-        list: nodeValidationErrors,
+    setIsBuilding(true);
+    setLockChat(true);
+    setChatValue("");
+    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+    if (chatInputNode) {
+      let newNode = cloneDeep(chatInputNode);
+      newNode.data.node!.template["message"].value = chatValue;
+      setNode(chatInput!.id, newNode);
+    }
+    for (let i = 0; i < count; i++) {
+      await buildFlow().catch((err) => {
+        console.error(err);
+        setLockChat(false);
       });
     }
+    setLockChat(false);
   }
 
   useEffect(() => {
@@ -260,27 +248,52 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             )}
 
             {haveChat ? (
-              selectedViewField ? (
-                inputs.some((input) => input.id === selectedViewField.id) ? (
-                  <IOInputField
-                    inputType={selectedViewField.type!}
-                    inputId={selectedViewField.id!}
+              <div className="flex h-full w-full">
+                {selectedViewField && (
+                  <div
+                    className={cn(
+                      "flex h-full w-full flex-col items-start gap-4 p-4",
+                      !selectedViewField ? "hidden" : ""
+                    )}
+                  >
+                    <div className="font-xl flex items-center justify-center gap-3 font-semibold">
+                      <button onClick={() => setSelectedViewField(undefined)}>
+                        <IconComponent
+                          name={"ArrowLeft"}
+                          className="h-6 w-6"
+                        ></IconComponent>
+                      </button>
+                      {selectedViewField.type}
+                    </div>
+                    <div className="h-full">
+                    {inputs.some(
+                      (input) => input.id === selectedViewField.id
+                    ) ? (
+                      <IOInputField
+                        inputType={selectedViewField.type!}
+                        inputId={selectedViewField.id!}
+                      />
+                    ) : (
+                      <IOOutputView
+                        outputType={selectedViewField.type!}
+                        outputId={selectedViewField.id!}
+                      />
+                    )}
+                    </div>
+                  </div>
+                )}
+                <div
+                  className={cn("flex w-full h-full",selectedViewField ? "hidden" : "")}
+                >
+                  <NewChatView
+                    sendMessage={sendMessage}
+                    chatValue={chatValue}
+                    setChatValue={setChatValue}
+                    lockChat={lockChat}
+                    setLockChat={setLockChat}
                   />
-                ) : (
-                  <IOOutputView
-                    outputType={selectedViewField.type!}
-                    outputId={selectedViewField.id!}
-                  />
-                )
-              ) : (
-                <NewChatView
-                  sendMessage={sendMessage}
-                  chatValue={chatValue}
-                  setChatValue={setChatValue}
-                  lockChat={lockChat}
-                  setLockChat={setLockChat}
-                />
-              )
+                </div>
+              </div>
             ) : (
               <div className="absolute bottom-8 right-8"></div>
             )}
