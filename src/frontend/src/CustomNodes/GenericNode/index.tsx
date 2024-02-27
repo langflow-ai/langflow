@@ -119,6 +119,8 @@ export default function GenericNode({
       !showNode ? "absolute inset-x-6 h-12 w-12" : ""
     }`;
 
+    console.log(iconClassName);
+
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
     } else {
@@ -186,7 +188,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center ")
               }
             >
               {iconNodeRender()}
