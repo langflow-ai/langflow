@@ -9,8 +9,13 @@ from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
-                                         RoutingVertex, ToolkitVertex)
+from langflow.graph.vertex.types import (
+    ChatVertex,
+    FileToolVertex,
+    LLMVertex,
+    RoutingVertex,
+    ToolkitVertex,
+)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -317,12 +322,20 @@ class Graph:
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
-    def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
+    def get_vertex_edges(
+        self,
+        vertex_id: str,
+        is_target: Optional[bool] = None,
+        is_source: Optional[bool] = None,
+    ) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
+        # The idea here is to return the edges that have the vertex_id as source or target
+        # or both
         return [
             edge
             for edge in self.edges
-            if edge.source_id == vertex_id or edge.target_id == vertex_id
+            if (edge.source_id == vertex_id and is_source is not False)
+            or (edge.target_id == vertex_id and is_target is not False)
         ]
 
     def get_vertices_with_target(self, vertex_id: str) -> List[Vertex]:
