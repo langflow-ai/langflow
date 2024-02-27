@@ -92,4 +92,5 @@ export type FlowStoreType = {
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: { [key: string]: BuildStatus };
+  updateFlowPool: (nodeId:string, data:FlowPoolObjectType,buildId?:string) => void;
 };
