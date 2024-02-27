@@ -81,9 +81,6 @@ class PreloadResponse(BaseModel):
     is_clear: Optional[bool] = None
 
 
-# TaskStatusResponse(
-#         status=task.status, result=task.result if task.ready() else None
-#     )
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 
