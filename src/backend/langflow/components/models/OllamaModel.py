@@ -250,7 +250,7 @@ class ChatOllamaComponent(CustomComponent):
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result

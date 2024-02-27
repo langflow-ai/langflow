@@ -77,7 +77,7 @@ class AnthropicLLM(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result
