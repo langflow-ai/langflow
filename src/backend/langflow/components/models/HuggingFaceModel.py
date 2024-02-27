@@ -4,7 +4,6 @@ from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
 from langflow import CustomComponent
-
 from langflow.field_typing import Text
 
 
@@ -30,7 +29,7 @@ class HuggingFaceEndpointsComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         endpoint_url: str,
         task: str = "text2text-generation",
         huggingfacehub_api_token: Optional[str] = None,

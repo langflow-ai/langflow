@@ -66,6 +66,14 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: Optional[List[Any]] = None
+    status: Optional[str] = None
+    session_id: Optional[str] = None
+
+
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
@@ -73,9 +81,6 @@ class PreloadResponse(BaseModel):
     is_clear: Optional[bool] = None
 
 
-# TaskStatusResponse(
-#         status=task.status, result=task.result if task.ready() else None
-#     )
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 

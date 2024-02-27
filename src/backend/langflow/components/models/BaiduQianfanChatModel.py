@@ -73,7 +73,7 @@ class QianfanChatEndpointComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         model: str = "ERNIE-Bot-turbo",
         qianfan_ak: Optional[str] = None,
         qianfan_sk: Optional[str] = None,
