@@ -119,8 +119,6 @@ export default function GenericNode({
       !showNode ? "absolute inset-x-6 h-12 w-12" : ""
     }`;
 
-    console.log(iconClassName);
-
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
     } else {
