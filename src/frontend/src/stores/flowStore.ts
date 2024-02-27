@@ -19,7 +19,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType } from "../types/zustand/flow";
+import { FlowPoolObjectType, FlowStoreType } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   cleanEdges,
@@ -56,6 +56,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
       newFlowPool[nodeId].push(data);
+    }
+    get().setFlowPool(newFlowPool);
+  },
+  updateFlowPool:(nodeId:string,data:FlowPoolObjectType,buildId?:string)=>{
+    let newFlowPool = cloneDeep({ ...get().flowPool });
+    if (!newFlowPool[nodeId]){
+      return;
+    }
+    else {
+      let index = newFlowPool[nodeId].length-1;
+      if(buildId){
+        index = newFlowPool[nodeId].findIndex((flow)=>flow.id===buildId);
+      }
+      newFlowPool[nodeId][index] = data;
     }
     get().setFlowPool(newFlowPool);
   },
