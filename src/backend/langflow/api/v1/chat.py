@@ -1,10 +1,11 @@
 import time
 import uuid
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Body,
     Depends,
     HTTPException,
     WebSocket,
@@ -21,6 +22,7 @@ from langflow.api.utils import (
     format_exception_message,
 )
 from langflow.api.v1.schemas import (
+    InputValueRequest,
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,
@@ -139,10 +141,12 @@ async def build_vertex(
     flow_id: str,
     vertex_id: str,
     background_tasks: BackgroundTasks,
+    inputs: Annotated[InputValueRequest, Body(embed=True)] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
 ):
     """Build a vertex instead of the entire graph."""
+    {"inputs": {"input_value": "some value"}}
     start_time = time.perf_counter()
     try:
         start_time = time.perf_counter()
@@ -163,7 +167,7 @@ async def build_vertex(
         vertex = graph.get_vertex(vertex_id)
         try:
             if not vertex.pinned or not vertex._built:
-                await vertex.build(user_id=current_user.id)
+                await vertex.build(user_id=current_user.id, inputs=inputs.model_dump())
 
             if vertex.result is not None:
                 params = vertex._built_object_repr()
