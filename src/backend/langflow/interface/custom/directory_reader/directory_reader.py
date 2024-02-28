@@ -1,6 +1,7 @@
 import ast
 import os
 import zlib
+from pathlib import Path
 
 from loguru import logger
 
@@ -79,9 +80,13 @@ class DirectoryReader:
                 except Exception as e:
                     logger.error(f"Error while loading component: {e}")
                     continue
-            items.append({"name": menu["name"], "path": menu["path"], "components": components})
+            items.append(
+                {"name": menu["name"], "path": menu["path"], "components": components}
+            )
         filtered = [menu for menu in items if menu["components"]]
-        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
+        logger.debug(
+            f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}'
+        )
         return {"menu": filtered}
 
     def validate_code(self, file_content):
@@ -114,15 +119,24 @@ class DirectoryReader:
         Walk through the directory path and return a list of all .py files.
         """
         if not (safe_path := self.get_safe_path()):
-            raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
+            raise CustomComponentPathValueError(
+                f"The path needs to start with '{self.base_path}'."
+            )
 
         file_list = []
-        for root, _, files in os.walk(safe_path):
-            file_list.extend(
-                os.path.join(root, filename)
-                for filename in files
-                if filename.endswith(".py") and not filename.startswith("__")
-            )
+        safe_path_obj = Path(safe_path)
+        for file_path in safe_path_obj.rglob("*.py"):
+            # The other condtion is that it should be
+            # in the safe_path/[folder]/[file].py format
+            # any folders below [folder] will be ignored
+            # basically the parent folder of the file should be a
+            # folder in the safe_path
+            if (
+                file_path.is_file()
+                and file_path.parent.parent == safe_path_obj
+                and not file_path.name.startswith("__")
+            ):
+                file_list.append(str(file_path))
         return file_list
 
     def find_menu(self, response, menu_name):
@@ -159,7 +173,9 @@ class DirectoryReader:
             for node in ast.walk(module):
                 if isinstance(node, ast.FunctionDef):
                     for arg in node.args.args:
-                        if self._is_type_hint_in_arg_annotation(arg.annotation, type_hint_name):
+                        if self._is_type_hint_in_arg_annotation(
+                            arg.annotation, type_hint_name
+                        ):
                             return True
         except SyntaxError:
             # Returns False if the code is not valid Python
@@ -177,14 +193,16 @@ class DirectoryReader:
             and annotation.value.id == type_hint_name
         )
 
-    def is_type_hint_used_but_not_imported(self, type_hint_name: str, code: str) -> bool:
+    def is_type_hint_used_but_not_imported(
+        self, type_hint_name: str, code: str
+    ) -> bool:
         """
         Check if a type hint is used but not imported in the given code.
         """
         try:
-            return self._is_type_hint_used_in_args(type_hint_name, code) and not self._is_type_hint_imported(
+            return self._is_type_hint_used_in_args(
                 type_hint_name, code
-            )
+            ) and not self._is_type_hint_imported(type_hint_name, code)
         except SyntaxError:
             # Returns True if there's something wrong with the code
             # TODO : Find a better way to handle this
@@ -205,9 +223,9 @@ class DirectoryReader:
             return False, "Syntax error"
         elif not self.validate_build(file_content):
             return False, "Missing build function"
-        elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
+        elif self._is_type_hint_used_in_args(
             "Optional", file_content
-        ):
+        ) and not self._is_type_hint_imported("Optional", file_content):
             return (
                 False,
                 "Type hint 'Optional' is used but not imported in the code.",
@@ -223,7 +241,9 @@ class DirectoryReader:
         from the .py files in the directory.
         """
         response = {"menu": []}
-        logger.debug("-------------------- Building component menu list --------------------")
+        logger.debug(
+            "-------------------- Building component menu list --------------------"
+        )
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
@@ -243,7 +263,9 @@ class DirectoryReader:
 
             # first check if it's already CamelCase
             if "_" in component_name:
-                component_name_camelcase = " ".join(word.title() for word in component_name.split("_"))
+                component_name_camelcase = " ".join(
+                    word.title() for word in component_name.split("_")
+                )
             else:
                 component_name_camelcase = component_name
 
@@ -251,7 +273,9 @@ class DirectoryReader:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
                 except Exception as exc:
-                    logger.exception(f"Error while getting output types from code: {str(exc)}")
+                    logger.exception(
+                        f"Error while getting output types from code: {str(exc)}"
+                    )
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -267,7 +291,9 @@ class DirectoryReader:
 
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
-        logger.debug("-------------------- Component menu list built --------------------")
+        logger.debug(
+            "-------------------- Component menu list built --------------------"
+        )
         return response
 
     @staticmethod
