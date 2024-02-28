@@ -28,7 +28,8 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import { APIKEY_ERROR_ALERT, COMPONENTS_ERROR_ALERT, INVALID_API_ERROR_ALERT, NOAPI_ERROR_ALERT } from "../../alerts_constants";
+import { APIKEY_ERROR_ALERT, COMPONENTS_ERROR_ALERT, INVALID_API_ERROR_ALERT, NOAPI_ERROR_ALERT } from "../../constants/alerts_constants";
+import { storeDesc, storeTitle } from "../../constants/constants";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -172,8 +173,8 @@ export default function StorePage(): JSX.Element {
   return (
     <PageLayout
       betaIcon
-      title="Langflow Store"
-      description="Search flows and components from the community."
+      title={storeTitle}
+      description={storeDesc}
       button={
         <>
           {StoreApiKeyModal && (

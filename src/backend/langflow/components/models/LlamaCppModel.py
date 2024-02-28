@@ -2,11 +2,11 @@ from typing import Any, Dict, List, Optional
 
 from langchain_community.llms.llamacpp import LlamaCpp
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class LlamaCppComponent(CustomComponent):
+class LlamaCppComponent(LCModelComponent):
     display_name = "LlamaCppModel"
     description = "Generate text using llama.cpp model."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
@@ -56,13 +56,17 @@ class LlamaCppComponent(CustomComponent):
             "use_mmap": {"display_name": "Use Mmap", "advanced": True},
             "verbose": {"display_name": "Verbose", "advanced": True},
             "vocab_only": {"display_name": "Vocab Only", "advanced": True},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
         model_path: str,
-        inputs: str,
+        input_value: str,
         grammar: Optional[str] = None,
         cache: Optional[bool] = None,
         client: Optional[Any] = None,
@@ -97,6 +101,7 @@ class LlamaCppComponent(CustomComponent):
         use_mmap: Optional[bool] = True,
         verbose: bool = True,
         vocab_only: bool = False,
+        stream: bool = False,
     ) -> Text:
         output = LlamaCpp(
             model_path=model_path,
@@ -135,9 +140,5 @@ class LlamaCppComponent(CustomComponent):
             verbose=verbose,
             vocab_only=vocab_only,
         )
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

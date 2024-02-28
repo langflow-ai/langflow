@@ -20,14 +20,17 @@ class RetrievalQAComponent(CustomComponent):
             "input_key": {"display_name": "Input Key", "advanced": True},
             "output_key": {"display_name": "Output Key", "advanced": True},
             "return_source_documents": {"display_name": "Return Source Documents"},
-            "inputs": {"display_name": "Input", "input_types": ["Text", "Document"]},
+            "input_value": {
+                "display_name": "Input",
+                "input_types": ["Text", "Document"],
+            },
         }
 
     def build(
         self,
         combine_documents_chain: BaseCombineDocumentsChain,
         retriever: BaseRetriever,
-        inputs: str = "",
+        input_value: str = "",
         memory: Optional[BaseMemory] = None,
         input_key: str = "query",
         output_key: str = "result",

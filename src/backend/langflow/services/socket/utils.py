@@ -2,14 +2,15 @@ import time
 from typing import Callable
 
 import socketio
+from sqlmodel import select
+
 from langflow.api.utils import format_elapsed_time
-from langflow.api.v1.schemas import ResultData, VertexBuildResponse
+from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import StatelessVertex
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
 from langflow.services.monitor.utils import log_vertex_build
-from sqlmodel import select
 
 
 def set_socketio_server(socketio_server):
@@ -73,7 +74,7 @@ async def build_vertex(
             artifacts = vertex.artifacts
             timedelta = time.perf_counter() - start_time
             duration = format_elapsed_time(timedelta)
-            result_dict = ResultData(
+            result_dict = ResultDataResponse(
                 results=result_dict,
                 artifacts=artifacts,
                 duration=duration,
@@ -82,7 +83,7 @@ async def build_vertex(
         except Exception as exc:
             params = str(exc)
             valid = False
-            result_dict = ResultData(results={})
+            result_dict = ResultDataResponse(results={})
             artifacts = {}
         set_cache(flow_id, graph)
         await log_vertex_build(
@@ -95,7 +96,9 @@ async def build_vertex(
         )
 
         # Emit the vertex build response
-        response = VertexBuildResponse(valid=valid, params=params, id=vertex.id, data=result_dict)
+        response = VertexBuildResponse(
+            valid=valid, params=params, id=vertex.id, data=result_dict
+        )
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
     except Exception as exc:

@@ -17,6 +17,7 @@ import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { savedHover } from "../../../../constants/constants";
 
 export const MenuBar = ({
   removeFunction,
@@ -127,7 +128,7 @@ export const MenuBar = ({
       </div>
       <ShadTooltip
         content={
-          "Last saved at " +
+          savedHover +
           new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
             hour: "numeric",
             minute: "numeric",

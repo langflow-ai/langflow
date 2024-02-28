@@ -25,7 +25,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
-import { UPLOAD_ERROR_ALERT } from "../../../../alerts_constants";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);

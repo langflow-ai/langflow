@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
@@ -89,6 +89,9 @@ export default function NodeToolbarComponent({
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
 
+  const setLastCopiedSelection = useFlowStore(
+    (state) => state.setLastCopiedSelection
+  );
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [
@@ -142,6 +145,9 @@ export default function NodeToolbarComponent({
       case "delete":
         deleteNode(data.id);
         break;
+      case "copy":
+        const node = nodes.filter((node) => node.id === data.id);
+        setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
     }
   };
 
@@ -229,7 +235,7 @@ export default function NodeToolbarComponent({
                     id={"code-input-node-toolbar-" + name}
                   />
                 </div>
-                <IconComponent name="Code" className="h-4 w-4" />
+                <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (
@@ -360,6 +366,20 @@ export default function NodeToolbarComponent({
                   </SelectItem>
                 )
               )}
+              <SelectItem value={"copy"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Copy"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Copy</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.5em]">C</span>
+                </div>
+              </SelectItem>
               {hasStore && (
                 <SelectItem
                   value={"Share"}
@@ -430,7 +450,7 @@ export default function NodeToolbarComponent({
                   <span>
                     <IconComponent
                       name="Delete"
-                      className="absolute right-2 top-2 h-4 w-4 text-red-300"
+                      className="absolute right-2 top-2 h-4 w-4 stroke-2 text-red-400"
                     ></IconComponent>
                   </span>
                 </div>

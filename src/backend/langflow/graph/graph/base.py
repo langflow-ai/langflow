@@ -1,5 +1,6 @@
+import asyncio
 from collections import defaultdict, deque
-from typing import Dict, Generator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
 from loguru import logger
@@ -7,12 +8,20 @@ from loguru import logger
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
-from langflow.graph.schema import InterfaceComponentTypes
+from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
-                                         RoutingVertex, ToolkitVertex)
+from langflow.graph.vertex.types import (
+    ChatVertex,
+    FileToolVertex,
+    LLMVertex,
+    RoutingVertex,
+    ToolkitVertex,
+)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
+
+if TYPE_CHECKING:
+    from langflow.graph.schema import ResultData
 
 
 class Graph:
@@ -24,14 +33,16 @@ class Graph:
         edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
     ) -> None:
-        self.inputs = []
-        self.outputs = []
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        self._is_input_vertices = []
+        self._is_output_vertices = []
+        self._has_session_id_vertices = []
+        self._sorted_vertices_layers = []
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -44,6 +55,67 @@ class Graph:
         self.inactive_vertices = set()
         self._build_graph()
         self.build_graph_maps()
+        self.define_vertices_lists()
+
+    @property
+    def sorted_vertices_layers(self):
+        if not self._sorted_vertices_layers:
+            self.sort_vertices()
+        return self._sorted_vertices_layers
+
+    def define_vertices_lists(self):
+        """
+        Defines the lists of vertices that are inputs, outputs, and have session_id.
+        """
+        attributes = ["is_input", "is_output", "has_session_id"]
+        for vertex in self.vertices:
+            for attribute in attributes:
+                if getattr(vertex, attribute):
+                    getattr(self, f"_{attribute}_vertices").append(vertex.id)
+
+    async def _run(self, inputs: Dict[str, str], stream: bool) -> List["ResultData"]:
+        """Runs the graph with the given inputs."""
+        for vertex_id in self._is_input_vertices:
+            vertex = self.get_vertex(vertex_id)
+            if vertex is None:
+                raise ValueError(f"Vertex {vertex_id} not found")
+            vertex.update_raw_params(inputs)
+        try:
+            await self.process()
+            self.increment_run_count()
+        except Exception as exc:
+            logger.exception(exc)
+            raise ValueError(f"Error running graph: {exc}") from exc
+        outputs = []
+        for vertex_id in self._is_output_vertices:
+            vertex = self.get_vertex(vertex_id)
+            if vertex is None:
+                raise ValueError(f"Vertex {vertex_id} not found")
+            if not stream and hasattr(vertex, "consume_async_generator"):
+                await vertex.consume_async_generator()
+            outputs.append(vertex.result)
+        return outputs
+
+    async def run(
+        self, inputs: Dict[str, Union[str, list[str]]], stream: bool
+    ) -> List["ResultData"]:
+        """Runs the graph with the given inputs."""
+
+        # inputs is {"message": "Hello, world!"}
+        # we need to go through self.inputs and update the self._raw_params
+        # of the vertices that are inputs
+        # if the value is a list, we need to run multiple times
+        outputs = []
+        inputs_values = inputs.get(INPUT_FIELD_NAME)
+        if not isinstance(inputs_values, list):
+            inputs_values = [inputs_values]
+        for input_value in inputs_values:
+            run_outputs = await self._run(
+                {INPUT_FIELD_NAME: input_value}, stream=stream
+            )
+            logger.debug(f"Run outputs: {run_outputs}")
+            outputs.extend(run_outputs)
+        return outputs
 
     @property
     def metadata(self):
@@ -157,7 +229,10 @@ class Graph:
         self.edges = new_edges
 
     def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
-        return vertex.__repr__() == other_vertex.__repr__()
+        data_is_equivalent = vertex.__repr__() == other_vertex.__repr__()
+        if not data_is_equivalent:
+            return False
+        return self.vertex_edges_are_identical(vertex, other_vertex)
 
     def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
@@ -246,28 +321,6 @@ class Graph:
         # Now that we have the vertices and edges
         # We need to map the vertices that are connected to
         # to ChatVertex instances
-        self._map_chat_vertices()
-
-    def _map_chat_vertices(self) -> None:
-        """Maps the vertices that are connected to ChatVertex instances."""
-        # For each edge, we need to check if the source or target vertex is a ChatVertex
-        # If it is, we need to update the other vertex `is_external` attribute
-        # and store the id of the ChatVertex in the attributes self.inputs and self.outputs
-        for edge in self.edges:
-            source_vertex = self.get_vertex(edge.source_id)
-            target_vertex = self.get_vertex(edge.target_id)
-            if isinstance(source_vertex, ChatVertex):
-                # The source vertex is a ChatVertex
-                # thus the target vertex is an external vertex
-                # and the source vertex is an input
-                target_vertex.has_external_input = True
-                self.inputs.append(source_vertex.id)
-            if isinstance(target_vertex, ChatVertex):
-                # The target vertex is a ChatVertex
-                # thus the source vertex is an external vertex
-                # and the target vertex is an output
-                source_vertex.has_external_output = True
-                self.outputs.append(target_vertex.id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
@@ -317,12 +370,20 @@ class Graph:
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
-    def get_vertex_edges(self, vertex_id: str) -> List[ContractEdge]:
+    def get_vertex_edges(
+        self,
+        vertex_id: str,
+        is_target: Optional[bool] = None,
+        is_source: Optional[bool] = None,
+    ) -> List[ContractEdge]:
         """Returns a list of edges for a given vertex."""
+        # The idea here is to return the edges that have the vertex_id as source or target
+        # or both
         return [
             edge
             for edge in self.edges
-            if edge.source_id == vertex_id or edge.target_id == vertex_id
+            if (edge.source_id == vertex_id and is_source is not False)
+            or (edge.target_id == vertex_id and is_target is not False)
         ]
 
     def get_vertices_with_target(self, vertex_id: str) -> List[Vertex]:
@@ -343,6 +404,38 @@ class Graph:
         if root_vertex is None:
             raise ValueError("No root vertex found")
         return await root_vertex.build()
+
+    async def process(self) -> "Graph":
+        """Processes the graph with vertices in each layer run in parallel."""
+        vertices_layers = self.sorted_vertices_layers
+
+        for layer_index, layer in enumerate(vertices_layers):
+            tasks = []
+            for vertex_id in layer:
+                vertex = self.get_vertex(vertex_id)
+                task = asyncio.create_task(
+                    vertex.build(), name=f"layer-{layer_index}-vertex-{vertex_id}"
+                )
+                tasks.append(task)
+            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
+            await self._execute_tasks(tasks)
+        logger.debug("Graph processing complete")
+        return self
+
+    async def _execute_tasks(self, tasks):
+        """Executes tasks in parallel, handling exceptions for each task."""
+        results = []
+        for i, task in enumerate(asyncio.as_completed(tasks)):
+            try:
+                result = await task
+                results.append(result)
+            except Exception as e:
+                # Log the exception along with the task name for easier debugging
+                # task_name = task.get_name()
+                # coroutine has not attribute get_name
+                task_name = tasks[i].get_name()
+                logger.error(f"Task {task_name} failed with exception: {e}")
+        return results
 
     def topological_sort(self) -> List[Vertex]:
         """
@@ -611,6 +704,7 @@ class Graph:
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
         vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         self.increment_run_count()
+        self._sorted_vertices_layers = vertices_layers
         return vertices_layers
 
     def sort_interface_components_first(

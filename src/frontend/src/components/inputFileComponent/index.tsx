@@ -4,7 +4,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
-import { CONSOLE_ERROR_MSG, CONSOLE_SUCCESS_MSG, INVALID_FILE_ALERT } from "../../alerts_constants";
+import { CONSOLE_ERROR_MSG, CONSOLE_SUCCESS_MSG, INVALID_FILE_ALERT } from "../../constants/alerts_constants";
 
 export default function InputFileComponent({
   value,

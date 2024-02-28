@@ -9,14 +9,14 @@ import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { CODE_PROMPT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { CODE_PROMPT_DIALOG_SUBTITLE, editCodeTitle } from "../../constants/constants";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
-import { BUG_ALERT, CODE_ERROR_ALERT, CODE_SUCCESS_ALERT, FUNC_ERROR_ALERT, IMPORT_ERROR_ALERT } from "../../alerts_constants";
+import { BUG_ALERT, CODE_ERROR_ALERT, CODE_SUCCESS_ALERT, FUNC_ERROR_ALERT, IMPORT_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function CodeAreaModal({
   value,
@@ -144,7 +144,7 @@ export default function CodeAreaModal({
     <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2">Edit Code</span>
+        <span className="pr-2"> {editCodeTitle} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary "

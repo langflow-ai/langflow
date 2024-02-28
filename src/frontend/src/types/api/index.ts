@@ -18,6 +18,8 @@ export type APIClassType = {
   template: APITemplateType;
   display_name: string;
   icon?: string;
+  is_input?: boolean;
+  is_output?: boolean;
   input_types?: Array<string>;
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
@@ -133,6 +135,7 @@ export type Component = {
 
 export type VerticesOrderTypeAPI = {
   ids: Array<Array<string>>;
+  run_id: string;
 };
 
 export type VertexBuildTypeAPI = {

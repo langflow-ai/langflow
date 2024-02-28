@@ -7,7 +7,8 @@ from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
 
 from loguru import logger
 
-from langflow.graph.schema import InterfaceComponentTypes
+from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
+                                   InterfaceComponentTypes, ResultData)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -17,12 +18,11 @@ from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.util import sync_to_async
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultData
     from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
 
 
-class VertexStates(Enum):
+class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
     ACTIVE = "active"
@@ -41,10 +41,21 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
+        self.will_stream = False
+        self.updated_raw_params = False
+        self.id: str = data["id"]
+        self.is_input = any(
+            input_component_name in self.id for input_component_name in INPUT_COMPONENTS
+        )
+        self.is_output = any(
+            output_component_name in self.id
+            for output_component_name in OUTPUT_COMPONENTS
+        )
+        self.has_session_id = None
+        self._custom_component = None
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
-        self.id: str = data["id"]
         self._data = data
         self.base_type: Optional[str] = base_type
         self._parse_data()
@@ -61,7 +72,7 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         self.should_run = True
-        self.result: Optional["ResultData"] = None
+        self.result: Optional[ResultData] = None
         try:
             self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
         except ValueError:
@@ -116,7 +127,7 @@ class Vertex:
                 )
         return edge_results
 
-    def set_result(self, result: "ResultData") -> None:
+    def set_result(self, result: ResultData) -> None:
         self.result = result
 
     def get_built_result(self):
@@ -202,11 +213,16 @@ class Vertex:
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"]["display_name"]
         self.pinned = self.data["node"].get("pinned", False)
+        self.selected_output_type = self.data["node"].get("selected_output_type")
+        self.is_input = self.data["node"].get("is_input") or self.is_input
+        self.is_output = self.data["node"].get("is_output") or self.is_output
         template_dicts = {
             key: value
             for key, value in self.data["node"]["template"].items()
             if isinstance(value, dict)
         }
+
+        self.has_session_id = "session_id" in template_dicts
 
         self.required_inputs = [
             template_dicts[key]["type"]
@@ -266,6 +282,10 @@ class Vertex:
 
         if self.graph is None:
             raise ValueError("Graph not found")
+
+        if self.updated_raw_params:
+            self.updated_raw_params = False
+            return
 
         template_dict = {
             key: value
@@ -358,6 +378,22 @@ class Vertex:
         self.params = params
         self._raw_params = params.copy()
 
+    def update_raw_params(self, new_params: Dict[str, str]):
+        """
+        Update the raw parameters of the vertex with the given new parameters.
+
+        Args:
+            new_params (Dict[str, Any]): The new parameters to update.
+
+        Raises:
+            ValueError: If any key in new_params is not found in self._raw_params.
+        """
+        # First check if the input_value in _raw_params is not a vertex
+        if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
+            return
+        self._raw_params.update(new_params)
+        self.updated_raw_params = True
+
     async def _build(self, user_id=None):
         """
         Initiate the build process.
@@ -368,6 +404,18 @@ class Vertex:
         self._validate_built_object()
 
         self._built = True
+
+    def _finalize_build(self):
+        result_dict = self.get_built_result()
+        # We need to set the artifacts to pass information
+        # to the frontend
+        self.set_artifacts()
+        artifacts = self.artifacts
+        result_dict = ResultData(
+            results=result_dict,
+            artifacts=artifacts,
+        )
+        self.set_result(result_dict)
 
     async def _run(
         self,
@@ -406,6 +454,8 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
+            elif key not in self.params:
+                self.params[key] = value
 
     def _is_node(self, value):
         """
@@ -500,15 +550,18 @@ class Vertex:
         if self.base_type is None:
             raise ValueError(f"Base type for node {self.display_name} not found")
         try:
+
             result = await loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
                 params=self.params,
                 user_id=user_id,
+                vertex=self,
             )
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             logger.exception(exc)
+
             raise ValueError(
                 f"Error building node {self.display_name}: {str(exc)}"
             ) from exc
@@ -518,7 +571,10 @@ class Vertex:
         Updates the built object and its artifacts.
         """
         if isinstance(result, tuple):
-            self._built_object, self.artifacts = result
+            if len(result) == 2:
+                self._built_object, self.artifacts = result
+            elif len(result) == 3:
+                self._custom_component, self._built_object, self.artifacts = result
         else:
             self._built_object = result
 
@@ -535,7 +591,7 @@ class Vertex:
 
             logger.warning(message)
 
-    def _reset(self):
+    def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()
@@ -572,6 +628,8 @@ class Vertex:
                 else:
                     step(user_id=user_id, **kwargs)
                 self.steps_ran.append(step)
+
+        self._finalize_build()
 
         return await self.get_requester_result(requester)
 

@@ -2,11 +2,11 @@ from typing import List, Optional
 
 from langchain_core.messages.base import BaseMessage
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class ChatVertexAIComponent(CustomComponent):
+class ChatVertexAIComponent(LCModelComponent):
     display_name = "ChatVertexAIModel"
     description = "Generate text using Vertex AI Chat large language models API."
 
@@ -57,12 +57,16 @@ class ChatVertexAIComponent(CustomComponent):
                 "value": False,
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         credentials: Optional[str],
         project: str,
         examples: Optional[List[BaseMessage]] = [],
@@ -73,6 +77,7 @@ class ChatVertexAIComponent(CustomComponent):
         top_k: int = 40,
         top_p: float = 0.95,
         verbose: bool = False,
+        stream: bool = False,
     ) -> Text:
         try:
             from langchain_google_vertexai import ChatVertexAI
@@ -92,7 +97,5 @@ class ChatVertexAIComponent(CustomComponent):
             top_p=top_p,
             verbose=verbose,
         )
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

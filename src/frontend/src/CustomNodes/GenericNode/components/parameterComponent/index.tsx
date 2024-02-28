@@ -19,6 +19,8 @@ import { Button } from "../../../../components/ui/button";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
+  inputHandleHover,
+  outputHandleHover,
 } from "../../../../constants/constants";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -182,8 +184,8 @@ export default function ParameterComponent({
             {index === 0 && (
               <span>
                 {left
-                  ? "Avaliable input components:"
-                  : "Avaliable output components:"}
+                  ? inputHandleHover
+                  : outputHandleHover}
               </span>
             )}
             <span
@@ -265,7 +267,7 @@ export default function ParameterComponent({
         <div className="flex">
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={0}
+            delayDuration={1000}
             content={refHtml.current}
             side={left ? "left" : "right"}
           >

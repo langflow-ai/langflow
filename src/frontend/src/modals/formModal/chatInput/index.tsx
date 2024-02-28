@@ -3,6 +3,7 @@ import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
+import { chatInputPlaceholder, chatInputPlaceholderSend } from "../../../constants/constants";
 
 export default function ChatInput({
   lockChat,
@@ -51,7 +52,7 @@ export default function ChatInput({
             ? "Thinking..."
             : typeof chatValue === "object" &&
               Object.keys(chatValue)?.length === 0
-            ? "No chat input variables found. Click to run your flow."
+            ? chatInputPlaceholder
             : chatValue
         }
         onChange={(event): void => {
@@ -68,8 +69,8 @@ export default function ChatInput({
         )}
         placeholder={
           noInput
-            ? "No chat input variables found. Click to run your flow."
-            : "Send a message..."
+            ? chatInputPlaceholder
+            : chatInputPlaceholderSend
         }
       />
       <div className="form-modal-send-icon-position">

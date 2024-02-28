@@ -1,17 +1,19 @@
 from typing import Optional
 
 from langchain_openai import ChatOpenAI
-from langflow import CustomComponent
+
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import NestedDict, Text
 
 
-class OpenAIModelComponent(CustomComponent):
+class OpenAIModelComponent(LCModelComponent):
     display_name = "OpenAI Model"
     description = "Generates text using OpenAI's models."
+    icon = "OpenAI"
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": False,
@@ -56,21 +58,26 @@ class OpenAIModelComponent(CustomComponent):
                 "required": False,
                 "value": 0.7,
             },
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
         model_name: str = "gpt-4-1106-preview",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
+        stream: Optional[bool] = False,
     ) -> Text:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
-        model = ChatOpenAI(
+        output = ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
             model=model_name,
@@ -79,7 +86,4 @@ class OpenAIModelComponent(CustomComponent):
             temperature=temperature,
         )
 
-        message = model.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+        return self.get_result(output=output, stream=stream, input_value=input_value)

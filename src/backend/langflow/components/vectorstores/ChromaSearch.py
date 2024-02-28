@@ -2,12 +2,13 @@ from typing import List, Optional
 
 import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
-from langflow import CustomComponent
+
+from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record, docs_to_records
+from langflow.schema import Record
 
 
-class ChromaSearchComponent(CustomComponent):
+class ChromaSearchComponent(LCVectorStoreComponent):
     """
     A custom component for implementing a Vector Store using Chroma.
     """
@@ -25,7 +26,7 @@ class ChromaSearchComponent(CustomComponent):
         - dict: A dictionary containing the configuration options for the component.
         """
         return {
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
             "search_type": {
                 "display_name": "Search Type",
                 "options": ["Similarity", "MMR"],
@@ -57,7 +58,7 @@ class ChromaSearchComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         search_type: str,
         collection_name: str,
         embedding: Embeddings,
@@ -92,24 +93,19 @@ class ChromaSearchComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
+                or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
         index_directory = self.resolve_path(index_directory)
-        chroma = Chroma(
+        vector_store = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,
             persist_directory=index_directory,
             client_settings=chroma_settings,
         )
 
-        # Validate the inputs
-        docs = []
-        if inputs and isinstance(inputs, str):
-            docs = chroma.search(query=inputs, search_type=search_type.lower())
-        else:
-            raise ValueError("Invalid inputs provided.")
-        return docs_to_records(docs)
+        return self.search_with_vector_store(input_value, search_type, vector_store)

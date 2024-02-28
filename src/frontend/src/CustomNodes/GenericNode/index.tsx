@@ -8,7 +8,11 @@ import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
-import { priorityFields } from "../../constants/constants";
+import {
+  priorityFields,
+  statusBuild,
+  statusBuilding,
+} from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useDarkStore } from "../../stores/darkStore";
@@ -135,7 +139,7 @@ export default function GenericNode({
     const iconName =
       iconElement || (data.node?.flow ? "group_components" : name);
     const iconClassName = `generic-node-icon ${
-      !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+      !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
     }`;
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
@@ -211,9 +215,7 @@ export default function GenericNode({
       return "inactive-status";
     }
     if (buildStatus === BuildStatus.BUILT && isInvalid) {
-      return isDark
-        ? "border-none ring ring-[#751C1C]"
-        : "built-invalid-status";
+      return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
     } else {
@@ -295,7 +297,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center ")
               }
             >
               {iconNodeRender()}
@@ -331,22 +333,21 @@ export default function GenericNode({
                   ) : (
                     <ShadTooltip content={data.node?.display_name}>
                       <div className="group flex items-center gap-2.5">
-                        <ShadTooltip content={data.node?.display_name}>
-                          <div
-                            onDoubleClick={(event) => {
-                              if (nameEditable) {
-                                setInputName(true);
-                              }
-                              takeSnapshot();
-                              event.stopPropagation();
-                              event.preventDefault();
-                            }}
-                            data-testid={"title-" + data.node?.display_name}
-                            className="generic-node-tooltip-div text-primary"
-                          >
-                            {data.node?.display_name}
-                          </div>
-                        </ShadTooltip>
+                        <div
+                          onDoubleClick={(event) => {
+                            if (nameEditable) {
+                              setInputName(true);
+                            }
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
+                          data-testid={"title-" + data.node?.display_name}
+                          className="generic-node-tooltip-div text-primary"
+                        >
+                          {data.node?.display_name}
+                        </div>
+
                         {nameEditable && (
                           <div
                             onClick={(event) => {
@@ -471,17 +472,17 @@ export default function GenericNode({
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
+                        <span> {statusBuilding} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">Build to validate status.</span>
+                        <span className="flex">{statusBuild}</span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
-                            ? (`${durationString}\n${validationStatus.params}`
+                            ? `${durationString}\n${validationStatus.params}`
                                 .split("\n")
                                 .map((line, index) => (
                                   <div key={index}>{line}</div>
-                                )))
+                                ))
                             : durationString}
                         </div>
                       )
