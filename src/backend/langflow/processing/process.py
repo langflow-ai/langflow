@@ -277,12 +277,19 @@ async def run_graph(
 ):
     """Run the graph and generate the result"""
     if isinstance(graph, dict):
+        graph_data = graph
         graph = Graph.from_payload(graph, flow_id=flow_id)
+    else:
+        graph_data = graph._graph_data
+    if not session_id:
+        session_id = session_service.generate_key(
+            session_id=flow_id, data_graph=graph_data
+        )
 
     outputs = await graph.run(inputs)
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
-    return outputs
+    return outputs, session_id
 
 
 def validate_input(
