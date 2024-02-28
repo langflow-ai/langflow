@@ -279,6 +279,8 @@ export const nodeIconsLucide: iconsType = {
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
+  MongoDB:MongoDBIcon,
+  MongoDBChatMessageHistory: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
