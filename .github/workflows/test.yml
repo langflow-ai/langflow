@@ -3,8 +3,16 @@ name: test
 on:
   push:
     branches: [main]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
   pull_request:
     branches: [dev]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
 
 env:
   POETRY_VERSION: "1.5.0"
