@@ -392,6 +392,8 @@ class Vertex:
             ValueError: If any key in new_params is not found in self._raw_params.
         """
         # First check if the input_value in _raw_params is not a vertex
+        if not new_params:
+            return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         self._raw_params.update(new_params)
@@ -624,7 +626,7 @@ class Vertex:
             return self.get_requester_result(requester)
         self._reset()
 
-        if inputs and self.is_input:
+        if self.is_input:
             self.update_raw_params(inputs)
 
         # Run steps
