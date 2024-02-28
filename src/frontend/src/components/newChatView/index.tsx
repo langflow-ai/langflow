@@ -1,6 +1,10 @@
-import _ from "lodash";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import { NOCHATOUTPUT_NOTICE_ALERT } from "../../constants/alerts_constants";
+import {
+  chatFirstInitialText,
+  chatSecondInitialText,
+} from "../../constants/constants";
 import { deleteFlowPool } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -14,8 +18,6 @@ import {
 import { classNames } from "../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
-import { INFO_MISSING_ALERT, NOCHATOUTPUT_NOTICE_ALERT } from "../../constants/alerts_constants";
-import { chatFirstInitialText, chatSecondInitialText } from "../../constants/constants";
 
 export default function NewChatView({
   sendMessage,
@@ -34,7 +36,7 @@ export default function NewChatView({
   const inputIds = inputs.map((obj) => obj.id);
   const outputIds = outputs.map((obj) => obj.id);
   const outputTypes = outputs.map((obj) => obj.type);
-  const updateFlowPool = useFlowStore((state)=>state.updateFlowPool)
+  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
 
   useEffect(() => {
     if (!outputTypes.includes("ChatOutput")) {
@@ -73,7 +75,7 @@ export default function NewChatView({
             isSend: !is_ai,
             message: message,
             sender_name,
-            componentId:  output.id,
+            componentId: output.id,
             stream_url: stream_url,
           };
         } catch (e) {
@@ -120,22 +122,26 @@ export default function NewChatView({
     chat: ChatMessageType,
     message: string,
     stream_url?: string
-    ) {
-      if (message === "") return;
-      chat.message = message;
+  ) {
+    if (message === "") return;
+    chat.message = message;
     // chat is one of the chatHistory
-    updateFlowPool(chat.componentId,{message,sender_name:chat.sender_name??"Bot",sender:chat.isSend?"User":"Machine"})
+    updateFlowPool(chat.componentId, {
+      message,
+      sender_name: chat.sender_name ?? "Bot",
+      sender: chat.isSend ? "User" : "Machine",
+    });
     // setChatHistory((oldChatHistory) => {
-      // const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
-      // if (index === -1) return oldChatHistory;
-      // let newChatHistory = _.cloneDeep(oldChatHistory);
-      // newChatHistory = [
-      //   ...newChatHistory.slice(0, index),
-      //   chat,
-      //   ...newChatHistory.slice(index + 1),
-      // ];
-      // console.log("newChatHistory:", newChatHistory);
-      // return newChatHistory;
+    // const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
+    // if (index === -1) return oldChatHistory;
+    // let newChatHistory = _.cloneDeep(oldChatHistory);
+    // newChatHistory = [
+    //   ...newChatHistory.slice(0, index),
+    //   chat,
+    //   ...newChatHistory.slice(index + 1),
+    // ];
+    // console.log("newChatHistory:", newChatHistory);
+    // return newChatHistory;
     // });
   }
 
@@ -160,7 +166,7 @@ export default function NewChatView({
           {chatHistory?.length > 0 ? (
             chatHistory.map((chat, index) => (
               <ChatMessage
-              setLockChat={setLockChat}
+                setLockChat={setLockChat}
                 lockChat={lockChat}
                 chat={chat}
                 lastMessage={chatHistory.length - 1 === index ? true : false}
