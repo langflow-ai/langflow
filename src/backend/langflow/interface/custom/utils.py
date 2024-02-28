@@ -314,14 +314,12 @@ def build_custom_component_template(
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
-        logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        logger.debug("Updated attributes")
         field_config, custom_instance = run_build_config(
             custom_component, user_id=user_id, update_field=update_field
         )
-        logger.debug("Built field config")
+
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
@@ -336,7 +334,6 @@ def build_custom_component_template(
         add_output_types(
             frontend_node, custom_component.get_function_entrypoint_return_type
         )
-        logger.debug("Added base classes")
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -432,7 +429,6 @@ def sanitize_field_config(field_config: Dict):
 def build_component(component):
     """Build a single component."""
     component_name = determine_component_name(component)
-    logger.debug(f"Building component: {component_name}")
     component_template = create_component_template(component)
 
     return component_name, component_template
