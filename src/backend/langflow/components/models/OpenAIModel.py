@@ -2,13 +2,14 @@ from typing import Optional
 
 from langchain_openai import ChatOpenAI
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import NestedDict, Text
 
 
-class OpenAIModelComponent(CustomComponent):
+class OpenAIModelComponent(LCModelComponent):
     display_name = "OpenAI Model"
     description = "Generates text using OpenAI's models."
+    icon = "OpenAI"
 
     def build_config(self):
         return {
@@ -84,10 +85,5 @@ class OpenAIModelComponent(CustomComponent):
             api_key=openai_api_key,
             temperature=temperature,
         )
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

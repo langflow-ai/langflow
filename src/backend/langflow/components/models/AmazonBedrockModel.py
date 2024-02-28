@@ -2,13 +2,14 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class AmazonBedrockComponent(CustomComponent):
+class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Model"
     description: str = "Generate text using LLM model from Amazon Bedrock."
+    icon = "AmazonBedrock"
 
     def build_config(self):
         return {
@@ -65,10 +66,5 @@ class AmazonBedrockComponent(CustomComponent):
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

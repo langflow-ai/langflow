@@ -3,15 +3,16 @@ from typing import Optional
 from langchain_community.chat_models.anthropic import ChatAnthropic
 from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class AnthropicLLM(CustomComponent):
+class AnthropicLLM(LCModelComponent):
     display_name: str = "AnthropicModel"
     description: str = (
         "Generate text using Anthropic Chat&Completion large language models."
     )
+    icon = "Anthropic"
 
     def build_config(self):
         return {
@@ -82,10 +83,5 @@ class AnthropicLLM(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

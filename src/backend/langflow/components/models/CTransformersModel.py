@@ -2,11 +2,11 @@ from typing import Dict, Optional
 
 from langchain_community.llms.ctransformers import CTransformers
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class CTransformersComponent(CustomComponent):
+class CTransformersComponent(LCModelComponent):
     display_name = "CTransformersModel"
     description = "Generate text using CTransformers LLM models"
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
@@ -47,10 +47,5 @@ class CTransformersComponent(CustomComponent):
         output = CTransformers(
             model=model, model_file=model_file, model_type=model_type, config=config
         )
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

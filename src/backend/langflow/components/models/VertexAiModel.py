@@ -2,11 +2,11 @@ from typing import List, Optional
 
 from langchain_core.messages.base import BaseMessage
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class ChatVertexAIComponent(CustomComponent):
+class ChatVertexAIComponent(LCModelComponent):
     display_name = "ChatVertexAIModel"
     description = "Generate text using Vertex AI Chat large language models API."
 
@@ -97,10 +97,5 @@ class ChatVertexAIComponent(CustomComponent):
             top_p=top_p,
             verbose=verbose,
         )
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

@@ -3,16 +3,17 @@ from typing import Optional
 from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 
 
-class AzureChatOpenAIComponent(CustomComponent):
+class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "AzureOpenAI Model"
     description: str = "Generate text using LLM model from Azure OpenAI."
     documentation: str = (
         "https://python.langchain.com/docs/integrations/llms/azure_openai"
     )
     beta = False
+    icon = "Azure"
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
@@ -104,10 +105,5 @@ class AzureChatOpenAIComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)
