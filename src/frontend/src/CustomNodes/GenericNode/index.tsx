@@ -269,6 +269,7 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
+          selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>
       <div

@@ -11,6 +11,7 @@ from langflow.schema import Record
 class SupabaseSearchComponent(LCVectorStoreComponent):
     display_name = "Supabase Search"
     description = "Search a Supabase Vector Store for similar documents."
+    icon="Supabase"
 
     def build_config(self):
         return {

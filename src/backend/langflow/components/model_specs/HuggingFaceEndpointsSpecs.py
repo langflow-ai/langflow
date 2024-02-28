@@ -8,6 +8,8 @@ from langflow import CustomComponent
 class HuggingFaceEndpointsComponent(CustomComponent):
     display_name: str = "Hugging Face Inference API"
     description: str = "LLM model from Hugging Face Inference API."
+    icon="HuggingFace"
+
 
     def build_config(self):
         return {

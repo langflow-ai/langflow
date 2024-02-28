@@ -9,7 +9,7 @@ from langflow.field_typing import Text
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Model"
     description: str = "Generate text using LLM model from Amazon Bedrock."
-    icon = "AmazonBedrock"
+    icon = "Amazon"
 
     def build_config(self):
         return {

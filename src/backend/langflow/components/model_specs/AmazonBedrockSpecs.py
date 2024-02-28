@@ -10,6 +10,8 @@ from langflow import CustomComponent
 class AmazonBedrockComponent(CustomComponent):
     display_name: str = "Amazon Bedrock"
     description: str = "LLM model from Amazon Bedrock."
+    icon = "Amazon"
+
 
     def build_config(self):
         return {

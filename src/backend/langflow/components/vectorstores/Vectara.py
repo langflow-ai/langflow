@@ -18,6 +18,7 @@ class VectaraComponent(CustomComponent):
         "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     )
     beta = True
+    icon="Vectara"
     field_config = {
         "vectara_customer_id": {
             "display_name": "Vectara Customer ID",
