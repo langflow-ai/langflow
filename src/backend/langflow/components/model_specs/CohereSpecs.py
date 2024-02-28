@@ -7,6 +7,7 @@ class CohereComponent(CustomComponent):
     display_name = "Cohere"
     description = "Cohere large language models."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
+    icon = "Cohere"
 
     def build_config(self):
         return {
