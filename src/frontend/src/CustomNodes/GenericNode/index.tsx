@@ -245,8 +245,6 @@ export default function GenericNode({
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
-  console.log(data.node?.template);
-
   return (
     <>
       <NodeToolbar>
