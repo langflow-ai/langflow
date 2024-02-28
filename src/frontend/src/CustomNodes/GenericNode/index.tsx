@@ -186,7 +186,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center ")
               }
             >
               {iconNodeRender()}
