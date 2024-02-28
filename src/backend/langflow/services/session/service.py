@@ -14,9 +14,7 @@ class SessionService(Service):
     def __init__(self, cache_service):
         self.cache_service: "BaseCacheService" = cache_service
 
-    async def load_session(
-        self, key, data_graph: Optional[dict] = None, flow_id: Optional[str] = None
-    ):
+    async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
         # Check if the data is cached
         if key in self.cache_service:
             return self.cache_service.get(key)

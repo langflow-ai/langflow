@@ -77,7 +77,7 @@ class Vertex:
         self.should_run = True
         self.result: Optional[ResultData] = None
         try:
-            self.is_interface_component = InterfaceComponentTypes(self.vertex_type)
+            self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
             self.is_interface_component = False
 
@@ -106,29 +106,6 @@ class Vertex:
 
     def add_build_time(self, time):
         self.build_times.append(time)
-
-    # Build a result dict for each edge
-    # like so: {edge.target.id: {edge.target_param: self._built_object}}
-    async def get_result_dict(self, force: bool = False) -> Dict[str, Dict[str, Any]]:
-        """
-        Returns a dictionary with the result of the build process.
-        """
-        edge_results = {}
-        for edge in self.edges:
-            target = self.graph.get_vertex(edge.target_id)
-            if edge.is_fulfilled and isinstance(
-                await edge.get_result(
-                    source=self,
-                    target=target,
-                ),
-                str,
-            ):
-                if edge.target_id not in edge_results:
-                    edge_results[edge.target_id] = {}
-                edge_results[edge.target_id][edge.target_param] = await edge.get_result(
-                    source=self, target=target
-                )
-        return edge_results
 
     def set_result(self, result: ResultData) -> None:
         self.result = result
@@ -626,7 +603,7 @@ class Vertex:
             return self.get_requester_result(requester)
         self._reset()
 
-        if self.is_input:
+        if self.is_input and inputs is not None:
             self.update_raw_params(inputs)
 
         # Run steps

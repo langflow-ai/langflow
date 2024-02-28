@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     CustomComponentCode,
+    InputValueRequest,
     ProcessResponse,
     RunResponse,
     TaskStatusResponse,
@@ -54,7 +55,7 @@ def get_all(
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[Union[List[dict], dict]] = None,
+    inputs: Optional[InputValueRequest] = None,
     tweaks: Optional[dict] = None,
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
@@ -62,6 +63,11 @@ async def run_flow_with_caching(
     session_service: SessionService = Depends(get_session_service),
 ):
     try:
+        if inputs is not None:
+            input_values_dict: dict[str, Union[str, list[str]]] = inputs.model_dump()
+        else:
+            input_values_dict = {}
+
         if session_id:
             session_data = await session_service.load_session(
                 session_id, flow_id=flow_id
@@ -74,7 +80,7 @@ async def run_flow_with_caching(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=inputs,
+                inputs=input_values_dict,
                 artifacts=artifacts,
                 session_service=session_service,
                 stream=stream,
@@ -99,7 +105,7 @@ async def run_flow_with_caching(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=inputs,
+                inputs=input_values_dict,
                 artifacts={},
                 session_service=session_service,
                 stream=stream,

@@ -52,7 +52,9 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
-        self.inactive_vertices = set()
+        self.inactive_vertices: set = set()
+        self.edges: List[ContractEdge] = []
+        self.vertices: List[Vertex] = []
         self._build_graph()
         self.build_graph_maps()
         self.define_vertices_lists()
@@ -100,7 +102,7 @@ class Graph:
 
     async def run(
         self, inputs: Dict[str, Union[str, list[str]]], stream: bool
-    ) -> List["ResultData"]:
+    ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
 
         # inputs is {"message": "Hello, world!"}
@@ -108,7 +110,7 @@ class Graph:
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         outputs = []
-        inputs_values = inputs.get(INPUT_FIELD_NAME)
+        inputs_values = inputs.get(INPUT_FIELD_NAME, "")
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
@@ -245,7 +247,7 @@ class Graph:
                 return False
         return True
 
-    def update(self, other: "Graph") -> None:
+    def update(self, other: "Graph") -> "Graph":
         # Existing vertices in self graph
         existing_vertex_ids = set(vertex.id for vertex in self.vertices)
         # Vertex IDs in the other graph
@@ -274,7 +276,7 @@ class Graph:
                 if not self_vertex.pinned:
                     self_vertex._built = False
                     self_vertex.result = None
-                    self_vertex.artifacts = None
+                    self_vertex.artifacts = {}
                     self_vertex.set_top_level(self.top_level_vertices)
                 self.reset_all_edges_of_vertex(self_vertex)
 
@@ -623,7 +625,7 @@ class Graph:
         queue = deque(
             vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0
         )
-        layers = []
+        layers: List[List[str]] = []
 
         current_layer = 0
         while queue:

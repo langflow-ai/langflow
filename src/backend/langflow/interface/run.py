@@ -1,14 +1,11 @@
-from typing import Dict, Optional, Tuple, Union
-from uuid import UUID
+from typing import Dict, Tuple
 
 from loguru import logger
 
 from langflow.graph import Graph
 
 
-async def build_sorted_vertices(
-    data_graph, flow_id: Optional[Union[str, UUID]] = None
-) -> Tuple[Graph, Dict]:
+async def build_sorted_vertices(data_graph, flow_id: str) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """

@@ -1,3 +1,4 @@
+import enum
 from typing import Dict, List, Optional, Union
 
 from langchain_core.messages import BaseMessage
@@ -40,3 +41,13 @@ class ChatOutputResponse(BaseModel):
         message = self.message.replace("\n\n", "\n")
         self.message = message.replace("\n", "\n\n")
         return self
+
+
+class ContainsEnumMeta(enum.EnumMeta):
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        else:
+            return True

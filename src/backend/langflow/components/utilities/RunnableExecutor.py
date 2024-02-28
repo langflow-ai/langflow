@@ -36,7 +36,7 @@ class RunnableExecComponent(CustomComponent):
         runnable: Runnable,
         output_key: str = "output",
     ) -> Text:
-        result = runnable.invoke({input_key: inputs})
+        result = runnable.invoke({input_key: input_value})
         result = result.get(output_key)
         self.status = result
         return result

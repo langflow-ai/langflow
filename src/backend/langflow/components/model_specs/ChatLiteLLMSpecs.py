@@ -150,6 +150,7 @@ class ChatLiteLLMComponent(CustomComponent):
 
         LLM = ChatLiteLLM(
             model=model,
+            client=None,
             streaming=streaming,
             temperature=temperature,
             model_kwargs=model_kwargs if model_kwargs is not None else {},

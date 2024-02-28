@@ -35,6 +35,7 @@ from langflow.utils import validate
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
+    from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
 
 
@@ -292,8 +293,9 @@ class CustomComponent(Component):
     def get_function(self):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
-    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> Any:
-        from langflow.processing.process import build_sorted_vertices, process_tweaks
+    async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
+        from langflow.graph.graph.base import Graph
+        from langflow.processing.process import process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:
@@ -302,7 +304,15 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        return await build_sorted_vertices(graph_data, self.user_id)
+        graph = Graph(**graph_data)
+        return graph
+
+    async def run_flow(
+        self, input_value: str, flow_id: str, tweaks: Optional[dict] = None
+    ) -> Any:
+        graph = await self.load_flow(flow_id, tweaks)
+        input_value_dict = {"input_value": input_value}
+        return await graph.run(input_value_dict)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self._user_id:

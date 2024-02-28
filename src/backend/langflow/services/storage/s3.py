@@ -1,5 +1,5 @@
-import boto3
-from botocore.exceptions import ClientError, NoCredentialsError
+import boto3  # type: ignore
+from botocore.exceptions import ClientError, NoCredentialsError  # type: ignore
 from loguru import logger
 
 from .service import StorageService
@@ -25,7 +25,9 @@ class S3StorageService(StorageService):
         :raises Exception: If an error occurs during file saving.
         """
         try:
-            self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
+            self.s3_client.put_object(
+                Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data
+            )
             logger.info(f"File {file_name} saved successfully in folder {folder}.")
         except NoCredentialsError:
             logger.error("Credentials not available for AWS S3.")
@@ -44,8 +46,12 @@ class S3StorageService(StorageService):
         :raises Exception: If an error occurs during file retrieval.
         """
         try:
-            response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
-            logger.info(f"File {file_name} retrieved successfully from folder {folder}.")
+            response = self.s3_client.get_object(
+                Bucket=self.bucket, Key=f"{folder}/{file_name}"
+            )
+            logger.info(
+                f"File {file_name} retrieved successfully from folder {folder}."
+            )
             return response["Body"].read()
         except ClientError as e:
             logger.error(f"Error retrieving file {file_name} from folder {folder}: {e}")
@@ -61,7 +67,11 @@ class S3StorageService(StorageService):
         """
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
-            files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
+            files = [
+                item["Key"]
+                for item in response.get("Contents", [])
+                if "/" not in item["Key"][len(folder) :]
+            ]
             logger.info(f"{len(files)} files listed in folder {folder}.")
             return files
         except ClientError as e:
@@ -77,7 +87,9 @@ class S3StorageService(StorageService):
         :raises Exception: If an error occurs during file deletion.
         """
         try:
-            self.s3_client.delete_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
+            self.s3_client.delete_object(
+                Bucket=self.bucket, Key=f"{folder}/{file_name}"
+            )
             logger.info(f"File {file_name} deleted successfully from folder {folder}.")
         except ClientError as e:
             logger.error(f"Error deleting file {file_name} from folder {folder}: {e}")

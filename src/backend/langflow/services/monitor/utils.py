@@ -23,7 +23,10 @@ def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -
 def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     columns = {}
     for field_name, field_type in model.model_fields.items():
-        if hasattr(field_type.annotation, "__args__"):
+        if (
+            hasattr(field_type.annotation, "__args__")
+            and field_type.annotation is not None
+        ):
             field_args = field_type.annotation.__args__
         else:
             field_args = []
@@ -82,7 +85,7 @@ def drop_and_create_table_if_schema_mismatch(
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
-    model: Type[BaseModel],
+    model: Type,
     monitor_data: Union[Dict[str, Any], BaseModel],
 ):
     # Validate the data with the Pydantic model

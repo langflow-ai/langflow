@@ -4,7 +4,7 @@ from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from loguru import logger
 
-from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
+from langflow.api.v1.callback import StreamingLLMCallbackHandler
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
 
@@ -15,10 +15,7 @@ if TYPE_CHECKING:
 def setup_callbacks(sync, trace_id, **kwargs):
     """Setup callbacks for langchain object"""
     callbacks = []
-    if sync:
-        callbacks.append(StreamingLLMCallbackHandler(**kwargs))
-    else:
-        callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
+    callbacks.append(StreamingLLMCallbackHandler(**kwargs))
 
     plugin_service = get_plugins_service()
     plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
@@ -42,7 +39,9 @@ def get_langfuse_callback(trace_id):
     return None
 
 
-def flush_langfuse_callback_if_present(callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]):
+def flush_langfuse_callback_if_present(
+    callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]
+):
     """
     If langfuse callback is present, run callback.langfuse.flush()
     """
@@ -83,9 +82,15 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         # if langfuse callback is present, run callback.langfuse.flush()
         flush_langfuse_callback_if_present(callbacks)
 
-        intermediate_steps = output.get("intermediate_steps", []) if isinstance(output, dict) else []
+        intermediate_steps = (
+            output.get("intermediate_steps", []) if isinstance(output, dict) else []
+        )
 
-        result = output.get(langchain_object.output_keys[0]) if isinstance(output, dict) else output
+        result = (
+            output.get(langchain_object.output_keys[0])
+            if isinstance(output, dict)
+            else output
+        )
         try:
             thought = format_actions(intermediate_steps) if intermediate_steps else ""
         except Exception as exc:

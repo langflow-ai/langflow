@@ -79,6 +79,7 @@ class ChatComponent(CustomComponent):
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
     ) -> Union[Text, Record]:
+        input_value_record: Optional[Record] = None
         if return_record:
             if isinstance(input_value, Record):
                 # Update the data of the record
@@ -86,7 +87,7 @@ class ChatComponent(CustomComponent):
                 input_value.data["sender_name"] = sender_name
                 input_value.data["session_id"] = session_id
             else:
-                input_value = Record(
+                input_value_record = Record(
                     text=input_value,
                     data={
                         "sender": sender,
@@ -96,7 +97,11 @@ class ChatComponent(CustomComponent):
                 )
         if not input_value:
             input_value = ""
-        self.status = input_value
+        if return_record and input_value_record:
+            result = input_value_record
+        else:
+            result = input_value
+        self.status = result
         if session_id:
-            self.store_message(input_value, session_id, sender, sender_name)
-        return input_value
+            self.store_message(result, session_id, sender, sender_name)
+        return result

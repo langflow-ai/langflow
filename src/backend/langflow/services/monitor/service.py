@@ -1,11 +1,10 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import duckdb
 from loguru import logger
 from platformdirs import user_cache_dir
-from pydantic import BaseModel
 
 from langflow.services.base import Service
 from langflow.services.monitor.schema import (
@@ -56,7 +55,7 @@ class MonitorService(Service):
     ):
         # Make sure the model passed matches the table
 
-        model: Type[BaseModel] = self.table_map.get(table_name)
+        model = self.table_map.get(table_name)
         if model is None:
             raise ValueError(f"Unknown table name: {table_name}")
 

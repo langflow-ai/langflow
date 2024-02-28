@@ -1,8 +1,10 @@
 from enum import Enum
 from typing import Any, Optional
-from langflow.graph.utils import serialize_field
 
 from pydantic import BaseModel, Field, field_serializer
+
+from langflow.graph.utils import serialize_field
+from langflow.utils.schemas import ContainsEnumMeta
 
 
 class ResultData(BaseModel):
@@ -18,13 +20,21 @@ class ResultData(BaseModel):
         return serialize_field(value)
 
 
-class InterfaceComponentTypes(str, Enum):
+class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     # ChatInput and ChatOutput are the only ones that are
     # power components
     ChatInput = "ChatInput"
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
+
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        else:
+            return True
 
 
 INPUT_COMPONENTS = [
