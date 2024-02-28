@@ -128,6 +128,7 @@ import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AzureOpenAiEmbeddingsIcon } from "../icons/AzureOpenAiEmbeddings";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
@@ -147,9 +148,12 @@ import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NotionIcon } from "../icons/Notion";
+import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
+import { PostgresIcon } from "../icons/Postgres";
 import { QDrantIcon } from "../icons/QDrant";
+import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -252,6 +256,18 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  AzureChatOpenAi: AzureOpenAiEmbeddingsIcon,
+  Ollama: OllamaIcon,
+  ChatOllama: OllamaIcon,
+  AzureOpenAiEmbeddings: AzureOpenAiEmbeddingsIcon,
+  OllamaEmbeddings: OllamaIcon,
+  ChatOllamaModel: OllamaIcon,
+  Faiss: MetaIcon,
+  FaissSearch: MetaIcon,
+  AzureOpenAiModel: AzureOpenAiEmbeddingsIcon,
+  Redis: RedisIcon,
+  RedisSearch: RedisIcon,
+  PostgresChatMessageHistory: PostgresIcon,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
@@ -280,7 +296,7 @@ export const nodeIconsLucide: iconsType = {
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
-  MongoDB:MongoDBIcon,
+  MongoDB: MongoDBIcon,
   MongoDBChatMessageHistory: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
