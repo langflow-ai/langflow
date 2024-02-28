@@ -42,26 +42,13 @@ make frontend &
 # Give some time for the frontend to start (adjust sleep duration as needed)
 sleep 10
 
-# Navigate to the test directory
-cd src/frontend
-
-# Run frontend only Playwright tests with or without UI based on the --ui flag
-if [ "$ui" = true ]; then
-    PLAYWRIGHT_HTML_REPORT=playwright-report/onlyFront npx playwright test tests/onlyFront --ui --project=chromium
-else
-    PLAYWRIGHT_HTML_REPORT=playwright-report/onlyFront npx playwright test tests/onlyFront --project=chromium
-fi
-
-# Navigate back to the project root directory
-cd ../../
-
 # Start the backend using 'make backend' in the background
-make backend &
+make backend LANGFLOW_DATABASE_URL=sqlite:// &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
 sleep 25
 
-# Navigate back to the test directory
+# Navigate to the test directory
 cd src/frontend
 
 # Run Playwright tests with or without UI based on the --ui flag
