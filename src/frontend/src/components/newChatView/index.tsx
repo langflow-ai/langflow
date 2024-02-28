@@ -124,7 +124,7 @@ export default function NewChatView({
       if (message === "") return;
       chat.message = message;
     // chat is one of the chatHistory
-    updateFlowPool(chat.componentId,{message,sender_name:chat.sender_name??"Bot",sender:"Machine"})
+    updateFlowPool(chat.componentId,{message,sender_name:chat.sender_name??"Bot",sender:chat.isSend?"User":"Machine"})
     // setChatHistory((oldChatHistory) => {
       // const index = oldChatHistory.findIndex((ch) => ch.id === chat.id);
       // if (index === -1) return oldChatHistory;
