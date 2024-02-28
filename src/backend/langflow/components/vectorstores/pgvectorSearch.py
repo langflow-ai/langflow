@@ -1,13 +1,13 @@
 from typing import List, Optional
 
 from langchain.embeddings.base import Embeddings
-from langchain_community.vectorstores.pgvector import PGVector
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow.components.vectorstores.pgvector import PGVectorComponent
 from langflow.schema import Record
 
 
-class PGVectorSearchComponent(LCVectorStoreComponent):
+class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
     """
     A custom component for implementing a Vector Store using PostgreSQL.
     """
@@ -60,14 +60,12 @@ class PGVectorSearchComponent(LCVectorStoreComponent):
         Returns:
         - VectorStore: The Vector Store object.
         """
-
         try:
-            vector_store = PGVector.from_existing_index(
+            vector_store = super().build(
                 embedding=embedding,
+                pg_server_url=pg_server_url,
                 collection_name=collection_name,
-                connection_string=pg_server_url,
             )
-
         except Exception as e:
             raise RuntimeError(f"Failed to build PGVector: {e}")
         return self.search_with_vector_store(
