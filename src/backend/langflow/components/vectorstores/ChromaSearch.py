@@ -3,12 +3,12 @@ from typing import List, Optional
 import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
 
-from langflow import CustomComponent
+from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record, docs_to_records
+from langflow.schema import Record
 
 
-class ChromaSearchComponent(CustomComponent):
+class ChromaSearchComponent(LCVectorStoreComponent):
     """
     A custom component for implementing a Vector Store using Chroma.
     """
@@ -101,17 +101,11 @@ class ChromaSearchComponent(CustomComponent):
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
         index_directory = self.resolve_path(index_directory)
-        chroma = Chroma(
+        vector_store = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,
             persist_directory=index_directory,
             client_settings=chroma_settings,
         )
 
-        # Validate the inputs
-        docs = []
-        if inputs and isinstance(inputs, str):
-            docs = chroma.search(query=inputs, search_type=search_type.lower())
-        else:
-            raise ValueError("Invalid inputs provided.")
-        return docs_to_records(docs)
+        return self.search_with_vector_store(input_value, search_type, vector_store)
