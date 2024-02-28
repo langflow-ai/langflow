@@ -167,7 +167,8 @@ async def build_vertex(
         vertex = graph.get_vertex(vertex_id)
         try:
             if not vertex.pinned or not vertex._built:
-                await vertex.build(user_id=current_user.id, inputs=inputs.model_dump())
+                inputs_dict = inputs.model_dump() if inputs else {}
+                await vertex.build(user_id=current_user.id, inputs=inputs_dict)
 
             if vertex.result is not None:
                 params = vertex._built_object_repr()
