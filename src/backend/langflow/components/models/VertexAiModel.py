@@ -57,7 +57,7 @@ class ChatVertexAIComponent(CustomComponent):
                 "value": False,
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

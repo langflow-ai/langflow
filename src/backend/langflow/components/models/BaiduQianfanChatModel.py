@@ -68,7 +68,7 @@ class QianfanChatEndpointComponent(CustomComponent):
                 "info": "Endpoint of the Qianfan LLM, required if custom model used.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

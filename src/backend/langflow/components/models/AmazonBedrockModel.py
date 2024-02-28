@@ -34,7 +34,7 @@ class AmazonBedrockComponent(CustomComponent):
             "model_kwargs": {"display_name": "Model Kwargs"},
             "cache": {"display_name": "Cache"},
             "code": {"advanced": True},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(
