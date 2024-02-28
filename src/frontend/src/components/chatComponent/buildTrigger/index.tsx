@@ -23,8 +23,6 @@ export default function BuildTrigger({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setFlowState = useFlowStore((state) => state.setFlowState);
 
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
@@ -47,7 +45,7 @@ export default function BuildTrigger({
       setIsBuilding(true);
 
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      await buildFlow();
+      await buildFlow({});
     } catch (error) {
       console.error("Error:", error);
     } finally {

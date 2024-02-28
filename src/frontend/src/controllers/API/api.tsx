@@ -123,7 +123,7 @@ function ApiInterceptor() {
   async function clearBuildVerticesState(error) {
     if (error?.response?.status === 500) {
       const vertices = useFlowStore.getState().verticesBuild;
-      useFlowStore.getState().updateBuildStatus(vertices, BuildStatus.BUILT);
+      useFlowStore.getState().updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
       useFlowStore.getState().setIsBuilding(false);
     }
   }
