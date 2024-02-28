@@ -56,7 +56,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
     const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
     if (chatInputNode) {
       let newNode = cloneDeep(chatInputNode);
-      newNode.data.node!.template["message"].value = chatValue;
+      newNode.data.node!.template["input_value"].value = chatValue;
       setNode(chatInput!.id, newNode);
     }
     for (let i = 0; i < count; i++) {
