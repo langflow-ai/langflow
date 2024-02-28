@@ -1,9 +1,13 @@
-import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import { CHAT_FORM_DIALOG_SUBTITLE, outputsModalTitle, textInputModalTitle } from "../../constants/constants";
+import {
+  CHAT_FORM_DIALOG_SUBTITLE,
+  outputsModalTitle,
+  textInputModalTitle,
+} from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
-import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
@@ -40,27 +44,47 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
     { type: string; id: string } | undefined
   >(undefined);
 
-  const { getNode, setNode, buildFlow, getFlow } = useFlowStore();
-  const { setErrorData } = useAlertStore();
+  const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const [lockChat, setLockChat] = useState(false);
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const verticesBuild = useFlowStore((state) => state.verticesBuild);
+  const updateVerticesBuild = useFlowStore(
+    (state) => state.updateVerticesBuild
+  );
+
+  async function updateVertices() {
+    return new Promise<void>((resolve, reject) => {
+      if (!verticesBuild) {
+        updateVerticesOrder(currentFlow!.id, null).then((orderResponse) => {
+          resolve();
+        });
+      }
+      resolve();
+    });
+  }
+
+  useEffect(() => {
+    updateVertices();
+  }, [currentFlow]);
+
+  useEffect(() => {
+    if (open) {
+      updateVerticesBuild(null);
+      updateVertices();
+    }
+  }, [open]);
 
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
-    const { nodes, edges } = getFlow();
+    await updateVertices();
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
-    const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-    if (chatInputNode) {
-      let newNode = cloneDeep(chatInputNode);
-      newNode.data.node!.template["input_value"].value = chatValue;
-      setNode(chatInput!.id, newNode);
-    }
     for (let i = 0; i < count; i++) {
-      await buildFlow().catch((err) => {
+      await buildFlow({ input_value: chatValue }).catch((err) => {
         console.error(err);
         setLockChat(false);
       });
@@ -104,7 +128,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                 <Tabs
                   value={selectedTab.toString()}
                   className={
-                    "flex h-full flex-col overflow-y-auto custom-scroll rounded-md border bg-muted text-center"
+                    "flex h-full flex-col overflow-y-auto rounded-md border bg-muted text-center custom-scroll"
                   }
                   onValueChange={(value) => {
                     setSelectedTab(Number(value));
@@ -266,24 +290,27 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       {selectedViewField.type}
                     </div>
                     <div className="h-full">
-                    {inputs.some(
-                      (input) => input.id === selectedViewField.id
-                    ) ? (
-                      <IOInputField
-                        inputType={selectedViewField.type!}
-                        inputId={selectedViewField.id!}
-                      />
-                    ) : (
-                      <IOOutputView
-                        outputType={selectedViewField.type!}
-                        outputId={selectedViewField.id!}
-                      />
-                    )}
+                      {inputs.some(
+                        (input) => input.id === selectedViewField.id
+                      ) ? (
+                        <IOInputField
+                          inputType={selectedViewField.type!}
+                          inputId={selectedViewField.id!}
+                        />
+                      ) : (
+                        <IOOutputView
+                          outputType={selectedViewField.type!}
+                          outputId={selectedViewField.id!}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
                 <div
-                  className={cn("flex w-full h-full",selectedViewField ? "hidden" : "")}
+                  className={cn(
+                    "flex h-full w-full",
+                    selectedViewField ? "hidden" : ""
+                  )}
                 >
                   <NewChatView
                     sendMessage={sendMessage}
