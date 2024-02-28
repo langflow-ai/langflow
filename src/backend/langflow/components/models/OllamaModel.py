@@ -3,17 +3,19 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
+from langflow.components.models.base.model import LCModelComponent
+
 # from langchain.chat_models import ChatOllama
-from langflow import CustomComponent
 from langflow.field_typing import Text
 
 # whe When a callback component is added to Langflow, the comment must be uncommented.
 # from langchain.callbacks.manager import CallbackManager
 
 
-class ChatOllamaComponent(CustomComponent):
+class ChatOllamaComponent(LCModelComponent):
     display_name = "ChatOllamaModel"
     description = "Generate text using Local LLM for chat with Ollama."
+    icon = "Ollama"
 
     def build_config(self) -> dict:
         return {
@@ -164,7 +166,11 @@ class ChatOllamaComponent(CustomComponent):
                 "info": "Template to use for generating text.",
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -197,6 +203,7 @@ class ChatOllamaComponent(CustomComponent):
         timeout: Optional[int] = None,
         top_k: Optional[int] = None,
         top_p: Optional[int] = None,
+        stream: Optional[bool] = False,
     ) -> Text:
         if not base_url:
             base_url = "http://localhost:11434"
@@ -250,7 +257,5 @@ class ChatOllamaComponent(CustomComponent):
             output = ChatOllama(**llm_params)  # type: ignore
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

@@ -44,6 +44,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
+        self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
         self.is_input = any(
@@ -391,6 +392,8 @@ class Vertex:
             ValueError: If any key in new_params is not found in self._raw_params.
         """
         # First check if the input_value in _raw_params is not a vertex
+        if not new_params:
+            return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
         self._raw_params.update(new_params)
@@ -456,7 +459,7 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
-            elif key not in self.params:
+            elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
 
     def _is_node(self, value):
@@ -610,6 +613,7 @@ class Vertex:
     async def build(
         self,
         user_id=None,
+        inputs: Optional[Dict[str, Any]] = None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
@@ -621,6 +625,9 @@ class Vertex:
         if self.pinned and self._built:
             return self.get_requester_result(requester)
         self._reset()
+
+        if self.is_input:
+            self.update_raw_params(inputs)
 
         # Run steps
         for step in self.steps:

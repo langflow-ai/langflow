@@ -228,6 +228,7 @@ async def run_flow_with_caching(
     flow_id: str,
     inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
+    stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     api_key_user: User = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
@@ -239,13 +240,14 @@ async def run_flow_with_caching(
             task_result: Any = None
             if not graph:
                 raise ValueError("Graph not found in the session")
-            task_result = await run_graph(
+            task_result, session_id = await run_graph(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
                 inputs=inputs,
                 artifacts=artifacts,
                 session_service=session_service,
+                stream=stream,
             )
 
         else:
@@ -263,13 +265,14 @@ async def run_flow_with_caching(
                 raise ValueError(f"Flow {flow_id} has no data")
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks)
-            task_result = await run_graph(
+            task_result, session_id = await run_graph(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
                 inputs=inputs,
                 artifacts={},
                 session_service=session_service,
+                stream=stream,
             )
 
         return RunResponse(outputs=task_result, session_id=session_id)
