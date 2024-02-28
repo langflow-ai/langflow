@@ -9,11 +9,11 @@ class TextInput(CustomComponent):
     description = "Used to pass text input to the next component."
 
     field_config = {
-        "value": {"display_name": "Value", "multiline": True},
+        "input_value": {"display_name": "Value", "multiline": True},
     }
 
-    def build(self, value: Optional[str] = "") -> Text:
-        self.status = value
-        if not value:
-            value = ""
-        return value
+    def build(self, input_value: Optional[str] = "") -> Text:
+        self.status = input_value
+        if not input_value:
+            input_value = ""
+        return input_value

@@ -24,7 +24,7 @@ class HuggingFaceEndpointsComponent(CustomComponent):
                 "field_type": "code",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

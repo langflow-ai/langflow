@@ -164,7 +164,7 @@ class ChatOllamaComponent(CustomComponent):
                 "info": "Template to use for generating text.",
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

@@ -1,10 +1,7 @@
-from typing import Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-from pydantic.v1.types import SecretStr
 
 from langflow import CustomComponent
-from langflow.field_typing import RangeSpec, Text
+from langflow.field_typing import RangeSpec
 
 
 class GoogleGenerativeAIComponent(CustomComponent):
@@ -50,7 +47,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
             "code": {
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {e": {"display_name": "Input"},
         }
 
     def build(

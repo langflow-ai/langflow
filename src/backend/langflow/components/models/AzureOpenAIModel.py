@@ -73,7 +73,7 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "info": "Maximum number of tokens to generate.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

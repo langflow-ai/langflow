@@ -28,7 +28,7 @@ class CohereComponent(CustomComponent):
                 "type": "float",
                 "show": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

@@ -56,7 +56,7 @@ class LlamaCppComponent(CustomComponent):
             "use_mmap": {"display_name": "Use Mmap", "advanced": True},
             "verbose": {"display_name": "Verbose", "advanced": True},
             "vocab_only": {"display_name": "Vocab Only", "advanced": True},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
         }
 
     def build(

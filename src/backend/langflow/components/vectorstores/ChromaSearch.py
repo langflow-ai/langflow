@@ -26,7 +26,7 @@ class ChromaSearchComponent(CustomComponent):
         - dict: A dictionary containing the configuration options for the component.
         """
         return {
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
             "search_type": {
                 "display_name": "Search Type",
                 "options": ["Similarity", "MMR"],

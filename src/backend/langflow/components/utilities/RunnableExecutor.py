@@ -15,7 +15,7 @@ class RunnableExecComponent(CustomComponent):
                 "display_name": "Input Key",
                 "info": "The key to use for the input.",
             },
-            "inputs": {
+            "input_value": {
                 "display_name": "Inputs",
                 "info": "The inputs to pass to the runnable.",
             },

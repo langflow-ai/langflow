@@ -12,7 +12,7 @@ class OpenAIModelComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": False,
