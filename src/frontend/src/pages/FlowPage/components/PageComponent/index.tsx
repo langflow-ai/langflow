@@ -87,8 +87,30 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const selectedNode = nodes.filter((obj) => obj.selected);
+      if ((event.ctrlKey || event.metaKey) && event.key === "p" && selectedNode.length > 0) {
+        event.preventDefault();
+        setNode(selectedNode[0].id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              pinned: old.data?.node?.pinned ? false : true,
+            },
+          },
+        }));
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === "d" && selectedNode.length > 0) {
+        event.preventDefault();
+        paste({nodes: selectedNode, edges: []}, {
+          x: position.current.x,
+          y: position.current.y,
+        });
+      }
       if (!isWrappedWithClass(event, "noundo")) {
         if (
           (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
