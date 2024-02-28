@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import { CHAT_FORM_DIALOG_SUBTITLE, outputsModalTitle, textInputModalTitle } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -56,7 +56,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
     const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
     if (chatInputNode) {
       let newNode = cloneDeep(chatInputNode);
-      newNode.data.node!.template["message"].value = chatValue;
+      newNode.data.node!.template["input_value"].value = chatValue;
       setNode(chatInput!.id, newNode);
     }
     for (let i = 0; i < count; i++) {
@@ -97,14 +97,14 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start overflow-auto scrollbar-hide",
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start",
                   haveChat ? "w-2/6" : "w-full"
                 )}
               >
                 <Tabs
                   value={selectedTab.toString()}
                   className={
-                    "flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center"
+                    "flex h-full flex-col overflow-y-auto custom-scroll rounded-md border bg-muted text-center"
                   }
                   onValueChange={(value) => {
                     setSelectedTab(Number(value));
@@ -127,7 +127,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Type"} />
-                      Text Inputs
+                      {textInputModalTitle}
                     </div>
                     {nodes
                       .filter((node) =>
@@ -188,7 +188,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Braces"} />
-                      Prompt Outputs
+                      {outputsModalTitle}
                     </div>
                     {nodes
                       .filter((node) =>

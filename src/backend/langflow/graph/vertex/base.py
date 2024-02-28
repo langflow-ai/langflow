@@ -2,16 +2,13 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from loguru import logger
 
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
+                                   InterfaceComponentTypes, ResultData)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -25,7 +22,7 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
 
 
-class VertexStates(Enum):
+class VertexStates(str, Enum):
     """Vertex are related to it being active, inactive, or in an error state."""
 
     ACTIVE = "active"
@@ -44,7 +41,8 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
-
+        self.will_stream = False
+        self.updated_raw_params = False
         self.id: str = data["id"]
         self.is_input = any(
             input_component_name in self.id for input_component_name in INPUT_COMPONENTS
@@ -53,6 +51,7 @@ class Vertex:
             output_component_name in self.id
             for output_component_name in OUTPUT_COMPONENTS
         )
+        self.has_session_id = None
         self._custom_component = None
         self.has_external_input = False
         self.has_external_output = False
@@ -223,6 +222,8 @@ class Vertex:
             if isinstance(value, dict)
         }
 
+        self.has_session_id = "session_id" in template_dicts
+
         self.required_inputs = [
             template_dicts[key]["type"]
             for key, value in template_dicts.items()
@@ -281,6 +282,10 @@ class Vertex:
 
         if self.graph is None:
             raise ValueError("Graph not found")
+
+        if self.updated_raw_params:
+            self.updated_raw_params = False
+            return
 
         template_dict = {
             key: value
@@ -383,10 +388,11 @@ class Vertex:
         Raises:
             ValueError: If any key in new_params is not found in self._raw_params.
         """
-        for key in new_params:
-            if key not in self._raw_params:
-                raise ValueError(f"Key {key} not found in raw params")
+        # First check if the input_value in _raw_params is not a vertex
+        if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
+            return
         self._raw_params.update(new_params)
+        self.updated_raw_params = True
 
     async def _build(self, user_id=None):
         """
@@ -448,6 +454,8 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
+            elif key not in self.params:
+                self.params[key] = value
 
     def _is_node(self, value):
         """
@@ -583,7 +591,7 @@ class Vertex:
 
             logger.warning(message)
 
-    def _reset(self):
+    def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()

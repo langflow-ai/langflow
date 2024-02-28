@@ -13,7 +13,7 @@ import {
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { FlowState, FlowsState } from "../types/tabs";
+import { FlowState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -217,12 +217,8 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(flowState?: FlowState): string {
-  return flowState &&
-    flowState.input_keys &&
-    Object.keys(flowState.input_keys!).length > 0
-    ? JSON.stringify(flowState.input_keys)
-    : '{"input": "message"}';
+export function buildInputs(): string {
+  return '{"input_value": "message"}';
 }
 
 export function getRandomElement<T>(array: T[]): T {
@@ -323,7 +319,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   return `import requests
 from typing import Optional
 
@@ -382,12 +378,10 @@ export function getCurlCode(
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
 
   return `curl -X POST \\
-  ${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process/${flowId} \\
+  ${window.location.protocol}//${window.location.host}/api/v1/run/${flowId} \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
@@ -410,7 +404,7 @@ export function getPythonCode(
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -435,7 +429,7 @@ export function getWidgetCode(
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   let chat_input_field = getChatInputField(flow, flowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>

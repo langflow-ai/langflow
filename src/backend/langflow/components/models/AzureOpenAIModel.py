@@ -3,14 +3,17 @@ from typing import Optional
 from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 
 
-class AzureChatOpenAIComponent(CustomComponent):
+class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "AzureOpenAI Model"
     description: str = "Generate text using LLM model from Azure OpenAI."
-    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    documentation: str = (
+        "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    )
     beta = False
+    icon = "Azure"
 
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
@@ -71,19 +74,24 @@ class AzureChatOpenAIComponent(CustomComponent):
                 "info": "Maximum number of tokens to generate.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
         model: str,
         azure_endpoint: str,
-        inputs: str,
+        input_value: str,
         azure_deployment: str,
         api_key: str,
         api_version: str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
+        stream: bool = False,
     ) -> BaseLanguageModel:
         try:
             output = AzureChatOpenAI(
@@ -97,7 +105,5 @@ class AzureChatOpenAIComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

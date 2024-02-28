@@ -8,12 +8,15 @@ from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
 from langflow import CustomComponent
 from langflow.field_typing import BaseRetriever, Document
+from langchain_community.vectorstores.vectara import Vectara
 
 
 class VectaraComponent(CustomComponent):
     display_name: str = "Vectara"
     description: str = "Implementation of Vector Store using Vectara"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    )
     beta = True
     field_config = {
         "vectara_customer_id": {
@@ -26,7 +29,10 @@ class VectaraComponent(CustomComponent):
             "display_name": "Vectara API Key",
             "password": True,
         },
-        "documents": {"display_name": "Documents", "info": "If provided, will be upserted to corpus (optional)"},
+        "documents": {
+            "display_name": "Documents",
+            "info": "If provided, will be upserted to corpus (optional)",
+        },
         "files_url": {
             "display_name": "Files Url",
             "info": "Make vectara object using url of files (optional)",

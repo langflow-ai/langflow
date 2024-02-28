@@ -9,7 +9,7 @@ type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
   nodeId?: string | null; // Assuming nodeId is of type string, and it's optional
   onGetOrderSuccess?: () => void;
-  onBuildUpdate?: (data: VertexBuildTypeAPI, status: BuildStatus) => void; // Replace any with the actual type if it's not any
+  onBuildUpdate?: (data: VertexBuildTypeAPI, status: BuildStatus,buildId:string) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: string[]) => void;
   onBuildStart?: (idList: string[]) => void;
@@ -48,7 +48,7 @@ export async function buildVertices({
   let orderResponse;
   try {
     orderResponse = await getVerticesOrder(flowId, nodeId);
-  } catch (error) {
+  } catch (error:any) {
     console.log(error);
     setErrorData({
       title: "Oops! Looks like you missed something",
@@ -59,6 +59,7 @@ export async function buildVertices({
   }
   if (onGetOrderSuccess) onGetOrderSuccess();
   let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
+  const runId = orderResponse.data.run_id;
   let vertices_layers: Array<Array<string>> = [];
   let stop = false;
   if (validateNodes) {
@@ -102,14 +103,14 @@ export async function buildVertices({
         onBuildUpdate
       ) {
         // If it is, skip building and set the state to inactive
-        onBuildUpdate(getInactiveVertexData(id), BuildStatus.INACTIVE);
+        onBuildUpdate(getInactiveVertexData(id), BuildStatus.INACTIVE,runId);
         buildResults.push(false);
         continue;
       }
       await buildVertex({
         flowId,
         id,
-        onBuildUpdate,
+        onBuildUpdate:(data: VertexBuildTypeAPI, status: BuildStatus) => {if(onBuildUpdate) onBuildUpdate(data, status,runId)},
         onBuildError,
         verticesIds,
         buildResults,

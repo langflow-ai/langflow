@@ -25,6 +25,7 @@ import {
   Code,
   Code2,
   Combine,
+  Command,
   Compass,
   Copy,
   Cpu,
@@ -426,4 +427,5 @@ export const nodeIconsLucide: iconsType = {
   AlertCircle,
   Bot,
   Delete,
+  Command,
 };

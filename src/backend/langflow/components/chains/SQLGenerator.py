@@ -28,7 +28,7 @@ class SQLGeneratorComponent(CustomComponent):
 
     def build(
         self,
-        inputs: Text,
+        input_value: Text,
         db: SQLDatabase,
         llm: BaseLanguageModel,
         top_k: int = 5,

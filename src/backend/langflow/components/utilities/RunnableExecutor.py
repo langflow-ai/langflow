@@ -15,7 +15,7 @@ class RunnableExecComponent(CustomComponent):
                 "display_name": "Input Key",
                 "info": "The key to use for the input.",
             },
-            "inputs": {
+            "input_value": {
                 "display_name": "Inputs",
                 "info": "The inputs to pass to the runnable.",
             },
@@ -32,7 +32,7 @@ class RunnableExecComponent(CustomComponent):
     def build(
         self,
         input_key: str,
-        inputs: str,
+        input_value: str,
         runnable: Runnable,
         output_key: str = "output",
     ) -> Text:

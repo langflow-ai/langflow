@@ -1,5 +1,6 @@
 import time
-from typing import Optional
+import uuid
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import (
     APIRouter,
@@ -31,8 +32,12 @@ from langflow.services.auth.utils import (
     get_current_user_for_websocket,
 )
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session
+from langflow.services.deps import get_chat_service, get_session, get_session_service
 from langflow.services.monitor.utils import log_vertex_build
+from langflow.services.session.service import SessionService
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.types import ChatVertex
 
 router = APIRouter(tags=["Chat"])
 
@@ -120,7 +125,8 @@ async def get_vertices(
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
-        return VerticesOrderResponse(ids=vertices)
+        run_id = uuid.uuid4()
+        return VerticesOrderResponse(ids=vertices, run_id=run_id)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
@@ -180,15 +186,16 @@ async def build_vertex(
             chat_service.clear_cache(flow_id)
 
         # Log the vertex build
-        background_tasks.add_task(
-            log_vertex_build,
-            flow_id=flow_id,
-            vertex_id=vertex_id,
-            valid=valid,
-            params=params,
-            data=result_data_response,
-            artifacts=artifacts,
-        )
+        if not vertex.will_stream:
+            background_tasks.add_task(
+                log_vertex_build,
+                flow_id=flow_id,
+                vertex_id=vertex_id,
+                valid=valid,
+                params=params,
+                data=result_data_response,
+                artifacts=artifacts,
+            )
 
         timedelta = time.perf_counter() - start_time
         duration = format_elapsed_time(timedelta)
@@ -221,41 +228,71 @@ async def build_vertex(
 async def build_vertex_stream(
     flow_id: str,
     vertex_id: str,
+    session_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
+    session_service: "SessionService" = Depends(get_session_service),
 ):
     """Build a vertex instead of the entire graph."""
     try:
 
         async def stream_vertex():
             try:
-                cache = chat_service.get_cache(flow_id)
-                if not cache:
-                    # If there's no cache
-                    raise ValueError(f"No cache found for {flow_id}.")
+                if not session_id:
+                    cache = chat_service.get_cache(flow_id)
+                    if not cache:
+                        # If there's no cache
+                        raise ValueError(f"No cache found for {flow_id}.")
+                    else:
+                        graph = cache.get("result")
                 else:
-                    graph = cache.get("result")
+                    session_data = await session_service.load_session(session_id)
+                    graph, artifacts = session_data if session_data else (None, None)
+                    if not graph:
+                        raise ValueError(f"No graph found for {flow_id}.")
 
-                vertex = graph.get_vertex(vertex_id)
-                if not vertex.pinned or not vertex._built:
+                vertex: "ChatVertex" = graph.get_vertex(vertex_id)
+                if not hasattr(vertex, "stream"):
+                    raise ValueError(f"Vertex {vertex_id} does not support streaming")
+                if isinstance(vertex._built_result, str) and vertex._built_result:
                     stream_data = StreamData(
                         event="message",
-                        data={"message": "Building vertex"},
+                        data={"message": f"Streaming vertex {vertex_id}"},
+                    )
+                    yield str(stream_data)
+                    stream_data = StreamData(
+                        event="message",
+                        data={"chunk": vertex._built_result},
                     )
                     yield str(stream_data)
 
+                elif not vertex.pinned or not vertex._built:
+                    logger.debug(f"Streaming vertex {vertex_id}")
+                    stream_data = StreamData(
+                        event="message",
+                        data={"message": f"Streaming vertex {vertex_id}"},
+                    )
+                    yield str(stream_data)
                     async for chunk in vertex.stream():
                         stream_data = StreamData(
                             event="message",
                             data={"chunk": chunk},
                         )
                         yield str(stream_data)
+                elif vertex.result is not None:
+                    stream_data = StreamData(
+                        event="message",
+                        data={"chunk": vertex._built_result},
+                    )
+                    yield str(stream_data)
                 else:
                     raise ValueError(f"No result found for vertex {vertex_id}")
 
             except Exception as exc:
+                logger.error(f"Error building vertex: {exc}")
                 yield str(StreamData(event="error", data={"error": str(exc)}))
-
-            yield str(StreamData(event="close", data={"message": "Stream closed"}))
+            finally:
+                logger.debug("Closing stream")
+                yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
         return StreamingResponse(stream_vertex(), media_type="text/event-stream")
     except Exception as exc:

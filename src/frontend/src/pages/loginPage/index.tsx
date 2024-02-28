@@ -13,7 +13,7 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
-import { SIGNIN_ERROR_ALERT } from "../../alerts_constants";
+import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =

@@ -8,7 +8,11 @@ import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
-import { priorityFields } from "../../constants/constants";
+import {
+  priorityFields,
+  statusBuild,
+  statusBuilding,
+} from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useDarkStore } from "../../stores/darkStore";
@@ -293,7 +297,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && " justify-center")
+                (!showNode && " justify-center ")
               }
             >
               {iconNodeRender()}
@@ -468,9 +472,9 @@ export default function GenericNode({
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
+                        <span> {statusBuilding} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">Build to validate status.</span>
+                        <span className="flex">{statusBuild}</span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"

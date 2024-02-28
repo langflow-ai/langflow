@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_serializer
 
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
@@ -66,6 +66,26 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: Optional[List[Any]] = None
+    session_id: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        # Serialize all the outputs if they are base models
+        if self.outputs:
+            serialized_outputs = []
+            for output in self.outputs:
+                if isinstance(output, BaseModel):
+                    serialized_outputs.append(output.model_dump(exclude_none=True))
+                else:
+                    serialized_outputs.append(output)
+            self.outputs = serialized_outputs
+        return handler(self)
+
+
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
@@ -73,9 +93,6 @@ class PreloadResponse(BaseModel):
     is_clear: Optional[bool] = None
 
 
-# TaskStatusResponse(
-#         status=task.status, result=task.result if task.ready() else None
-#     )
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 
@@ -220,6 +237,7 @@ class ApiKeyCreateRequest(BaseModel):
 
 class VerticesOrderResponse(BaseModel):
     ids: List[List[str]]
+    run_id: UUID
 
 
 class ResultDataResponse(BaseModel):

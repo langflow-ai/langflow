@@ -1,5 +1,5 @@
 import Convert from "ansi-to-html";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
@@ -9,6 +9,7 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
+import useFlowStore from "../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
@@ -18,6 +19,7 @@ export default function ChatMessage({
   lockChat,
   lastMessage,
   updateChat,
+  setLockChat,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -29,6 +31,14 @@ export default function ChatMessage({
   const chatMessageString = chat.message ? chat.message.toString() : "";
   const [chatMessage, setChatMessage] = useState(chatMessageString);
   const [isStreaming, setIsStreaming] = useState(false);
+  const eventSource = useRef<EventSource | undefined>(undefined);
+  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+  const chatMessageRef = useRef(chatMessage);
+
+  // Sync ref with state
+  useEffect(() => {
+    chatMessageRef.current = chatMessage;
+  }, [chatMessage]);
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -36,49 +46,50 @@ export default function ChatMessage({
   const streamChunks = (url: string) => {
     setIsStreaming(true); // Streaming starts
     return new Promise<boolean>((resolve, reject) => {
-      const eventSource = new EventSource(url);
-      eventSource.onmessage = (event) => {
+      eventSource.current = new EventSource(url);
+      eventSource.current.onmessage = (event) => {
         let parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.onerror = (event) => {
+      eventSource.current.onerror = (event) => {
+        setIsStreaming(false);
+        eventSource.current?.close();
+        setStreamUrl(undefined);
         reject(new Error("Streaming failed"));
-        setIsStreaming(false);
-        eventSource.close();
       };
-      eventSource.addEventListener("close", (event) => {
-        setStreamUrl(null); // Update state to reflect the stream is closed
-        resolve(true);
+      eventSource.current.addEventListener("close", (event) => {
+        setStreamUrl(undefined); // Update state to reflect the stream is closed
+        eventSource.current?.close();
         setIsStreaming(false);
-        eventSource.close();
+        resolve(true);
       });
     });
   };
 
   useEffect(() => {
-    if (streamUrl && chat.message === "") {
+    if (streamUrl && !isStreaming) {
+      setLockChat(true);
       streamChunks(streamUrl)
         .then(() => {
+          setLockChat(false);
           if (updateChat) {
-            updateChat(chat, chatMessage, streamUrl);
+            updateChat(chat, chatMessageRef.current);
           }
         })
         .catch((error) => {
           console.error(error);
+          setLockChat(false);
         });
     }
-  }, [streamUrl]);
+  }, [streamUrl, chatMessage]);
 
   useEffect(() => {
-    // This effect is specifically for calling updateChat after streaming ends
-    if (!isStreaming && streamUrl) {
-      if (updateChat) {
-        updateChat(chat, chatMessage, streamUrl);
-      }
-    }
-  }, [isStreaming]);
+    return () => {
+      eventSource.current?.close();
+    };
+  }, []);
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
