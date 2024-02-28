@@ -228,6 +228,7 @@ async def run_flow_with_caching(
     flow_id: str,
     inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
+    stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     api_key_user: User = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
@@ -246,6 +247,7 @@ async def run_flow_with_caching(
                 inputs=inputs,
                 artifacts=artifacts,
                 session_service=session_service,
+                stream=stream,
             )
 
         else:
@@ -270,6 +272,7 @@ async def run_flow_with_caching(
                 inputs=inputs,
                 artifacts={},
                 session_service=session_service,
+                stream=stream,
             )
 
         return RunResponse(outputs=task_result, session_id=session_id)
