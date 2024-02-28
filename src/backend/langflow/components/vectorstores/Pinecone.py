@@ -5,6 +5,7 @@ import pinecone  # type: ignore
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
+
 from langflow import CustomComponent
 from langflow.field_typing import Document, Embeddings
 
@@ -12,6 +13,7 @@ from langflow.field_typing import Document, Embeddings
 class PineconeComponent(CustomComponent):
     display_name = "Pinecone"
     description = "Construct Pinecone wrapper from raw documents."
+    icon = "Pinecone"
 
     def build_config(self):
         return {
@@ -19,10 +21,23 @@ class PineconeComponent(CustomComponent):
             "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
-            "pinecone_api_key": {"display_name": "Pinecone API Key", "default": "", "password": True, "required": True},
-            "pinecone_env": {"display_name": "Pinecone Environment", "default": "", "required": True},
+            "pinecone_api_key": {
+                "display_name": "Pinecone API Key",
+                "default": "",
+                "password": True,
+                "required": True,
+            },
+            "pinecone_env": {
+                "display_name": "Pinecone Environment",
+                "default": "",
+                "required": True,
+            },
             "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
-            "pool_threads": {"display_name": "Pool Threads", "default": 1, "advanced": True},
+            "pool_threads": {
+                "display_name": "Pool Threads",
+                "default": 1,
+                "advanced": True,
+            },
         }
 
     def build(
