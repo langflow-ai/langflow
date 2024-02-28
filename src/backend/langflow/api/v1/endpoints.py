@@ -239,7 +239,7 @@ async def run_flow_with_caching(
             task_result: Any = None
             if not graph:
                 raise ValueError("Graph not found in the session")
-            task_result = await run_graph(
+            task_result, session_id = await run_graph(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
@@ -263,7 +263,7 @@ async def run_flow_with_caching(
                 raise ValueError(f"Flow {flow_id} has no data")
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks)
-            task_result = await run_graph(
+            task_result, session_id = await run_graph(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
