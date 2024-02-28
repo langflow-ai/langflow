@@ -50,36 +50,19 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const verticesBuild = useFlowStore((state) => state.verticesBuild);
-  const updateVerticesBuild = useFlowStore(
-    (state) => state.updateVerticesBuild
-  );
 
   async function updateVertices() {
-    return new Promise<void>((resolve, reject) => {
-      if (!verticesBuild) {
-        updateVerticesOrder(currentFlow!.id, null).then((orderResponse) => {
-          resolve();
-        });
-      }
-      resolve();
-    });
+    return updateVerticesOrder(currentFlow!.id, null);
   }
 
   useEffect(() => {
-    updateVertices();
-  }, [currentFlow]);
-
-  useEffect(() => {
     if (open) {
-      updateVerticesBuild(null);
       updateVertices();
     }
-  }, [open]);
+  }, [open, currentFlow]);
 
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
-    await updateVertices();
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
