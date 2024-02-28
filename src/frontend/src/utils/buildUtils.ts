@@ -39,7 +39,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
-export async function updateVerticesOrder(flowId: string, nodeId: string | null) {
+export async function updateVerticesOrder(flowId: string, nodeId: string | null): Promise<{ verticesLayers: string[][], verticesIds: string[], verticesOrder: string[][], runId: string }> {
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
@@ -80,6 +80,7 @@ export async function updateVerticesOrder(flowId: string, nodeId: string | null)
     useFlowStore
       .getState()
       .updateVerticesBuild({ verticesLayers, verticesIds, verticesOrder, runId });
+    resolve({ verticesLayers, verticesIds, verticesOrder, runId });
   });
 }
 
@@ -94,9 +95,9 @@ export async function buildVertices({
   onBuildStart,
   validateNodes,
 }: BuildVerticesParams) {
-  const verticesBuild = useFlowStore.getState().verticesBuild;
-  if (!verticesBuild) {
-    await updateVerticesOrder(flowId, nodeId);
+  let verticesBuild = useFlowStore.getState().verticesBuild;
+  if (!verticesBuild || nodeId) {
+    verticesBuild = await updateVerticesOrder(flowId, nodeId);
   }
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
