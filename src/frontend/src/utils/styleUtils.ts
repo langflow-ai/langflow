@@ -270,6 +270,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
+  Google: GoogleIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,

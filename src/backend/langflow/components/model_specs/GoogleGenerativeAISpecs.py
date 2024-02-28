@@ -10,6 +10,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
     display_name: str = "Google Generative AI"
     description: str = "A component that uses Google Generative AI to generate text."
     documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "Google"
 
     def build_config(self):
         return {
