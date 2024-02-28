@@ -74,6 +74,10 @@ class AzureChatOpenAIComponent(CustomComponent):
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -86,6 +90,7 @@ class AzureChatOpenAIComponent(CustomComponent):
         api_version: str,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
+        stream: bool = False,
     ) -> BaseLanguageModel:
         try:
             output = AzureChatOpenAI(
@@ -99,7 +104,10 @@ class AzureChatOpenAIComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

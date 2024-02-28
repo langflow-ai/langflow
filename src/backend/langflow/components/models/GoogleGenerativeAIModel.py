@@ -70,7 +70,10 @@ class GoogleGenerativeAIComponent(CustomComponent):
             n=n or 1,
             google_api_key=SecretStr(google_api_key),
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

@@ -69,6 +69,10 @@ class QianfanChatEndpointComponent(CustomComponent):
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -81,6 +85,7 @@ class QianfanChatEndpointComponent(CustomComponent):
         temperature: Optional[float] = None,
         penalty_score: Optional[float] = None,
         endpoint: Optional[str] = None,
+        stream: bool = False,
     ) -> Text:
         try:
             output = QianfanChatEndpoint(  # type: ignore
@@ -94,7 +99,10 @@ class QianfanChatEndpointComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

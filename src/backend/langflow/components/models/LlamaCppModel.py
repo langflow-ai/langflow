@@ -57,6 +57,10 @@ class LlamaCppComponent(CustomComponent):
             "verbose": {"display_name": "Verbose", "advanced": True},
             "vocab_only": {"display_name": "Vocab Only", "advanced": True},
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -97,6 +101,7 @@ class LlamaCppComponent(CustomComponent):
         use_mmap: Optional[bool] = True,
         verbose: bool = True,
         vocab_only: bool = False,
+        stream: bool = False,
     ) -> Text:
         output = LlamaCpp(
             model_path=model_path,
@@ -135,9 +140,10 @@ class LlamaCppComponent(CustomComponent):
             verbose=verbose,
             vocab_only=vocab_only,
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result
