@@ -294,6 +294,7 @@ export const nodeIconsLucide: iconsType = {
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SupabaseVectorStore: SupabaseIcon,
+  Supabase: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
