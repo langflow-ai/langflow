@@ -42,8 +42,11 @@ make frontend &
 # Give some time for the frontend to start (adjust sleep duration as needed)
 sleep 10
 
+#install backend 
+poetry install --extras deploy
+
 # Start the backend using 'make backend' in the background
-make backend LANGFLOW_DATABASE_URL=sqlite:// &
+LANGFLOW_DATABASE_URL=sqlite:// LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
 sleep 25
