@@ -3,13 +3,14 @@ from typing import Optional
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class HuggingFaceEndpointsComponent(CustomComponent):
+class HuggingFaceEndpointsComponent(LCModelComponent):
     display_name: str = "Hugging Face Inference API models"
     description: str = "Generate text using LLM model from Hugging Face Inference API."
+    icon = "HuggingFace"
 
     def build_config(self):
         return {
@@ -25,6 +26,10 @@ class HuggingFaceEndpointsComponent(CustomComponent):
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -34,6 +39,7 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         task: str = "text2text-generation",
         huggingfacehub_api_token: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
+        stream: bool = False,
     ) -> Text:
         try:
             llm = HuggingFaceEndpoint(
@@ -45,7 +51,4 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
         output = ChatHuggingFace(llm=llm)
-        message = output.invoke(input_value)alue)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+        return self.get_result(output=output, stream=stream, input_value=input_value)

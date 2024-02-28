@@ -2,11 +2,11 @@ from typing import Any, Dict, List, Optional
 
 from langchain_community.llms.llamacpp import LlamaCpp
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class LlamaCppComponent(CustomComponent):
+class LlamaCppComponent(LCModelComponent):
     display_name = "LlamaCppModel"
     description = "Generate text using llama.cpp model."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
@@ -140,10 +140,5 @@ class LlamaCppComponent(CustomComponent):
             verbose=verbose,
             vocab_only=vocab_only,
         )
-        if stream:
-            result = output.stream(input_value)
-        else:
-            message = output.invoke(input_value)
-            result = message.content if hasattr(message, "content") else message
-            self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)
