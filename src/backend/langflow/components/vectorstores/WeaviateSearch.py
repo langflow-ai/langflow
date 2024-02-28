@@ -14,6 +14,8 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
         "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
     )
     beta = True
+    icon="Weaviate"
+
     field_config = {
         "search_type": {
             "display_name": "Search Type",

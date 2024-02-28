@@ -14,6 +14,8 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     )
     beta = True
+    icon="Vectara"
+
     field_config = {
         "search_type": {
             "display_name": "Search Type",
