@@ -11,7 +11,7 @@ from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
-from langflow.services.monitor.utils import log_message
+from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse
 
 
@@ -394,6 +394,8 @@ class ChatVertex(StatelessVertex):
                         sender_name=sender_name,
                         stream_url=stream_url,
                     )
+
+                    self.will_stream = stream_url is not None
                 if artifacts:
                     self.artifacts = artifacts.model_dump()
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
@@ -434,13 +436,15 @@ class ChatVertex(StatelessVertex):
         self._built_result = complete_message
         # Update artifacts with the message
         # and remove the stream_url
+        self._finalize_build()
         logger.debug(f"Streamed message: {complete_message}")
 
-        await log_message(
-            sender=self.params.get("sender", ""),
-            sender_name=self.params.get("sender_name", ""),
-            message=complete_message,
-            session_id=self.params.get("session_id", ""),
+        await log_vertex_build(
+            flow_id=self.graph.flow_id,
+            vertex_id=self.id,
+            valid=True,
+            params=self._built_object_repr(),
+            data=self.result,
             artifacts=self.artifacts,
         )
 

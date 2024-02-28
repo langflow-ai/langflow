@@ -2,16 +2,13 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from loguru import logger
 
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
+                                   InterfaceComponentTypes, ResultData)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -44,6 +41,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
+        self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
         self.is_input = any(
