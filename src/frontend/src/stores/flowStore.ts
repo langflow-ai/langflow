@@ -56,6 +56,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowPool: {},
   inputs: [],
   outputs: [],
+  openCodeModalWShortcut: false,
+  handleModalWShortcut: ((modal) => {
+    switch (modal) {
+      case "code":
+        set((state) => ({
+          openCodeModalWShortcut: !state.openCodeModalWShortcut,
+        }));
+        break
+    }
+  }),
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },

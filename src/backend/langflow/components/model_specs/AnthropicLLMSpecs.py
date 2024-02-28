@@ -10,6 +10,7 @@ from langflow import CustomComponent
 class AnthropicLLM(CustomComponent):
     display_name: str = "AnthropicLLM"
     description: str = "Anthropic Chat&Completion large language models."
+    icon ="Anthropic"
 
     def build_config(self):
         return {

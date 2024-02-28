@@ -36,6 +36,7 @@ export default function NodeToolbarComponent({
   numberOfHandles,
   showNode,
   name = "code",
+  selected,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
@@ -88,6 +89,13 @@ export default function NodeToolbarComponent({
     }
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
+
+  const openCodeModalWShortcut = useFlowStore(state => state.openCodeModalWShortcut);
+  const handleModalWShortcut = useFlowStore(state => state.handleModalWShortcut);
+
+  useEffect(() => {
+    setOpenModal(openCodeModalWShortcut)
+  }, [openCodeModalWShortcut, handleModalWShortcut])
 
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection

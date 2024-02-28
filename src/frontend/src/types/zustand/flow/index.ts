@@ -37,6 +37,8 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  openCodeModalWShortcut: boolean;
+  handleModalWShortcut: (modal: string) => void
   flowPool: FlowPoolType;
   inputs: Array<{ type: string; id: string }>;
   outputs: Array<{ type: string; id: string }>;

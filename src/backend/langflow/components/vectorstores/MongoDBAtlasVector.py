@@ -11,6 +11,7 @@ class MongoDBAtlasComponent(CustomComponent):
     description = (
         "Construct a `MongoDB Atlas Vector Search` vector store from raw documents."
     )
+    icon="MongoDB"
 
     def build_config(self):
         return {
