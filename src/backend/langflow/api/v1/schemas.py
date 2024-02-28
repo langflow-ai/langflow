@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from langflow.api.utils import serialize_field
+from pydantic import BaseModel, Field, field_validator, model_serializer
+
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class BuildStatus(Enum):
@@ -66,6 +66,26 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: Optional[List[Any]] = None
+    session_id: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        # Serialize all the outputs if they are base models
+        if self.outputs:
+            serialized_outputs = []
+            for output in self.outputs:
+                if isinstance(output, BaseModel):
+                    serialized_outputs.append(output.model_dump(exclude_none=True))
+                else:
+                    serialized_outputs.append(output)
+            self.outputs = serialized_outputs
+        return handler(self)
+
+
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
@@ -73,9 +93,6 @@ class PreloadResponse(BaseModel):
     is_clear: Optional[bool] = None
 
 
-# TaskStatusResponse(
-#         status=task.status, result=task.result if task.ready() else None
-#     )
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 
@@ -161,7 +178,9 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        return (
+            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        )
 
 
 class CustomComponentCode(BaseModel):
@@ -218,19 +237,14 @@ class ApiKeyCreateRequest(BaseModel):
 
 class VerticesOrderResponse(BaseModel):
     ids: List[List[str]]
+    run_id: UUID
 
 
-class ResultData(BaseModel):
+class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
-
-    @field_serializer("results")
-    def serialize_results(self, value):
-        if isinstance(value, dict):
-            return {key: serialize_field(val) for key, val in value.items()}
-        return serialize_field(value)
 
 
 class VertexBuildResponse(BaseModel):
@@ -239,7 +253,7 @@ class VertexBuildResponse(BaseModel):
     valid: bool
     params: Optional[str]
     """JSON string of the params."""
-    data: ResultData
+    data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
     """Timestamp of the build."""

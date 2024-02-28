@@ -4,6 +4,7 @@ import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { editTextModalTitle } from "../../constants/constants";
 
 export default function TextAreaComponent({
   value,
@@ -37,7 +38,7 @@ export default function TextAreaComponent({
           <GenericModal
             type={TypeModal.TEXT}
             buttonText="Finish Editing"
-            modalTitle="Edit Text"
+            modalTitle={editTextModalTitle}
             value={value}
             setValue={(value: string) => {
               onChange(value);

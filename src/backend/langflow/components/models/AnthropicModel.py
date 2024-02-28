@@ -3,13 +3,16 @@ from typing import Optional
 from langchain_community.chat_models.anthropic import ChatAnthropic
 from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class AnthropicLLM(CustomComponent):
+class AnthropicLLM(LCModelComponent):
     display_name: str = "AnthropicModel"
-    description: str = "Generate text using Anthropic Chat&Completion large language models."
+    description: str = (
+        "Generate text using Anthropic Chat&Completion large language models."
+    )
+    icon = "Anthropic"
 
     def build_config(self):
         return {
@@ -47,17 +50,22 @@ class AnthropicLLM(CustomComponent):
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
         model: str,
-        inputs: str,
+        input_value: str,
         anthropic_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         api_endpoint: Optional[str] = None,
+        stream: bool = False,
     ) -> Text:
         # Set default API endpoint if not provided
         if not api_endpoint:
@@ -66,14 +74,14 @@ class AnthropicLLM(CustomComponent):
         try:
             output = ChatAnthropic(
                 model_name=model,
-                anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
+                anthropic_api_key=(
+                    SecretStr(anthropic_api_key) if anthropic_api_key else None
+                ),
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=api_endpoint,
             )
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

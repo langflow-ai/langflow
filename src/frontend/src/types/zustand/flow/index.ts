@@ -18,16 +18,18 @@ export type ChatOutputType = {
   message: string;
   sender: string;
   sender_name: string;
+  stream_url?: string;
 };
 
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
   params: any;
-  data: { artifacts: any; results: any | ChatOutputType | chatInputType };
-  duration: string;
-  progress: number;
+  data: { artifacts: any | ChatOutputType | chatInputType; results: any | ChatOutputType | chatInputType };
+  duration?: string;
+  progress?: number;
   id: string;
+  buildId: string;
 };
 
 export type FlowPoolType = {
@@ -40,7 +42,7 @@ export type FlowStoreType = {
   outputs: Array<{ type: string; id: string }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
-  addDataToFlowPool: (data: any, nodeId: string) => void;
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
   isPending: boolean;
@@ -92,4 +94,5 @@ export type FlowStoreType = {
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: { [key: string]: BuildStatus };
+  updateFlowPool: (nodeId:string, data:FlowPoolObjectType | ChatOutputType | chatInputType,buildId?:string) => void;
 };

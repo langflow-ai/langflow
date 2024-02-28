@@ -2,13 +2,14 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class AmazonBedrockComponent(CustomComponent):
+class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Model"
     description: str = "Generate text using LLM model from Amazon Bedrock."
+    icon = "AmazonBedrock"
 
     def build_config(self):
         return {
@@ -34,12 +35,16 @@ class AmazonBedrockComponent(CustomComponent):
             "model_kwargs": {"display_name": "Model Kwargs"},
             "cache": {"display_name": "Cache"},
             "code": {"advanced": True},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         model_id: str = "anthropic.claude-instant-v1",
         credentials_profile_name: Optional[str] = None,
         region_name: Optional[str] = None,
@@ -47,6 +52,7 @@ class AmazonBedrockComponent(CustomComponent):
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
         cache: Optional[bool] = None,
+        stream: bool = False,
     ) -> Text:
         try:
             output = BedrockChat(
@@ -60,7 +66,5 @@ class AmazonBedrockComponent(CustomComponent):
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

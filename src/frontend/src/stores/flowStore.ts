@@ -9,7 +9,7 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
-import { FLOW_BUILD_SUCCESS_ALERT } from "../alerts_constants";
+import { FLOW_BUILD_SUCCESS_ALERT, MISSED_ERROR_ALERT } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -19,7 +19,7 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType } from "../types/zustand/flow";
+import { ChatOutputType, FlowPoolObjectType, FlowStoreType, chatInputType } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   cleanEdges,
@@ -51,11 +51,33 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: any, nodeId: string) => {
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
       newFlowPool[nodeId].push(data);
+    }
+    get().setFlowPool(newFlowPool);
+  },
+  updateFlowPool:(nodeId:string,data:FlowPoolObjectType| ChatOutputType | chatInputType,buildId?:string)=>{
+    let newFlowPool = cloneDeep({ ...get().flowPool });
+    if (!newFlowPool[nodeId]){
+      return;
+    }
+    else {
+      let index = newFlowPool[nodeId].length-1;
+      if(buildId){
+        index = newFlowPool[nodeId].findIndex((flow)=>flow.id===buildId);
+      }
+      //check if the data is a flowpool object
+      if((data as FlowPoolObjectType).data?.artifacts!==undefined){
+        newFlowPool[nodeId][index] = (data as FlowPoolObjectType);
+      }
+      //update data artifact
+      else
+      {
+        newFlowPool[nodeId][index].data.artifacts = data;
+      }
     }
     get().setFlowPool(newFlowPool);
   },
@@ -385,7 +407,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
       if (errors.length > 0) {
         setErrorData({
-          title: "Oops! Looks like you missed something",
+          title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
@@ -394,12 +416,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
-      status: BuildStatus
+      status: BuildStatus,
+      buildId:string
     ) {
       if (vertexBuildData && vertexBuildData.inactive_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
       }
-      get().addDataToFlowPool(vertexBuildData, vertexBuildData.id);
+      get().addDataToFlowPool({...vertexBuildData,buildId}, vertexBuildData.id);
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await updateFlowInDatabase({

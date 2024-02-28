@@ -10,6 +10,8 @@ import {
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
+  editTextModalTitle,
+  editTextPlaceholder,
   regexHighlight,
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
@@ -19,7 +21,7 @@ import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { BUG_ALERT, PROMPT_ERROR_ALERT, PROMPT_SUCCESS_ALERT, TEMP_NOTICE_ALERT } from "../../alerts_constants";
+import { BUG_ALERT, PROMPT_ERROR_ALERT, PROMPT_SUCCESS_ALERT, TEMP_NOTICE_ALERT } from "../../constants/alerts_constants";
 
 export default function GenericModal({
   field_name = "",
@@ -211,7 +213,7 @@ export default function GenericModal({
                   setInputValue(event.target.value);
                   checkVariables(event.target.value);
                 }}
-                placeholder="Type message here."
+                placeholder={editTextPlaceholder}
                 onKeyDown={(e) => {
                   handleKeyDown(e, inputValue, "");
                 }}
@@ -233,7 +235,7 @@ export default function GenericModal({
                 onChange={(event) => {
                   setInputValue(event.target.value);
                 }}
-                placeholder="Type message here."
+                placeholder={editTextPlaceholder}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}

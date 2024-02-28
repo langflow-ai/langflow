@@ -3,16 +3,17 @@ from typing import Optional
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class QianfanChatEndpointComponent(CustomComponent):
+class QianfanChatEndpointComponent(LCModelComponent):
     display_name: str = "QianfanChat Model"
     description: str = (
         "Generate text using Baidu Qianfan chat models. Get more detail from "
         "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
     )
+    icon = "BaiduQianfan"
 
     def build_config(self):
         return {
@@ -68,12 +69,16 @@ class QianfanChatEndpointComponent(CustomComponent):
                 "info": "Endpoint of the Qianfan LLM, required if custom model used.",
             },
             "code": {"show": False},
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
         self,
-        inputs: str,
+        input_value: str,
         model: str = "ERNIE-Bot-turbo",
         qianfan_ak: Optional[str] = None,
         qianfan_sk: Optional[str] = None,
@@ -81,6 +86,7 @@ class QianfanChatEndpointComponent(CustomComponent):
         temperature: Optional[float] = None,
         penalty_score: Optional[float] = None,
         endpoint: Optional[str] = None,
+        stream: bool = False,
     ) -> Text:
         try:
             output = QianfanChatEndpoint(  # type: ignore
@@ -94,7 +100,5 @@ class QianfanChatEndpointComponent(CustomComponent):
             )
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
-        message = output.invoke(inputs)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)
