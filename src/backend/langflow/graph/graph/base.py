@@ -73,7 +73,7 @@ class Graph:
                 if getattr(vertex, attribute):
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
-    async def _run(self, inputs: Dict[str, str]) -> List["ResultData"]:
+    async def _run(self, inputs: Dict[str, str], stream: bool) -> List["ResultData"]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -91,10 +91,14 @@ class Graph:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
+            if not stream and hasattr(vertex, "consume_async_generator"):
+                await vertex.consume_async_generator()
             outputs.append(vertex.result)
         return outputs
 
-    async def run(self, inputs: Dict[str, Union[str, list[str]]]) -> List["ResultData"]:
+    async def run(
+        self, inputs: Dict[str, Union[str, list[str]]], stream: bool
+    ) -> List["ResultData"]:
         """Runs the graph with the given inputs."""
 
         # inputs is {"message": "Hello, world!"}
@@ -106,7 +110,9 @@ class Graph:
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
-            run_outputs = await self._run({INPUT_FIELD_NAME: input_value})
+            run_outputs = await self._run(
+                {INPUT_FIELD_NAME: input_value}, stream=stream
+            )
             logger.debug(f"Run outputs: {run_outputs}")
             outputs.extend(run_outputs)
         return outputs

@@ -451,6 +451,10 @@ class ChatVertex(StatelessVertex):
         self._validate_built_object()
         self._built = True
 
+    async def consume_async_generator(self):
+        async for _ in self.stream():
+            pass
+
 
 class RoutingVertex(StatelessVertex):
     def __init__(self, data: Dict, graph):
