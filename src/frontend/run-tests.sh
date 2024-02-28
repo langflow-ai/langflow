@@ -27,8 +27,16 @@ terminate_process_by_port() {
     echo "Process terminated."
 }
 
+delete_temp() {
+    cd ../../
+    echo "Deleting temp database"
+    rm temp
+    echo "Temp database deleted."
+}
+
+
 # Trap signals to ensure cleanup on script termination
-trap 'terminate_process_by_port 7860; terminate_process_by_port 3000' EXIT
+trap 'terminate_process_by_port 7860; terminate_process_by_port 3000; delete_temp' EXIT
 
 # install playwright if there is not installed yet
 npx playwright install
@@ -46,7 +54,7 @@ sleep 10
 poetry install --extras deploy
 
 # Start the backend using 'make backend' in the background
-LANGFLOW_DATABASE_URL=sqlite:// LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser &
+LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
 sleep 25
