@@ -191,7 +191,7 @@ class Vertex:
     def _parse_data(self) -> None:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
-        self.display_name = self.data["node"]["display_name"]
+        self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
         self.pinned = self.data["node"].get("pinned", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
