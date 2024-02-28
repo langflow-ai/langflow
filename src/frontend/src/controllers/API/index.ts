@@ -872,7 +872,7 @@ export async function postBuildVertex(
   vertexId: string,
   input_value: string,
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
-  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`, {inputs: {input_value: input_value}});
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`, input_value ? {inputs: {input_value: input_value}} : undefined);
 }
 
 export async function downloadImage({ flowId, fileName }): Promise<any> {
