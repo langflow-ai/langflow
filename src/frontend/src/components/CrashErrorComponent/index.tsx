@@ -18,7 +18,7 @@ export default function CrashErrorComponent({
               </div>
               <div>
                 <p className="mb-4 text-xl text-foreground">
-                  Sorry, we found an unexpectable error!
+                  Sorry, we found an unexpected error!
                 </p>
               </div>
             </CardHeader>
@@ -26,17 +26,18 @@ export default function CrashErrorComponent({
             <CardContent className="grid">
               <div>
                 <p>
-                  Click <span className="font-bold">'Restart Langflow'</span>{" "}
-                  button to reset the app. Please report errors on our{" "}
+                Please report errors with detailed tracebacks on the{" "}
                   <a
-                    href="https://github.com/logspace-ai/langflow/issues/new"
+                    href="https://github.com/logspace-ai/langflow/issues"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium  hover:underline "
                   >
                     GitHub Issues
                   </a>{" "}
-                  page to help the community. Thank you!
+                  page.
+                  <br></br>
+                   Thank you!
                 </p>
               </div>
             </CardContent>
