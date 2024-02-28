@@ -14,6 +14,11 @@ from loguru import logger
 class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     """Callback handler for streaming LLM responses."""
 
+    @property
+    def ignore_chain(self) -> bool:
+        """Whether to ignore chain callbacks."""
+        return False
+
     def __init__(self, client_id: str):
         self.chat_service = get_chat_service()
         self.client_id = client_id
