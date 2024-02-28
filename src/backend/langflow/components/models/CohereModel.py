@@ -41,13 +41,11 @@ class CohereComponent(LCModelComponent):
         self,
         cohere_api_key: str,
         input_value: str,
-        max_tokens: int = 256,
         temperature: float = 0.75,
         stream: bool = False,
     ) -> Text:
-        output = ChatCohere(
+        output = ChatCohere(  # type: ignore
             cohere_api_key=cohere_api_key,
-            max_tokens=max_tokens,
             temperature=temperature,
         )
         return self.get_result(output=output, stream=stream, input_value=input_value)

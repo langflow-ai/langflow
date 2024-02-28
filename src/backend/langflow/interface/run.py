@@ -6,20 +6,17 @@ from loguru import logger
 from langflow.graph import Graph
 
 
-async def build_sorted_vertices(data_graph, user_id: Optional[Union[str, UUID]] = None) -> Tuple[Graph, Dict]:
+async def build_sorted_vertices(
+    data_graph, flow_id: Optional[Union[str, UUID]] = None
+) -> Tuple[Graph, Dict]:
     """
     Build langchain object from data_graph.
     """
 
     logger.debug("Building langchain object")
-    graph = Graph.from_payload(data_graph)
-    sorted_vertices = graph.topological_sort()
-    artifacts = {}
-    for vertex in sorted_vertices:
-        await vertex.build(user_id=user_id)
-        if vertex.artifacts:
-            artifacts.update(vertex.artifacts)
-    return graph, artifacts
+    graph = Graph.from_payload(data_graph, flow_id=flow_id)
+
+    return graph, {}
 
 
 def get_memory_key(langchain_object):

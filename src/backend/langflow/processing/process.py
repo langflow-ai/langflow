@@ -98,22 +98,6 @@ def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     return list(inputs.values())[0] if len(inputs) == 1 else None
 
 
-def get_build_result(data_graph, session_id):
-    # If session_id is provided, load the langchain_object from the session
-    # using build_sorted_vertices_with_caching.get_result_by_session_id
-    # if it returns something different than None, return it
-    # otherwise, build the graph and return the result
-    if session_id:
-        logger.debug(f"Loading LangChain object from session {session_id}")
-        result = build_sorted_vertices(data_graph=data_graph)
-        if result is not None:
-            logger.debug("Loaded LangChain object")
-            return result
-
-    logger.debug("Building langchain object")
-    return build_sorted_vertices(data_graph)
-
-
 def process_inputs(
     inputs: Optional[Union[dict, List[dict]]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
@@ -233,7 +217,9 @@ async def process_graph_cached(
             session_id=session_id, data_graph=data_graph
         )
     # Load the graph using SessionService
-    session = await session_service.load_session(session_id, data_graph)
+    session = await session_service.load_session(
+        session_id, data_graph, flow_id=flow_id
+    )
     graph, artifacts = session if session else (None, None)
     if not graph:
         raise ValueError("Graph not found in the session")
@@ -270,8 +256,8 @@ async def build_graph_and_generate_result(
 async def run_graph(
     graph: Union["Graph", dict],
     flow_id: str,
-    session_id: str,
     stream: bool,
+    session_id: Optional[str] = None,
     inputs: Optional[Union[dict, List[dict]]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
     session_service: Optional[SessionService] = None,
@@ -282,10 +268,12 @@ async def run_graph(
         graph = Graph.from_payload(graph, flow_id=flow_id)
     else:
         graph_data = graph._graph_data
-    if not session_id:
+    if not session_id and session_service is not None:
         session_id = session_service.generate_key(
             session_id=flow_id, data_graph=graph_data
         )
+    if inputs is None:
+        inputs = {}
 
     outputs = await graph.run(inputs, stream=stream)
     if session_id and session_service:

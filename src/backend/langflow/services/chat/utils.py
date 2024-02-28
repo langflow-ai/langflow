@@ -8,7 +8,6 @@ from loguru import logger
 from langflow.api.v1.schemas import ChatMessage
 from langflow.interface.utils import try_setting_streaming_options
 from langflow.processing.base import get_result_and_steps
-from langflow.utils.chat import ChatDefinition
 
 LANGCHAIN_RUNNABLES = (Chain, Runnable, AgentExecutor)
 
@@ -24,7 +23,9 @@ async def process_graph(
 
     if build_result is None:
         # Raise user facing error
-        raise ValueError("There was an error loading the langchain_object. Please, check all the nodes and try again.")
+        raise ValueError(
+            "There was an error loading the langchain_object. Please, check all the nodes and try again."
+        )
 
     # Generate result and thought
     try:
@@ -40,20 +41,7 @@ async def process_graph(
                 client_id=client_id,
                 session_id=session_id,
             )
-        elif isinstance(build_result, ChatDefinition):
-            raw_output = await run_build_result(
-                build_result,
-                chat_inputs,
-                client_id=client_id,
-                session_id=session_id,
-            )
-            if isinstance(raw_output, dict):
-                if not build_result.output_key:
-                    raise ValueError("No output key provided to ChatDefinition when returning a dict.")
-                result = raw_output[build_result.output_key]
-            else:
-                result = raw_output
-            intermediate_steps = []
+
         else:
             raise TypeError(f"Unknown type {type(build_result)}")
         logger.debug("Generated result and intermediate_steps")
@@ -64,5 +52,7 @@ async def process_graph(
         raise e
 
 
-async def run_build_result(build_result: Any, chat_inputs: ChatMessage, client_id: str, session_id: str):
+async def run_build_result(
+    build_result: Any, chat_inputs: ChatMessage, client_id: str, session_id: str
+):
     return build_result(inputs=chat_inputs.message)

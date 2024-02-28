@@ -22,7 +22,8 @@ class Object:
     pass
 
 
-class Text:
+# Text = NewType("Text", str)
+class Text(str):
     pass
 
 

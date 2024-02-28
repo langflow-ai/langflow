@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.documents import Document
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ class Record(BaseModel):
     """
 
     text: str
-    data: Optional[dict] = None
+    data: dict = {}
 
     @classmethod
     def from_document(cls, document: Document) -> "Record":

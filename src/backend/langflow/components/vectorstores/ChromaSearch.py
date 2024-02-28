@@ -100,7 +100,8 @@ class ChromaSearchComponent(LCVectorStoreComponent):
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
-        index_directory = self.resolve_path(index_directory)
+        if index_directory:
+            index_directory = self.resolve_path(index_directory)
         vector_store = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,

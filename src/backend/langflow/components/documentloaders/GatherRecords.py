@@ -76,9 +76,11 @@ class GatherRecordsComponent(CustomComponent):
 
         return file_paths
 
-    def parse_file_to_record(self, file_path: str, silent_errors: bool) -> Record:
+    def parse_file_to_record(
+        self, file_path: str, silent_errors: bool
+    ) -> Optional[Record]:
         # Use the partition function to load the file
-        from unstructured.partition.auto import partition
+        from unstructured.partition.auto import partition  # type: ignore
 
         try:
             elements = partition(file_path)
@@ -115,13 +117,14 @@ class GatherRecordsComponent(CustomComponent):
 
     def parallel_load_records(
         self, file_paths: List[str], silent_errors: bool, max_concurrency: int
-    ) -> List[Record]:
+    ) -> List[Optional[Record]]:
         with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
             loaded_files = executor.map(
                 lambda file_path: self.parse_file_to_record(file_path, silent_errors),
                 file_paths,
             )
-        return loaded_files
+        # loaded_files is an iterator, so we need to convert it to a list
+        return list(loaded_files)
 
     def build(
         self,

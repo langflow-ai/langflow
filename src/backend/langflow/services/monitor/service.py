@@ -1,8 +1,12 @@
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Type, Union
 
 import duckdb
+from loguru import logger
+from platformdirs import user_cache_dir
+from pydantic import BaseModel
+
 from langflow.services.base import Service
 from langflow.services.monitor.schema import (
     MessageModel,
@@ -13,8 +17,6 @@ from langflow.services.monitor.utils import (
     add_row_to_table,
     drop_and_create_table_if_schema_mismatch,
 )
-from loguru import logger
-from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService
@@ -43,7 +45,9 @@ class MonitorService(Service):
 
     def ensure_tables_exist(self):
         for table_name, model in self.table_map.items():
-            drop_and_create_table_if_schema_mismatch(str(self.db_path), table_name, model)
+            drop_and_create_table_if_schema_mismatch(
+                str(self.db_path), table_name, model
+            )
 
     def add_row(
         self,
@@ -52,7 +56,7 @@ class MonitorService(Service):
     ):
         # Make sure the model passed matches the table
 
-        model = self.table_map.get(table_name)
+        model: Type[BaseModel] = self.table_map.get(table_name)
         if model is None:
             raise ValueError(f"Unknown table name: {table_name}")
 

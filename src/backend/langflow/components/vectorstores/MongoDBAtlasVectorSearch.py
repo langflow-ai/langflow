@@ -25,7 +25,7 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
             "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
         }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         search_type: str,

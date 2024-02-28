@@ -203,7 +203,7 @@ class ChatOllamaComponent(LCModelComponent):
         timeout: Optional[int] = None,
         top_k: Optional[int] = None,
         top_p: Optional[int] = None,
-        stream: Optional[bool] = False,
+        stream: bool = False,
     ) -> Text:
         if not base_url:
             base_url = "http://localhost:11434"

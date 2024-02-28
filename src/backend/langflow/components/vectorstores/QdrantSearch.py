@@ -44,7 +44,7 @@ class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
             "url": {"display_name": "URL", "advanced": True},
         }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         embedding: Embeddings,
@@ -65,7 +65,7 @@ class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
         search_kwargs: Optional[NestedDict] = None,
         timeout: Optional[int] = None,
         url: Optional[str] = None,
-    ) -> List[Record]:
+    ) -> List[Record]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
             collection_name=collection_name,
