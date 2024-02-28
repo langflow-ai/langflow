@@ -274,6 +274,7 @@ export const nodeIconsLucide: iconsType = {
   Google: GoogleIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
+  HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
