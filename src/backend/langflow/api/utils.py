@@ -222,7 +222,7 @@ def build_and_cache_graph(
     graph: Optional[Graph] = None,
 ):
     """Build and cache the graph."""
-    flow: Flow = session.get(Flow, flow_id)
+    flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
     other_graph = Graph.from_payload(flow.data, flow_id)
@@ -236,10 +236,12 @@ def build_and_cache_graph(
 
 def format_syntax_error_message(exc: SyntaxError) -> str:
     """Format a SyntaxError message for returning to the frontend."""
+    if exc.text is None:
+        return f"Syntax error in code. Error on line {exc.lineno}"
     return f"Syntax error in code. Error on line {exc.lineno}: {exc.text.strip()}"
 
 
-def get_causing_exception(exc: Exception) -> Exception:
+def get_causing_exception(exc: BaseException) -> BaseException:
     """Get the causing exception from an exception."""
     if hasattr(exc, "__cause__") and exc.__cause__:
         return get_causing_exception(exc.__cause__)

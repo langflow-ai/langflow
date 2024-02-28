@@ -102,7 +102,7 @@ class GatherRecordsComponent(CustomComponent):
         silent_errors: bool,
         max_concurrency: int,
         use_multithreading: bool,
-    ) -> List[Record]:
+    ) -> List[Optional[Record]]:
         if use_multithreading:
             records = self.parallel_load_records(
                 file_paths, silent_errors, max_concurrency

@@ -1,7 +1,7 @@
 import time
 from typing import Callable
 
-import socketio
+import socketio  # type: ignore
 from sqlmodel import select
 
 from langflow.api.utils import format_elapsed_time

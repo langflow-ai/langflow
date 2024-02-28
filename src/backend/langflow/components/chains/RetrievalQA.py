@@ -59,4 +59,4 @@ class RetrievalQAComponent(CustomComponent):
 
         final_result = "\n".join([str(result_str), references_str])
         self.status = final_result
-        return final_result
+        return final_result  # OK
