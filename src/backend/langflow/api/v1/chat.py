@@ -32,8 +32,9 @@ from langflow.services.auth.utils import (
     get_current_user_for_websocket,
 )
 from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session
+from langflow.services.deps import get_chat_service, get_session, get_session_service
 from langflow.services.monitor.utils import log_vertex_build
+from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.types import ChatVertex
@@ -227,19 +228,27 @@ async def build_vertex(
 async def build_vertex_stream(
     flow_id: str,
     vertex_id: str,
+    session_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
+    session_service: "SessionService" = Depends(get_session_service),
 ):
     """Build a vertex instead of the entire graph."""
     try:
 
         async def stream_vertex():
             try:
-                cache = chat_service.get_cache(flow_id)
-                if not cache:
-                    # If there's no cache
-                    raise ValueError(f"No cache found for {flow_id}.")
+                if not session_id:
+                    cache = chat_service.get_cache(flow_id)
+                    if not cache:
+                        # If there's no cache
+                        raise ValueError(f"No cache found for {flow_id}.")
+                    else:
+                        graph = cache.get("result")
                 else:
-                    graph = cache.get("result")
+                    session_data = await session_service.load_session(session_id)
+                    graph, artifacts = session_data if session_data else (None, None)
+                    if not graph:
+                        raise ValueError(f"No graph found for {flow_id}.")
 
                 vertex: "ChatVertex" = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
