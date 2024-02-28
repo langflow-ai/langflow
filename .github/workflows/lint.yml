@@ -3,7 +3,15 @@ name: lint
 on:
   push:
     branches: [main]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
   pull_request:
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
 
 env:
   POETRY_VERSION: "1.7.0"
