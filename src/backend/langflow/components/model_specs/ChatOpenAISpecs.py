@@ -9,6 +9,7 @@ from langflow.field_typing import BaseLanguageModel, NestedDict
 class ChatOpenAIComponent(CustomComponent):
     display_name = "ChatOpenAI"
     description = "`OpenAI` Chat large language models API."
+    icon = "OpenAI"
 
     def build_config(self):
         return {
