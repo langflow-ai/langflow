@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 from loguru import logger
 
 from langflow.graph.schema import INPUT_FIELD_NAME
-from langflow.graph.utils import UnbuiltObject, flatten_list
+from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
@@ -483,7 +483,6 @@ class RoutingVertex(StatelessVertex):
 
 
 def dict_to_codeblock(d: dict) -> str:
-    from langflow.api.utils import serialize_field
 
     serialized = {key: serialize_field(val) for key, val in d.items()}
     json_str = json.dumps(serialized, indent=4)

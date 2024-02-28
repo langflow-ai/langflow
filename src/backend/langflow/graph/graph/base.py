@@ -39,10 +39,10 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
-        self._is_input_vertices = []
-        self._is_output_vertices = []
-        self._has_session_id_vertices = []
-        self._sorted_vertices_layers = []
+        self._is_input_vertices: List[str] = []
+        self._is_output_vertices: List[str] = []
+        self._has_session_id_vertices: List[str] = []
+        self._sorted_vertices_layers: List[List[str]] = []
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -73,7 +73,9 @@ class Graph:
                 if getattr(vertex, attribute):
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
-    async def _run(self, inputs: Dict[str, str], stream: bool) -> List["ResultData"]:
+    async def _run(
+        self, inputs: Dict[str, str], stream: bool
+    ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -363,10 +365,10 @@ class Graph:
         # All vertices that do not have edges are invalid
         return len(self.get_vertex_edges(vertex.id)) > 0
 
-    def get_vertex(self, vertex_id: str) -> Union[None, Vertex]:
+    def get_vertex(self, vertex_id: str) -> Vertex:
         """Returns a vertex by id."""
         try:
-            return self.vertex_map.get(vertex_id)
+            return self.vertex_map[vertex_id]
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
 
@@ -590,7 +592,7 @@ class Graph:
         )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def sort_up_to_vertex(self, vertex_id: str) -> "Graph":
+    def sort_up_to_vertex(self, vertex_id: str) -> List[Vertex]:
         """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
         # Initial setup
         visited = set()  # To keep track of visited vertices
@@ -727,7 +729,9 @@ class Graph:
         ]
         return sorted_vertices
 
-    def sort_by_avg_build_time(self, vertices_layers: List[str]) -> List[str]:
+    def sort_by_avg_build_time(
+        self, vertices_layers: List[List[str]]
+    ) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices with the lowest average build time come first."""
 
         def sort_layer_by_avg_build_time(vertices_ids: List[str]) -> List[str]:

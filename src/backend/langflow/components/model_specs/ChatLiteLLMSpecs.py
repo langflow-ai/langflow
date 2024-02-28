@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Optional, Union
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel
 
@@ -126,7 +127,8 @@ class ChatLiteLLMComponent(CustomComponent):
             litellm.set_verbose = verbose
         except ImportError:
             raise ChatLiteLLMException(
-                "Could not import litellm python package. " "Please install it with `pip install litellm`"
+                "Could not import litellm python package. "
+                "Please install it with `pip install litellm`"
             )
         provider_map = {
             "OpenAI": "openai_api_key",
@@ -137,11 +139,17 @@ class ChatLiteLLMComponent(CustomComponent):
             "OpenRouter": "openrouter_api_key",
         }
         # Set the API key based on the provider
-        kwarg = {provider_map[provider]: api_key}
+        api_keys = {v: None for v in provider_map.values()}
+
+        if variable_name := provider_map.get(provider):
+            api_keys[variable_name] = api_key
+        else:
+            raise ChatLiteLLMException(
+                f"Provider {provider} is not supported. Supported providers are: {', '.join(provider_map.keys())}"
+            )
 
         LLM = ChatLiteLLM(
             model=model,
-            client=None,
             streaming=streaming,
             temperature=temperature,
             model_kwargs=model_kwargs if model_kwargs is not None else {},
@@ -150,6 +158,11 @@ class ChatLiteLLMComponent(CustomComponent):
             n=n,
             max_tokens=max_tokens,
             max_retries=max_retries,
-            **kwarg,
+            openai_api_key=api_keys["openai_api_key"],
+            azure_api_key=api_keys["azure_api_key"],
+            anthropic_api_key=api_keys["anthropic_api_key"],
+            replicate_api_key=api_keys["replicate_api_key"],
+            cohere_api_key=api_keys["cohere_api_key"],
+            openrouter_api_key=api_keys["openrouter_api_key"],
         )
         return LLM

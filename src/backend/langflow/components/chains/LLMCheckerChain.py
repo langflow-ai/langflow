@@ -23,7 +23,8 @@ class LLMCheckerChainComponent(CustomComponent):
     ) -> Text:
 
         chain = LLMCheckerChain.from_llm(llm=llm)
-        response = chain.invoke({chain.input_key: inputs})
-        result = response.get(chain.output_key)
-        self.status = result
-        return result
+        response = chain.invoke({chain.input_key: input_value})
+        result = response.get(chain.output_key, "")
+        result_str = str(result)
+        self.status = result_str
+        return result_str

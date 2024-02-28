@@ -55,7 +55,7 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
         "code": {"show": False},
     }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         search_type: str,

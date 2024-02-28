@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
-import socketio
+import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,7 +18,9 @@ from langflow.utils.logger import configure
 def get_lifespan(fix_migration=False, socketio_server=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+        initialize_services(
+            fix_migration=fix_migration, socketio_server=socketio_server
+        )
         setup_llm_caching()
         LangfuseInstance.update()
         yield
@@ -31,7 +33,9 @@ def create_app():
     """Create the FastAPI app and include the router."""
 
     configure()
-    socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
+    socketio_server = socketio.AsyncServer(
+        async_mode="asgi", cors_allowed_origins="*", logger=True
+    )
     lifespan = get_lifespan(socketio_server=socketio_server)
     app = FastAPI(lifespan=lifespan)
     origins = ["*"]
@@ -98,7 +102,9 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
+def setup_app(
+    static_files_dir: Optional[Path] = None, backend_only: bool = False
+) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     if not static_files_dir:

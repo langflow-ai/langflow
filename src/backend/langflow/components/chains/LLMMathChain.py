@@ -38,7 +38,8 @@ class LLMMathChainComponent(CustomComponent):
             output_key=output_key,
             memory=memory,
         )
-        response = chain.invoke({input_key: inputs})
+        response = chain.invoke({input_key: input_value})
         result = response.get(output_key)
-        self.status = result
-        return result
+        result_str = str(result)
+        self.status = result_str
+        return result_str

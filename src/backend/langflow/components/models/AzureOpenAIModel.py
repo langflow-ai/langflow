@@ -4,6 +4,7 @@ from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 
 from langflow.components.models.base.model import LCModelComponent
+from pydantic.v1 import SecretStr
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -93,13 +94,14 @@ class AzureChatOpenAIComponent(LCModelComponent):
         max_tokens: Optional[int] = 1000,
         stream: bool = False,
     ) -> BaseLanguageModel:
+        secret_api_key = SecretStr(api_key)
         try:
             output = AzureChatOpenAI(
                 model=model,
                 azure_endpoint=azure_endpoint,
                 azure_deployment=azure_deployment,
                 api_version=api_version,
-                api_key=api_key,
+                api_key=secret_api_key,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )

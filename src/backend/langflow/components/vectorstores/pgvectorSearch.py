@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langchain.embeddings.base import Embeddings
 
@@ -40,13 +40,13 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
             "input_value": {"display_name": "Input"},
         }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         embedding: Embeddings,
+        search_type: str,
         pg_server_url: str,
         collection_name: str,
-        search_type: Optional[str] = None,
     ) -> List[Record]:
         """
         Builds the Vector Store or BaseRetriever object.

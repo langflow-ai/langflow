@@ -95,8 +95,8 @@ class ChromaComponent(CustomComponent):
         # If documents, then we need to create a Chroma instance using .from_documents
 
         # Check index_directory and expand it if it is a relative path
-
-        index_directory = self.resolve_path(index_directory)
+        if index_directory is not None:
+            index_directory = self.resolve_path(index_directory)
 
         if documents is not None and embedding is not None:
             if len(documents) == 0:

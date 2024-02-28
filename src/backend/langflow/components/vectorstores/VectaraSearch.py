@@ -42,7 +42,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         },
     }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         search_type: str,

@@ -35,7 +35,7 @@ class ChatComponent(CustomComponent):
 
     def store_message(
         self,
-        message: Union[Text, Record],
+        message: Union[str, Text, Record],
         session_id: Optional[str] = None,
         sender: Optional[str] = None,
         sender_name: Optional[str] = None,

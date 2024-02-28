@@ -23,7 +23,7 @@ class ShouldRunNext(CustomComponent):
 
     def build(self, template: Prompt, llm: BaseLanguageModel, **kwargs) -> dict:
         # This is a simple component that always returns True
-        prompt_template = PromptTemplate.from_template(template)
+        prompt_template = PromptTemplate.from_template(str(template))
 
         attributes_to_check = ["text", "page_content"]
         for key, value in kwargs.items():
@@ -41,7 +41,9 @@ class ShouldRunNext(CustomComponent):
             result = result.get("response")
 
         if result.lower() not in ["true", "false"]:
-            raise ValueError("The prompt should generate a boolean response (True or False).")
+            raise ValueError(
+                "The prompt should generate a boolean response (True or False)."
+            )
         # The string should be the words true or false
         # if not raise an error
         bool_result = result.lower() == "true"

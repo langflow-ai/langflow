@@ -41,11 +41,15 @@ class CTransformersComponent(LCModelComponent):
         model_file: str,
         input_value: str,
         model_type: str,
+        stream: bool = False,
         config: Optional[Dict] = None,
-        stream: Optional[bool] = False,
     ) -> Text:
         output = CTransformers(
-            model=model, model_file=model_file, model_type=model_type, config=config
+            client=None,
+            model=model,
+            model_file=model_file,
+            model_type=model_type,
+            config=config,  # noqa
         )
 
         return self.get_result(output=output, stream=stream, input_value=input_value)

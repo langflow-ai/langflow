@@ -40,7 +40,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
             },
         }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         embedding: Embeddings,
@@ -51,7 +51,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         pinecone_api_key: Optional[str] = None,
         namespace: Optional[str] = "default",
         search_type: str = "similarity",
-    ) -> List[Record]:
+    ) -> List[Record]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
             pinecone_env=pinecone_env,

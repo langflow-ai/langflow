@@ -42,7 +42,7 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
             "redis_index_name": {"display_name": "Redis Index", "advanced": False},
         }
 
-    def build(
+    def build(  # type: ignore[override]
         self,
         input_value: str,
         search_type: str,

@@ -27,7 +27,7 @@ class MongoDBAtlasComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: List[Document] = None,
+        documents: List[Document],
         collection_name: str = "",
         db_name: str = "",
         index_name: str = "",
@@ -35,11 +35,22 @@ class MongoDBAtlasComponent(CustomComponent):
         search_kwargs: Optional[NestedDict] = None,
     ) -> MongoDBAtlasVectorSearch:
         search_kwargs = search_kwargs or {}
+        try:
+            from pymongo import MongoClient
+        except ImportError:
+            raise ImportError(
+                "Please install pymongo to use MongoDB Atlas Vector Store"
+            )
+        try:
+            mongo_client: MongoClient = MongoClient(mongodb_atlas_cluster_uri)
+            collection = mongo_client[db_name][collection_name]
+        except Exception as e:
+            raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
         if documents:
             vector_store = MongoDBAtlasVectorSearch.from_documents(
                 documents=documents,
                 embedding=embedding,
-                collection_name=collection_name,
+                collection=collection,
                 db_name=db_name,
                 index_name=index_name,
                 mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
@@ -48,10 +59,7 @@ class MongoDBAtlasComponent(CustomComponent):
         else:
             vector_store = MongoDBAtlasVectorSearch(
                 embedding=embedding,
-                collection_name=collection_name,
-                db_name=db_name,
+                collection=collection,
                 index_name=index_name,
-                mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
-                search_kwargs=search_kwargs,
             )
         return vector_store

@@ -48,11 +48,15 @@ class StoreMessages(CustomComponent):
         # and the other parameters
         if not texts and not records:
             raise ValueError("Either texts or records must be provided.")
+        if not texts:
+            texts = []
 
         if not records:
             records = []
             if not session_id or not sender or not sender_name:
-                raise ValueError("If passing texts, session_id, sender, and sender_name must be provided.")
+                raise ValueError(
+                    "If passing texts, session_id, sender, and sender_name must be provided."
+                )
             for text in texts:
                 record = Record(
                     text=text,
@@ -68,4 +72,4 @@ class StoreMessages(CustomComponent):
 
         self.status = records
         records = add_messages(records)
-        return records
+        return records or []

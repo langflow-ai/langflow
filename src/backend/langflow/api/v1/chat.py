@@ -2,19 +2,9 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Annotated, Optional
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    Depends,
-    HTTPException,
-    WebSocket,
-    WebSocketException,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
-from sqlmodel import Session
 
 from langflow.api.utils import (
     build_and_cache_graph,
@@ -28,11 +18,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
     VerticesOrderResponse,
 )
-from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import (
-    get_current_active_user,
-    get_current_user_for_websocket,
-)
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
 from langflow.services.monitor.utils import log_vertex_build
@@ -42,47 +28,6 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.types import ChatVertex
 
 router = APIRouter(tags=["Chat"])
-
-
-@router.websocket("/chat/{client_id}")
-async def chat(
-    client_id: str,
-    websocket: WebSocket,
-    db: Session = Depends(get_session),
-    chat_service: "ChatService" = Depends(get_chat_service),
-):
-    """Websocket endpoint for chat."""
-    try:
-        user = await get_current_user_for_websocket(websocket, db)
-        await websocket.accept()
-        if not user:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
-        elif not user.is_active:
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
-
-        if client_id in chat_service.cache_service:
-            await chat_service.handle_websocket(client_id, websocket)
-        else:
-            # We accept the connection but close it immediately
-            # if the flow is not built yet
-            message = "Please, build the flow before sending messages"
-            await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=message)
-    except WebSocketException as exc:
-        logger.error(f"Websocket exrror: {exc}")
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(exc))
-    except Exception as exc:
-        logger.error(f"Error in chat websocket: {exc}")
-        messsage = exc.detail if isinstance(exc, HTTPException) else str(exc)
-        if "Could not validate credentials" in str(exc):
-            await websocket.close(
-                code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized"
-            )
-        else:
-            await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=messsage)
 
 
 async def try_running_celery_task(vertex, user_id):
@@ -113,7 +58,7 @@ async def get_vertices(
         # First, we need to check if the flow_id is in the cache
         graph = None
         if cache := chat_service.get_cache(flow_id):
-            graph: Graph = cache.get("result")
+            graph = cache.get("result")
         graph = build_and_cache_graph(flow_id, session, chat_service, graph)
         if component_id:
             try:
@@ -141,7 +86,7 @@ async def build_vertex(
     flow_id: str,
     vertex_id: str,
     background_tasks: BackgroundTasks,
-    inputs: Annotated[InputValueRequest, Body(embed=True)] = None,
+    inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
 ):
@@ -161,7 +106,7 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-        result_data_response = {}
+        result_data_response = ResultDataResponse(results={})
         duration = ""
 
         vertex = graph.get_vertex(vertex_id)
@@ -250,7 +195,9 @@ async def build_vertex_stream(
                     else:
                         graph = cache.get("result")
                 else:
-                    session_data = await session_service.load_session(session_id)
+                    session_data = await session_service.load_session(
+                        session_id, flow_id=flow_id
+                    )
                     graph, artifacts = session_data if session_data else (None, None)
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")

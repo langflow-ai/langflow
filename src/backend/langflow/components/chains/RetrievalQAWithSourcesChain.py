@@ -40,11 +40,11 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             return_source_documents=return_source_documents,
             retriever=retriever,
         )
-        if isinstance(inputs, Document):
-            inputs = inputs.page_content
+        if isinstance(input_value, Document):
+            input_value = input_value.page_content
         self.status = runnable
         input_key = runnable.input_keys[0]
-        result = runnable.invoke({input_key: inputs})
+        result = runnable.invoke({input_key: input_value})
         result = result.content if hasattr(result, "content") else result
         # Result is a dict with keys "query",  "result" and "source_documents"
         # for now we just return the result
@@ -52,7 +52,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         references_str = ""
         if return_source_documents:
             references_str = self.create_references_from_records(records)
-        result_str = result.get("answer")
+        result_str = str(result.get("answer", ""))
         final_result = "\n".join([result_str, references_str])
         self.status = final_result
         return final_result

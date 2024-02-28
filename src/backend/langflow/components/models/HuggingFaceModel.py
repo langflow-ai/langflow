@@ -36,17 +36,19 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         self,
         input_value: str,
         endpoint_url: str,
+        model: Optional[str] = None,
         task: str = "text2text-generation",
         huggingfacehub_api_token: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
         stream: bool = False,
     ) -> Text:
         try:
-            llm = HuggingFaceEndpoint(
+            llm = HuggingFaceEndpoint(  # type: ignore
                 endpoint_url=endpoint_url,
                 task=task,
                 huggingfacehub_api_token=huggingfacehub_api_token,
-                model_kwargs=model_kwargs,
+                model_kwargs=model_kwargs or {},
+                model=model or "",
             )
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e

@@ -36,3 +36,4 @@ class FAISSComponent(CustomComponent):
             raise ValueError("Folder path is required to save the FAISS index.")
         path = self.resolve_path(folder_path)
         vector_store.save_local(str(path), index_name)
+        return vector_store

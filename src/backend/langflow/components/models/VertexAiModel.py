@@ -82,7 +82,7 @@ class ChatVertexAIComponent(LCModelComponent):
         stream: bool = False,
     ) -> Text:
         try:
-            from langchain_google_vertexai import ChatVertexAI
+            from langchain_google_vertexai import ChatVertexAI  # type: ignore
         except ImportError:
             raise ImportError(
                 "To use the ChatVertexAI model, you need to install the langchain-google-vertexai package."

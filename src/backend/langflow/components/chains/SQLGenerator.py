@@ -3,6 +3,7 @@ from typing import Optional
 from langchain.chains import create_sql_query_chain
 from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import Runnable
 
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, Text
@@ -39,33 +40,27 @@ class SQLGeneratorComponent(CustomComponent):
         else:
             prompt_template = None
 
-        if top_k > 0:
-            kwargs = {
-                "k": top_k,
-            }
+        if top_k < 1:
+            raise ValueError("Top K must be greater than 0.")
+
         if not prompt_template:
-            sql_query_chain = create_sql_query_chain(llm=llm, db=db, **kwargs)
+            sql_query_chain = create_sql_query_chain(llm=llm, db=db, k=top_k)
         else:
-            template = (
-                prompt_template.template
-                if hasattr(prompt, "template")
-                else prompt_template
-            )
             # Check if {question} is in the prompt
             if (
-                "{question}" not in template
-                or "question" not in template.input_variables
+                "{question}" not in prompt_template.template
+                or "question" not in prompt_template.input_variables
             ):
                 raise ValueError(
                     "Prompt must contain `{question}` to be used with Natural Language to SQL."
                 )
             sql_query_chain = create_sql_query_chain(
-                llm=llm, db=db, prompt=prompt_template, **kwargs
+                llm=llm, db=db, prompt=prompt_template, k=top_k
             )
-        query_writer = sql_query_chain | {
+        query_writer: Runnable = sql_query_chain | {
             "query": lambda x: x.replace("SQLQuery:", "").strip()
         }
-        response = query_writer.invoke({"question": inputs})
+        response = query_writer.invoke({"question": input_value})
         query = response.get("query")
         self.status = query
         return query
