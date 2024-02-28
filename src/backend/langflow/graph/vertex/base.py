@@ -457,7 +457,7 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
-            elif key not in self.params:
+            elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
 
     def _is_node(self, value):
