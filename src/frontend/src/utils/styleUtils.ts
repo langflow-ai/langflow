@@ -258,6 +258,7 @@ export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
+  Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
