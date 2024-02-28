@@ -181,7 +181,7 @@ async def build_vertex(
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
-            logger.error(f"Error building vertex: {exc}")
+            logger.exception(f"Error building vertex: {exc}")
             params = format_exception_message(exc)
             valid = False
             result_data_response = ResultDataResponse(results={})
