@@ -47,6 +47,27 @@ export default function CodeAreaModal({
     }
   }, []);
 
+  const handleModalWShortcut = useFlowStore((state) => state.handleModalWShortcut) 
+  const openCodeModalWShortcut = useFlowStore(state => state.openCodeModalWShortcut);
+const nodes = useFlowStore(state => state.nodes);
+
+useEffect(() => {
+  const onKeyDown = (event: KeyboardEvent) => {
+    
+    const selectedNode = nodes.filter((obj) => obj.selected);
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "C" && selectedNode.length > 0) {
+      event.preventDefault();
+      setOpen(openCodeModalWShortcut)
+    }
+    
+  }
+  document.addEventListener("keydown", onKeyDown);
+  
+  return () => {
+    document.removeEventListener("keydown", onKeyDown);
+  }
+}, []);
+
   useEffect(() => {
     if (openModal) setOpen(true);
   }, [openModal]);

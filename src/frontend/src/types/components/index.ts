@@ -484,6 +484,7 @@ export type nodeToolbarPropsType = {
   name?: string;
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
+  selected: boolean;
 };
 
 export type parsedDataType = {
