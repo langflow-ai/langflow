@@ -2,13 +2,16 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
-                    Optional)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
 
 from loguru import logger
 
-from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
-                                   InterfaceComponentTypes, ResultData)
+from langflow.graph.schema import (
+    INPUT_COMPONENTS,
+    OUTPUT_COMPONENTS,
+    InterfaceComponentTypes,
+    ResultData,
+)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -608,6 +611,7 @@ class Vertex:
     async def build(
         self,
         user_id=None,
+        inputs: Optional[Dict[str, Any]] = None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
@@ -619,6 +623,9 @@ class Vertex:
         if self.pinned and self._built:
             return self.get_requester_result(requester)
         self._reset()
+
+        if inputs and self.is_input:
+            self.update_raw_params(inputs)
 
         # Run steps
         for step in self.steps:
