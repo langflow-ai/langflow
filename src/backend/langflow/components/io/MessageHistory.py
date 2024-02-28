@@ -12,7 +12,7 @@ class MessageHistoryComponent(CustomComponent):
     def build_config(self):
         return {
             "sender": {
-                "options": ["Machine", "User"],
+                "options": ["Machine", "User", "Machine and User"],
                 "display_name": "Sender Type",
             },
             "sender_name": {"display_name": "Sender Name"},
@@ -38,6 +38,8 @@ class MessageHistoryComponent(CustomComponent):
         session_id: Optional[str] = None,
         n_messages: int = 5,
     ) -> List[Record]:
+        if sender == "Machine and User":
+            sender = None
         messages = get_messages(
             sender=sender,
             sender_name=sender_name,

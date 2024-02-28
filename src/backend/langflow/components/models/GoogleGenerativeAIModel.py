@@ -1,16 +1,17 @@
 from typing import Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-from pydantic.v1.types import SecretStr
+from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import RangeSpec, Text
 
 
-class GoogleGenerativeAIComponent(CustomComponent):
+class GoogleGenerativeAIComponent(LCModelComponent):
     display_name: str = "Google Generative AIModel"
     description: str = "Generate text using Google Generative AI to generate text."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "GoogleGenerativeAI"
+    icon = "Google"
 
     def build_config(self):
         return {
@@ -50,7 +51,11 @@ class GoogleGenerativeAIComponent(CustomComponent):
             "code": {
                 "advanced": True,
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "info": "The input to the model."},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -63,6 +68,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
         top_k: Optional[int] = None,
         top_p: Optional[float] = None,
         n: Optional[int] = 1,
+        stream: bool = False,
     ) -> Text:
         output = ChatGoogleGenerativeAI(
             model=model,
@@ -73,7 +79,4 @@ class GoogleGenerativeAIComponent(CustomComponent):
             n=n or 1,
             google_api_key=SecretStr(google_api_key),
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+        return self.get_result(output=output, stream=stream, input_value=input_value)

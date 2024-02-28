@@ -1,5 +1,5 @@
 import Convert from "ansi-to-html";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
@@ -9,17 +9,17 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
+import useFlowStore from "../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
-import useFlowStore from "../../../stores/flowStore";
 
 export default function ChatMessage({
   chat,
   lockChat,
   lastMessage,
   updateChat,
-  setLockChat
+  setLockChat,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -39,8 +39,6 @@ export default function ChatMessage({
   useEffect(() => {
     chatMessageRef.current = chatMessage;
   }, [chatMessage]);
-
-
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -70,9 +68,7 @@ export default function ChatMessage({
     });
   };
 
-
   useEffect(() => {
-    console.log("chatMessage", chatMessage);
     if (streamUrl && !isStreaming) {
       setLockChat(true);
       streamChunks(streamUrl)
@@ -92,8 +88,8 @@ export default function ChatMessage({
   useEffect(() => {
     return () => {
       eventSource.current?.close();
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
@@ -222,7 +218,7 @@ dark:prose-invert"
                                       },
                                     ]}
                                     activeTab={"0"}
-                                    setActiveTab={() => { }}
+                                    setActiveTab={() => {}}
                                   />
                                 ) : (
                                   <code className={className} {...props}>
@@ -279,33 +275,33 @@ dark:prose-invert"
                 <span className="prose text-primary word-break-break-word dark:prose-invert">
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                      const regex = /{([^}]+)}/g;
-                      let match;
-                      let parts: Array<JSX.Element | string> = [];
-                      let lastIndex = 0;
-                      while ((match = regex.exec(line)) !== null) {
-                        // Push text up to the match
-                        if (match.index !== lastIndex) {
-                          parts.push(line.substring(lastIndex, match.index));
-                        }
-                        // Push div with matched text
-                        if (chat.message[match[1]]) {
-                          parts.push(
-                            <span className="chat-message-highlight">
-                              {chat.message[match[1]]}
-                            </span>
-                          );
-                        }
+                        const regex = /{([^}]+)}/g;
+                        let match;
+                        let parts: Array<JSX.Element | string> = [];
+                        let lastIndex = 0;
+                        while ((match = regex.exec(line)) !== null) {
+                          // Push text up to the match
+                          if (match.index !== lastIndex) {
+                            parts.push(line.substring(lastIndex, match.index));
+                          }
+                          // Push div with matched text
+                          if (chat.message[match[1]]) {
+                            parts.push(
+                              <span className="chat-message-highlight">
+                                {chat.message[match[1]]}
+                              </span>
+                            );
+                          }
 
-                        // Update last index
-                        lastIndex = regex.lastIndex;
-                      }
-                      // Push text after the last match
-                      if (lastIndex !== line.length) {
-                        parts.push(line.substring(lastIndex));
-                      }
-                      return <p>{parts}</p>;
-                    })
+                          // Update last index
+                          lastIndex = regex.lastIndex;
+                        }
+                        // Push text after the last match
+                        if (lastIndex !== line.length) {
+                          parts.push(line.substring(lastIndex));
+                        }
+                        return <p>{parts}</p>;
+                      })
                     : chatMessage}
                 </span>
               </>

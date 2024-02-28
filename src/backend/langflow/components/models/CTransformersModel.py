@@ -2,11 +2,11 @@ from typing import Dict, Optional
 
 from langchain_community.llms.ctransformers import CTransformers
 
-from langflow import CustomComponent
+from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import Text
 
 
-class CTransformersComponent(CustomComponent):
+class CTransformersComponent(LCModelComponent):
     display_name = "CTransformersModel"
     description = "Generate text using CTransformers LLM models"
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
@@ -28,7 +28,11 @@ class CTransformersComponent(CustomComponent):
                 "field_type": "dict",
                 "value": '{"top_k":40,"top_p":0.95,"temperature":0.8,"repetition_penalty":1.1,"last_n_tokens":64,"seed":-1,"max_new_tokens":256,"stop":"","stream":"False","reset":"True","batch_size":8,"threads":-1,"context_length":-1,"gpu_layers":0}',
             },
-            "inputs": {"display_name": "Input"},
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -38,11 +42,10 @@ class CTransformersComponent(CustomComponent):
         input_value: str,
         model_type: str,
         config: Optional[Dict] = None,
+        stream: Optional[bool] = False,
     ) -> Text:
         output = CTransformers(
             model=model, model_file=model_file, model_type=model_type, config=config
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
-        return result
+
+        return self.get_result(output=output, stream=stream, input_value=input_value)

@@ -261,3 +261,7 @@ class VertexBuildResponse(BaseModel):
 
 class VerticesBuiltResponse(BaseModel):
     vertices: List[VertexBuildResponse]
+
+
+class InputValueRequest(BaseModel):
+    input_value: str

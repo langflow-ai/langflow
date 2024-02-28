@@ -218,24 +218,7 @@ retrievers:
   # https://github.com/supabase-community/supabase-py/issues/482
   # ZepRetriever:
   #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
-vectorstores:
-  # Chroma:
-  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/chroma"
-  Qdrant:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
-  FAISS:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
-  Pinecone:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/pinecone"
-  ElasticsearchStore:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/elasticsearch"
-  SupabaseVectorStore:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/supabase"
-  MongoDBAtlasVectorSearch:
-    documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
-  # Requires docarray >=0.32.0 but langchain-serve requires jina 3.15.2 which doesn't support docarray >=0.32.0
-  # DocArrayInMemorySearch:
-  #   documentation: "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/docarray_in_memory"
+
 wrappers:
   RequestsWrapper:
     documentation: ""

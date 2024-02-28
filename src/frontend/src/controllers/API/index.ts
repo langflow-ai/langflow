@@ -869,9 +869,10 @@ export async function getVerticesOrder(
 
 export async function postBuildVertex(
   flowId: string,
-  vertexId: string
+  vertexId: string,
+  input_value: string,
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
-  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`);
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices/${vertexId}`, input_value ? {inputs: {input_value: input_value}} : undefined);
 }
 
 export async function downloadImage({ flowId, fileName }): Promise<any> {
