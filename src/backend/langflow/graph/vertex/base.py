@@ -44,7 +44,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
-
+        self.updated_raw_params = False
         self.id: str = data["id"]
         self.is_input = any(
             input_component_name in self.id for input_component_name in INPUT_COMPONENTS
@@ -285,6 +285,10 @@ class Vertex:
         if self.graph is None:
             raise ValueError("Graph not found")
 
+        if self.updated_raw_params:
+            self.updated_raw_params = False
+            return
+
         template_dict = {
             key: value
             for key, value in self.data["node"]["template"].items()
@@ -386,10 +390,11 @@ class Vertex:
         Raises:
             ValueError: If any key in new_params is not found in self._raw_params.
         """
-        for key in new_params:
-            if key not in self._raw_params:
-                raise ValueError(f"Key {key} not found in raw params")
+        # First check if the input_value in _raw_params is not a vertex
+        if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
+            return
         self._raw_params.update(new_params)
+        self.updated_raw_params = True
 
     async def _build(self, user_id=None):
         """
@@ -451,6 +456,8 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
+            elif key not in self.params:
+                self.params[key] = value
 
     def _is_node(self, value):
         """
@@ -586,7 +593,7 @@ class Vertex:
 
             logger.warning(message)
 
-    def _reset(self):
+    def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
         self._built_object = UnbuiltObject()
         self._built_result = UnbuiltResult()

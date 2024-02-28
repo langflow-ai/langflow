@@ -42,7 +42,7 @@ class CTransformersComponent(CustomComponent):
         output = CTransformers(
             model=model, model_file=model_file, model_type=model_type, config=config
         )
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result

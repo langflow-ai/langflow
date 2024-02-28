@@ -48,27 +48,28 @@ class ChatComponent(CustomComponent):
             raise ValueError(
                 "All of session_id, sender, and sender_name must be provided."
             )
-
-        if not record:
-            record = []
-            if not session_id or not sender or not sender_name:
-                raise ValueError
-            for text in text:
-                record = Record(
-                    text=text,
-                    data={
-                        "session_id": session_id,
-                        "sender": sender,
-                        "sender_name": sender_name,
-                    },
-                )
-                record.append(record)
-        elif isinstance(record, Record):
-            record = [record]
+        if isinstance(message, Record):
+            record = message
+            record.data.update(
+                {
+                    "session_id": session_id,
+                    "sender": sender,
+                    "sender_name": sender_name,
+                }
+            )
+        else:
+            record = Record(
+                text=message,
+                data={
+                    "session_id": session_id,
+                    "sender": sender,
+                    "sender_name": sender_name,
+                },
+            )
 
         self.status = record
-        record = add_messages(record)
-        return record
+        records = add_messages([record])
+        return records[0]
 
     def build(
         self,

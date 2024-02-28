@@ -9,7 +9,7 @@ export type ChatMessageType = {
   files?: Array<{ data: string; type: string; data_type: string }>;
   prompt?: string;
   chatKey?: string;
-  id?: string;
+  componentId: string;
   stream_url?: string | null;
   sender_name?: string;
 };

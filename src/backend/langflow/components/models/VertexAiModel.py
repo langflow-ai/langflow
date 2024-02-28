@@ -92,7 +92,7 @@ class ChatVertexAIComponent(CustomComponent):
             top_p=top_p,
             verbose=verbose,
         )
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result
