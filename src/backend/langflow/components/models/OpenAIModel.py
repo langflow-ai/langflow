@@ -57,6 +57,10 @@ class OpenAIModelComponent(CustomComponent):
                 "required": False,
                 "value": 0.7,
             },
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -68,10 +72,11 @@ class OpenAIModelComponent(CustomComponent):
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
+        stream: Optional[bool] = False,
     ) -> Text:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
-        model = ChatOpenAI(
+        output = ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
             model=model_name,
@@ -79,8 +84,10 @@ class OpenAIModelComponent(CustomComponent):
             api_key=openai_api_key,
             temperature=temperature,
         )
-
-        message = model.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

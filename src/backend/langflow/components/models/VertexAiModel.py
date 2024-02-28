@@ -58,6 +58,10 @@ class ChatVertexAIComponent(CustomComponent):
                 "advanced": True,
             },
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -73,6 +77,7 @@ class ChatVertexAIComponent(CustomComponent):
         top_k: int = 40,
         top_p: float = 0.95,
         verbose: bool = False,
+        stream: bool = False,
     ) -> Text:
         try:
             from langchain_google_vertexai import ChatVertexAI
@@ -92,7 +97,10 @@ class ChatVertexAIComponent(CustomComponent):
             top_p=top_p,
             verbose=verbose,
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

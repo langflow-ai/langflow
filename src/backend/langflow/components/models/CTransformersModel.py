@@ -29,6 +29,10 @@ class CTransformersComponent(CustomComponent):
                 "value": '{"top_k":40,"top_p":0.95,"temperature":0.8,"repetition_penalty":1.1,"last_n_tokens":64,"seed":-1,"max_new_tokens":256,"stop":"","stream":"False","reset":"True","batch_size":8,"threads":-1,"context_length":-1,"gpu_layers":0}',
             },
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -38,11 +42,15 @@ class CTransformersComponent(CustomComponent):
         input_value: str,
         model_type: str,
         config: Optional[Dict] = None,
+        stream: Optional[bool] = False,
     ) -> Text:
         output = CTransformers(
             model=model, model_file=model_file, model_type=model_type, config=config
         )
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result

@@ -35,6 +35,10 @@ class AmazonBedrockComponent(CustomComponent):
             "cache": {"display_name": "Cache"},
             "code": {"advanced": True},
             "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": "Stream the response from the model.",
+            },
         }
 
     def build(
@@ -47,6 +51,7 @@ class AmazonBedrockComponent(CustomComponent):
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
         cache: Optional[bool] = None,
+        stream: bool = False,
     ) -> Text:
         try:
             output = BedrockChat(
@@ -60,7 +65,10 @@ class AmazonBedrockComponent(CustomComponent):
             )  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
-        message = output.invoke(input_value)
-        result = message.content if hasattr(message, "content") else message
-        self.status = result
+        if stream:
+            result = output.stream(input_value)
+        else:
+            message = output.invoke(input_value)
+            result = message.content if hasattr(message, "content") else message
+            self.status = result
         return result
