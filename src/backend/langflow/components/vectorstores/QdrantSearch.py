@@ -9,6 +9,8 @@ from langflow.schema import Record
 class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Construct Qdrant wrapper from a list of texts."
+    icon="Qdrant"
+
 
     def build_config(self):
         return {
