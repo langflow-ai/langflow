@@ -86,11 +86,11 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
-  buildFlow: (nodeId?: string) => Promise<void>;
+  buildFlow: ({nodeId, input_value}: {nodeId?: string, input_value?: string}) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
-  updateVerticesBuild: (vertices: string[]) => void;
-  removeFromVerticesBuild: (vertices: string[]) => void;
-  verticesBuild: string[];
+  updateVerticesBuild: (vertices: {verticesIds: string[], verticesLayers: string[][], verticesOrder: string[][], runId: string} | null) => void;
+  removeFromVerticesBuild: (vertices: string[]) => void; 
+  verticesBuild:  {verticesIds: string[], verticesLayers: string[][], verticesOrder: string[][], runId: string} | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: { [key: string]: BuildStatus };

@@ -9,9 +9,12 @@ import {
   applyNodeChanges,
 } from "reactflow";
 import { create } from "zustand";
-import { FLOW_BUILD_SUCCESS_ALERT, MISSED_ERROR_ALERT } from "../constants/alerts_constants";
+import {
+  FLOW_BUILD_SUCCESS_ALERT,
+  MISSED_ERROR_ALERT,
+} from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
-import { getFlowPool, updateFlowInDatabase } from "../controllers/API";
+import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
 import {
   NodeDataType,
@@ -19,7 +22,12 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { ChatOutputType, FlowPoolObjectType, FlowStoreType, chatInputType } from "../types/zustand/flow";
+import {
+  ChatOutputType,
+  FlowPoolObjectType,
+  FlowStoreType,
+  chatInputType,
+} from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   cleanEdges,
@@ -59,23 +67,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     get().setFlowPool(newFlowPool);
   },
-  updateFlowPool:(nodeId:string,data:FlowPoolObjectType| ChatOutputType | chatInputType,buildId?:string)=>{
+  updateFlowPool: (
+    nodeId: string,
+    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    buildId?: string
+  ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
-    if (!newFlowPool[nodeId]){
+    if (!newFlowPool[nodeId]) {
       return;
-    }
-    else {
-      let index = newFlowPool[nodeId].length-1;
-      if(buildId){
-        index = newFlowPool[nodeId].findIndex((flow)=>flow.id===buildId);
+    } else {
+      let index = newFlowPool[nodeId].length - 1;
+      if (buildId) {
+        index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
       }
       //check if the data is a flowpool object
-      if((data as FlowPoolObjectType).data?.artifacts!==undefined){
-        newFlowPool[nodeId][index] = (data as FlowPoolObjectType);
+      if ((data as FlowPoolObjectType).data?.artifacts !== undefined) {
+        newFlowPool[nodeId][index] = data as FlowPoolObjectType;
       }
       //update data artifact
-      else
-      {
+      else {
         newFlowPool[nodeId][index].data.artifacts = data;
       }
     }
@@ -394,7 +404,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
-  buildFlow: async (nodeId?: string) => {
+  buildFlow: async ({
+    nodeId,
+    input_value,
+  }: {
+    nodeId?: string;
+    input_value?: string;
+  }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
@@ -417,25 +433,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
-      buildId:string
+      buildId: string
     ) {
       if (vertexBuildData && vertexBuildData.inactive_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
       }
-      get().addDataToFlowPool({...vertexBuildData,buildId}, vertexBuildData.id);
+      get().addDataToFlowPool(
+        { ...vertexBuildData, buildId },
+        vertexBuildData.id
+      );
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
-    await updateFlowInDatabase({
-      data: {
-        nodes: get().nodes,
-        edges: get().edges,
-        viewport: get().reactFlowInstance?.getViewport()!,
-      },
-      id: currentFlow!.id,
-      name: currentFlow!.name,
-      description: currentFlow!.description,
-    });
     await buildVertices({
+      input_value,
       flowId: currentFlow!.id,
       nodeId,
       onGetOrderSuccess: () => {
@@ -473,16 +483,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       viewport: get().reactFlowInstance?.getViewport()!,
     };
   },
-  updateVerticesBuild: (vertices: string[]) => {
+  updateVerticesBuild: (
+    vertices: { verticesIds: string[], verticesOrder: string[][], verticesLayers: string[][], runId: string } | null
+  ) => {
     set({ verticesBuild: vertices });
   },
-  verticesBuild: [],
-
+  verticesBuild: null,
   removeFromVerticesBuild: (vertices: string[]) => {
+    const verticesBuild = get().verticesBuild;
+    if (!verticesBuild) return;
     set({
-      verticesBuild: get().verticesBuild.filter(
-        (vertex) => !vertices.includes(vertex)
-      ),
+      verticesBuild: {
+        ...verticesBuild,
+        verticesIds: get().verticesBuild!.verticesIds.filter(
+          (vertex) => !vertices.includes(vertex)
+        ),
+      },
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {

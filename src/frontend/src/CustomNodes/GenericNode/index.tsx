@@ -465,7 +465,7 @@ export default function GenericNode({
                   if (buildStatus === BuildStatus.BUILDING || isBuilding)
                     return;
                   setValidationStatus(null);
-                  buildFlow(data.id);
+                  buildFlow({nodeId: data.id});
                 }}
               >
                 <div>

@@ -4,6 +4,7 @@ import { Textarea } from "../../../components/ui/textarea";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import { chatInputPlaceholder, chatInputPlaceholderSend } from "../../../constants/constants";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 
 export default function ChatInput({
   lockChat,
@@ -14,20 +15,21 @@ export default function ChatInput({
   noInput,
 }: chatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
+  const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
     }
   }, [lockChat, inputRef]);
 
-  function handleChange(value: number) {
+/*   function handleChange(value: number) {
     console.log(value);
     if (value > 0) {
       setRepeat(value);
     } else {
       setRepeat(1);
     }
-  }
+  } */
 
   useEffect(() => {
     if (inputRef.current) {
@@ -41,13 +43,13 @@ export default function ChatInput({
       <div className="relative w-full">
         <Textarea
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !lockChat && !event.shiftKey) {
+            if (event.key === "Enter" && !lockChat && !saveLoading && !event.shiftKey) {
               sendMessage(repeat);
             }
           }}
           rows={1}
           ref={inputRef}
-          disabled={lockChat || noInput}
+          disabled={lockChat || noInput || saveLoading}
           style={{
             resize: "none",
             bottom: `${inputRef?.current?.scrollHeight}px`,
@@ -58,12 +60,12 @@ export default function ChatInput({
                 : "hidden"
             }`,
           }}
-          value={lockChat ? "Thinking..." : chatValue}
+          value={lockChat ? "Thinking..." : (saveLoading ? "Saving..." : chatValue)}
           onChange={(event): void => {
             setChatValue(event.target.value);
           }}
           className={classNames(
-            lockChat
+            (lockChat || saveLoading)
               ? " form-modal-lock-true bg-input"
               : noInput
               ? "form-modal-no-input bg-input"
@@ -87,10 +89,10 @@ export default function ChatInput({
                 ? "text-primary"
                 : "bg-chat-send text-background"
             )}
-            disabled={lockChat}
+            disabled={lockChat || saveLoading}
             onClick={(): void => sendMessage(repeat)}
           >
-            {lockChat ? (
+            {lockChat || saveLoading ? (
               <IconComponent
                 name="Lock"
                 className="form-modal-lock-icon"

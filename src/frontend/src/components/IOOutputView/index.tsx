@@ -30,12 +30,12 @@ export default function IOOutputView({
           <Textarea
             className="w-full custom-scroll"
             placeholder={"Enter text..."}
-            value={node.data.node!.template["value"]}
+            value={node.data.node!.template["input_value"]}
             onChange={(e) => {
               e.target.value;
               if (node) {
                 let newNode = cloneDeep(node);
-                newNode.data.node!.template["value"].value = e.target.value;
+                newNode.data.node!.template["input_value"].value = e.target.value;
                 setNode(node.id, newNode);
               }
             }}
