@@ -1,3 +1,4 @@
+import { Cross2Icon } from "@radix-ui/react-icons";
 import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import {
@@ -46,15 +47,15 @@ export default function AlertDropdown({
                 setTimeout(clearNotificationList, 100);
               }}
             >
-              <IconComponent name="Trash2" className="h-[1.1rem] w-[1.1rem]" />
+              <IconComponent name="Trash2" className="h-4 w-4" />
             </button>
             <button
-              className="text-foreground hover:text-status-red"
+              className="text-foreground opacity-70 hover:opacity-100"
               onClick={() => {
                 setOpen(false);
               }}
             >
-              <IconComponent name="X" className="h-5 w-5" />
+              <Cross2Icon className="h-4 w-4" />
             </button>
           </div>
         </div>
