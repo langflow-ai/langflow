@@ -45,7 +45,7 @@ class HuggingFaceEndpointsComponent(CustomComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
         output = ChatHuggingFace(llm=llm)
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)alue)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result

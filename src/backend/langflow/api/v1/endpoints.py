@@ -220,7 +220,9 @@ async def preload_flow(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/run/{flow_id}", response_model=ProcessResponse)
+@router.post(
+    "/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True
+)
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
@@ -235,13 +237,13 @@ async def run_flow_with_caching(
             session_data = await session_service.load_session(session_id)
             graph, artifacts = session_data if session_data else (None, None)
             task_result: Any = None
-            task_status = None
             if not graph:
                 raise ValueError("Graph not found in the session")
             task_result = await run_graph(
-                graph,
-                session_id,
-                inputs,
+                graph=graph,
+                flow_id=flow_id,
+                session_id=session_id,
+                inputs=inputs,
                 artifacts=artifacts,
                 session_service=session_service,
             )
@@ -262,16 +264,15 @@ async def run_flow_with_caching(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks)
             task_result = await run_graph(
-                graph_data,
-                inputs,
-                tweaks,
-                session_id,
+                graph=graph_data,
+                flow_id=flow_id,
+                session_id=session_id,
+                inputs=inputs,
+                artifacts={},
                 session_service=session_service,
             )
 
-        return RunResponse(
-            outputs=task_result, session_id=session_id, status=task_status
-        )
+        return RunResponse(outputs=task_result, session_id=session_id)
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):

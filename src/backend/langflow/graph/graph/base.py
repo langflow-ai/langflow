@@ -8,7 +8,7 @@ from loguru import logger
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
-from langflow.graph.schema import InterfaceComponentTypes
+from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     ChatVertex,
@@ -33,8 +33,6 @@ class Graph:
         edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
     ) -> None:
-        self.inputs = []
-        self.outputs = []
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -77,7 +75,7 @@ class Graph:
 
     async def _run(self, inputs: Dict[str, str]) -> List["ResultData"]:
         """Runs the graph with the given inputs."""
-        for vertex_id in self.inputs:
+        for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
@@ -89,7 +87,7 @@ class Graph:
             logger.exception(exc)
             raise ValueError(f"Error running graph: {exc}") from exc
         outputs = []
-        for vertex_id in self.outputs:
+        for vertex_id in self._is_output_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
@@ -104,11 +102,11 @@ class Graph:
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         outputs = []
-        inputs_values = inputs.get("input_value")
+        inputs_values = inputs.get(INPUT_FIELD_NAME)
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
-            run_outputs = await self._run({"input_value": input_value})
+            run_outputs = await self._run({INPUT_FIELD_NAME: input_value})
             logger.debug(f"Run outputs: {run_outputs}")
             outputs.extend(run_outputs)
         return outputs
@@ -317,28 +315,6 @@ class Graph:
         # Now that we have the vertices and edges
         # We need to map the vertices that are connected to
         # to ChatVertex instances
-        self._map_chat_vertices()
-
-    def _map_chat_vertices(self) -> None:
-        """Maps the vertices that are connected to ChatVertex instances."""
-        # For each edge, we need to check if the source or target vertex is a ChatVertex
-        # If it is, we need to update the other vertex `is_external` attribute
-        # and store the id of the ChatVertex in the attributes self.inputs and self.outputs
-        for edge in self.edges:
-            source_vertex = self.get_vertex(edge.source_id)
-            target_vertex = self.get_vertex(edge.target_id)
-            if isinstance(source_vertex, ChatVertex):
-                # The source vertex is a ChatVertex
-                # thus the target vertex is an external vertex
-                # and the source vertex is an input
-                target_vertex.has_external_input = True
-                self.inputs.append(source_vertex.id)
-            if isinstance(target_vertex, ChatVertex):
-                # The target vertex is a ChatVertex
-                # thus the source vertex is an external vertex
-                # and the target vertex is an output
-                source_vertex.has_external_output = True
-                self.outputs.append(target_vertex.id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
@@ -443,13 +419,15 @@ class Graph:
     async def _execute_tasks(self, tasks):
         """Executes tasks in parallel, handling exceptions for each task."""
         results = []
-        for task in asyncio.as_completed(tasks):
+        for i, task in enumerate(asyncio.as_completed(tasks)):
             try:
                 result = await task
                 results.append(result)
             except Exception as e:
                 # Log the exception along with the task name for easier debugging
-                task_name = task.get_name()
+                # task_name = task.get_name()
+                # coroutine has not attribute get_name
+                task_name = tasks[i].get_name()
                 logger.error(f"Task {task_name} failed with exception: {e}")
         return results
 

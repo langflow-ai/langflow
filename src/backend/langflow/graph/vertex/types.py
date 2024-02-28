@@ -1,11 +1,12 @@
 import ast
 import json
-from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
-                    Union)
+from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
+from loguru import logger
 
+from langflow.graph.schema import INPUT_FIELD_NAME
 from langflow.graph.utils import UnbuiltObject, flatten_list
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -362,7 +363,7 @@ class ChatVertex(StatelessVertex):
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                message = self.params.get("message", None)
+                message = self.params.get(INPUT_FIELD_NAME, None)
                 stream_url = None
                 if isinstance(self._built_object, AIMessage):
                     artifacts = ChatOutputResponse.from_message(
@@ -396,7 +397,7 @@ class ChatVertex(StatelessVertex):
                 if artifacts:
                     self.artifacts = artifacts.model_dump()
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
-                if self.params["as_record"]:
+                if self.params["return_record"]:
                     self._built_object = Record(text=message, data=self.artifacts)
                 else:
                     self._built_object = message
@@ -406,7 +407,7 @@ class ChatVertex(StatelessVertex):
             await super()._run(*args, **kwargs)
 
     async def stream(self):
-        iterator = self.params.get("message", None)
+        iterator = self.params.get(INPUT_FIELD_NAME, None)
         if not isinstance(iterator, (AsyncIterator, Iterator)):
             raise ValueError("The message must be an iterator or an async iterator.")
         is_async = isinstance(iterator, AsyncIterator)
@@ -423,15 +424,17 @@ class ChatVertex(StatelessVertex):
                 message = message.text if hasattr(message, "text") else message
                 yield message
                 complete_message += message
-        self._built_object = Record(text=complete_message, data=self.artifacts)
-        self._built_result = complete_message
-        # Update artifacts with the message
-        # and remove the stream_url
         self.artifacts = ChatOutputResponse(
             message=complete_message,
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
         ).model_dump()
+        self.params[INPUT_FIELD_NAME] = complete_message
+        self._built_object = Record(text=complete_message, data=self.artifacts)
+        self._built_result = complete_message
+        # Update artifacts with the message
+        # and remove the stream_url
+        logger.debug(f"Streamed message: {complete_message}")
 
         await log_message(
             sender=self.params.get("sender", ""),
@@ -440,6 +443,9 @@ class ChatVertex(StatelessVertex):
             session_id=self.params.get("session_id", ""),
             artifacts=self.artifacts,
         )
+
+        self._validate_built_object()
+        self._built = True
 
 
 class RoutingVertex(StatelessVertex):

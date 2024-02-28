@@ -43,7 +43,7 @@ class CohereComponent(CustomComponent):
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        message = output.invoke(inputs)
+        message = output.invoke(input_value)
         result = message.content if hasattr(message, "content") else message
         self.status = result
         return result

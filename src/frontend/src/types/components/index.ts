@@ -524,10 +524,11 @@ export type chatMessagePropsType = {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
+  setLockChat: (lock: boolean) => void;
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url: string
+    stream_url?: string
   ) => void;
 };
 
@@ -632,9 +633,9 @@ export type validationStatusType = {
   id: string;
   data: object | any;
   params: string;
-  progress: number;
+  progress?: number;
   valid: boolean;
-  duration: string;
+  duration?: string;
 };
 
 export type ApiKey = {

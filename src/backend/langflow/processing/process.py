@@ -269,6 +269,7 @@ async def build_graph_and_generate_result(
 
 async def run_graph(
     graph: Union["Graph", dict],
+    flow_id: str,
     session_id: str,
     inputs: Optional[Union[dict, List[dict]]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
@@ -276,7 +277,8 @@ async def run_graph(
 ):
     """Run the graph and generate the result"""
     if isinstance(graph, dict):
-        graph = Graph.from_payload(graph)
+        graph = Graph.from_payload(graph, flow_id=flow_id)
+
     outputs = await graph.run(inputs)
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
