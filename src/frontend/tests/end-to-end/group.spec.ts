@@ -5,10 +5,10 @@ test.describe("group node test", () => {
   /// <reference lib="dom"/>
   test("group and ungroup updating values", async ({ page }) => {
     await page.goto("http:localhost:3000/");
-    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    await page.locator('//*[@id="new-project-btn"]').click();
     // Read your file into a buffer.
     const jsonContent = readFileSync(
-      "tests/onlyFront/assets/collection.json",
+      "tests/end-to-end/assets/flow_group_test.json",
       "utf-8"
     );
 
@@ -16,7 +16,7 @@ test.describe("group node test", () => {
     const dataTransfer = await page.evaluateHandle((data) => {
       const dt = new DataTransfer();
       // Convert the buffer to a hex array
-      const file = new File([data], "flowtest.json", {
+      const file = new File([data], "flow_group_test.json", {
         type: "application/json",
       });
       dt.items.add(file);
@@ -25,33 +25,58 @@ test.describe("group node test", () => {
 
     page.waitForTimeout(2000);
 
-    await page.dispatchEvent(
-      '//*[@id="root"]/div/div[1]/div[2]/div[3]/div/div',
-      "drop",
-      {
-        dataTransfer,
-      }
-    );
+    await page.dispatchEvent('//*[@id="react-flow-id"]', "drop", {
+      dataTransfer,
+    });
+
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(2000);
+
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("PythonFunctionTool");
+
+    await page.waitForTimeout(2000);
 
     await page
-      .getByTestId("edit-flow-button-e9ac1bdc-429b-475d-ac03-d26f9a2a3210-0")
-      .click();
+      .getByTestId("toolsPythonFunctionTool")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("ChatOpenAI");
+
     await page.waitForTimeout(2000);
+
+    await page
+      .getByTestId("model_specsChatOpenAI")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+
+    await page.getByPlaceholder("Search").click();
+    await page.getByPlaceholder("Search").fill("AgentInitializer");
+
+    await page.waitForTimeout(2000);
+
+    await page
+      .getByTestId("agentsAgent Initializer")
+      .first()
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     const genericNoda = page.getByTestId("div-generic-node");
     const elementCount = await genericNoda.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
+    page.locator('//*[@id="react-flow-id"]').click();
+
+    await page.getByTestId("title-Agent Initializer").click({
+      modifiers: ["Control"],
+    });
 
     await page.getByTestId("title-PythonFunctionTool").click({
       modifiers: ["Control"],
     });
     await page.getByTestId("title-ChatOpenAI").click({
-      modifiers: ["Control"],
-    });
-
-    await page.getByTestId("title-AgentInitializer").click({
       modifiers: ["Control"],
     });
 
