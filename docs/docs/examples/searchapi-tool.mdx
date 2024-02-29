@@ -1,0 +1,52 @@
+import Admonition from "@theme/Admonition";
+
+# SearchApi Tool
+
+The [SearchApi](https://www.searchapi.io/) allows developers to retrieve results from search engines such as Google, Google Scholar, YouTube, YouTube transcripts, and more, and can be used as in Langflow through the `SearchApi` tool.
+
+<Admonition type="info">
+  To use the SearchApi, you must first obtain an API key by registering at [SearchApi's website](https://www.searchapi.io/).
+</Admonition>
+
+In the given example, we specify `engine` as `youtube_transcripts` and provide a `video_id`.
+
+<Admonition type="info">
+  All engines and parameters can be found in [SearchApi documentation](https://www.searchapi.io/docs/google).
+</Admonition>
+
+The `RetrievalQA` chain processes a `Document` along with a user's question to return an answer.
+
+<Admonition type="tip">
+  In this example, we used [`ChatOpenAI`](https://platform.openai.com/) as the
+  LLM, but feel free to experiment with other Language Models!
+</Admonition>
+
+The `RetrievalQA` takes `CombineDocsChain` and `SearchApi` tool as inputs, using the tool as a `Document` to answer questions.
+
+<Admonition type="info">
+  Learn more about the SearchApi
+  [here](https://python.langchain.com/docs/integrations/tools/searchapi).
+</Admonition>
+
+## ⛓️ Langflow Example
+
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/searchapi-tool.png",
+  }}
+/>
+
+#### <a target="\_blank" href="json_files/SearchApi_Tool.json" download>Download Flow</a>
+
+<Admonition type="note" title="LangChain Components 🦜🔗">
+
+- [`OpenAI`](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/openai)
+- [`SearchApiAPIWrapper`](https://python.langchain.com/docs/integrations/providers/searchapi#wrappers)
+- [`ZeroShotAgent`](https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent)
+
+</Admonition>

@@ -40,9 +40,10 @@ Wrapper around Anthropic's large language model used for chat-based interactions
 
 The `CTransformers` component provides access to the Transformer models implemented in C/C++ using the [GGML](https://github.com/ggerganov/ggml) library.
 
-:::info
+<Admonition type="info">
+
 Make sure to have the `ctransformers` python package installed. Learn more about installation, supported models, and usage [here](https://github.com/marella/ctransformers).
-:::
+</Admonition>
 
 **config:** Configuration for the Transformer models. Check out [config](https://github.com/marella/ctransformers#config). Defaults to:
 
@@ -115,9 +116,9 @@ Wrapper around [Cohere's](https://cohere.com) large language models.
 
 Wrapper around [HuggingFace](https://www.huggingface.co/models) models.
 
-:::info
+<Admonition type="info">
 The HuggingFace Hub is an online platform that hosts over 120k models, 20k datasets, and 50k demo apps, all of which are open-source and publicly available. Discover more at [HuggingFace](http://www.huggingface.co).
-:::
+</Admonition>
 
 - **huggingfacehub_api_token:** Token needed to authenticate the API.
 - **model_kwargs:** Keyword arguments to pass to the model.
@@ -130,9 +131,9 @@ The HuggingFace Hub is an online platform that hosts over 120k models, 20k datas
 
 The `LlamaCpp` component provides access to the `llama.cpp` models.
 
-:::info
+<Admonition type="info">
 Make sure to have the `llama.cpp` python package installed. Learn more about installation, supported models, and usage [here](https://github.com/ggerganov/llama.cpp).
-:::
+</Admonition>
 
 - **echo:** Whether to echo the prompt – defaults to `False`.
 - **f16_kv:** Use half-precision for key/value cache – defaults to `True`.
@@ -181,9 +182,9 @@ Wrapper around [OpenAI's](https://openai.com) large language models.
 
 Wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) large language models.
 
-:::info
+<Admonition type="info">
 Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). It provides access, management, and development of applications and services through global data centers. To use Vertex AI PaLM, you need to have the [google-cloud-aiplatform](https://pypi.org/project/google-cloud-aiplatform/) Python package installed and credentials configured for your environment.
-:::
+</Admonition>
 
 - **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use.
 - **location:** The default location to use when making API calls – defaults to `us-central1`.
@@ -203,9 +204,9 @@ Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). 
 
 Wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) large language models.
 
-:::info
+<Admonition type="info">
 Vertex AI is a cloud computing platform offered by Google Cloud Platform (GCP). It provides access, management, and development of applications and services through global data centers. To use Vertex AI PaLM, you need to have the [google-cloud-aiplatform](https://pypi.org/project/google-cloud-aiplatform/) Python package installed and credentials configured for your environment.
-:::
+</Admonition>
 
 - **credentials:** The default custom credentials (google.auth.credentials.Credentials) to use.
 - **location:** The default location to use when making API calls – defaults to `us-central1`.
