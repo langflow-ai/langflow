@@ -6,9 +6,9 @@ from typing import List, Optional, Union
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
+
 from langflow import CustomComponent
 from langflow.field_typing import BaseRetriever, Document
-from langchain_community.vectorstores.vectara import Vectara
 
 
 class VectaraComponent(CustomComponent):
@@ -18,7 +18,7 @@ class VectaraComponent(CustomComponent):
         "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     )
     beta = True
-    icon="Vectara"
+    icon = "Vectara"
     field_config = {
         "vectara_customer_id": {
             "display_name": "Vectara Customer ID",
