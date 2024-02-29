@@ -79,6 +79,12 @@ test.describe("save component tests", () => {
     await page.getByTestId("title-Group").click();
     await page.getByTestId("icon-SaveAll").click();
 
+    const replaceButton = page.getByTestId("replace-button");
+
+    if (replaceButton) {
+      await replaceButton.click();
+    }
+
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");
     await page.waitForTimeout(2000);
