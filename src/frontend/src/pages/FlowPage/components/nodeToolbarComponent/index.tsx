@@ -97,10 +97,6 @@ export default function NodeToolbarComponent({
     (state) => state.handleModalWShortcut
   );
 
-  useEffect(() => {
-    setOpenModal(openCodeModalWShortcut);
-  }, [openCodeModalWShortcut, handleModalWShortcut]);
-
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
   );
@@ -217,6 +213,8 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
 
+  console.log((selected && openModal))
+
   return (
     <>
       <div className="w-26 h-10">
@@ -231,8 +229,9 @@ export default function NodeToolbarComponent({
                 data-testid="code-button-modal"
               >
                 <div className="hidden">
-                  <CodeAreaComponent
-                    openModal={openModal}
+                  {selected && (
+                    <CodeAreaComponent
+                    openModal={(openModal || selected)}
                     readonly={
                       data.node?.flow && data.node.template[name].dynamic
                         ? true
@@ -245,7 +244,9 @@ export default function NodeToolbarComponent({
                     value={data.node?.template[name].value ?? ""}
                     onChange={handleOnNewValue}
                     id={"code-input-node-toolbar-" + name}
-                  />
+                    selected={selected}
+                    />
+                  )}
                 </div>
                 <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>

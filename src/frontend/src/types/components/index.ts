@@ -113,6 +113,7 @@ export type CodeAreaComponentType = {
   id?: string;
   readonly?: boolean;
   openModal?: boolean;
+  selected?: boolean;
 };
 
 export type FileComponentType = {
@@ -519,6 +520,7 @@ export type codeAreaModalPropsType = {
   dynamic?: boolean;
   readonly?: boolean;
   openModal?: boolean;
+  selected?: boolean;
 };
 
 export type chatMessagePropsType = {

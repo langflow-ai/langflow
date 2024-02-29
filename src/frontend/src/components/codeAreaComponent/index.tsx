@@ -15,6 +15,7 @@ export default function CodeAreaComponent({
   id = "",
   readonly = false,
   openModal,
+  selected,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
@@ -33,6 +34,7 @@ export default function CodeAreaComponent({
   return (
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <CodeAreaModal
+        selected={selected}
         openModal={openModal}
         readonly={readonly}
         dynamic={dynamic}
