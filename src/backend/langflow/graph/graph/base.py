@@ -631,7 +631,7 @@ class Graph:
         vertices: List[Vertex],
     ) -> List[List[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
-
+        vertices_ids = [vertex.id for vertex in vertices]
         # Queue for vertices with no incoming edges
         queue = deque(
             vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0
@@ -646,6 +646,10 @@ class Graph:
                 vertex_id = queue.popleft()
                 layers[current_layer].append(vertex_id)
                 for neighbor in self.successor_map[vertex_id]:
+                    # only vertices in `vertices` are considered
+                    if neighbor not in vertices_ids:
+                        continue
+
                     self.in_degree_map[neighbor] -= 1  # 'remove' edge
                     if self.in_degree_map[neighbor] == 0:
                         queue.append(neighbor)
