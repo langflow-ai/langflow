@@ -358,11 +358,13 @@ def create_component_template(component):
     """Create a template for a component."""
     component_code = component["code"]
     component_output_types = component["output_types"]
+    # remove
 
     component_extractor = CustomComponent(code=component_code)
 
     component_template = build_custom_component_template(component_extractor)
-    component_template["output_types"] = component_output_types
+    if not component_template["output_types"] and component_output_types:
+        component_template["output_types"] = component_output_types
 
     return component_template
 
