@@ -7,6 +7,7 @@ from loguru import logger
 
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
@@ -43,6 +44,7 @@ class Graph:
         self._is_output_vertices: List[str] = []
         self._has_session_id_vertices: List[str] = []
         self._sorted_vertices_layers: List[List[str]] = []
+        self.run_id = None
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -58,9 +60,18 @@ class Graph:
         self._build_graph()
         self.build_graph_maps()
         self.define_vertices_lists()
+        self.state_manager = GraphStateManager()
+
+    def set_run_id(self, run_id: str):
+        for vertex in self.vertices:
+            self.state_manager.subscribe(run_id, vertex.update_graph_state)
+        self.run_id = run_id
+
+    def add_state(self, state: str):
+        self.state_manager.append_state(self.run_id, state)
 
     @property
-    def sorted_vertices_layers(self):
+    def sorted_vertices_layers(self) -> List[List[str]]:
         if not self._sorted_vertices_layers:
             self.sort_vertices()
         return self._sorted_vertices_layers
@@ -75,7 +86,9 @@ class Graph:
                 if getattr(vertex, attribute):
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
-    async def _run(self, inputs: Dict[str, str], stream: bool) -> List[Optional["ResultData"]]:
+    async def _run(
+        self, inputs: Dict[str, str], stream: bool
+    ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -98,7 +111,9 @@ class Graph:
             outputs.append(vertex.result)
         return outputs
 
-    async def run(self, inputs: Dict[str, Union[str, list[str]]], stream: bool) -> List[Optional["ResultData"]]:
+    async def run(
+        self, inputs: Dict[str, Union[str, list[str]]], stream: bool
+    ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
 
         # inputs is {"message": "Hello, world!"}
@@ -110,7 +125,9 @@ class Graph:
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
-            run_outputs = await self._run({INPUT_FIELD_NAME: input_value}, stream=stream)
+            run_outputs = await self._run(
+                {INPUT_FIELD_NAME: input_value}, stream=stream
+            )
             logger.debug(f"Run outputs: {run_outputs}")
             outputs.extend(run_outputs)
         return outputs
@@ -150,7 +167,9 @@ class Graph:
     def build_parent_child_map(self):
         parent_child_map = defaultdict(list)
         for vertex in self.vertices:
-            parent_child_map[vertex.id] = [child.id for child in self.get_successors(vertex)]
+            parent_child_map[vertex.id] = [
+                child.id for child in self.get_successors(vertex)
+            ]
         return parent_child_map
 
     def increment_run_count(self):
@@ -325,7 +344,11 @@ class Graph:
             return
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
-        self.edges = [edge for edge in self.edges if edge.source_id != vertex_id and edge.target_id != vertex_id]
+        self.edges = [
+            edge
+            for edge in self.edges
+            if edge.source_id != vertex_id and edge.target_id != vertex_id
+        ]
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
@@ -346,7 +369,9 @@ class Graph:
             return
         for vertex in self.vertices:
             if not self._validate_vertex(vertex):
-                raise ValueError(f"{vertex.display_name} is not connected to any other components")
+                raise ValueError(
+                    f"{vertex.display_name} is not connected to any other components"
+                )
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
@@ -403,7 +428,9 @@ class Graph:
             tasks = []
             for vertex_id in layer:
                 vertex = self.get_vertex(vertex_id)
-                task = asyncio.create_task(vertex.build(), name=f"layer-{layer_index}-vertex-{vertex_id}")
+                task = asyncio.create_task(
+                    vertex.build(), name=f"layer-{layer_index}-vertex-{vertex_id}"
+                )
                 tasks.append(task)
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
             await self._execute_tasks(tasks)
@@ -442,7 +469,9 @@ class Graph:
         def dfs(vertex):
             if state[vertex] == 1:
                 # We have a cycle
-                raise ValueError("Graph contains a cycle, cannot perform topological sort")
+                raise ValueError(
+                    "Graph contains a cycle, cannot perform topological sort"
+                )
             if state[vertex] == 0:
                 state[vertex] = 1
                 for edge in vertex.edges:
@@ -466,11 +495,17 @@ class Graph:
 
     def get_predecessors(self, vertex):
         """Returns the predecessors of a vertex."""
-        return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
+        return [
+            self.get_vertex(source_id)
+            for source_id in self.predecessor_map.get(vertex.id, [])
+        ]
 
     def get_successors(self, vertex):
         """Returns the successors of a vertex."""
-        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
+        return [
+            self.get_vertex(target_id)
+            for target_id in self.successor_map.get(vertex.id, [])
+        ]
 
     def get_vertex_neighbors(self, vertex: Vertex) -> Dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
@@ -509,7 +544,9 @@ class Graph:
             edges.append(ContractEdge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
+    def _get_vertex_class(
+        self, node_type: str, node_base_type: str, node_id: str
+    ) -> Type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -540,14 +577,18 @@ class Graph:
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+            VertexClass = self._get_vertex_class(
+                vertex_type, vertex_base_type, vertex_data["id"]
+            )
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
 
         return vertices
 
-    def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> List[Vertex]:
+    def get_children_by_vertex_type(
+        self, vertex: Vertex, vertex_type: str
+    ) -> List[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
         children = []
         vertex_types = [vertex.data["type"]]
@@ -559,7 +600,9 @@ class Graph:
 
     def __repr__(self):
         vertex_ids = [vertex.id for vertex in self.vertices]
-        edges_repr = "\n".join([f"{edge.source_id} --> {edge.target_id}" for edge in self.edges])
+        edges_repr = "\n".join(
+            [f"{edge.source_id} --> {edge.target_id}" for edge in self.edges]
+        )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
     def sort_up_to_vertex(self, vertex_id: str) -> List[Vertex]:
@@ -590,7 +633,9 @@ class Graph:
         """Performs a layered topological sort of the vertices in the graph."""
 
         # Queue for vertices with no incoming edges
-        queue = deque(vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0)
+        queue = deque(
+            vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0
+        )
         layers: List[List[str]] = []
 
         current_layer = 0
@@ -646,7 +691,9 @@ class Graph:
 
         return refined_layers
 
-    def sort_chat_inputs_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
+    def sort_chat_inputs_first(
+        self, vertices_layers: List[List[str]]
+    ) -> List[List[str]]:
         chat_inputs_first = []
         for layer in vertices_layers:
             for vertex_id in layer:
@@ -675,11 +722,15 @@ class Graph:
         self._sorted_vertices_layers = vertices_layers
         return vertices_layers
 
-    def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
+    def sort_interface_components_first(
+        self, vertices_layers: List[List[str]]
+    ) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
 
         def contains_interface_component(vertex):
-            return any(component.value in vertex for component in InterfaceComponentTypes)
+            return any(
+                component.value in vertex for component in InterfaceComponentTypes
+            )
 
         # Sort each inner list so that vertices containing ChatInput or ChatOutput come first
         sorted_vertices = [
@@ -691,16 +742,22 @@ class Graph:
         ]
         return sorted_vertices
 
-    def sort_by_avg_build_time(self, vertices_layers: List[List[str]]) -> List[List[str]]:
+    def sort_by_avg_build_time(
+        self, vertices_layers: List[List[str]]
+    ) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices with the lowest average build time come first."""
 
         def sort_layer_by_avg_build_time(vertices_ids: List[str]) -> List[str]:
             """Sorts the vertices in the graph so that vertices with the lowest average build time come first."""
             if len(vertices_ids) == 1:
                 return vertices_ids
-            vertices_ids.sort(key=lambda vertex_id: self.get_vertex(vertex_id).avg_build_time)
+            vertices_ids.sort(
+                key=lambda vertex_id: self.get_vertex(vertex_id).avg_build_time
+            )
 
             return vertices_ids
 
-        sorted_vertices = [sort_layer_by_avg_build_time(layer) for layer in vertices_layers]
+        sorted_vertices = [
+            sort_layer_by_avg_build_time(layer) for layer in vertices_layers
+        ]
         return sorted_vertices
