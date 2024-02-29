@@ -10,8 +10,7 @@ from langflow.field_typing import BaseLanguageModel
 class ChatVertexAIComponent(CustomComponent):
     display_name = "ChatVertexAI"
     description = "`Vertex AI` Chat large language models API."
-    icon="VertexAI"
-
+    icon = "VertexAI"
 
     def build_config(self):
         return {

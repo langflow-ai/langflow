@@ -10,7 +10,7 @@ from langflow.field_typing import Document, Embeddings, NestedDict
 class QdrantComponent(CustomComponent):
     display_name = "Qdrant"
     description = "Construct Qdrant wrapper from a list of texts."
-    icon="Qdrant"
+    icon = "Qdrant"
 
     def build_config(self):
         return {

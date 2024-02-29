@@ -9,7 +9,7 @@ class HuggingFaceEmbeddingsComponent(CustomComponent):
     documentation = (
         "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
     )
-    icon="HuggingFace"
+    icon = "HuggingFace"
 
     def build_config(self):
         return {

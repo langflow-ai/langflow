@@ -70,17 +70,11 @@ class GatherRecordsComponent(CustomComponent):
 
         glob = "**/*" if recursive else "*"
         paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-        file_paths = [
-            Text(p)
-            for p in paths
-            if p.is_file() and match_types(p) and is_not_hidden(p)
-        ]
+        file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
         return file_paths
 
-    def parse_file_to_record(
-        self, file_path: str, silent_errors: bool
-    ) -> Optional[Record]:
+    def parse_file_to_record(self, file_path: str, silent_errors: bool) -> Optional[Record]:
         # Use the partition function to load the file
         from unstructured.partition.auto import partition  # type: ignore
 
@@ -106,14 +100,9 @@ class GatherRecordsComponent(CustomComponent):
         use_multithreading: bool,
     ) -> List[Optional[Record]]:
         if use_multithreading:
-            records = self.parallel_load_records(
-                file_paths, silent_errors, max_concurrency
-            )
+            records = self.parallel_load_records(file_paths, silent_errors, max_concurrency)
         else:
-            records = [
-                self.parse_file_to_record(file_path, silent_errors)
-                for file_path in file_paths
-            ]
+            records = [self.parse_file_to_record(file_path, silent_errors) for file_path in file_paths]
         records = list(filter(None, records))
         return records
 
@@ -142,20 +131,13 @@ class GatherRecordsComponent(CustomComponent):
         if types is None:
             types = []
         resolved_path = self.resolve_path(path)
-        file_paths = self.retrieve_file_paths(
-            resolved_path, types, load_hidden, recursive, depth
-        )
+        file_paths = self.retrieve_file_paths(resolved_path, types, load_hidden, recursive, depth)
         loaded_records = []
 
         if use_multithreading:
-            loaded_records = self.parallel_load_records(
-                file_paths, silent_errors, max_concurrency
-            )
+            loaded_records = self.parallel_load_records(file_paths, silent_errors, max_concurrency)
         else:
-            loaded_records = [
-                self.parse_file_to_record(file_path, silent_errors)
-                for file_path in file_paths
-            ]
+            loaded_records = [self.parse_file_to_record(file_path, silent_errors) for file_path in file_paths]
         loaded_records = list(filter(None, loaded_records))
         self.status = loaded_records
         return loaded_records

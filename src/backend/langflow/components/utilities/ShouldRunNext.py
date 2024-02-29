@@ -42,9 +42,7 @@ class ShouldRunNext(CustomComponent):
             result = result.get("response")
 
         if result.lower() not in ["true", "false"]:
-            raise ValueError(
-                "The prompt should generate a boolean response (True or False)."
-            )
+            raise ValueError("The prompt should generate a boolean response (True or False).")
         # The string should be the words true or false
         # if not raise an error
         bool_result = result.lower() == "true"

@@ -12,7 +12,6 @@ class AmazonBedrockComponent(CustomComponent):
     description: str = "LLM model from Amazon Bedrock."
     icon = "Amazon"
 
-
     def build_config(self):
         return {
             "model_id": {

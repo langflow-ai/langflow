@@ -1,4 +1,5 @@
 import uuid
+from typing import Text
 
 from langflow import CustomComponent
 

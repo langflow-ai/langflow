@@ -10,8 +10,7 @@ from langflow.field_typing import BaseLanguageModel, NestedDict
 class AnthropicComponent(CustomComponent):
     display_name = "Anthropic"
     description = "Anthropic large language models."
-    icon ="Anthropic"
-
+    icon = "Anthropic"
 
     def build_config(self):
         return {
