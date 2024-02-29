@@ -36,17 +36,25 @@ export default function CodeAreaModal({
   dynamic,
   readonly = false,
   openModal,
+  selected,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
+  const handleModalWShortcut = useFlowStore(
+    (state) => state.handleModalWShortcut
+  );
+  const openCodeModalWShortcut = useFlowStore(
+    (state) => state.openCodeModalWShortcut
+  );
+  const [open, setOpen] = useState(false);
+  const nodes = useFlowStore((state) => state.nodes);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -54,39 +62,31 @@ export default function CodeAreaModal({
     if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
-  }, []);
-
-  const handleModalWShortcut = useFlowStore(
-    (state) => state.handleModalWShortcut
-  );
-  const openCodeModalWShortcut = useFlowStore(
-    (state) => state.openCodeModalWShortcut
-  );
-  const nodes = useFlowStore((state) => state.nodes);
+  }, []);                                                          
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const selectedNode = nodes.filter((obj) => obj.selected);
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "C" &&
-        selectedNode.length > 0
+        (event.key === "C" || event.key === "c") &&
+        (event.metaKey || event.ctrlKey) &&
+        selected
       ) {
         event.preventDefault();
-        setOpen(openCodeModalWShortcut);
+        console.log("entrou")
+        setOpen((oldState) => !oldState);
       }
     };
-    document.addEventListener("keydown", onKeyDown);
-
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+  
 
   useEffect(() => {
+    console.log(open)
     if (openModal) setOpen(true);
-  }, [openModal]);
+  }, [openModal, open]);
 
   function processNonDynamicField() {
     postValidateCode(code)
@@ -171,14 +171,14 @@ export default function CodeAreaModal({
     };
   }, [error, setHeight]);
 
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setCode(value);
   }, [value, open]);
+  console.log(selected)
 
   return (
-    <BaseModal open={open} setOpen={setOpen}>
+    <BaseModal open={(open && selected)} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <span className="pr-2"> {editCodeTitle} </span>
