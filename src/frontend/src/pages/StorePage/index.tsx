@@ -21,11 +21,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { AuthContext } from "../../contexts/authContext";
-import {
-  checkHasApiKey,
-  getStoreComponents,
-  getStoreTags,
-} from "../../controllers/API";
+import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -46,9 +42,7 @@ export default function StorePage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
-  const currentFlowId = useFlowsManagerStore(
-    (state) => state.currentFlowId
-  );
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
   const { id } = useParams();
