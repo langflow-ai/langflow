@@ -117,7 +117,7 @@ class CustomComponent(Component):
 
     def to_records(
         self, data: Any, text_key: str = "text", data_key: str = "data"
-    ) -> List[dict]:
+    ) -> List[Record]:
         """
         Convert data into a list of records.
 
@@ -312,7 +312,7 @@ class CustomComponent(Component):
     ) -> Any:
         graph = await self.load_flow(flow_id, tweaks)
         input_value_dict = {"input_value": input_value}
-        return await graph.run(input_value_dict)
+        return await graph.run(input_value_dict, stream=False)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
         if not self._user_id:
