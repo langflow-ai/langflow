@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
+import {
+  chatInputPlaceholder,
+  chatInputPlaceholderSend,
+} from "../../../constants/constants";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
-import { chatInputPlaceholder, chatInputPlaceholderSend } from "../../../constants/constants";
 
 export default function ChatInput({
   lockChat,
@@ -67,11 +70,7 @@ export default function ChatInput({
 
           "form-modal-lockchat"
         )}
-        placeholder={
-          noInput
-            ? chatInputPlaceholder
-            : chatInputPlaceholderSend
-        }
+        placeholder={noInput ? chatInputPlaceholder : chatInputPlaceholderSend}
       />
       <div className="form-modal-send-icon-position">
         <button

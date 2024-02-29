@@ -21,7 +21,7 @@ type TriggerProps = {
 };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
-  return <div className="h-full w-full flex flex-col">{children}</div>;
+  return <div className="flex h-full w-full flex-col">{children}</div>;
 };
 const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
   return (

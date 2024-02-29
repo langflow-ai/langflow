@@ -15,7 +15,7 @@ export default function ShadTooltip({
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
 
       <TooltipContent
-        className={cn(styleClasses, "max-w-96") }
+        className={cn(styleClasses, "max-w-96")}
         side={side}
         avoidCollisions={false}
         sticky="always"

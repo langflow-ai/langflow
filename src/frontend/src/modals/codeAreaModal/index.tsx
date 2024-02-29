@@ -9,14 +9,23 @@ import AceEditor from "react-ace";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { CODE_PROMPT_DIALOG_SUBTITLE, editCodeTitle } from "../../constants/constants";
+import {
+  BUG_ALERT,
+  CODE_ERROR_ALERT,
+  CODE_SUCCESS_ALERT,
+  FUNC_ERROR_ALERT,
+  IMPORT_ERROR_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  CODE_PROMPT_DIALOG_SUBTITLE,
+  editCodeTitle,
+} from "../../constants/constants";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
-import { BUG_ALERT, CODE_ERROR_ALERT, CODE_SUCCESS_ALERT, FUNC_ERROR_ALERT, IMPORT_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function CodeAreaModal({
   value,
@@ -47,26 +56,33 @@ export default function CodeAreaModal({
     }
   }, []);
 
-  const handleModalWShortcut = useFlowStore((state) => state.handleModalWShortcut) 
-  const openCodeModalWShortcut = useFlowStore(state => state.openCodeModalWShortcut);
-const nodes = useFlowStore(state => state.nodes);
+  const handleModalWShortcut = useFlowStore(
+    (state) => state.handleModalWShortcut
+  );
+  const openCodeModalWShortcut = useFlowStore(
+    (state) => state.openCodeModalWShortcut
+  );
+  const nodes = useFlowStore((state) => state.nodes);
 
-useEffect(() => {
-  const onKeyDown = (event: KeyboardEvent) => {
-    
-    const selectedNode = nodes.filter((obj) => obj.selected);
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "C" && selectedNode.length > 0) {
-      event.preventDefault();
-      setOpen(openCodeModalWShortcut)
-    }
-    
-  }
-  document.addEventListener("keydown", onKeyDown);
-  
-  return () => {
-    document.removeEventListener("keydown", onKeyDown);
-  }
-}, []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const selectedNode = nodes.filter((obj) => obj.selected);
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key === "C" &&
+        selectedNode.length > 0
+      ) {
+        event.preventDefault();
+        setOpen(openCodeModalWShortcut);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     if (openModal) setOpen(true);

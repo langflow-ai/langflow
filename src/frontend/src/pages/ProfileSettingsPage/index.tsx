@@ -6,6 +6,12 @@ import GradientChooserComponent from "../../components/gradientChooserComponent"
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
+import {
+  EDIT_PASSWORD_ALERT_LIST,
+  EDIT_PASSWORD_ERROR_ALERT,
+  SAVE_ERROR_ALERT,
+  SAVE_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { resetPassword, updateUser } from "../../controllers/API";
@@ -16,7 +22,6 @@ import {
   patchUserInputStateType,
 } from "../../types/components";
 import { gradients } from "../../utils/styleUtils";
-import { EDIT_PASSWORD_ALERT_LIST, EDIT_PASSWORD_ERROR_ALERT, SAVE_ERROR_ALERT, SAVE_SUCCESS_ALERT } from "../../constants/alerts_constants";
 export default function ProfileSettingsPage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId

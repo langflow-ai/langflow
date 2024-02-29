@@ -3,14 +3,22 @@ import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import {
+  API_ERROR_ALERT,
+  API_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  createApi,
+  insertApi,
+  invalidApi,
+  noApi,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { addApiKeyStore } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { StoreApiKeyType } from "../../types/components";
 import BaseModal from "../baseModal";
-import { API_ERROR_ALERT, API_SUCCESS_ALERT } from "../../constants/alerts_constants";
-import { createApi, insertApi, invalidApi, noApi } from "../../constants/constants";
 
 export default function StoreApiKeyModal({
   children,
@@ -60,11 +68,8 @@ export default function StoreApiKeyModal({
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={
-          (hasApiKey && !validApiKey
-            ? invalidApi
-            : !hasApiKey
-            ? noApi
-            : "") + insertApi
+          (hasApiKey && !validApiKey ? invalidApi : !hasApiKey ? noApi : "") +
+          insertApi
         }
       >
         <span className="pr-2">API Key</span>
@@ -99,7 +104,7 @@ export default function StoreApiKeyModal({
           </div>
           <div className="flex items-end justify-between">
             <span className="pr-1 text-xs text-muted-foreground">
-              {createApi} {" "}
+              {createApi}{" "}
               <a
                 className="text-high-indigo underline"
                 href="https://langflow.store/"

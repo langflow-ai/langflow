@@ -3,13 +3,17 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { EXPORT_DIALOG_SUBTITLE, alertSaveWApi, saveWApiCheckbox } from "../../constants/constants";
+import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
+import {
+  EXPORT_DIALOG_SUBTITLE,
+  alertSaveWApi,
+  saveWApiCheckbox,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
-import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 
 const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
@@ -55,9 +59,7 @@ const ExportModal = forwardRef(
               {saveWApiCheckbox}
             </label>
           </div>
-          <span className=" text-xs text-destructive ">
-            {alertSaveWApi}
-          </span>
+          <span className=" text-xs text-destructive ">{alertSaveWApi}</span>
         </BaseModal.Content>
 
         <BaseModal.Footer>
@@ -77,8 +79,7 @@ const ExportModal = forwardRef(
                   description
                 );
                 setNoticeData({
-                  title:
-                    API_WARNING_NOTICE_ALERT,
+                  title: API_WARNING_NOTICE_ALERT,
                 });
               } else
                 downloadFlow(

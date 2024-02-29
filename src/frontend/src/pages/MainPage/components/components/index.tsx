@@ -6,10 +6,14 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
+import {
+  CONSOLE_ERROR_MSG,
+  UPLOAD_ALERT_LIST,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-import { CONSOLE_ERROR_MSG, UPLOAD_ALERT_LIST, WRONG_FILE_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 export default function ComponentsComponent({
   is_component = true,

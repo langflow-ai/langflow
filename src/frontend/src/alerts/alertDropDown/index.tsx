@@ -6,10 +6,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
+import { zeroNotifications } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
-import { zeroNotifications } from "../../constants/constants";
 
 export default function AlertDropdown({
   children,

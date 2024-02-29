@@ -25,7 +25,10 @@ export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
   params: any;
-  data: { artifacts: any | ChatOutputType | chatInputType; results: any | ChatOutputType | chatInputType };
+  data: {
+    artifacts: any | ChatOutputType | chatInputType;
+    results: any | ChatOutputType | chatInputType;
+  };
   duration?: string;
   progress?: number;
   id: string;
@@ -38,7 +41,7 @@ export type FlowPoolType = {
 
 export type FlowStoreType = {
   openCodeModalWShortcut: boolean;
-  handleModalWShortcut: (modal: string) => void
+  handleModalWShortcut: (modal: string) => void;
   flowPool: FlowPoolType;
   inputs: Array<{ type: string; id: string }>;
   outputs: Array<{ type: string; id: string }>;
@@ -88,13 +91,35 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
-  buildFlow: ({nodeId, input_value}: {nodeId?: string, input_value?: string}) => Promise<void>;
+  buildFlow: ({
+    nodeId,
+    input_value,
+  }: {
+    nodeId?: string;
+    input_value?: string;
+  }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
-  updateVerticesBuild: (vertices: {verticesIds: string[], verticesLayers: string[][], verticesOrder: string[][], runId: string} | null) => void;
-  removeFromVerticesBuild: (vertices: string[]) => void; 
-  verticesBuild:  {verticesIds: string[], verticesLayers: string[][], verticesOrder: string[][], runId: string} | null;
+  updateVerticesBuild: (
+    vertices: {
+      verticesIds: string[];
+      verticesLayers: string[][];
+      verticesOrder: string[][];
+      runId: string;
+    } | null
+  ) => void;
+  removeFromVerticesBuild: (vertices: string[]) => void;
+  verticesBuild: {
+    verticesIds: string[];
+    verticesLayers: string[][];
+    verticesOrder: string[][];
+    runId: string;
+  } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: { [key: string]: BuildStatus };
-  updateFlowPool: (nodeId:string, data:FlowPoolObjectType | ChatOutputType | chatInputType,buildId?:string) => void;
+  updateFlowPool: (
+    nodeId: string,
+    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    buildId?: string
+  ) => void;
 };

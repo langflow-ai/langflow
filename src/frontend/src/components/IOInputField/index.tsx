@@ -24,7 +24,8 @@ export default function IOInputField({
               e.target.value;
               if (node) {
                 let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value = e.target.value;
+                newNode.data.node!.template["input_value"].value =
+                  e.target.value;
                 setNode(node.id, newNode);
               }
             }}
@@ -54,7 +55,8 @@ export default function IOInputField({
               e.target.value;
               if (node) {
                 let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value = e.target.value;
+                newNode.data.node!.template["input_value"].value =
+                  e.target.value;
                 setNode(node.id, newNode);
               }
             }}

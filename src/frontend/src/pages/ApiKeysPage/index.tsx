@@ -18,6 +18,10 @@ import SecretKeyModal from "../../modals/SecretKeyModal";
 import moment from "moment";
 import Header from "../../components/headerComponent";
 import {
+  DEL_KEY_ERROR_ALERT,
+  DEL_KEY_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
+import {
   API_PAGE_PARAGRAPH_1,
   API_PAGE_PARAGRAPH_2,
   API_PAGE_USER_KEYS,
@@ -26,7 +30,6 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ApiKey } from "../../types/components";
-import { DEL_KEY_ERROR_ALERT, DEL_KEY_SUCCESS_ALERT } from "../../constants/alerts_constants";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
