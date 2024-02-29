@@ -68,7 +68,9 @@ class TemplateField(BaseModel):
     refresh: Optional[bool] = None
     """Specifies if the field should be refreshed. Defaults to False."""
 
-    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
+    range_spec: Optional[RangeSpec] = Field(
+        default=None, serialization_alias="rangeSpec"
+    )
     """Range specification for the field. Defaults to None."""
 
     title_case: bool = False
@@ -81,11 +83,13 @@ class TemplateField(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type == "str":
+        if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
             else:
                 result["input_types"].append("Text")
+        if self.field_type == "Text":
+            result["type"] = "str"
         return result
 
     @field_serializer("file_path")
@@ -115,6 +119,10 @@ class TemplateField(BaseModel):
         if not isinstance(value, list):
             raise ValueError("file_types must be a list")
         return [
-            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
+            (
+                f".{file_type}"
+                if isinstance(file_type, str) and not file_type.startswith(".")
+                else file_type
+            )
             for file_type in value
         ]
