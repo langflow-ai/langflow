@@ -247,10 +247,12 @@ class DirectoryReader:
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
-            logger.debug(f"Menu name: {menu_name}")
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
-            logger.debug(f"Validation result: {validation_result}")
+            if not validation_result:
+                logger.error(
+                    f"Error while processing file {file_path}: {result_content}"
+                )
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
