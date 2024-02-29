@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import SvgPostgres from "./Redis";
+import SvgPostgres from "./Postgres";
 
 export const PostgresIcon = forwardRef<
   SVGSVGElement,

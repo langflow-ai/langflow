@@ -124,7 +124,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -268,6 +268,7 @@ export const nodeIconsLucide: iconsType = {
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
   PostgresChatMessageHistory: PostgresIcon,
+  BaiduQianfan: FaRobot,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
