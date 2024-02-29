@@ -1,4 +1,4 @@
-from typing import Callable, Dict, NewType, Union
+from typing import Callable, Dict, Text, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -20,12 +20,6 @@ NestedDict = Dict[str, Union[str, Dict]]
 
 class Object:
     pass
-
-
-Text = NewType("Text", str)
-# class Text(str):
-#     pass
-#
 
 
 class Data:
