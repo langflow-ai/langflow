@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Text
 
 import requests
 from langchain_core.documents import Document
+
 from langflow import CustomComponent
 from langflow.services.database.models.base import orjson_dumps
 
@@ -31,7 +32,9 @@ class GetRequest(CustomComponent):
         },
     }
 
-    def get_document(self, session: requests.Session, url: str, headers: Optional[dict], timeout: int) -> Document:
+    def get_document(
+        self, session: requests.Session, url: str, headers: Optional[dict], timeout: int
+    ) -> Document:
         try:
             response = session.get(url, headers=headers, timeout=int(timeout))
             try:
@@ -55,7 +58,7 @@ class GetRequest(CustomComponent):
             )
         except Exception as exc:
             return Document(
-                page_content=str(exc),
+                page_content=Text(exc),
                 metadata={"source": url, "headers": headers, "status_code": 500},
             )
 

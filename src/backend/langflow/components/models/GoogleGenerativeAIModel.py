@@ -62,7 +62,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         self,
         google_api_key: str,
         model: str,
-        input_value: str,
+        input_value: Text,
         max_output_tokens: Optional[int] = None,
         temperature: float = 0.1,
         top_k: Optional[int] = None,

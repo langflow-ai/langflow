@@ -66,7 +66,7 @@ class LlamaCppComponent(LCModelComponent):
     def build(
         self,
         model_path: str,
-        input_value: str,
+        input_value: Text,
         grammar: Optional[str] = None,
         cache: Optional[bool] = None,
         client: Optional[Any] = None,

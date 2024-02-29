@@ -139,7 +139,7 @@ class ChatLiteLLMComponent(CustomComponent):
             "OpenRouter": "openrouter_api_key",
         }
         # Set the API key based on the provider
-        api_keys = {v: None for v in provider_map.values()}
+        api_keys: dict[str, Optional[str]] = {v: None for v in provider_map.values()}
 
         if variable_name := provider_map.get(provider):
             api_keys[variable_name] = api_key

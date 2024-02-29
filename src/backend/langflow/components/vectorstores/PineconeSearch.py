@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Pinecone import PineconeComponent
-from langflow.field_typing import Embeddings
+from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
 
 
@@ -42,7 +42,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         embedding: Embeddings,
         pinecone_env: str,
         text_key: str = "text",

@@ -32,7 +32,7 @@ class RunnableExecComponent(CustomComponent):
     def build(
         self,
         input_key: str,
-        input_value: str,
+        input_value: Text,
         runnable: Runnable,
         output_key: str = "output",
     ) -> Text:

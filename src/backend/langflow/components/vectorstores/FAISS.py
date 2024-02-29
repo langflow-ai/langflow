@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Text, Union
 
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
@@ -35,5 +35,5 @@ class FAISSComponent(CustomComponent):
         if not folder_path:
             raise ValueError("Folder path is required to save the FAISS index.")
         path = self.resolve_path(folder_path)
-        vector_store.save_local(str(path), index_name)
+        vector_store.save_local(Text(path), index_name)
         return vector_store

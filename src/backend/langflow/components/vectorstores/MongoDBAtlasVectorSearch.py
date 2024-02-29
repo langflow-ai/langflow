@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.MongoDBAtlasVector import MongoDBAtlasComponent
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings, NestedDict, Text
 from langflow.schema import Record
 
 
@@ -27,7 +27,7 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         embedding: Embeddings,
         collection_name: str = "",

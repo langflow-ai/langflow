@@ -60,7 +60,7 @@ class AnthropicLLM(LCModelComponent):
     def build(
         self,
         model: str,
-        input_value: str,
+        input_value: Text,
         anthropic_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,

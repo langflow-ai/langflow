@@ -26,7 +26,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         retriever: BaseRetriever,
         llm: BaseLanguageModel,
         chain_type: str,
@@ -52,7 +52,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         references_str = ""
         if return_source_documents:
             references_str = self.create_references_from_records(records)
-        result_str = str(result.get("answer", ""))
+        result_str = Text(result.get("answer", ""))
         final_result = "\n".join([result_str, references_str])
         self.status = final_result
         return final_result

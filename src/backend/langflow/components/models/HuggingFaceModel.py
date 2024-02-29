@@ -34,7 +34,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         endpoint_url: str,
         model: Optional[str] = None,
         task: str = "text2text-generation",

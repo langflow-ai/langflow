@@ -177,7 +177,7 @@ class ChatOllamaComponent(LCModelComponent):
         self,
         base_url: Optional[str],
         model: str,
-        input_value: str,
+        input_value: Text,
         mirostat: Optional[str],
         mirostat_eta: Optional[float] = None,
         mirostat_tau: Optional[float] = None,

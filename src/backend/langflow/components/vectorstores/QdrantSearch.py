@@ -2,15 +2,14 @@ from typing import List, Optional
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Qdrant import QdrantComponent
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings, NestedDict, Text
 from langflow.schema import Record
 
 
 class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
     display_name = "Qdrant Search"
     description = "Construct Qdrant wrapper from a list of texts."
-    icon="Qdrant"
-
+    icon = "Qdrant"
 
     def build_config(self):
         return {
@@ -46,7 +45,7 @@ class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         embedding: Embeddings,
         collection_name: str,
         search_type: str = "similarity",

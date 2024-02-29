@@ -3,7 +3,7 @@ from typing import List
 from langchain_community.vectorstores.faiss import FAISS
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.field_typing import Embeddings
+from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
 
 
@@ -26,7 +26,7 @@ class FAISSSearchComponent(LCVectorStoreComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         embedding: Embeddings,
         folder_path: str,
         index_name: str = "langflow_index",
@@ -35,7 +35,7 @@ class FAISSSearchComponent(LCVectorStoreComponent):
             raise ValueError("Folder path is required to save the FAISS index.")
         path = self.resolve_path(folder_path)
         vector_store = FAISS.load_local(
-            folder_path=str(path), embeddings=embedding, index_name=index_name
+            folder_path=Text(path), embeddings=embedding, index_name=index_name
         )
         if not vector_store:
             raise ValueError("Failed to load the FAISS index.")

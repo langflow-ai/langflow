@@ -4,14 +4,14 @@ from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from supabase.client import Client, create_client
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.field_typing import Embeddings
+from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
 
 
 class SupabaseSearchComponent(LCVectorStoreComponent):
     display_name = "Supabase Search"
     description = "Search a Supabase Vector Store for similar documents."
-    icon="Supabase"
+    icon = "Supabase"
 
     def build_config(self):
         return {
@@ -30,7 +30,7 @@ class SupabaseSearchComponent(LCVectorStoreComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         embedding: Embeddings,
         query_name: str = "",

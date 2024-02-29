@@ -5,7 +5,8 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow import CustomComponent
-from langflow.schema import Record, docs_to_records
+from langflow.field_typing import Text, docs_to_records
+from langflow.schema import Record
 
 
 class LCVectorStoreComponent(CustomComponent):
@@ -16,7 +17,7 @@ class LCVectorStoreComponent(CustomComponent):
 
     def search_with_vector_store(
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         vector_store: Union[VectorStore, BaseRetriever],
     ) -> List[Record]:
