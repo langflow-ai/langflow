@@ -16,10 +16,6 @@ class MessageHistoryComponent(CustomComponent):
                 "display_name": "Sender Type",
             },
             "sender_name": {"display_name": "Sender Name"},
-            "file_path": {
-                "display_name": "File Path",
-                "info": "Path of the local JSON file to store the messages. It should be a unique path for each chat history.",
-            },
             "n_messages": {
                 "display_name": "Number of Messages",
                 "info": "Number of messages to retrieve.",
