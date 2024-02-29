@@ -50,12 +50,12 @@ def upgrade() -> None:
                     sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=True)
                 )
             indices = inspector.get_indexes("flow")
-            indices = [index["name"] for index in indices]
-            if "ix_flow_user_id" not in indices:
+            indices_names = [index["name"] for index in indices]
+            if "ix_flow_user_id" not in indices_names:
                 batch_op.create_index(
                     batch_op.f("ix_flow_user_id"), ["user_id"], unique=False
                 )
-            if "fk_flow_user_id_user" not in indices:
+            if "fk_flow_user_id_user" not in indices_names:
                 batch_op.create_foreign_key(
                     "fk_flow_user_id_user", "user", ["user_id"], ["id"]
                 )
@@ -95,13 +95,13 @@ def downgrade() -> None:
                 batch_op.drop_column("is_component")
 
             indices = inspector.get_indexes("flow")
-            indices = [index["name"] for index in indices]
-            if "ix_flow_user_id" in indices:
+            indices_names = [index["name"] for index in indices]
+            if "ix_flow_user_id" in indices_names:
                 batch_op.drop_index("ix_flow_user_id")
             # Assuming fk_flow_user_id_user is a foreign key constraint's name, not an index
             constraints = inspector.get_foreign_keys("flow")
-            constraints = [constraint["name"] for constraint in constraints]
-            if "fk_flow_user_id_user" in constraints:
+            constraint_names = [constraint["name"] for constraint in constraints]
+            if "fk_flow_user_id_user" in constraint_names:
                 batch_op.drop_constraint("fk_flow_user_id_user", type_="foreignkey")
 
     except Exception as e:

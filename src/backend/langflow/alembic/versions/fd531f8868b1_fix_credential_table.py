@@ -6,7 +6,7 @@ Create Date: 2023-11-24 15:07:37.566516
 
 """
 
-from typing import Sequence, Union
+from typing import Optional, Sequence, Union
 
 from alembic import op
 from sqlalchemy.engine.reflection import Inspector
@@ -46,10 +46,10 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)  # type: ignore
     tables = inspector.get_table_names()
-    foreign_keys_names = []
+    foreign_keys_names: list[Optional[str]] = []
     if "credential" in tables:
         foreign_keys = inspector.get_foreign_keys("credential")
-        foreign_keys = [fk["name"] for fk in foreign_keys]
+        foreign_keys_names = [fk["name"] for fk in foreign_keys]
     try:
         if "credential" in tables and "fk_credential_user_id" in foreign_keys_names:
             with op.batch_alter_table("credential", schema=None) as batch_op:
