@@ -21,26 +21,6 @@ class BuildStatus(Enum):
     IN_PROGRESS = "in_progress"
 
 
-class GraphData(BaseModel):
-    """Data inside the exported flow."""
-
-    nodes: List[Dict[str, Any]]
-    edges: List[Dict[str, Any]]
-
-
-class ExportedFlow(BaseModel):
-    """Exported flow from Langflow."""
-
-    description: str
-    name: str
-    id: str
-    data: GraphData
-
-
-class InputRequest(BaseModel):
-    input: dict
-
-
 class TweaksRequest(BaseModel):
     tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
 
@@ -178,9 +158,7 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
 class CustomComponentCode(BaseModel):

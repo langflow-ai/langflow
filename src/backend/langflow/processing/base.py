@@ -36,9 +36,7 @@ def get_langfuse_callback(trace_id):
     return None
 
 
-def flush_langfuse_callback_if_present(
-    callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]
-):
+def flush_langfuse_callback_if_present(callbacks: List[Union[BaseCallbackHandler, "CallbackHandler"]]):
     """
     If langfuse callback is present, run callback.langfuse.flush()
     """
@@ -79,15 +77,9 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         # if langfuse callback is present, run callback.langfuse.flush()
         flush_langfuse_callback_if_present(callbacks)
 
-        intermediate_steps = (
-            output.get("intermediate_steps", []) if isinstance(output, dict) else []
-        )
+        intermediate_steps = output.get("intermediate_steps", []) if isinstance(output, dict) else []
 
-        result = (
-            output.get(langchain_object.output_keys[0])
-            if isinstance(output, dict)
-            else output
-        )
+        result = output.get(langchain_object.output_keys[0]) if isinstance(output, dict) else output
         try:
             thought = format_actions(intermediate_steps) if intermediate_steps else ""
         except Exception as exc:

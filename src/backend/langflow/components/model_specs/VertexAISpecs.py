@@ -7,7 +7,7 @@ from langchain_community.llms.vertexai import VertexAI
 class VertexAIComponent(CustomComponent):
     display_name = "VertexAI"
     description = "Google Vertex AI large language models"
-    icon="VertexAI"
+    icon = "VertexAI"
 
     def build_config(self):
         return {

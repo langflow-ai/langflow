@@ -8,11 +8,7 @@ from langflow.template.frontend_node.custom_components import (
 
 def merge_nested_dicts_with_renaming(dict1, dict2):
     for key, value in dict2.items():
-        if (
-            key in dict1
-            and isinstance(value, dict)
-            and isinstance(dict1.get(key), dict)
-        ):
+        if key in dict1 and isinstance(value, dict) and isinstance(dict1.get(key), dict):
             for sub_key, sub_value in value.items():
                 # if sub_key in dict1[key]:
                 #     new_key = get_new_key(dict1[key], sub_key)
@@ -69,9 +65,7 @@ def build_custom_component_list_from_path(path: str):
     file_list = load_files_from_path(path)
     reader = DirectoryReader(path, False)
 
-    valid_components, invalid_components = build_and_validate_all_files(
-        reader, file_list
-    )
+    valid_components, invalid_components = build_and_validate_all_files(reader, file_list)
 
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)
@@ -118,9 +112,7 @@ def build_invalid_menu_items(menu_item):
             menu_items[component_name] = component_template
             logger.debug(f"Added {component_name} to invalid menu.")
         except Exception as exc:
-            logger.exception(
-                f"Error while creating custom component [{component_name}]: {str(exc)}"
-            )
+            logger.exception(f"Error while creating custom component [{component_name}]: {str(exc)}")
     return menu_items
 
 
@@ -154,7 +146,5 @@ def build_menu_items(menu_item):
             menu_items[component_name] = component_template
         except Exception as exc:
             logger.error(f"Error loading Component: {component['output_types']}")
-            logger.exception(
-                f"Error while building custom component {component['output_types']}: {exc}"
-            )
+            logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
     return menu_items

@@ -14,9 +14,7 @@ from langflow.field_typing import BaseRetriever, Document
 class VectaraComponent(CustomComponent):
     display_name: str = "Vectara"
     description: str = "Implementation of Vector Store using Vectara"
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
-    )
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     beta = True
     icon = "Vectara"
     field_config = {

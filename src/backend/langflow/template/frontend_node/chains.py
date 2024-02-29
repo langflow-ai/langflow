@@ -216,9 +216,7 @@ class MidJourneyPromptChainNode(FrontendNode):
             ),
         ],
     )
-    description: str = (
-        "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
-    )
+    description: str = "MidJourneyPromptChain is a chain you can use to generate new MidJourney prompts."
     base_classes: list[str] = [
         "LLMChain",
         "BaseCustomChain",

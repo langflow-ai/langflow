@@ -28,9 +28,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         resp = ChatResponse(message=token, type="stream", intermediate_steps="")
         await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
 
-    async def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
-    ) -> Any:
+    async def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
         """Run when tool starts running."""
         resp = ChatResponse(
             message="",
@@ -68,9 +66,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
         try:
             # This is to emulate the stream of tokens
             for resp in resps:
-                await self.socketio_service.emit_token(
-                    to=self.sid, data=resp.model_dump()
-                )
+                await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
         except Exception as exc:
             logger.error(f"Error sending response: {exc}")
 
@@ -96,9 +92,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             resp = PromptResponse(
                 prompt=text,
             )
-            await self.socketio_service.emit_message(
-                to=self.sid, data=resp.model_dump()
-            )
+            await self.socketio_service.emit_message(to=self.sid, data=resp.model_dump())
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"
@@ -108,9 +102,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             logs = log.split("\n")
             for log in logs:
                 resp = ChatResponse(message="", type="stream", intermediate_steps=log)
-                await self.socketio_service.emit_token(
-                    to=self.sid, data=resp.model_dump()
-                )
+                await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
         else:
             resp = ChatResponse(message="", type="stream", intermediate_steps=log)
             await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())

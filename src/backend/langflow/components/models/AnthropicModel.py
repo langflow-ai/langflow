@@ -9,9 +9,7 @@ from langflow.field_typing import Text
 
 class AnthropicLLM(LCModelComponent):
     display_name: str = "AnthropicModel"
-    description: str = (
-        "Generate text using Anthropic Chat&Completion large language models."
-    )
+    description: str = "Generate text using Anthropic Chat&Completion large language models."
     icon = "Anthropic"
 
     def build_config(self):
@@ -74,9 +72,7 @@ class AnthropicLLM(LCModelComponent):
         try:
             output = ChatAnthropic(
                 model_name=model,
-                anthropic_api_key=(
-                    SecretStr(anthropic_api_key) if anthropic_api_key else None
-                ),
+                anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
                 anthropic_api_url=api_endpoint,

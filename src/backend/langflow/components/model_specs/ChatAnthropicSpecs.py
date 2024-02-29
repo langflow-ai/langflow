@@ -9,7 +9,7 @@ class ChatAnthropicComponent(CustomComponent):
     display_name = "ChatAnthropic"
     description = "`Anthropic` chat large language models."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
-    icon ="Anthropic"
+    icon = "Anthropic"
 
     def build_config(self):
         return {

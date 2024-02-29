@@ -36,10 +36,8 @@ class ConversationChainComponent(CustomComponent):
         # We need to check if it is a string or a BaseMessage
         result_str: Text = ""
         if hasattr(result, "content") and isinstance(result.content, str):
-
             result_str = result.content
         elif isinstance(result, str):
-
             result_str = result
         else:
             # is dict
