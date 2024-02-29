@@ -533,12 +533,6 @@ export type chatMessagePropsType = {
   ) => void;
 };
 
-export type formModalPropsType = {
-  open: boolean;
-  setOpen: Function;
-  flow: FlowType;
-};
-
 export type genericModalPropsType = {
   field_name?: string;
   setValue: (value: string) => void;
