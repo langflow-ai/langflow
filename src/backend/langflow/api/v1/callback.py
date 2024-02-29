@@ -1,9 +1,8 @@
-import asyncio
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 from langchain.schema import AgentAction, AgentFinish
-from langchain_core.callbacks.base import AsyncCallbackHandler, BaseCallbackHandler
+from langchain_core.callbacks.base import AsyncCallbackHandler
 from loguru import logger
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
@@ -100,7 +99,6 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             await self.socketio_service.emit_message(
                 to=self.sid, data=resp.model_dump()
             )
-            self.chat_service.chat_history.add_message(self.client_id, resp)
 
     async def on_agent_action(self, action: AgentAction, **kwargs: Any):
         log = f"Thought: {action.log}"
@@ -125,21 +123,3 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
             intermediate_steps=finish.log,
         )
         await self.socketio_service.emit_token(to=self.sid, data=resp.model_dump())
-
-
-class StreamingLLMCallbackHandler(BaseCallbackHandler):
-    """Callback handler for streaming LLM responses."""
-
-    def __init__(self, client_id: str):
-        self.chat_service = get_chat_service()
-        self.client_id = client_id
-        self.socketio_service = self.chat_service.active_connections[self.client_id]
-
-    def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        resp = ChatResponse(message=token, type="stream", intermediate_steps="")
-
-        loop = asyncio.get_event_loop()
-        coroutine = self.socketio_service.emit_token(
-            to=self.sid, data=resp.model_dump()
-        )
-        asyncio.run_coroutine_threadsafe(coroutine, loop)
