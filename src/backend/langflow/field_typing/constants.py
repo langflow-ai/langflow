@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, NewType, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -22,9 +22,10 @@ class Object:
     pass
 
 
-# Text = NewType("Text", str)
-class Text(str):
-    pass
+Text = NewType("Text", str)
+# class Text(str):
+#     pass
+#
 
 
 class Data:

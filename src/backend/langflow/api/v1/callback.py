@@ -7,7 +7,7 @@ from langchain_core.callbacks.base import AsyncCallbackHandler, BaseCallbackHand
 from loguru import logger
 
 from langflow.api.v1.schemas import ChatResponse, PromptResponse
-from langflow.services.deps import get_chat_service
+from langflow.services.deps import get_chat_service, get_socket_service
 from langflow.utils.util import remove_ansi_escape_codes
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class AsyncStreamingLLMCallbackHandleSIO(AsyncCallbackHandler):
     def __init__(self, session_id: str):
         self.chat_service = get_chat_service()
         self.client_id = session_id
-        self.socketio_service: "SocketIOService" = self.chat_service.socketio_service
+        self.socketio_service: "SocketIOService" = get_socket_service()
         self.sid = session_id
         # self.socketio_service = self.chat_service.active_connections[self.client_id]
 
