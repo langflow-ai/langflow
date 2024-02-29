@@ -1,17 +1,28 @@
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from fastapi.responses import StreamingResponse
+from loguru import logger
+from sqlmodel import Session
+
 from langflow.api.utils import build_input_keys_response, format_elapsed_time
 from langflow.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user, get_current_user_for_websocket
+from langflow.services.auth.utils import (
+    get_current_active_user,
+    get_current_user_for_websocket,
+)
 from langflow.services.cache.service import BaseCacheService
 from langflow.services.cache.utils import update_build_status
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_cache_service, get_chat_service, get_session
-from loguru import logger
-from sqlmodel import Session
 
 router = APIRouter(tags=["Chat"])
 
