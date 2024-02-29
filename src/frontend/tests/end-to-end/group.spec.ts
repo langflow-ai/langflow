@@ -25,49 +25,23 @@ test.describe("group node test", () => {
 
     page.waitForTimeout(2000);
 
-    await page.dispatchEvent('//*[@id="react-flow-id"]', "drop", {
-      dataTransfer,
-    });
-
-    await page.locator('//*[@id="new-project-btn"]').click();
-    await page.waitForTimeout(2000);
-
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("PythonFunctionTool");
-
-    await page.waitForTimeout(2000);
-
-    await page
-      .getByTestId("toolsPythonFunctionTool")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("ChatOpenAI");
-
-    await page.waitForTimeout(2000);
-
-    await page
-      .getByTestId("model_specsChatOpenAI")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("AgentInitializer");
-
-    await page.waitForTimeout(2000);
-
-    await page
-      .getByTestId("agentsAgent Initializer")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    // Now dispatch
+    await page.dispatchEvent(
+      "//*[@id='react-flow-id']/div[1]/div[1]/div",
+      "drop",
+      {
+        dataTransfer,
+      }
+    );
 
     const genericNoda = page.getByTestId("div-generic-node");
     const elementCount = await genericNoda.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
-    page.locator('//*[@id="react-flow-id"]').click();
+    await page
+      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
+      .click();
 
     await page.getByTestId("title-Agent Initializer").click({
       modifiers: ["Control"],
