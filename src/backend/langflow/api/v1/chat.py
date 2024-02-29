@@ -73,6 +73,7 @@ async def get_vertices(
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
+        graph.set_run_id(run_id)
         return VerticesOrderResponse(ids=vertices, run_id=run_id)
 
     except Exception as exc:
@@ -98,8 +99,12 @@ async def build_vertex(
         cache = chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
-            logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
-            graph = build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
+            logger.warning(
+                f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
+            )
+            graph = build_and_cache_graph(
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
+            )
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
@@ -154,13 +159,14 @@ async def build_vertex(
             graph.reset_inactive_vertices()
         chat_service.set_cache(flow_id, graph)
 
-        return VertexBuildResponse(
+        build_response = VertexBuildResponse(
             inactive_vertices=inactive_vertices,
             valid=valid,
             params=params,
             id=vertex.id,
             data=result_data_response,
         )
+        return build_response
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
         logger.exception(exc)
@@ -191,7 +197,9 @@ async def build_vertex_stream(
                     else:
                         graph = cache.get("result")
                 else:
-                    session_data = await session_service.load_session(session_id, flow_id=flow_id)
+                    session_data = await session_service.load_session(
+                        session_id, flow_id=flow_id
+                    )
                     graph, artifacts = session_data if session_data else (None, None)
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
