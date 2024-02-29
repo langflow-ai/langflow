@@ -125,10 +125,11 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
@@ -148,9 +149,12 @@ import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NotionIcon } from "../icons/Notion";
+import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
+import { PostgresIcon } from "../icons/Postgres";
 import { QDrantIcon } from "../icons/QDrant";
+import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -254,6 +258,20 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  AzureChatOpenAi: AzureIcon,
+  Ollama: OllamaIcon,
+  ChatOllama: OllamaIcon,
+  AzureOpenAiEmbeddings: AzureIcon,
+  Azure: AzureIcon,
+  OllamaEmbeddings: OllamaIcon,
+  ChatOllamaModel: OllamaIcon,
+  Faiss: MetaIcon,
+  FaissSearch: MetaIcon,
+  AzureOpenAiModel: AzureIcon,
+  Redis: RedisIcon,
+  RedisSearch: RedisIcon,
+  PostgresChatMessageHistory: PostgresIcon,
+  BaiduQianfan: FaRobot,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
