@@ -34,7 +34,6 @@ from langflow.utils import validate
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
-    from langflow.graph.edge.base import ContractEdge
     from langflow.graph.vertex.base import Vertex
 
 
