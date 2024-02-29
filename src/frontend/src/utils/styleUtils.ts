@@ -128,7 +128,7 @@ import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
-import { AzureOpenAiEmbeddingsIcon } from "../icons/AzureOpenAiEmbeddings";
+import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
@@ -256,15 +256,16 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
-  AzureChatOpenAi: AzureOpenAiEmbeddingsIcon,
+  AzureChatOpenAi: AzureIcon,
   Ollama: OllamaIcon,
   ChatOllama: OllamaIcon,
-  AzureOpenAiEmbeddings: AzureOpenAiEmbeddingsIcon,
+  AzureOpenAiEmbeddings: AzureIcon,
+  Azure: AzureIcon,
   OllamaEmbeddings: OllamaIcon,
   ChatOllamaModel: OllamaIcon,
   Faiss: MetaIcon,
   FaissSearch: MetaIcon,
-  AzureOpenAiModel: AzureOpenAiEmbeddingsIcon,
+  AzureOpenAiModel: AzureIcon,
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
   PostgresChatMessageHistory: PostgresIcon,
