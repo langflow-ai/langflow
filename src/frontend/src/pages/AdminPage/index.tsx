@@ -17,6 +17,14 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import {
+  USER_ADD_ERROR_ALERT,
+  USER_ADD_SUCCESS_ALERT,
+  USER_DEL_ERROR_ALERT,
+  USER_DEL_SUCCESS_ALERT,
+  USER_EDIT_ERROR_ALERT,
+  USER_EDIT_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
+import {
   ADMIN_HEADER_DESCRIPTION,
   ADMIN_HEADER_TITLE,
 } from "../../constants/constants";
@@ -33,7 +41,6 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
-import { USER_ADD_ERROR_ALERT, USER_ADD_SUCCESS_ALERT, USER_DEL_ERROR_ALERT, USER_DEL_SUCCESS_ALERT, USER_EDIT_ERROR_ALERT, USER_EDIT_SUCCESS_ALERT } from "../../constants/alerts_constants";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");

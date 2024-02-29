@@ -13,6 +13,12 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
+import {
+  INVALID_SELECTION_ERROR_ALERT,
+  UPLOAD_ALERT_LIST,
+  UPLOAD_ERROR_ALERT,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -31,7 +37,6 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
-import { INVALID_SELECTION_ERROR_ALERT, UPLOAD_ALERT_LIST, UPLOAD_ERROR_ALERT, WRONG_FILE_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -91,7 +96,11 @@ export default function Page({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const selectedNode = nodes.filter((obj) => obj.selected);
-      if ((event.ctrlKey || event.metaKey) && event.key === "p" && selectedNode.length > 0) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "p" &&
+        selectedNode.length > 0
+      ) {
         event.preventDefault();
         setNode(selectedNode[0].id, (old) => ({
           ...old,
@@ -104,12 +113,19 @@ export default function Page({
           },
         }));
       }
-      if ((event.ctrlKey || event.metaKey) && event.key === "d" && selectedNode.length > 0) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "d" &&
+        selectedNode.length > 0
+      ) {
         event.preventDefault();
-        paste({nodes: selectedNode, edges: []}, {
-          x: position.current.x,
-          y: position.current.y,
-        });
+        paste(
+          { nodes: selectedNode, edges: [] },
+          {
+            x: position.current.x,
+            y: position.current.y,
+          }
+        );
       }
       if (!isWrappedWithClass(event, "noundo")) {
         if (

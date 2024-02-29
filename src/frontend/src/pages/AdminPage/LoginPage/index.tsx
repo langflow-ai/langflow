@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
+import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import { onLogin } from "../../../controllers/API";
@@ -11,7 +12,6 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
-import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 
 export default function LoginAdminPage() {
   const navigate = useNavigate();

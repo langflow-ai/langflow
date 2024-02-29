@@ -6,11 +6,14 @@ import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
-import { USER_PROJECTS_HEADER, myCollectionDesc } from "../../constants/constants";
+import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
+import {
+  USER_PROJECTS_HEADER,
+  myCollectionDesc,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
-import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);

@@ -3,12 +3,12 @@ import { useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { FlowType } from "../../../types/flow";
 
+import { MISSED_ERROR_ALERT } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { validateNodes } from "../../../utils/reactflowUtils";
 import RadialProgressComponent from "../../RadialProgress";
 import IconComponent from "../../genericIconComponent";
-import { MISSED_ERROR_ALERT } from "../../../constants/alerts_constants";
 
 export default function BuildTrigger({
   open,

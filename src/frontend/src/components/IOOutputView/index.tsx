@@ -20,7 +20,10 @@ export default function IOOutputView({
             className="w-full custom-scroll"
             placeholder={"Empty"}
             // update to real value on flowPool
-            value={((flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1])?.params ?? ""}
+            value={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+            }
             readOnly
           />
         );
@@ -35,7 +38,8 @@ export default function IOOutputView({
               e.target.value;
               if (node) {
                 let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value = e.target.value;
+                newNode.data.node!.template["input_value"].value =
+                  e.target.value;
                 setNode(node.id, newNode);
               }
             }}

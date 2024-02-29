@@ -57,15 +57,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   inputs: [],
   outputs: [],
   openCodeModalWShortcut: false,
-  handleModalWShortcut: ((modal) => {
+  handleModalWShortcut: (modal) => {
     switch (modal) {
       case "code":
         set((state) => ({
           openCodeModalWShortcut: !state.openCodeModalWShortcut,
         }));
-        break
+        break;
     }
-  }),
+  },
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
@@ -494,7 +494,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     };
   },
   updateVerticesBuild: (
-    vertices: { verticesIds: string[], verticesOrder: string[][], verticesLayers: string[][], runId: string } | null
+    vertices: {
+      verticesIds: string[];
+      verticesOrder: string[][];
+      verticesLayers: string[][];
+      runId: string;
+    } | null
   ) => {
     set({ verticesBuild: vertices });
   },

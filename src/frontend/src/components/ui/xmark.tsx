@@ -12,7 +12,6 @@ export default function Xmark({ initial = true, isVisible, className }) {
           className={"CheckIcon " + className}
         >
           <motion.path
-          
             initial={{ pathLength: 0, pathOffset: 1, strokeLinecap: "butt" }}
             animate={{ pathLength: 1, pathOffset: 0, strokeLinecap: "round" }}
             exit={{ pathLength: 0, pathOffset: 1, strokeLinecap: "butt" }}

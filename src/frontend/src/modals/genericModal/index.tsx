@@ -6,11 +6,16 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
+  BUG_ALERT,
+  PROMPT_ERROR_ALERT,
+  PROMPT_SUCCESS_ALERT,
+  TEMP_NOTICE_ALERT,
+} from "../../constants/alerts_constants";
+import {
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
-  editTextModalTitle,
   editTextPlaceholder,
   regexHighlight,
 } from "../../constants/constants";
@@ -21,7 +26,6 @@ import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { BUG_ALERT, PROMPT_ERROR_ALERT, PROMPT_SUCCESS_ALERT, TEMP_NOTICE_ALERT } from "../../constants/alerts_constants";
 
 export default function GenericModal({
   field_name = "",

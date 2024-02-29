@@ -20,6 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import {
+  APIKEY_ERROR_ALERT,
+  COMPONENTS_ERROR_ALERT,
+  INVALID_API_ERROR_ALERT,
+  NOAPI_ERROR_ALERT,
+} from "../../constants/alerts_constants";
+import { storeDesc, storeTitle } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -28,8 +35,6 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import { APIKEY_ERROR_ALERT, COMPONENTS_ERROR_ALERT, INVALID_API_ERROR_ALERT, NOAPI_ERROR_ALERT } from "../../constants/alerts_constants";
-import { storeDesc, storeTitle } from "../../constants/constants";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -65,17 +70,13 @@ export default function StorePage(): JSX.Element {
       if (!hasApiKey) {
         setErrorData({
           title: APIKEY_ERROR_ALERT,
-          list: [
-            NOAPI_ERROR_ALERT,
-          ],
+          list: [NOAPI_ERROR_ALERT],
         });
         setLoading(false);
       } else if (!validApiKey) {
         setErrorData({
           title: APIKEY_ERROR_ALERT,
-          list: [
-            INVALID_API_ERROR_ALERT,
-          ],
+          list: [INVALID_API_ERROR_ALERT],
         });
       }
     }

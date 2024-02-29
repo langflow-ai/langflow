@@ -1,10 +1,10 @@
 import { useEffect } from "react";
+import { editTextModalTitle } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
-import { editTextModalTitle } from "../../constants/constants";
 
 export default function TextAreaComponent({
   value,

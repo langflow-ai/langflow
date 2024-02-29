@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
 import {
   CONTROL_INPUT_STATE,
   SIGN_UP_SUCCESS,
@@ -15,7 +16,6 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =

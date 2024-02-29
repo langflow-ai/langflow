@@ -90,12 +90,16 @@ export default function NodeToolbarComponent({
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const openCodeModalWShortcut = useFlowStore(state => state.openCodeModalWShortcut);
-  const handleModalWShortcut = useFlowStore(state => state.handleModalWShortcut);
+  const openCodeModalWShortcut = useFlowStore(
+    (state) => state.openCodeModalWShortcut
+  );
+  const handleModalWShortcut = useFlowStore(
+    (state) => state.handleModalWShortcut
+  );
 
   useEffect(() => {
-    setOpenModal(openCodeModalWShortcut)
-  }, [openCodeModalWShortcut, handleModalWShortcut])
+    setOpenModal(openCodeModalWShortcut);
+  }, [openCodeModalWShortcut, handleModalWShortcut]);
 
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection

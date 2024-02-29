@@ -182,11 +182,7 @@ export default function ParameterComponent({
         return (
           <div key={index}>
             {index === 0 && (
-              <span>
-                {left
-                  ? inputHandleHover
-                  : outputHandleHover}
-              </span>
+              <span>{left ? inputHandleHover : outputHandleHover}</span>
             )}
             <span
               key={index}

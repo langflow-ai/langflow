@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import IconComponent from "../../../components/genericIconComponent";
 import { Textarea } from "../../../components/ui/textarea";
+import {
+  chatInputPlaceholder,
+  chatInputPlaceholderSend,
+} from "../../../constants/constants";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { chatInputType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
-import { chatInputPlaceholder, chatInputPlaceholderSend } from "../../../constants/constants";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 
 export default function ChatInput({
   lockChat,
@@ -22,7 +25,7 @@ export default function ChatInput({
     }
   }, [lockChat, inputRef]);
 
-/*   function handleChange(value: number) {
+  /*   function handleChange(value: number) {
     console.log(value);
     if (value > 0) {
       setRepeat(value);
@@ -43,7 +46,12 @@ export default function ChatInput({
       <div className="relative w-full">
         <Textarea
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !lockChat && !saveLoading && !event.shiftKey) {
+            if (
+              event.key === "Enter" &&
+              !lockChat &&
+              !saveLoading &&
+              !event.shiftKey
+            ) {
               sendMessage(repeat);
             }
           }}
@@ -60,12 +68,14 @@ export default function ChatInput({
                 : "hidden"
             }`,
           }}
-          value={lockChat ? "Thinking..." : (saveLoading ? "Saving..." : chatValue)}
+          value={
+            lockChat ? "Thinking..." : saveLoading ? "Saving..." : chatValue
+          }
           onChange={(event): void => {
             setChatValue(event.target.value);
           }}
           className={classNames(
-            (lockChat || saveLoading)
+            lockChat || saveLoading
               ? " form-modal-lock-true bg-input"
               : noInput
               ? "form-modal-no-input bg-input"
@@ -74,9 +84,7 @@ export default function ChatInput({
             "form-modal-lockchat"
           )}
           placeholder={
-            noInput
-              ? chatInputPlaceholder
-              : chatInputPlaceholderSend
+            noInput ? chatInputPlaceholder : chatInputPlaceholderSend
           }
         />
         <div className="form-modal-send-icon-position">
