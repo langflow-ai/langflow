@@ -98,7 +98,7 @@ class ChatComponent(CustomComponent):
         if not input_value:
             input_value = ""
         if return_record and input_value_record:
-            result = input_value_record
+            result: Union[Text, Record] = input_value_record
         else:
             result = input_value
         self.status = result

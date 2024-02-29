@@ -39,7 +39,7 @@ class CTransformersComponent(LCModelComponent):
         self,
         model: str,
         model_file: str,
-        input_value: str,
+        input_value: Text,
         model_type: str,
         stream: bool = False,
         config: Optional[Dict] = None,

@@ -1,4 +1,5 @@
 # Implement ShouldRunNext component
+from typing import Text
 from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
@@ -23,7 +24,7 @@ class ShouldRunNext(CustomComponent):
 
     def build(self, template: Prompt, llm: BaseLanguageModel, **kwargs) -> dict:
         # This is a simple component that always returns True
-        prompt_template = PromptTemplate.from_template(str(template))
+        prompt_template = PromptTemplate.from_template(Text(template))
 
         attributes_to_check = ["text", "page_content"]
         for key, value in kwargs.items():

@@ -40,7 +40,7 @@ class SQLExecutorComponent(CustomComponent):
             result = tool.run(query, include_columns=include_columns)
             self.status = result
         except Exception as e:
-            result = str(e)
+            result = Text(e)
             self.status = result
             if not passthrough:
                 raise e

@@ -18,13 +18,13 @@ class LLMCheckerChainComponent(CustomComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         llm: BaseLanguageModel,
     ) -> Text:
 
         chain = LLMCheckerChain.from_llm(llm=llm)
         response = chain.invoke({chain.input_key: input_value})
         result = response.get(chain.output_key, "")
-        result_str = str(result)
+        result_str = Text(result)
         self.status = result_str
         return result_str

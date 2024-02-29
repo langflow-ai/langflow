@@ -78,7 +78,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         model: str = "ERNIE-Bot-turbo",
         qianfan_ak: Optional[str] = None,
         qianfan_sk: Optional[str] = None,

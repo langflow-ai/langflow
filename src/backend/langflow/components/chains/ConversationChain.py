@@ -23,7 +23,7 @@ class ConversationChainComponent(CustomComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
     ) -> Text:
@@ -34,7 +34,7 @@ class ConversationChainComponent(CustomComponent):
         result = chain.invoke({chain.input_key: input_value})
         # result is an AIMessage which is a subclass of BaseMessage
         # We need to check if it is a string or a BaseMessage
-        result_str: str = ""
+        result_str: Text = ""
         if hasattr(result, "content") and isinstance(result.content, str):
 
             result_str = result.content
@@ -43,6 +43,6 @@ class ConversationChainComponent(CustomComponent):
             result_str = result
         else:
             # is dict
-            result_str = result.get("response")
+            result_str = Text(result.get("response"))
         self.status = result_str
         return result_str

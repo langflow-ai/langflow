@@ -4,6 +4,7 @@ from langchain.embeddings.base import Embeddings
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Redis import RedisComponent
+from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -44,7 +45,7 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         embedding: Embeddings,
         redis_server_url: str,

@@ -1,6 +1,6 @@
 from concurrent import futures
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Text
 
 from langflow import CustomComponent
 from langflow.schema import Record
@@ -71,7 +71,9 @@ class GatherRecordsComponent(CustomComponent):
         glob = "**/*" if recursive else "*"
         paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
         file_paths = [
-            str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)
+            Text(p)
+            for p in paths
+            if p.is_file() and match_types(p) and is_not_hidden(p)
         ]
 
         return file_paths
@@ -90,7 +92,7 @@ class GatherRecordsComponent(CustomComponent):
             return None
 
         # Create a Record
-        text = "\n\n".join([str(el) for el in elements])
+        text = "\n\n".join([Text(el) for el in elements])
         metadata = elements.metadata if hasattr(elements, "metadata") else {}
         metadata["file_path"] = file_path
         record = Record(text=text, data=metadata)
@@ -136,7 +138,7 @@ class GatherRecordsComponent(CustomComponent):
         recursive: bool = True,
         silent_errors: bool = False,
         use_multithreading: bool = True,
-    ) -> List[Record]:
+    ) -> List[Optional[Record]]:
         if types is None:
             types = []
         resolved_path = self.resolve_path(path)

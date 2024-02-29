@@ -2,9 +2,10 @@ from typing import Optional
 
 from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
+from pydantic.v1 import SecretStr
 
 from langflow.components.models.base.model import LCModelComponent
-from pydantic.v1 import SecretStr
+from langflow.field_typing import Text
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -86,7 +87,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         self,
         model: str,
         azure_endpoint: str,
-        input_value: str,
+        input_value: Text,
         azure_deployment: str,
         api_key: str,
         api_version: str,

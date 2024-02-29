@@ -4,6 +4,7 @@ from langchain.embeddings.base import Embeddings
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Weaviate import WeaviateVectorStoreComponent
+from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -14,7 +15,7 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
         "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
     )
     beta = True
-    icon="Weaviate"
+    icon = "Weaviate"
 
     field_config = {
         "search_type": {
@@ -57,7 +58,7 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         url: str,
         search_by_text: bool = False,

@@ -4,6 +4,7 @@ from langchain_community.vectorstores.vectara import Vectara
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Vectara import VectaraComponent
+from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -14,7 +15,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         "https://python.langchain.com/docs/integrations/vectorstores/vectara"
     )
     beta = True
-    icon="Vectara"
+    icon = "Vectara"
 
     field_config = {
         "search_type": {
@@ -44,7 +45,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         search_type: str,
         vectara_customer_id: str,
         vectara_corpus_id: str,

@@ -4,6 +4,7 @@ from langchain.embeddings.base import Embeddings
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.pgvector import PGVectorComponent
+from langflow.field_typing import Text
 from langflow.schema import Record
 
 
@@ -42,7 +43,7 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
 
     def build(  # type: ignore[override]
         self,
-        input_value: str,
+        input_value: Text,
         embedding: Embeddings,
         search_type: str,
         pg_server_url: str,

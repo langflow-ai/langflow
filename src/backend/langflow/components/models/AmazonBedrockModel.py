@@ -44,7 +44,7 @@ class AmazonBedrockComponent(LCModelComponent):
 
     def build(
         self,
-        input_value: str,
+        input_value: Text,
         model_id: str = "anthropic.claude-instant-v1",
         credentials_profile_name: Optional[str] = None,
         region_name: Optional[str] = None,

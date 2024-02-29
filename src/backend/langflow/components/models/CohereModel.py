@@ -40,7 +40,7 @@ class CohereComponent(LCModelComponent):
     def build(
         self,
         cohere_api_key: str,
-        input_value: str,
+        input_value: Text,
         temperature: float = 0.75,
         stream: bool = False,
     ) -> Text:
