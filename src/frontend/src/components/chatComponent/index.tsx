@@ -32,7 +32,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
   return (
     <>
       <div className="flex flex-col">
-        {/* <BuildTrigger open={open} flow={flow} /> */}
         {hasIO && (
           <IOView open={open} setOpen={setOpen}>
             <ChatTrigger />
