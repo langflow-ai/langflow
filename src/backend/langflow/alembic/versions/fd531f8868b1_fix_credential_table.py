@@ -23,13 +23,13 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)  # type: ignore
     tables = inspector.get_table_names()
-    foreign_keys = []
+    foreign_keys_names = []
     if "credential" in tables:
         foreign_keys = inspector.get_foreign_keys("credential")
-        foreign_keys = [fk["name"] for fk in foreign_keys]
+        foreign_keys_names = [fk["name"] for fk in foreign_keys]
 
     try:
-        if "credential" in tables and "fk_credential_user_id" not in foreign_keys:
+        if "credential" in tables and "fk_credential_user_id" not in foreign_keys_names:
             with op.batch_alter_table("credential", schema=None) as batch_op:
                 batch_op.create_foreign_key(
                     "fk_credential_user_id", "user", ["user_id"], ["id"]
@@ -46,12 +46,12 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)  # type: ignore
     tables = inspector.get_table_names()
-    foreign_keys = []
+    foreign_keys_names = []
     if "credential" in tables:
         foreign_keys = inspector.get_foreign_keys("credential")
         foreign_keys = [fk["name"] for fk in foreign_keys]
     try:
-        if "credential" in tables and "fk_credential_user_id" in foreign_keys:
+        if "credential" in tables and "fk_credential_user_id" in foreign_keys_names:
             with op.batch_alter_table("credential", schema=None) as batch_op:
                 batch_op.drop_constraint("fk_credential_user_id", type_="foreignkey")
     except Exception as e:

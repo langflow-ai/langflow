@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
+    inspector = Inspector.from_engine(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
     flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
@@ -52,7 +52,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
+    inspector = Inspector.from_engine(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
     flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
