@@ -4,10 +4,8 @@ import { ChatType } from "../../types/chat";
 import IOView from "../IOview";
 import ChatTrigger from "../ViewTriggers/chat";
 
-export default function Chat({ flow }: ChatType): JSX.Element {
+export default function Chat(): JSX.Element {
   const [open, setOpen] = useState(false);
-  const flowState = useFlowStore((state) => state.flowState);
-  const nodes = useFlowStore((state) => state.nodes);
   const hasIO = useFlowStore((state) => state.hasIO);
 
   useEffect(() => {
@@ -26,8 +24,6 @@ export default function Chat({ flow }: ChatType): JSX.Element {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-  const prevNodesRef = useRef<any[] | undefined>();
 
   return (
     <>

@@ -478,7 +478,7 @@ export default function Page({
                     }}
                   />
                 </ReactFlow>
-                {!view && <Chat flow={flow} />}
+                {!view && <Chat />}
               </div>
             ) : (
               <></>
