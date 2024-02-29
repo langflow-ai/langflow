@@ -5,8 +5,8 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
 from langflow import CustomComponent
-from langflow.field_typing import Text, docs_to_records
-from langflow.schema import Record
+from langflow.field_typing import Text
+from langflow.schema import Record, docs_to_records
 
 
 class LCVectorStoreComponent(CustomComponent):
@@ -36,8 +36,14 @@ class LCVectorStoreComponent(CustomComponent):
         """
 
         docs: List[Document] = []
-        if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
-            docs = vector_store.search(query=input_value, search_type=search_type.lower())
+        if (
+            input_value
+            and isinstance(input_value, str)
+            and hasattr(vector_store, "search")
+        ):
+            docs = vector_store.search(
+                query=input_value, search_type=search_type.lower()
+            )
         else:
             raise ValueError("Invalid inputs provided.")
         return docs_to_records(docs)
