@@ -128,7 +128,7 @@ export default function GenericNode({
 
   const showNode = data.showNode ?? true;
 
-  const nameEditable = data.node?.flow || data.type === "CustomComponent";
+  const nameEditable = true;
 
   const emojiRegex = /\p{Emoji}/u;
   const isEmoji = emojiRegex.test(data?.node?.icon!);
