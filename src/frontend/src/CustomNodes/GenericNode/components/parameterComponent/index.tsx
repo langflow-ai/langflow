@@ -332,7 +332,7 @@ export default function ParameterComponent({
                 <div>
                   <IconComponent
                     name="Info"
-                    className="relative bottom-0.5 ml-2 h-3 w-4"
+                    className="relative bottom-px ml-1.5 h-3 w-4"
                   />
                 </div>
               </ShadTooltip>
