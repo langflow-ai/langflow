@@ -16,6 +16,7 @@ import yaml
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 from langchain_core.documents import Document
+from sqlmodel import select
 
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
@@ -34,7 +35,6 @@ from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
 
@@ -96,6 +96,10 @@ class CustomComponent(Component):
         flow_id, file_name = path.split("/", 1)
         return storage_svc.build_full_path(flow_id, file_name)
 
+    @property
+    def graph(self):
+        return self.vertex.graph
+
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
 
@@ -145,7 +149,7 @@ class CustomComponent(Component):
         return records
 
     def create_references_from_records(
-        self, records: List[dict], include_data: bool = False
+        self, records: List[Record], include_data: bool = False
     ) -> str:
         """
         Create references from a list of records.
@@ -161,9 +165,9 @@ class CustomComponent(Component):
             return ""
         markdown_string = "---\n"
         for record in records:
-            markdown_string += f"- Text: {record['text']}"
+            markdown_string += f"- Text: {record.text}"
             if include_data:
-                markdown_string += f" Data: {record['data']}"
+                markdown_string += f" Data: {record.data}"
             markdown_string += "\n"
         return markdown_string
 
@@ -304,11 +308,14 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        graph = Graph(**graph_data)
+        graph = Graph.from_payload(graph_data, flow_id=flow_id)
         return graph
 
     async def run_flow(
-        self, input_value: str, flow_id: str, tweaks: Optional[dict] = None
+        self,
+        input_value: Union[str, list[str]],
+        flow_id: str,
+        tweaks: Optional[dict] = None,
     ) -> Any:
         graph = await self.load_flow(flow_id, tweaks)
         input_value_dict = {"input_value": input_value}
@@ -321,36 +328,12 @@ class CustomComponent(Component):
             get_session = get_session or session_getter
             db_service = get_db_service()
             with get_session(db_service) as session:
-                flows = session.query(Flow).filter(Flow.user_id == self.user_id).all()
+                flows = session.exec(
+                    select(Flow).where(Flow.user_id == self._user_id)
+                ).all()
             return flows
         except Exception as e:
             raise ValueError("Session is invalid") from e
-
-    async def get_flow(
-        self,
-        *,
-        flow_name: Optional[str] = None,
-        flow_id: Optional[str] = None,
-        tweaks: Optional[dict] = None,
-        get_session: Optional[Callable] = None,
-    ) -> Flow:
-        get_session = get_session or session_getter
-        db_service = get_db_service()
-        with get_session(db_service) as session:
-            if flow_id:
-                flow = session.query(Flow).get(flow_id)
-            elif flow_name:
-                flow = (
-                    session.query(Flow)
-                    .filter(Flow.name == flow_name)
-                    .filter(Flow.user_id == self.user_id)
-                ).first()
-            else:
-                raise ValueError("Either flow_name or flow_id must be provided")
-
-        if not flow:
-            raise ValueError(f"Flow {flow_name or flow_id} not found")
-        return await self.load_flow(flow.id, tweaks)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
