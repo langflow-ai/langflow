@@ -1,9 +1,8 @@
-
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # I/O
 
-## ChatInput
+### ChatInput
 
 This component is designed to get user input from the chat.
 
@@ -15,9 +14,7 @@ This component is designed to get user input from the chat.
 
 - **Message:** specifies the message text. It is a multiline text input.
 
-- **Session ID:** specifies the session ID of the chat history.
-
-- **As Record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
+- **Session ID:** specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
 
 <Admonition type="note" title="Note">
     <p>
@@ -25,7 +22,7 @@ This component is designed to get user input from the chat.
     </p>
 </Admonition>
 
-## ChatOutput
+### ChatOutput
 
 This component is designed to send a message to the chat.
 
@@ -35,11 +32,9 @@ This component is designed to send a message to the chat.
 
 - **Sender Name:** specifies the name of the sender. Defaults to _`"AI"`_.
 
-- **Session ID:** specifies the session ID of the chat history.
+- **Session ID:** specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
 
 - **Message:** specifies the message text.
-
-- **As Record:** if true, the message will be returned as a _`Record`_. Defaults to _`false`_.
 
 <Admonition type="note" title="Note">
     <p>
@@ -47,53 +42,11 @@ This component is designed to send a message to the chat.
     </p>
 </Admonition>
 
-## StoreMessages
 
-This component is designed to store messages in a structured format. It can store messages provided directly as records or construct records from provided texts and metadata.
+### TextInput
 
-**Params**
+This component is designed for simple text input, allowing users to pass textual data to subsequent components in the workflow. It's particularly useful for scenarios where a brief user input is required to initiate or influence the flow.
 
-- **Records:** (Optional) Specifies the list of records to store. Each `Record` should contain the keys `'sender'`, `'sender_name'`, and `'session_id'`. If not provided, `texts` must be used along with `session_id`, `sender`, and `sender_name` to construct the records.
-
-- **Texts:** (Optional) Specifies the list of text messages to store. If `records` is not provided, `texts` must be provided along with `session_id`, `sender`, and `sender_name`.
-
-- **Session ID:** (Optional) Specifies the session ID associated with the messages. Required if `records` is not provided and `texts` are used.
-
-- **Sender:** (Optional) Specifies the identifier of the sender. Required if `records` is not provided and `texts` are used.
-
-- **Sender Name:** (Optional) Specifies the name of the sender. Required if `records` is not provided and `texts` are used.
-
-<Admonition type="note" title="Note">
-    <p>
-        The component prioritizes the use of `Records` for storing messages. If `Records` are not provided, it requires `Texts`, `Session ID`, `Sender`, and `Sender Name` to construct and store records. Ensure that either `Records` or the combination of `Texts`, `Session ID`, `Sender`, and `Sender Name` is provided.
-    </p>
-</Admonition>
-
-## MessageHistory
-
-This component is designed to retrieve stored messages based on various filters such as sender type, sender name, and session ID. It allows for a flexible retrieval of chat history, providing insights into past interactions.
-
-**Params**
-
-- **Sender Type:** (Optional) Specifies the type of the sender. Options are _`"Machine"`_ or _`"User"`_. Filters the messages by the type of sender.
-
-- **Sender Name:** (Optional) Specifies the name of the sender. Filters the messages by the name of the sender.
-
-- **Session ID:** (Optional) Specifies the session ID of the chat history. Filters the messages belonging to a specific session.
-
-- **Number of Messages:** Specifies the number of messages to retrieve. Defaults to _`5`_. Determines how many recent messages from the chat history to fetch.
-
-<Admonition type="note" title="Note">
-    <p>
-        The component retrieves messages based on the provided criteria. If no specific criteria are provided, it will return the most recent messages up to the specified limit. This component can be used to review past interactions and analyze the flow of conversations.
-
-
- </p>
-</Admonition>
-
-## TextInput
-
-This component is designed for simple text input, allowing users to pass textual data to subsequent components in the workflow. It's particularly useful for scenarios where a brief user input is required to initiate or influence the process flow.
 
 **Params**
 
@@ -101,6 +54,20 @@ This component is designed for simple text input, allowing users to pass textual
 
 <Admonition type="note" title="Note">
     <p>
-        The `TextInput` component serves as a straightforward means for capturing user input. It ensures that textual data can be seamlessly integrated into the Langflow's component-based processing pipeline, fostering interactivity within automated workflows.
+        The `TextInput` component serves as a straightforward means for setting Text input values in the chat window. It ensures that textual data can be seamlessly passed to subsequent components in the flow.
+    </p>
+</Admonition>
+
+### TextOutput
+
+This component is designed to display text data to the user. It's particularly useful for scenarios where you don't want to send the text data to the chat, but still want to display it.
+
+**Params**
+
+- **Value:** Specifies the text data to be displayed. This is where the text data to be displayed is provided. If no value is provided, it defaults to an empty string.
+
+<Admonition type="note" title="Note">
+    <p>
+        The `TextOutput` component serves as a straightforward means for displaying text data. It ensures that textual data can be seamlessly observed in the chat window throughout your flow.
     </p>
 </Admonition>
