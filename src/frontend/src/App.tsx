@@ -20,8 +20,8 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
-import { useTypesStore } from "./stores/typesStore";
 import { useStoreStore } from "./stores/storeStore";
+import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
   const errorData = useAlertStore((state) => state.errorData);
