@@ -16,6 +16,7 @@ export default function CodeAreaComponent({
   readonly = false,
   openModal,
   selected,
+  setOpenModal,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
     typeof value == "string" ? value : JSON.stringify(value)
@@ -36,6 +37,7 @@ export default function CodeAreaComponent({
       <CodeAreaModal
         selected={selected}
         openModal={openModal}
+        setOpenModal={setOpenModal}
         readonly={readonly}
         dynamic={dynamic}
         value={myValue}

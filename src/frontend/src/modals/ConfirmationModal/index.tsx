@@ -61,7 +61,7 @@ function ConfirmationModal({
   );
 
   return (
-    <BaseModal size={size} open={modalOpen} setOpen={setModalOpen}>
+    <BaseModal size={size} open={open} setOpen={setModalOpen}>
       <BaseModal.Trigger>{triggerChild}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader ?? null}>
         <span className="pr-2">{title}</span>

@@ -210,6 +210,24 @@ export default function NodeToolbarComponent({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
+        (selected && isMinimal) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "q"
+      ) {
+        event.preventDefault();
+        setShowNode(data.showNode ?? true ? false : true);
+        unselectAll();
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key === "C"
+      ) {
+        event.preventDefault();
+        setOpenModal(state => !state);
+      }
+      if (
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "e"
@@ -270,6 +288,7 @@ export default function NodeToolbarComponent({
                 <div className="hidden">
                     <CodeAreaComponent
                     openModal={openModal}
+                    setOpenModal={setOpenModal}
                     readonly={
                       data.node?.flow && data.node.template[name].dynamic
                         ? true
@@ -494,12 +513,17 @@ export default function NodeToolbarComponent({
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <div className="flex">
-                    <IconComponent
+                  <IconComponent
                       name={showNode ? "Minimize2" : "Maximize2"}
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />
                     {showNode ? "Minimize" : "Expand"}
-                  </div>
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.46em]">Q</span>
+                </div>
                 </SelectItem>
               )}
               {isGroup && (
