@@ -4,21 +4,11 @@ import { readFileSync } from "fs";
 test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
   test("drop collection", async ({ page }) => {
-    await page.routeFromHAR("harFiles/langflow.har", {
-      url: "**/api/v1/**",
-      update: false,
-    });
-    await page.route("**/api/v1/flows/", async (route) => {
-      const json = {
-        id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
-      };
-      await route.fulfill({ json, status: 201 });
-    });
     await page.goto("http:localhost:3000/");
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
     const jsonContent = readFileSync(
-      "tests/onlyFront/assets/collection.json",
+      "tests/end-to-end/assets/collection.json",
       "utf-8"
     );
 
@@ -42,9 +32,7 @@ test.describe("drag and drop test", () => {
       }
     );
 
-    await page
-      .getByTestId("edit-flow-button-e9ac1bdc-429b-475d-ac03-d26f9a2a3210-0")
-      .click();
+    await page.getByText("Edit Flow").first().click();
     await page.waitForTimeout(2000);
 
     const genericNoda = page.getByTestId("div-generic-node");

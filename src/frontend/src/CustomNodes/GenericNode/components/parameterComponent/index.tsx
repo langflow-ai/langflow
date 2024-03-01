@@ -212,7 +212,7 @@ export default function ParameterComponent({
                     {item.display_name === "" ? "" : " - "}
                     {item.display_name.split(", ").length > 2
                       ? item.display_name.split(", ").map((el, index) => (
-                          <React.Fragment key={el + index}>
+                          <React.Fragment key={el + name}>
                             <span>
                               {index ===
                               item.display_name.split(", ").length - 1
@@ -229,7 +229,7 @@ export default function ParameterComponent({
                     {item.type === "" ? "" : " - "}
                     {item.type.split(", ").length > 2
                       ? item.type.split(", ").map((el, index) => (
-                          <React.Fragment key={el + index}>
+                          <React.Fragment key={el + name}>
                             <span>
                               {index === item.type.split(", ").length - 1
                                 ? el
@@ -409,7 +409,7 @@ export default function ParameterComponent({
               <div className="mt-2 flex w-full items-center">
                 <div className="w-5/6 flex-grow">
                   <InputComponent
-                    id={"input-" + index}
+                    id={"input-" + name}
                     disabled={disabled}
                     password={data.node?.template[name].password ?? false}
                     value={data.node?.template[name].value ?? ""}
@@ -432,11 +432,12 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2 w-full">
             <ToggleShadComponent
-              id={"toggle-" + index}
+              id={"toggle-" + name}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
               setEnabled={handleOnNewValue}
               size="large"
+              editNode={false}
             />
           </div>
         ) : left === true && type === "float" ? (
@@ -458,7 +459,7 @@ export default function ParameterComponent({
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
                 value={data.node.template[name].value ?? "Choose an option"}
-                id={"dropdown-" + index}
+                id={"dropdown-" + name}
               />
             </div>
             {data.node?.template[name].refresh && (
@@ -486,7 +487,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"code-input-" + index}
+              id={"code-input-" + name}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -507,7 +508,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"int-input-" + index}
+              id={"int-input-" + name}
             />
           </div>
         ) : left === true && type === "prompt" ? (
@@ -520,8 +521,8 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"prompt-input-" + index}
-              data-testid={"prompt-input-" + index}
+              id={"prompt-input-" + name}
+              data-testid={"prompt-input-" + name}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
