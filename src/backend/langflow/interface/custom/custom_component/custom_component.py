@@ -124,15 +124,21 @@ class CustomComponent(Component):
         self, data: Any, text_key: str = "text", data_key: str = "data"
     ) -> List[Record]:
         """
-        Convert data into a list of records.
+        Converts input data into a list of Record objects.
 
         Args:
-            data (Any): The input data to be converted.
-            text_key (str, optional): The key to extract the text from a dictionary item. Defaults to "text".
-            data_key (str, optional): The key to extract the data from a dictionary item. Defaults to "data".
+            data (Any): The input data to be converted. It can be a single item or a sequence of items.
+            If the input data is a Langchain Document, text_key and data_key are ignored.
+
+            text_key (str, optional): The key to access the text value in each item. Defaults to "text".
+            data_key (str, optional): The key to access the data value in each item. Defaults to "data".
 
         Returns:
-            List[dict]: A list of records, where each record is a dictionary with 'text' and 'data' keys.
+            List[Record]: A list of Record objects.
+
+        Raises:
+            ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
+
         """
         records = []
         if not isinstance(data, Sequence):
