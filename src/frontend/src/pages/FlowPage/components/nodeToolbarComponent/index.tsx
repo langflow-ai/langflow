@@ -210,6 +210,16 @@ export default function NodeToolbarComponent({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
+        selected &&
+        (hasApiKey || hasStore) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key === "S"
+      ) {
+        event.preventDefault();
+        setShowconfirmShare(state => !state);
+      }
+      if (
         (selected && isMinimal) &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "q"
@@ -421,7 +431,7 @@ export default function NodeToolbarComponent({
                 <SelectItem value={"override"}>
                   <div className="flex">
                   <IconComponent
-                    name="Settings2"
+                    name="SaveAll"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Save</span>{" "}
@@ -429,7 +439,7 @@ export default function NodeToolbarComponent({
                     name="Command"
                     className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                   ></IconComponent>
-                  <span className="absolute right-2 top-[0.46em]">S</span>
+                  <span className="absolute right-2 top-[0.45em]">S</span>
                 </div>
                 </SelectItem>
               ) : (
@@ -475,6 +485,15 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 -m-1 mr-1 h-6 w-6"
                     />{" "}
                     Share{" "}
+                    <IconComponent
+                    name="Command"
+                    className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <IconComponent
+                    name="ArrowBigUp"
+                    className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.45em]">S</span>
                   </div>{" "}
                 </SelectItem>
               )}
