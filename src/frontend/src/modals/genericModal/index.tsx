@@ -114,7 +114,6 @@ export default function GenericModal({
       return match;
     })
     .replace(/\n/g, "<br />");
-  console.log(coloredContent);
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
