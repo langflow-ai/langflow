@@ -24,7 +24,6 @@ import {
   createFlowComponent,
   downloadNode,
   expandGroupNode,
-  unselectAllNodes,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
@@ -69,7 +68,7 @@ export default function NodeToolbarComponent({
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const unselectAll = useFlowStore(state => state.unselectAll);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
@@ -210,7 +209,8 @@ export default function NodeToolbarComponent({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
-        (selected && isGroup) &&
+        selected &&
+        isGroup &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "u"
       ) {
@@ -234,10 +234,11 @@ export default function NodeToolbarComponent({
         event.key === "S"
       ) {
         event.preventDefault();
-        setShowconfirmShare(state => !state);
+        setShowconfirmShare((state) => !state);
       }
       if (
-        (selected && isMinimal) &&
+        selected &&
+        isMinimal &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "q"
       ) {
@@ -252,15 +253,16 @@ export default function NodeToolbarComponent({
         event.key === "C"
       ) {
         event.preventDefault();
-        setOpenModal(state => !state);
+        setOpenModal((state) => !state);
       }
       if (
-        (selected && !isGroup) &&
+        selected &&
+        !isGroup &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "e"
       ) {
         event.preventDefault();
-        setShowModalAdvanced(state => !state);
+        setShowModalAdvanced((state) => !state);
       }
       if (
         selected &&
@@ -269,7 +271,7 @@ export default function NodeToolbarComponent({
         isSaved
       ) {
         event.preventDefault();
-        return setShowOverrideModal(state => !state);
+        return setShowOverrideModal((state) => !state);
       }
       if (
         selected &&
@@ -279,10 +281,11 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         saveComponent(cloneDeep(data), false);
-        unselectAll()
+        unselectAll();
       }
       if (
-        (selected && data.node?.documentation) &&
+        selected &&
+        data.node?.documentation &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
         event.key === "D"
@@ -296,8 +299,8 @@ export default function NodeToolbarComponent({
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <>
@@ -313,7 +316,7 @@ export default function NodeToolbarComponent({
                 data-testid="code-button-modal"
               >
                 <div className="hidden">
-                    <CodeAreaComponent
+                  <CodeAreaComponent
                     openModal={openModal}
                     setOpenModal={setOpenModal}
                     readonly={
@@ -329,7 +332,7 @@ export default function NodeToolbarComponent({
                     onChange={handleOnNewValue}
                     id={"code-input-node-toolbar-" + name}
                     selected={selected}
-                    />
+                  />
                 </div>
                 <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
@@ -430,50 +433,50 @@ export default function NodeToolbarComponent({
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <div className="flex">
-                  <IconComponent
-                    name="Settings2"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Edit</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.46em]">E</span>
-                </div>
+                    <IconComponent
+                      name="Settings2"
+                      className="relative top-0.5 mr-2 h-4 w-4 "
+                    />{" "}
+                    <span className="">Edit</span>{" "}
+                    <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <span className="absolute right-2 top-[0.46em]">E</span>
+                  </div>
                 </SelectItem>
               )}
 
               {isSaved ? (
                 <SelectItem value={"override"}>
                   <div className="flex">
-                  <IconComponent
-                    name="SaveAll"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Save</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.45em]">S</span>
-                </div>
+                    <IconComponent
+                      name="SaveAll"
+                      className="relative top-0.5 mr-2 h-4 w-4 "
+                    />{" "}
+                    <span className="">Save</span>{" "}
+                    <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <span className="absolute right-2 top-[0.45em]">S</span>
+                  </div>
                 </SelectItem>
               ) : (
                 hasCode && (
                   <SelectItem value={"SaveAll"}>
                     <div className="flex">
-                  <IconComponent
-                    name="Settings2"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Save</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.46em]">S</span>
-                </div>
+                      <IconComponent
+                        name="Settings2"
+                        className="relative top-0.5 mr-2 h-4 w-4 "
+                      />{" "}
+                      <span className="">Save</span>{" "}
+                      <IconComponent
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
+                      <span className="absolute right-2 top-[0.46em]">S</span>
+                    </div>
                   </SelectItem>
                 )
               )}
@@ -503,14 +506,14 @@ export default function NodeToolbarComponent({
                     />{" "}
                     Share{" "}
                     <IconComponent
-                    name="Command"
-                    className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <IconComponent
-                    name="ArrowBigUp"
-                    className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.45em]">S</span>
+                      name="Command"
+                      className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <IconComponent
+                      name="ArrowBigUp"
+                      className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <span className="absolute right-2 top-[0.45em]">S</span>
                   </div>{" "}
                 </SelectItem>
               )}
@@ -549,33 +552,33 @@ export default function NodeToolbarComponent({
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <div className="flex">
-                  <IconComponent
+                    <IconComponent
                       name={showNode ? "Minimize2" : "Maximize2"}
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />
                     {showNode ? "Minimize" : "Expand"}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.46em]">Q</span>
-                </div>
+                    <IconComponent
+                      name="Command"
+                      className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <span className="absolute right-2 top-[0.46em]">Q</span>
+                  </div>
                 </SelectItem>
               )}
               {isGroup && (
                 <SelectItem value="ungroup">
                   <div className="flex">
-                  <IconComponent
-                    name="Ungroup"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Ungroup</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.43em]">U</span>
-                </div>
+                    <IconComponent
+                      name="Ungroup"
+                      className="relative top-0.5 mr-2 h-4 w-4 "
+                    />{" "}
+                    <span className="">Ungroup</span>{" "}
+                    <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    <span className="absolute right-2 top-[0.43em]">U</span>
+                  </div>
                 </SelectItem>
               )}
 

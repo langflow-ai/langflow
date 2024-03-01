@@ -36,14 +36,8 @@ class LCVectorStoreComponent(CustomComponent):
         """
 
         docs: List[Document] = []
-        if (
-            input_value
-            and isinstance(input_value, str)
-            and hasattr(vector_store, "search")
-        ):
-            docs = vector_store.search(
-                query=input_value, search_type=search_type.lower()
-            )
+        if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
+            docs = vector_store.search(query=input_value, search_type=search_type.lower())
         else:
             raise ValueError("Invalid inputs provided.")
         return docs_to_records(docs)

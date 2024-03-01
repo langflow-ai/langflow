@@ -50,7 +50,6 @@ export default function CodeAreaModal({
   } | null>(null);
   const [open, setOpen] = useState(false);
   const nodes = useFlowStore((state) => state.nodes);
-  
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -146,7 +145,6 @@ export default function CodeAreaModal({
       clearTimeout(delayedFunction);
     };
   }, [error, setHeight]);
-
 
   useEffect(() => {
     setCode(value);
