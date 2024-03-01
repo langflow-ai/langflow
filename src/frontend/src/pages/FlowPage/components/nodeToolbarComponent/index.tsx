@@ -255,7 +255,7 @@ export default function NodeToolbarComponent({
         setOpenModal(state => !state);
       }
       if (
-        selected &&
+        (selected && !isGroup) &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "e"
       ) {
