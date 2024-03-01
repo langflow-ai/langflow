@@ -52,7 +52,7 @@ export type sourceHandleType = {
   dataType: string;
   id: string;
   baseClasses: string[];
-  conditionalPath?: boolean | null;
+  conditionalPath?: string | null;
 };
 //left side
 export type targetHandleType = {
