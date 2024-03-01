@@ -103,6 +103,7 @@ export type PromptAreaComponentType = {
 };
 
 export type CodeAreaComponentType = {
+  setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -513,6 +514,7 @@ export type modalHeaderType = {
 
 export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
+  setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
   setNodeClass: (Class: APIClassType, code?: string) => void | undefined;

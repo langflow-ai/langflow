@@ -37,6 +37,7 @@ export default function CodeAreaModal({
   readonly = false,
   openModal,
   selected,
+  setOpenModal,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const dark = useDarkStore((state) => state.dark);
@@ -49,6 +50,7 @@ export default function CodeAreaModal({
   } | null>(null);
   const [open, setOpen] = useState(false);
   const nodes = useFlowStore((state) => state.nodes);
+  
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
