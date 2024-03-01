@@ -15,6 +15,7 @@ import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
 import {
   LANGFLOW_SUPPORTED_TYPES,
@@ -50,6 +51,7 @@ export default function ParameterComponent({
   data,
   tooltipTitle,
   title,
+  conditionPath,
   color,
   type,
   name = "",
@@ -315,6 +317,12 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
+          {" "}
+          {conditionPath && (
+            <Badge variant="gray" size="md" className="mr-2">
+              {conditionPath}
+            </Badge>
+          )}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
               <span>{title}</span>
