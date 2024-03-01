@@ -308,7 +308,9 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
               <div className="absolute bottom-8 right-8"></div>
             )}
           </div>
-          {!haveChat && (
+        </div>
+      </BaseModal.Content>
+      <BaseModal.Footer>{!haveChat && (
             <div className="flex w-full justify-end pt-6">
               <Button
                 variant={"outline"}
@@ -327,9 +329,8 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                 Run Flow
               </Button>
             </div>
-          )}
-        </div>
-      </BaseModal.Content>
+          )}  
+      </BaseModal.Footer>
     </BaseModal>
   );
 }
