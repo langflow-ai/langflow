@@ -59,9 +59,8 @@ export default function CodeAreaModal({
   }, []);
 
   useEffect(() => {
-    console.log(open)
     if (openModal) setOpen(true);
-  }, [openModal, open]);
+  }, [openModal]);
 
   function processNonDynamicField() {
     postValidateCode(code)
@@ -150,10 +149,9 @@ export default function CodeAreaModal({
   useEffect(() => {
     setCode(value);
   }, [value, open]);
-  console.log(selected)
 
   return (
-    <BaseModal open={(open && selected)} setOpen={setOpen}>
+    <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
         <span className="pr-2"> {editCodeTitle} </span>
