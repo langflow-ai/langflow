@@ -2,7 +2,7 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional, Union
 
 from loguru import logger
 
@@ -75,7 +75,7 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         self.should_run = True
-        self.result: Optional[ResultData] = None
+        self.result: Union[ResultData, UnbuiltResult] = UnbuiltResult()
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -95,11 +95,12 @@ class Vertex:
         else:
             self.graph_state[key] = new_state
 
-    def set_state(self, state: str):
-        self.state = VertexStates[state]
+    def set_state(self, state: "VertexStates"):
+        self.state = state
         if (
-            self.state == VertexStates.INACTIVE
-            and self.graph.in_degree_map[self.id] < 2
+            self.state
+            == VertexStates.INACTIVE
+            # and self.graph.in_degree_map[self.id] < 2
         ):
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
