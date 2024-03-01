@@ -210,6 +210,23 @@ export default function NodeToolbarComponent({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
+        (selected && isGroup) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "u"
+      ) {
+        event.preventDefault();
+        takeSnapshot();
+        expandGroupNode(
+          data.id,
+          updateFlowPosition(position, data.node?.flow!),
+          data.node!.template,
+          nodes,
+          edges,
+          setNodes,
+          setEdges
+        );
+      }
+      if (
         selected &&
         (hasApiKey || hasStore) &&
         (event.ctrlKey || event.metaKey) &&
@@ -548,12 +565,17 @@ export default function NodeToolbarComponent({
               {isGroup && (
                 <SelectItem value="ungroup">
                   <div className="flex">
-                    <IconComponent
-                      name="Combine"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Ungroup{" "}
-                  </div>
+                  <IconComponent
+                    name="Ungroup"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Ungroup</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.43em]">U</span>
+                </div>
                 </SelectItem>
               )}
 
