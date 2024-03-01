@@ -534,14 +534,21 @@ class Graph:
         # if we can't find a vertex, we raise an error
 
         edges: List[ContractEdge] = []
+        edges_added = set()
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
+
             if source is None:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
+
+            if (source.id, target.id) in edges_added:
+                continue
+
             edges.append(ContractEdge(source, target, edge))
+            edges_added.add((source.id, target.id))
         return edges
 
     def _get_vertex_class(
