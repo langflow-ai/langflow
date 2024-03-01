@@ -11,8 +11,8 @@ class ChatOutput(ChatComponent):
 
     def build(
         self,
-        sender: Optional[str] = "User",
-        sender_name: Optional[str] = "User",
+        sender: Optional[str] = "Machine",
+        sender_name: Optional[str] = "AI",
         input_value: Optional[str] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
