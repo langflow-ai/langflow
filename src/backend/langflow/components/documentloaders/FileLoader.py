@@ -121,4 +121,4 @@ class FileLoaderComponent(CustomComponent):
 
         result = loader_instance(file_path=file_path)
         docs = result.load()
-        return self.to_records(docs, text_key="page_content", data_key="metadata")
+        return self.to_records(docs)
