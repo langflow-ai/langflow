@@ -74,6 +74,24 @@ class CustomComponent(Component):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
 
+    def update_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.state_manager.update_state(key=name, new_state=value)
+        except Exception as e:
+            raise ValueError(f"Error updating state: {e}")
+
+    def append_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.state_manager.append_state(key=name, new_state=value)
+        except Exception as e:
+            raise ValueError(f"Error appending state: {e}")
+
+    def get_state(self, name: str):
+        try:
+            return self.vertex.graph.state_manager.get_state(key=name)
+        except Exception as e:
+            raise ValueError(f"Error getting state: {e}")
+
     _tree: Optional[dict] = None
 
     def __init__(self, **data):
