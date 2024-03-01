@@ -45,7 +45,6 @@ export async function updateVerticesOrder(
 ): Promise<{
   verticesLayers: string[][];
   verticesIds: string[];
-  verticesOrder: string[][];
   runId: string;
 }> {
   return new Promise(async (resolve, reject) => {
@@ -62,38 +61,16 @@ export async function updateVerticesOrder(
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }
-    let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
+    let verticesLayers: Array<Array<string>> = orderResponse.data.ids;
     const runId = orderResponse.data.run_id;
-    let verticesLayers: Array<Array<string>> = [];
-
-    if (nodeId) {
-      for (let i = 0; i < verticesOrder.length; i += 1) {
-        const innerArray = verticesOrder[i];
-        const idIndex = innerArray.indexOf(nodeId);
-        if (idIndex !== -1) {
-          // If there's a nodeId, we want to run just that component and not the entire layer
-          // because a layer contains dependencies for the next layer
-          // and we are stopping at the layer that contains the nodeId
-          verticesLayers.push([innerArray[idIndex]]);
-          break; // Stop searching after finding the first occurrence
-        }
-        // If the targetId is not found, include the entire inner array
-        verticesLayers.push(innerArray);
-      }
-    } else {
-      verticesLayers = verticesOrder;
-    }
 
     const verticesIds = verticesLayers.flat();
-    useFlowStore
-      .getState()
-      .updateVerticesBuild({
-        verticesLayers,
-        verticesIds,
-        verticesOrder,
-        runId,
-      });
-    resolve({ verticesLayers, verticesIds, verticesOrder, runId });
+    useFlowStore.getState().updateVerticesBuild({
+      verticesLayers,
+      verticesIds,
+      runId,
+    });
+    resolve({ verticesLayers, verticesIds, runId });
   });
 }
 
@@ -114,7 +91,6 @@ export async function buildVertices({
   }
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
-  const verticesOrder = verticesBuild?.verticesOrder!;
   const runId = verticesBuild?.runId!;
   let stop = false;
 
@@ -122,7 +98,7 @@ export async function buildVertices({
 
   if (validateNodes) {
     try {
-      validateNodes(verticesOrder.flatMap((id) => id));
+      validateNodes(verticesIds);
     } catch (e) {
       return;
     }
@@ -193,7 +169,9 @@ async function buildVertex({
   stopBuild: () => void;
 }) {
   try {
+    console.log("Building vertex", id);
     const buildRes = await postBuildVertex(flowId, id, input_value);
+    console.log(buildRes);
     const buildData: VertexBuildTypeAPI = buildRes.data;
     if (onBuildUpdate) {
       if (!buildData.valid) {
