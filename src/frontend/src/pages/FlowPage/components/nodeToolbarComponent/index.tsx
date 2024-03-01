@@ -206,7 +206,24 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
 
-  console.log((selected && openModal))
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "e"
+      ) {
+        event.preventDefault();
+        setShowModalAdvanced(state => !state);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    }
+  }, [])
 
   return (
     <>
@@ -222,9 +239,8 @@ export default function NodeToolbarComponent({
                 data-testid="code-button-modal"
               >
                 <div className="hidden">
-                  {selected && (
                     <CodeAreaComponent
-                    openModal={(openModal || selected)}
+                    openModal={openModal}
                     readonly={
                       data.node?.flow && data.node.template[name].dynamic
                         ? true
@@ -239,7 +255,6 @@ export default function NodeToolbarComponent({
                     id={"code-input-node-toolbar-" + name}
                     selected={selected}
                     />
-                  )}
                 </div>
                 <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
