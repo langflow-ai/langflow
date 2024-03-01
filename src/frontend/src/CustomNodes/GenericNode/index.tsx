@@ -162,6 +162,56 @@ export default function GenericNode({
     );
   };
 
+  const buildParameterComponent = ({
+    data,
+    conditionalPath,
+    showNode,
+    left,
+  }: {
+    data: NodeDataType;
+    conditionalPath: string | null;
+    showNode: boolean;
+    left: boolean;
+  }) => {
+    return (
+      <ParameterComponent
+        key={scapedJSONStringfy({
+          baseClasses: data.node!.base_classes,
+          id: data.id,
+          dataType: data.type,
+          conditionalPath: conditionalPath,
+        })}
+        data={data}
+        color={
+          (data.node?.output_types && data.node.output_types.length > 0
+            ? nodeColors[data.node.output_types[0]] ??
+              nodeColors[types[data.node.output_types[0]]]
+            : nodeColors[types[data.type]]) ?? nodeColors.unknown
+        }
+        title={
+          data.node?.output_types && data.node.output_types.length > 0
+            ? data.node.output_types.join(" | ")
+            : data.type
+        }
+        conditionPath={conditionalPath}
+        tooltipTitle={data.node?.base_classes.join("\n")}
+        id={{
+          baseClasses: data.node!.base_classes,
+          id: data.id,
+          dataType: data.type,
+          // First parameter component should be true
+          // Second should be false
+          conditionalPath: conditionalPath,
+        }}
+        // Type should be base_classes if it's not a conditional node
+        // else it should be true in the first parameter component
+        type={data.node?.base_classes.join("|")}
+        left={left}
+        showNode={showNode}
+      />
+    );
+  };
+
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
@@ -665,83 +715,27 @@ export default function GenericNode({
                 {" "}
               </div>
               <div>
-                {data.node!.base_classes.length > 0 && (
-                  <ParameterComponent
-                    key={scapedJSONStringfy({
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                      conditionalPath: data.node!.is_conditional ? true : null,
+                {data.node!.base_classes.length > 0 &&
+                // if conditionalPaths in data.node.conditionalPaths
+                // then buildParameterComponent for each conditionalPath
+                // else buildParameterComponent for each data.node.base_classes
+                // first we check
+                data.node!.conditionalPaths &&
+                data.node!.conditionalPaths.length > 1
+                  ? data.node!.conditionalPaths.map((conditionalPath) =>
+                      buildParameterComponent({
+                        data,
+                        conditionalPath,
+                        showNode,
+                        left: false,
+                      })
+                    )
+                  : buildParameterComponent({
+                      data,
+                      conditionalPath: null,
+                      showNode,
+                      left: false,
                     })}
-                    data={data}
-                    color={
-                      (data.node?.output_types &&
-                      data.node.output_types.length > 0
-                        ? nodeColors[data.node.output_types[0]] ??
-                          nodeColors[types[data.node.output_types[0]]]
-                        : nodeColors[types[data.type]]) ?? nodeColors.unknown
-                    }
-                    title={
-                      data.node?.output_types &&
-                      data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
-                        : data.type
-                    }
-                    conditionPath={data.node?.is_conditional ? "True" : null}
-                    tooltipTitle={data.node?.base_classes.join("\n")}
-                    id={{
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                      // First parameter component should be true
-                      // Second should be false
-                      conditionalPath: data.node!.is_conditional ? true : null,
-                    }}
-                    // Type should be base_classes if it's not a conditional node
-                    // else it should be true in the first parameter component
-                    type={data.node?.base_classes.join("|")}
-                    left={false}
-                    showNode={showNode}
-                  />
-                )}
-                {data.node!.is_conditional && (
-                  <ParameterComponent
-                    key={scapedJSONStringfy({
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                      conditionalPath: data.node!.is_conditional ? true : null,
-                    })}
-                    data={data}
-                    color={
-                      (data.node?.output_types &&
-                      data.node.output_types.length > 0
-                        ? nodeColors[data.node.output_types[0]] ??
-                          nodeColors[types[data.node.output_types[0]]]
-                        : nodeColors[types[data.type]]) ?? nodeColors.unknown
-                    }
-                    title={
-                      data.node?.output_types &&
-                      data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
-                        : data.type
-                    }
-                    conditionPath={data.node?.is_conditional ? "False" : null}
-                    tooltipTitle={data.node?.base_classes.join("\n")}
-                    id={{
-                      baseClasses: data.node!.base_classes,
-                      id: data.id,
-                      dataType: data.type,
-                      // condition should be null if it's not a conditional node
-                      // false if it's a conditional node and the condition is false
-                      // so we should check if it's a conditional node.
-                      conditionalPath: data.node!.is_conditional ? false : null,
-                    }}
-                    type={data.node?.base_classes.join("|")}
-                    left={false}
-                    showNode={showNode}
-                  />
-                )}
               </div>
             </>
           </div>
