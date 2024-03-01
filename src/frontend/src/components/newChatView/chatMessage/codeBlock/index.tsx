@@ -50,7 +50,7 @@ export function CodeBlock({ language, value }: Props): JSX.Element {
         <div className="flex items-center">
           <button className="code-block-modal-button" onClick={copyToClipboard}>
             {isCopied ? <IconCheck size={18} /> : <IconClipboard size={18} />}
-            {isCopied ? "Copied!" : "Copy code"}
+            {isCopied ? "Copied!" : "Copy Code"}
           </button>
           <button className="code-block-modal-button" onClick={downloadAsFile}>
             <IconDownload size={18} />
