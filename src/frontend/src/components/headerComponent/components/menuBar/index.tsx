@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
-import { Node } from "reactflow";
+import { Node, useEdges } from "reactflow";
 import { savedHover } from "../../../../constants/constants";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
@@ -109,6 +109,11 @@ export const MenuBar = ({
             >
               <IconComponent name="Undo" className="header-menu-options " />
               Undo
+              <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.4em]">Z</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -118,6 +123,11 @@ export const MenuBar = ({
             >
               <IconComponent name="Redo" className="header-menu-options " />
               Redo
+              <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.4em]">Y</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

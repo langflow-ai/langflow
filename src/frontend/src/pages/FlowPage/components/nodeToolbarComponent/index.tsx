@@ -543,7 +543,7 @@ export default function NodeToolbarComponent({
                     name="ArrowBigUp"
                     className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                   ></IconComponent>
-                  <span className="absolute right-2 top-[0.419em]">D</span>
+                  <span className="absolute right-2 top-[0.43em]">D</span>
                 </div>
               </SelectItem>
               {isMinimal && (
