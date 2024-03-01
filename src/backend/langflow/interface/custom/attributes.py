@@ -31,6 +31,12 @@ def getattr_return_bool(value):
         return value
 
 
+def getattr_return_list_of_str(value):
+    if isinstance(value, list):
+        return [str(val) for val in value]
+    return []
+
+
 ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "display_name": getattr_return_str,
     "description": getattr_return_str,
@@ -40,5 +46,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "pinned": getattr_return_bool,
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
-    "is_conditional": getattr_return_bool,
+    "conditional_paths": getattr_return_list_of_str,
 }
