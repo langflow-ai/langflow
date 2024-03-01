@@ -68,3 +68,20 @@ def docs_to_records(documents: list[Document]) -> list[Record]:
         list[Record]: The converted list of Records.
     """
     return [Record.from_document(document) for document in documents]
+
+
+#  {"path": bool_result, "result": kwargs}
+# Create a class for the above dictionary
+# with a good name that fits the context of
+# a decision making component
+class Decision(BaseModel):
+    """
+    Represents a decision made in the Graph.
+
+    Attributes:
+        path (bool): The path taken in the Graph.
+        result (dict): The result of the decision.
+    """
+
+    path: bool
+    result: Any

@@ -5,6 +5,7 @@ from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
 from langflow.field_typing import BaseLanguageModel, Prompt
+from langflow.schema import Decision
 
 
 class ShouldRunNext(CustomComponent):
@@ -49,4 +50,5 @@ class ShouldRunNext(CustomComponent):
         # The string should be the words true or false
         # if not raise an error
         bool_result = result.lower() == "true"
-        return {"path": bool_result, "result": kwargs}
+
+        return Decision(path=bool_result, result=kwargs)
