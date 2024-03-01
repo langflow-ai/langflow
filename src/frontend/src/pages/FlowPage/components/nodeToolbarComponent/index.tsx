@@ -24,6 +24,7 @@ import {
   createFlowComponent,
   downloadNode,
   expandGroupNode,
+  unselectAllNodes,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
@@ -68,7 +69,7 @@ export default function NodeToolbarComponent({
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-
+  const unselectAll = useFlowStore(state => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
@@ -215,6 +216,25 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         setShowModalAdvanced(state => !state);
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "s" &&
+        isSaved
+      ) {
+        event.preventDefault();
+        return setShowOverrideModal(state => !state);
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "s" &&
+        hasCode
+      ) {
+        event.preventDefault();
+        saveComponent(cloneDeep(data), false);
+        unselectAll()
       }
     }
 
@@ -371,24 +391,34 @@ export default function NodeToolbarComponent({
 
               {isSaved ? (
                 <SelectItem value={"override"}>
-                  <div className="flex" data-testid="save-button-modal">
-                    <IconComponent
-                      name="SaveAll"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Save{" "}
-                  </div>{" "}
+                  <div className="flex">
+                  <IconComponent
+                    name="Settings2"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Save</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.46em]">S</span>
+                </div>
                 </SelectItem>
               ) : (
                 hasCode && (
                   <SelectItem value={"SaveAll"}>
-                    <div className="flex" data-testid="save-button-modal">
-                      <IconComponent
-                        name="SaveAll"
-                        className="relative top-0.5 mr-2 h-4 w-4"
-                      />{" "}
-                      Save{" "}
-                    </div>{" "}
+                    <div className="flex">
+                  <IconComponent
+                    name="Settings2"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Save</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.46em]">S</span>
+                </div>
                   </SelectItem>
                 )
               )}
