@@ -11,6 +11,7 @@ from langflow.schema import Decision
 class ShouldRunNext(CustomComponent):
     display_name = "Should Run Next"
     description = "Decides whether to run the next component."
+    conditional_paths = ["True"]
 
     def build_config(self):
         return {
@@ -43,13 +44,7 @@ class ShouldRunNext(CustomComponent):
         else:
             result = result.get("response")
 
-        if result.lower() not in ["true", "false"]:
-            raise ValueError(
-                "The prompt should generate a boolean response (True or False)."
-            )
-        # The string should be the words true or false
-        # if not raise an error
-        if result.lower() not in ["true", "false"]:
+        if result.lower() not in self.conditional_paths:
             raise ValueError(
                 "The prompt should generate a boolean response (True or False)."
             )

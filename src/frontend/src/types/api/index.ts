@@ -20,7 +20,7 @@ export type APIClassType = {
   icon?: string;
   is_input?: boolean;
   is_output?: boolean;
-  conditionalPaths?: Array<string>;
+  conditional_paths?: Array<string>;
   input_types?: Array<string>;
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
