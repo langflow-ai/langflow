@@ -153,14 +153,14 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactive_vertices = None
-        if graph.inactive_vertices:
-            inactive_vertices = list(graph.inactive_vertices)
-            graph.reset_inactive_vertices()
+        inactivated_vertices = None
+        if graph.inactivated_vertices:
+            inactivated_vertices = list(graph.inactivated_vertices)
+            graph.reset_inactivated_vertices()
         chat_service.set_cache(flow_id, graph)
 
         build_response = VertexBuildResponse(
-            inactive_vertices=inactive_vertices,
+            inactivated_vertices=inactivated_vertices,
             valid=valid,
             params=params,
             id=vertex.id,

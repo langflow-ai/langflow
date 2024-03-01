@@ -31,7 +31,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     id: vertexId,
     data: inactiveData,
     params: "Inactive",
-    inactive_vertices: null,
+    inactivated_vertices: null,
     valid: false,
     timestamp: new Date().toISOString(),
   };
@@ -85,14 +85,12 @@ export async function updateVerticesOrder(
     }
 
     const verticesIds = verticesLayers.flat();
-    useFlowStore
-      .getState()
-      .updateVerticesBuild({
-        verticesLayers,
-        verticesIds,
-        verticesOrder,
-        runId,
-      });
+    useFlowStore.getState().updateVerticesBuild({
+      verticesLayers,
+      verticesIds,
+      verticesOrder,
+      runId,
+    });
     resolve({ verticesLayers, verticesIds, verticesOrder, runId });
   });
 }

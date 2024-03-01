@@ -103,12 +103,12 @@ class Vertex:
         ):
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
-            self.graph.inactive_vertices.add(self.id)
+            self.graph.inactivated_vertices.add(self.id)
         elif (
             self.state == VertexStates.ACTIVE
-            and self.id in self.graph.inactive_vertices
+            and self.id in self.graph.inactivated_vertices
         ):
-            self.graph.inactive_vertices.remove(self.id)
+            self.graph.inactivated_vertices.remove(self.id)
 
     @property
     def avg_build_time(self):

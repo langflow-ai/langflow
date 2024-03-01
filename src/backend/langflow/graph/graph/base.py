@@ -54,7 +54,7 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
-        self.inactive_vertices: set = set()
+        self.inactivated_vertices: set = set()
         self.edges: List[ContractEdge] = []
         self.vertices: List[Vertex] = []
         self._build_graph()
@@ -137,7 +137,7 @@ class Graph:
         return {
             "runs": self._runs,
             "updates": self._updates,
-            "inactive_vertices": self.inactive_vertices,
+            "inactivated_vertices": self.inactivated_vertices,
         }
 
     def build_graph_maps(self):
@@ -145,8 +145,8 @@ class Graph:
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
 
-    def reset_inactive_vertices(self):
-        self.inactive_vertices = set()
+    def reset_inactivated_vertices(self):
+        self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str):
         """Marks all vertices in the graph."""
