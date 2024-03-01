@@ -2,16 +2,13 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, List,
+                    Optional)
 
 from loguru import logger
 
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
+                                   InterfaceComponentTypes, ResultData)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -506,12 +503,22 @@ class Vertex:
         self.params[key] = []
         for node in nodes:
             built = await node.get_result(requester=self, user_id=user_id)
+            # Weird check to see if the params[key] is a list
+            # because sometimes it is a Record and breaks the code
+            if not isinstance(self.params[key], list):
+                self.params[key] = [self.params[key]]
+
             if isinstance(built, list):
-                if key not in self.params:
-                    self.params[key] = []
                 self.params[key].extend(built)
             else:
-                self.params[key].append(built)
+                try:
+                    self.params[key].append(built)
+                except AttributeError as e:
+                    logger.exception(e)
+                    raise ValueError(
+                        f"Error building node {self.display_name}: {str(e)}"
+                    ) from e
+
 
     def _handle_func(self, key, result):
         """
