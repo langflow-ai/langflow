@@ -236,6 +236,15 @@ export default function NodeToolbarComponent({
         saveComponent(cloneDeep(data), false);
         unselectAll()
       }
+      if (
+        (selected && data.node?.documentation) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key === "D"
+      ) {
+        event.preventDefault();
+        openInNewTab(data.node?.documentation);
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -468,10 +477,19 @@ export default function NodeToolbarComponent({
                 <div className="flex">
                   <IconComponent
                     name="FileText"
-                    className="relative top-0.5 mr-2 h-4 w-4"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
-                  Docs
-                </div>{" "}
+                  <span className="">Docs</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <IconComponent
+                    name="ArrowBigUp"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.419em]">D</span>
+                </div>
               </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>

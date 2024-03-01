@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  ArrowBigUp,
   ArrowLeft,
   ArrowUpToLine,
   Bell,
@@ -455,4 +456,5 @@ export const nodeIconsLucide: iconsType = {
   Bot,
   Delete,
   Command,
+  ArrowBigUp,
 };
