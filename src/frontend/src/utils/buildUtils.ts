@@ -63,7 +63,21 @@ export async function updateVerticesOrder(
     }
     let verticesLayers: Array<Array<string>> = orderResponse.data.ids;
     const runId = orderResponse.data.run_id;
-
+    if (nodeId) {
+      for (let i = 0; i < verticesLayers.length; i += 1) {
+        const innerArray = verticesLayers[i];
+        const idIndex = innerArray.indexOf(nodeId);
+        if (idIndex !== -1) {
+          // If there's a nodeId, we want to run just that component and not the entire layer
+          // because a layer contains dependencies for the next layer
+          // and we are stopping at the layer that contains the nodeId
+          verticesLayers.push([innerArray[idIndex]]);
+          break; // Stop searching after finding the first occurrence
+        }
+        // If the targetId is not found, include the entire inner array
+        verticesLayers.push(innerArray);
+      }
+    }
     const verticesIds = verticesLayers.flat();
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
