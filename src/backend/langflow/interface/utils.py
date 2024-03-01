@@ -1,14 +1,14 @@
 import base64
 import json
 import os
-from io import BytesIO
 import re
-
+from io import BytesIO
 
 import yaml
 from langchain.base_language import BaseLanguageModel
-from PIL.Image import Image
 from loguru import logger
+from PIL.Image import Image
+
 from langflow.services.chat.config import ChatConfig
 from langflow.services.deps import get_settings_service
 
@@ -43,7 +43,9 @@ def try_setting_streaming_options(langchain_object):
     llm = None
     if hasattr(langchain_object, "llm"):
         llm = langchain_object.llm
-    elif hasattr(langchain_object, "llm_chain") and hasattr(langchain_object.llm_chain, "llm"):
+    elif hasattr(langchain_object, "llm_chain") and hasattr(
+        langchain_object.llm_chain, "llm"
+    ):
         llm = langchain_object.llm_chain.llm
 
     if isinstance(llm, BaseLanguageModel):
@@ -56,8 +58,37 @@ def try_setting_streaming_options(langchain_object):
 
 
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    """Extract input variables from prompt."""
-    return re.findall(r"{(.*?)}", prompt)
+    variables = []
+    remaining_text = prompt
+
+    # Pattern to match single {var} and double {{var}} braces.
+    pattern = r"\{\{(.*?)\}\}|\{([^{}]+)\}"
+
+    while True:
+        match = re.search(pattern, remaining_text)
+        if not match:
+            break
+
+        # Extract the variable name from either the single or double brace match
+        if match.group(1):  # Match found in double braces
+            variable_name = (
+                "{{" + match.group(1) + "}}"
+            )  # Re-add single braces for JSON strings
+        else:  # Match found in single braces
+            variable_name = match.group(2)
+        if variable_name is not None:
+            # This means there is a match
+            # but there is nothing inside the braces
+            variables.append(variable_name)
+
+        # Remove the matched text from the remaining_text
+        start, end = match.span()
+        remaining_text = remaining_text[:start] + remaining_text[end:]
+
+        # Proceed to the next match until no more matches are found
+        # No need to compare remaining "{}" instances because we are re-adding braces for JSON compatibility
+
+    return variables
 
 
 def setup_llm_caching():
@@ -73,11 +104,14 @@ def setup_llm_caching():
 
 def set_langchain_cache(settings):
     from langchain.globals import set_llm_cache
+
     from langflow.interface.importing.utils import import_class
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:
-            cache_class = import_class(f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}")
+            cache_class = import_class(
+                f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}"
+            )
 
             logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
             set_llm_cache(cache_class())
