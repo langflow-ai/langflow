@@ -73,9 +73,8 @@ class FrontendNode(BaseModel):
     """Field formatters for the frontend node."""
     pinned: bool = False
     """Whether the frontend node is pinned."""
-    is_conditional: bool = False
-    """Whether the frontend node is conditional. This is used for the frontend node to show two output handles."""
-
+    conditional_paths: List[str] = []
+    """List of conditional paths for the frontend node."""
     beta: bool = False
     error: Optional[str] = None
 

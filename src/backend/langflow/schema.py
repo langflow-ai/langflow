@@ -1,7 +1,7 @@
 from typing import Any
 
 from langchain_core.documents import Document
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class Record(BaseModel):
@@ -79,9 +79,24 @@ class Decision(BaseModel):
     Represents a decision made in the Graph.
 
     Attributes:
-        path (bool): The path taken in the Graph.
+        path (str): The path to take as a result of the decision.
         result (dict): The result of the decision.
     """
 
-    path: bool
+    path: str
     result: Any
+
+    @field_validator("path")
+    def validate_path(cls, value: str) -> str:
+        """
+        Validates the path.
+
+        Args:
+            value (str): The path to validate.
+
+        Returns:
+            str: The validated path.
+        """
+        if isinstance(value, str):
+            return value
+        return str(value)

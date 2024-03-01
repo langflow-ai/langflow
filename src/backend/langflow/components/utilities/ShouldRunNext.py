@@ -49,6 +49,9 @@ class ShouldRunNext(CustomComponent):
             )
         # The string should be the words true or false
         # if not raise an error
-        bool_result = result.lower() == "true"
+        if result.lower() not in ["true", "false"]:
+            raise ValueError(
+                "The prompt should generate a boolean response (True or False)."
+            )
 
-        return Decision(path=bool_result, result=kwargs)
+        return Decision(path=result, result=kwargs)
