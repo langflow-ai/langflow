@@ -354,13 +354,18 @@ export default function NodeToolbarComponent({
             <SelectContent>
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <div className="flex" data-testid="edit-button-modal">
-                    <IconComponent
-                      name="Settings2"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Edit{" "}
-                  </div>{" "}
+                  <div className="flex">
+                  <IconComponent
+                    name="Settings2"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Edit</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.46em]">E</span>
+                </div>
                 </SelectItem>
               )}
 
