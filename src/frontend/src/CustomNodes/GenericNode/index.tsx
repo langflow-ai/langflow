@@ -716,13 +716,13 @@ export default function GenericNode({
               </div>
               <div>
                 {data.node!.base_classes.length > 0 &&
-                // if conditionalPaths in data.node.conditionalPaths
+                // if conditional_paths in data.node.conditional_paths
                 // then buildParameterComponent for each conditionalPath
                 // else buildParameterComponent for each data.node.base_classes
-                // first we check
-                data.node!.conditionalPaths &&
-                data.node!.conditionalPaths.length > 1
-                  ? data.node!.conditionalPaths.map((conditionalPath) =>
+                // first we check if there are any conditional paths
+                data.node!.conditional_paths &&
+                data.node!.conditional_paths.length > 0
+                  ? data.node!.conditional_paths.map((conditionalPath) =>
                       buildParameterComponent({
                         data,
                         conditionalPath,
