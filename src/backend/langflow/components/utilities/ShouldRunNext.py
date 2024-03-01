@@ -1,5 +1,6 @@
 # Implement ShouldRunNext component
 from typing import Text
+
 from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
@@ -42,8 +43,10 @@ class ShouldRunNext(CustomComponent):
             result = result.get("response")
 
         if result.lower() not in ["true", "false"]:
-            raise ValueError("The prompt should generate a boolean response (True or False).")
+            raise ValueError(
+                "The prompt should generate a boolean response (True or False)."
+            )
         # The string should be the words true or false
         # if not raise an error
         bool_result = result.lower() == "true"
-        return {"condition": bool_result, "result": kwargs}
+        return {"path": bool_result, "result": kwargs}
