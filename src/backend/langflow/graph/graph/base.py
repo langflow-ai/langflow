@@ -609,17 +609,44 @@ class Graph:
         """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
         # Initial setup
         visited = set()  # To keep track of visited vertices
+        excluded = set()  # To keep track of vertices that should be excluded
         stack = [vertex_id]  # Use a list as a stack for DFS
+
+        def get_successors(vertex):
+            # Recursively get the successors of the current vertex
+            successors = vertex.successors
+            if not successors:
+                return []
+            successors_result = []
+            for successor in successors:
+                # Just return a list of successors
+                next_successors = get_successors(successor)
+                successors_result.extend(next_successors)
+                successors_result.append(successor)
+            return successors_result
 
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
             current_id = stack.pop()
-            if current_id not in visited:
+            if current_id not in visited and current_id not in excluded:
                 visited.add(current_id)
                 current_vertex = self.get_vertex(current_id)
                 # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
                 for predecessor in current_vertex.predecessors:
                     stack.append(predecessor.id)
+                if current_id != vertex_id:
+                    # Get the successors of the current vertex
+                    for successor in current_vertex.successors:
+                        if successor.id not in visited:
+                            stack.append(successor.id)
+                else:
+                    # We should add to visited all the vertices that are successors of the current vertex
+                    # and their successors and so on
+                    for successor in current_vertex.successors:
+                        excluded.add(successor.id)
+                        all_successors = get_successors(successor)
+                        for successor in all_successors:
+                            excluded.add(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]
