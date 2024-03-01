@@ -18,11 +18,9 @@ import { getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
-import useFlowStore from "./stores/flowStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-import { useShortcutsStore } from "./stores/shortcuts";
 
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(

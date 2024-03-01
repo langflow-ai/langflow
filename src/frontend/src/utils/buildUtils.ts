@@ -85,14 +85,12 @@ export async function updateVerticesOrder(
     }
 
     const verticesIds = verticesLayers.flat();
-    useFlowStore
-      .getState()
-      .updateVerticesBuild({
-        verticesLayers,
-        verticesIds,
-        verticesOrder,
-        runId,
-      });
+    useFlowStore.getState().updateVerticesBuild({
+      verticesLayers,
+      verticesIds,
+      verticesOrder,
+      runId,
+    });
     resolve({ verticesLayers, verticesIds, verticesOrder, runId });
   });
 }

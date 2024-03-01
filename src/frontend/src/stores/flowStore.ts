@@ -219,8 +219,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
-    if(selection.nodes.some((node) => node.data.type === "ChatInput") && checkChatInput(get().nodes)){
-      useAlertStore.getState().setErrorData({title: "Error pasting components", list: ["You can only have one ChatInput component in the flow"]});
+    if (
+      selection.nodes.some((node) => node.data.type === "ChatInput") &&
+      checkChatInput(get().nodes)
+    ) {
+      useAlertStore
+        .getState()
+        .setErrorData({
+          title: "Error pasting components",
+          list: ["You can only have one ChatInput component in the flow"],
+        });
       return;
     }
     let minimumX = Infinity;
