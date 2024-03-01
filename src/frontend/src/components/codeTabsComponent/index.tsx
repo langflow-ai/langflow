@@ -166,7 +166,7 @@ export default function CodeTabsComponent({
               ) : (
                 <IconComponent name="Clipboard" className="h-4 w-4" />
               )}
-              {isCopied ? "Copied!" : "Copy code"}
+              {isCopied ? "Copied!" : "Copy Code"}
             </button>
             <button
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"

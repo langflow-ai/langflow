@@ -716,8 +716,8 @@ export const chatInputPlaceholder =
 export const chatInputPlaceholderSend = "Send a message...";
 export const editCodeTitle = "Edit Code";
 export const myCollectionDesc =
-  "Manage your personal projects. Download or upload your collection.";
-export const storeDesc = "Search flows and components from the community.";
+  "Manage your personal projects. Download and upload entire collections.";
+export const storeDesc = "Explore community-shared flows and components.";
 export const storeTitle = "Langflow Store";
 export const noApi = "You don't have an API key. ";
 export const insertApi = "Insert your Langflow API key.";
