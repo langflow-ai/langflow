@@ -57,14 +57,3 @@ class Record(BaseModel):
         return self.text
 
 
-def docs_to_records(documents: list[Document]) -> list[Record]:
-    """
-    Converts a list of Documents to a list of Records.
-
-    Args:
-        documents (list[Document]): The list of Documents to convert.
-
-    Returns:
-        list[Record]: The converted list of Records.
-    """
-    return [Record.from_document(document) for document in documents]
