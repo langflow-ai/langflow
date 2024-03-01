@@ -6,7 +6,8 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow import CustomComponent
 from langflow.field_typing import Text
-from langflow.schema import Record, docs_to_records
+from langflow.helpers.record import docs_to_records
+from langflow.schema import Record
 
 
 class LCVectorStoreComponent(CustomComponent):
