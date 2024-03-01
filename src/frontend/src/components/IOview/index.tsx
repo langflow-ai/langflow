@@ -153,7 +153,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                               trigger={
                                 <div className="file-component-badge-div">
                                   <Badge variant="gray" size="md">
-                                    {input.id}
+                                    {node.data.node.display_name}
                                   </Badge>
                                   {haveChat && (
                                     <div
@@ -194,7 +194,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                     className="api-modal-tabs-content mt-4"
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
-                      <IconComponent className="h-4 w-4" name={"Braces"} />
+                      <IconComponent className="h-4 w-4" name={"FileType2"} />
                       {outputsModalTitle}
                     </div>
                     {nodes

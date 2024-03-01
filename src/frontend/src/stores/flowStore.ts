@@ -30,6 +30,7 @@ import {
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
+  checkChatInput,
   cleanEdges,
   getHandleId,
   getNodeId,
@@ -56,16 +57,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowPool: {},
   inputs: [],
   outputs: [],
-  openCodeModalWShortcut: false,
-  handleModalWShortcut: (modal) => {
-    switch (modal) {
-      case "code":
-        set((state) => ({
-          openCodeModalWShortcut: !state.openCodeModalWShortcut,
-        }));
-        break;
-    }
-  },
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
@@ -228,6 +219,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+    if(selection.nodes.some((node) => node.data.type === "ChatInput") && checkChatInput(get().nodes)){
+      useAlertStore.getState().setErrorData({title: "Error pasting components", list: ["You can only have one ChatInput component in the flow"]});
+      return;
+    }
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
