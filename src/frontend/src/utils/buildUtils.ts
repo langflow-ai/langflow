@@ -61,11 +61,12 @@ export async function updateVerticesOrder(
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }
-    let verticesLayers: Array<Array<string>> = orderResponse.data.ids;
+    let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
+    let verticesLayers: Array<Array<string>> = [];
     const runId = orderResponse.data.run_id;
     if (nodeId) {
-      for (let i = 0; i < verticesLayers.length; i += 1) {
-        const innerArray = verticesLayers[i];
+      for (let i = 0; i < verticesOrder.length; i += 1) {
+        const innerArray = verticesOrder[i];
         const idIndex = innerArray.indexOf(nodeId);
         if (idIndex !== -1) {
           // If there's a nodeId, we want to run just that component and not the entire layer
@@ -78,7 +79,7 @@ export async function updateVerticesOrder(
         verticesLayers.push(innerArray);
       }
     }
-    const verticesIds = verticesLayers.flat();
+    const verticesIds = verticesOrder.flat();
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
       verticesIds,
@@ -183,9 +184,8 @@ async function buildVertex({
   stopBuild: () => void;
 }) {
   try {
-    console.log("Building vertex", id);
     const buildRes = await postBuildVertex(flowId, id, input_value);
-    console.log(buildRes);
+
     const buildData: VertexBuildTypeAPI = buildRes.data;
     if (onBuildUpdate) {
       if (!buildData.valid) {
