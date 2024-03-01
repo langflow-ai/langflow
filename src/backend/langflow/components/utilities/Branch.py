@@ -1,5 +1,6 @@
 from langflow import CustomComponent
 from langflow.field_typing import Text
+from langflow.schema import Decision
 
 
 class BranchComponent(CustomComponent):
@@ -11,4 +12,5 @@ class BranchComponent(CustomComponent):
         return {"param": {"display_name": "Parameter"}}
 
     def build(self, param: Text) -> Text:
-        return {"path": True, "result": param}
+
+        return Decision(path=True, result=param)
