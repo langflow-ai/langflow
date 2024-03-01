@@ -66,6 +66,8 @@ class CustomComponent(Component):
     """The selected output type of the component. Defaults to None."""
     vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
+    is_conditional: Optional[bool] = False
+    """The conditional state of the component. Defaults to False."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None

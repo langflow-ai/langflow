@@ -40,4 +40,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "pinned": getattr_return_bool,
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
+    "is_conditional": getattr_return_bool,
 }
