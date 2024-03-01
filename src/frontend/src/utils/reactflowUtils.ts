@@ -44,6 +44,10 @@ import {
 } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
 
+export function checkChatInput(nodes: Node[]) {
+  return nodes.some((node) => node.data.type === "ChatInput");
+}
+
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {

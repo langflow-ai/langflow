@@ -47,12 +47,6 @@ export default function CodeAreaModal({
   const [error, setError] = useState<{
     detail: { error: string | undefined; traceback: string | undefined };
   } | null>(null);
-  const handleModalWShortcut = useFlowStore(
-    (state) => state.handleModalWShortcut
-  );
-  const openCodeModalWShortcut = useFlowStore(
-    (state) => state.openCodeModalWShortcut
-  );
   const [open, setOpen] = useState(false);
   const nodes = useFlowStore((state) => state.nodes);
 
@@ -62,26 +56,7 @@ export default function CodeAreaModal({
     if (dynamic && Object.keys(nodeClass!.template).length > 2) {
       return;
     }
-  }, []);                                                          
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.key === "C" || event.key === "c") &&
-        (event.metaKey || event.ctrlKey) &&
-        selected
-      ) {
-        event.preventDefault();
-        console.log("entrou")
-        setOpen((oldState) => !oldState);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
   }, []);
-  
 
   useEffect(() => {
     console.log(open)

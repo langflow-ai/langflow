@@ -701,7 +701,7 @@ export const editTextPlaceholder = "Type message here.";
 export const inputHandleHover = "Avaliable input components:";
 export const outputHandleHover = "Avaliable output components:";
 export const textInputModalTitle = "Text Inputs";
-export const outputsModalTitle = "Prompt Outputs";
+export const outputsModalTitle = "Text Outputs";
 export const langflowChatTitle = "Langflow Chat";
 export const chatInputPlaceholder =
   "No chat input variables found. Click to run your flow.";
