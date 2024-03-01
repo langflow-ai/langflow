@@ -97,13 +97,24 @@ export default function GenericModal({
   useEffect(() => {
     setInputValue(value);
   }, [value, modalOpen]);
-
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
-    .replace(/\n/g, "<br />");
+    .replace(regexHighlight, (match, p1, p2) => {
+      // Decide which group was matched. If p1 is not undefined, do nothing
+      // we don't want to change the text. If p2 is not undefined, then we
+      // have a variable, so we should highlight it.
+      // ! This will not work with multiline or indented json yet
+      if (p1 !== undefined) {
+        return match;
+      } else if (p2 !== undefined) {
+        return varHighlightHTML({ name: p2 });
+      }
 
+      return match;
+    })
+    .replace(/\n/g, "<br />");
+  console.log(coloredContent);
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
@@ -159,7 +170,7 @@ export default function GenericModal({
         setIsEdit(true);
         return setErrorData({
           title: PROMPT_ERROR_ALERT,
-          list: [error.toString()],
+          list: [error.response.data.detail ?? ""],
         });
       });
   }
