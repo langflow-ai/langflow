@@ -272,7 +272,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       </button>
                       {selectedViewField.type}
                     </div>
-                    <div className="h-full">
+                    <div className="h-full w-full">
                       {inputs.some(
                         (input) => input.id === selectedViewField.id
                       ) ? (
