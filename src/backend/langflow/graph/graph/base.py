@@ -10,7 +10,7 @@ from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
-from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.types import (
     ChatVertex,
     FileToolVertex,
@@ -148,17 +148,17 @@ class Graph:
     def reset_inactive_vertices(self):
         self.inactive_vertices = set()
 
-    def mark_all_vertices(self, state: str):
+    def mark_all_vertices(self, state: "VertexStates"):
         """Marks all vertices in the graph."""
         for vertex in self.vertices:
             vertex.set_state(state)
 
-    def mark_vertex(self, vertex_id: str, state: str):
+    def mark_vertex(self, vertex_id: str, state: "VertexStates"):
         """Marks a vertex in the graph."""
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
 
-    def mark_branch(self, vertex_id: str, state: str):
+    def mark_branch(self, vertex_id: str, state: "VertexStates"):
         """Marks a branch of the graph."""
         self.mark_vertex(vertex_id, state)
         for child_id in self.parent_child_map[vertex_id]:
@@ -552,7 +552,7 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in ["ChatOutput", "ChatInput"]:
             return ChatVertex
-        elif node_name in ["ShouldRunNext"]:
+        elif node_name in ["ShouldRunNext", "Branch"]:
             return RoutingVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]

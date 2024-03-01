@@ -18,6 +18,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
     VerticesOrderResponse,
 )
+from langflow.graph.utils import UnbuiltResult
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
@@ -116,7 +117,7 @@ async def build_vertex(
                 inputs_dict = inputs.model_dump() if inputs else {}
                 await vertex.build(user_id=current_user.id, inputs=inputs_dict)
 
-            if vertex.result is not None:
+            if not isinstance(vertex.result, UnbuiltResult):
                 params = vertex._built_object_repr()
                 valid = True
                 result_dict = vertex.result
