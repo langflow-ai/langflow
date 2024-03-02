@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional
 
 from langflow import CustomComponent
 from langflow.field_typing import Text
@@ -20,12 +20,13 @@ class SharedState(CustomComponent):
         }
 
     def build(
-        self, name: str, record: Union[Text, Record], append: bool = False
+        self, name: str, record: Optional[Record] = None, append: bool = False
     ) -> Record:
-        if append:
-            self.append_state(name, record)
-        else:
-            self.update_state(name, record)
+        if record:
+            if append:
+                self.append_state(name, record)
+            else:
+                self.update_state(name, record)
 
         state = self.get_state(name)
         if state and not isinstance(state, Record):
