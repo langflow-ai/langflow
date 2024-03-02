@@ -682,7 +682,15 @@ class Vertex:
 
     def __eq__(self, __o: object) -> bool:
         try:
-            return self.id == __o.id if isinstance(__o, Vertex) else False
+            if not isinstance(__o, Vertex):
+                return False
+            # We should create a more robust comparison
+            # for the Vertex class
+            ids_are_equal = self.id == __o.id
+            # self._data is a dict and we need to compare them
+            # to check if they are equal
+            data_are_equal = self._data == __o._data
+            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
 
