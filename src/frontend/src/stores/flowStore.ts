@@ -223,12 +223,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
     ) {
-      useAlertStore
-        .getState()
-        .setErrorData({
-          title: "Error pasting components",
-          list: ["You can only have one ChatInput component in the flow"],
-        });
+      useAlertStore.getState().setErrorData({
+        title: "Error pasting components",
+        list: ["You can only have one ChatInput component in the flow"],
+      });
       return;
     }
     let minimumX = Infinity;
@@ -451,8 +449,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
       }
-      if (vertexBuildData && vertexBuildData.activated_vertices) {
-        get().addToVerticesBuild(vertexBuildData.activated_vertices);
+      if (vertexBuildData && vertexBuildData.activated_layers) {
+        get().addToVerticesBuild(vertexBuildData.activated_layers.flat());
       }
       get().addDataToFlowPool(
         { ...vertexBuildData, buildId },

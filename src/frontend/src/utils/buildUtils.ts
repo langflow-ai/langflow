@@ -32,7 +32,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     data: inactiveData,
     params: "Inactive",
     inactivated_vertices: null,
-    activated_vertices: null,
+    activated_layers: null,
     valid: false,
     timestamp: new Date().toISOString(),
   };
@@ -131,41 +131,25 @@ export async function buildVertices({
   const handleBuildUpdate = (data: VertexBuildTypeAPI, status: BuildStatus) => {
     // Handle activated vertices
     console.log("handleBuildUpdate", data, status);
-    if (data.activated_vertices && data.activated_vertices.length > 0) {
-      // Logic to determine the correct placement for activated vertices in dynamicVerticesLayers
-      // For simplicity, this example adds them to the next layer
-      // const nextLayerIndex = i + 1; i doesnt exist in this scope
-      // we don't want to add the activated vertices to the last layer
-      // because these vertices should be built right away
+    if (data.activated_layers && data.activated_layers.length > 0) {
       const thisVertexLayer = dynamicVerticesLayers.findIndex((layer) =>
         layer.includes(data.id)
       );
-      const nextLayerIndex = thisVertexLayer + 1;
+      let nextLayerIndex = thisVertexLayer + 1;
+
       console.log("nextLayerIndex", nextLayerIndex);
       console.log("dynamicVerticesLayers", dynamicVerticesLayers);
-      if (dynamicVerticesLayers[nextLayerIndex]) {
-        // If the next layer exists, add the activated vertices to it
-        // dynamicVerticesLayers[nextLayerIndex] = dynamicVerticesLayers[
-        //   nextLayerIndex
-        // ].concat(data.activated_vertices);
-        // instead of adding them all at once, add them one by one
-        // add one per layer and if the next layer doesn't exist, create it
 
-        for (const vertex of data.activated_vertices) {
-          console.log("vertex", vertex);
-          if (dynamicVerticesLayers[nextLayerIndex].includes(vertex)) {
-            continue;
-          } else if (dynamicVerticesLayers[nextLayerIndex].length > 0) {
-            dynamicVerticesLayers[nextLayerIndex].push(vertex);
-          } else {
-            dynamicVerticesLayers[nextLayerIndex] = [vertex];
-          }
-          console.log("dynamicVerticesLayers", dynamicVerticesLayers);
+      data.activated_layers.forEach((newLayer) => {
+        if (!dynamicVerticesLayers[nextLayerIndex]) {
+          dynamicVerticesLayers[nextLayerIndex] = [];
         }
-      } else {
-        dynamicVerticesLayers.push(data.activated_vertices);
-        console.log(dynamicVerticesLayers);
-      }
+        dynamicVerticesLayers[nextLayerIndex] = [
+          ...dynamicVerticesLayers[nextLayerIndex],
+          ...newLayer,
+        ];
+        nextLayerIndex += 1;
+      });
     }
     if (onBuildUpdate) onBuildUpdate(data, status, runId);
   };
