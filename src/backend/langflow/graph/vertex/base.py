@@ -57,6 +57,7 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
+        self.is_state = False
         self.is_input = any(
             input_component_name in self.id for input_component_name in INPUT_COMPONENTS
         )
