@@ -243,7 +243,7 @@ class Graph:
         self.edges = new_edges
 
     def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
-        data_is_equivalent = vertex.__repr__() == other_vertex.__repr__()
+        data_is_equivalent = vertex == other_vertex
         if not data_is_equivalent:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
@@ -635,12 +635,8 @@ class Graph:
                 # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
                 for predecessor in current_vertex.predecessors:
                     stack.append(predecessor.id)
-                if current_id != vertex_id:
-                    # Get the successors of the current vertex
-                    for successor in current_vertex.successors:
-                        if successor.id not in visited:
-                            stack.append(successor.id)
-                else:
+
+                if current_id == vertex_id:
                     # We should add to visited all the vertices that are successors of the current vertex
                     # and their successors and so on
                     for successor in current_vertex.successors:
