@@ -386,7 +386,7 @@ export default function NodeToolbarComponent({
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
-                  <div className="flex" data-testid="save-button-modal">
+                  <div className="flex" data-testid="share-button-modal">
                     <IconComponent
                       name="Share3"
                       className="relative top-0.5 -m-1 mr-1 h-6 w-6"

@@ -7,16 +7,6 @@ test.describe("Flow Page tests", () => {
   }
 
   test("save", async ({ page }) => {
-    await page.routeFromHAR("harFiles/backend_12112023.har", {
-      url: "**/api/v1/**",
-      update: false,
-    });
-    await page.route("**/api/v1/flows/", async (route) => {
-      const json = {
-        id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
-      };
-      await route.fulfill({ json, status: 201 });
-    });
     await page.goto("http://localhost:3000/");
     await page.waitForTimeout(2000);
 

@@ -12,6 +12,7 @@ import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
 import IOInputField from "../IOInputField";
 import IOOutputView from "../IOOutputView";
+import ShadTooltip from "../ShadTooltipComponent";
 import IconComponent from "../genericIconComponent";
 import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
@@ -213,9 +214,16 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                             <AccordionComponent
                               trigger={
                                 <div className="file-component-badge-div">
-                                  <Badge variant="gray" size="md">
-                                    {output.id}
-                                  </Badge>
+                                  <ShadTooltip
+                                    content={output.id}
+                                    styleClasses="z-50"
+                                  >
+                                    <div>
+                                      <Badge variant="gray" size="md">
+                                        {output.displayName}
+                                      </Badge>
+                                    </div>
+                                  </ShadTooltip>
                                   {haveChat && (
                                     <div
                                       className="-mb-1 pr-4"
@@ -272,7 +280,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                       </button>
                       {selectedViewField.type}
                     </div>
-                    <div className="h-full">
+                    <div className="h-full w-full">
                       {inputs.some(
                         (input) => input.id === selectedViewField.id
                       ) ? (
@@ -308,28 +316,30 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
               <div className="absolute bottom-8 right-8"></div>
             )}
           </div>
-          {!haveChat && (
-            <div className="flex w-full justify-end pt-6">
-              <Button
-                variant={"outline"}
-                className="flex gap-2 px-3"
-                onClick={() => sendMessage(1)}
-              >
-                <IconComponent
-                  name={isBuilding ? "Loader2" : "Play"}
-                  className={cn(
-                    "h-4 w-4",
-                    isBuilding
-                      ? "animate-spin"
-                      : "fill-current text-medium-indigo"
-                  )}
-                />
-                Run Flow
-              </Button>
-            </div>
-          )}
         </div>
       </BaseModal.Content>
+      <BaseModal.Footer>
+        {!haveChat && (
+          <div className="flex w-full justify-end pt-6">
+            <Button
+              variant={"outline"}
+              className="flex gap-2 px-3"
+              onClick={() => sendMessage(1)}
+            >
+              <IconComponent
+                name={isBuilding ? "Loader2" : "Play"}
+                className={cn(
+                  "h-4 w-4",
+                  isBuilding
+                    ? "animate-spin"
+                    : "fill-current text-medium-indigo"
+                )}
+              />
+              Run Flow
+            </Button>
+          </div>
+        )}
+      </BaseModal.Footer>
     </BaseModal>
   );
 }

@@ -46,7 +46,6 @@ export async function updateVerticesOrder(
 ): Promise<{
   verticesLayers: string[][];
   verticesIds: string[];
-  verticesOrder: string[][];
   runId: string;
 }> {
   return new Promise(async (resolve, reject) => {
@@ -64,9 +63,8 @@ export async function updateVerticesOrder(
       throw new Error("Invalid nodes");
     }
     let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-    const runId = orderResponse.data.run_id;
     let verticesLayers: Array<Array<string>> = [];
-
+    const runId = orderResponse.data.run_id;
     if (nodeId) {
       for (let i = 0; i < verticesOrder.length; i += 1) {
         const innerArray = verticesOrder[i];
@@ -84,15 +82,13 @@ export async function updateVerticesOrder(
     } else {
       verticesLayers = verticesOrder;
     }
-
-    const verticesIds = verticesLayers.flat();
+    const verticesIds = verticesOrder.flat();
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
       verticesIds,
-      verticesOrder,
       runId,
     });
-    resolve({ verticesLayers, verticesIds, verticesOrder, runId });
+    resolve({ verticesLayers, verticesIds, runId });
   });
 }
 
@@ -108,12 +104,13 @@ export async function buildVertices({
   validateNodes,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
+
   if (!verticesBuild || nodeId) {
     verticesBuild = await updateVerticesOrder(flowId, nodeId);
   }
-  let verticesIds = verticesBuild?.verticesIds!;
+
+  const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
-  const verticesOrder = verticesBuild?.verticesOrder!;
   const runId = verticesBuild?.runId!;
   let stop = false;
 
@@ -121,7 +118,7 @@ export async function buildVertices({
 
   if (validateNodes) {
     try {
-      validateNodes(verticesOrder.flatMap((id) => id));
+      validateNodes(verticesIds);
     } catch (e) {
       return;
     }
@@ -242,6 +239,7 @@ async function buildVertex({
 }) {
   try {
     const buildRes = await postBuildVertex(flowId, id, input_value);
+
     const buildData: VertexBuildTypeAPI = buildRes.data;
     if (onBuildUpdate) {
       if (!buildData.valid) {
