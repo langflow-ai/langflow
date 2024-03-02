@@ -35,4 +35,6 @@ class SharedState(CustomComponent):
                 state = Record(data=state)
             else:
                 state = Record(text=str(state))
+        elif not state:
+            state = Record(text="")
         return state
