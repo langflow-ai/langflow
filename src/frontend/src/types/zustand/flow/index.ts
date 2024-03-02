@@ -105,6 +105,7 @@ export type FlowStoreType = {
       runId: string;
     } | null
   ) => void;
+  addToVerticesBuild: (vertices: string[]) => void;
   removeFromVerticesBuild: (vertices: string[]) => void;
   verticesBuild: {
     verticesIds: string[];
