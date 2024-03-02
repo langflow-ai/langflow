@@ -25,6 +25,8 @@ class RecordsAsTextComponent(CustomComponent):
         records: list[Record],
         template: str = "Text: {text}\nData: {data}",
     ) -> Text:
+        if not records:
+            return ""
         if isinstance(records, Record):
             records = [records]
 

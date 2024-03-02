@@ -27,7 +27,7 @@ class GraphStateManager:
 
     def get_state(self, key):
         with self.lock:
-            return self.states.get(key, None)
+            return self.states.get(key, "")
 
     def subscribe(self, key, observer: Callable):
         with self.lock:
