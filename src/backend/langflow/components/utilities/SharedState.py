@@ -37,4 +37,5 @@ class SharedState(CustomComponent):
                 state = Record(text=str(state))
         elif not state:
             state = Record(text="")
+        self.status = state
         return state
