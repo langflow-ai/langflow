@@ -16,9 +16,11 @@ from langflow.graph.vertex.types import (
     FileToolVertex,
     LLMVertex,
     RoutingVertex,
+    StateVertex,
     ToolkitVertex,
 )
 from langflow.interface.tools.constants import FILE_TOOLS
+from langflow.schema import Record
 from langflow.utils import payload
 
 if TYPE_CHECKING:
@@ -55,12 +57,44 @@ class Graph:
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self.inactivated_vertices: set = set()
+        self.activated_vertices: set = set()
         self.edges: List[ContractEdge] = []
         self.vertices: List[Vertex] = []
         self._build_graph()
         self.build_graph_maps()
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
+
+    def update_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
+        """Updates the state of the graph."""
+        if caller:
+            # If there is a caller which is a vertex_id, I want to activate
+            # all StateVertex in self.vertices that are not the caller
+            # essentially notifying all the other vertices that the state has changed
+            # This also has to activate their successors
+            caller_vertex = self.get_vertex(caller)
+            for vertex in self.vertices:
+                if vertex.id != caller and isinstance(vertex, StateVertex):
+                    successors = self.get_all_successors(vertex)
+                    self.activated_vertices.add(vertex.id)
+                    for successor in successors:
+                        self.activated_vertices.add(successor.id)
+
+        self.state_manager.update_state(name, record)
+
+    def reset_activated_vertices(self):
+        self.activated_vertices = set()
+
+    def append_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
+        """Appends the state of the graph."""
+        if caller:
+            self.state_manager.subscribe(name, caller)
+
+        self.state_manager.append_state(name, record)
 
     def set_run_id(self, run_id: str):
         for vertex in self.vertices:
@@ -500,6 +534,20 @@ class Graph:
             for source_id in self.predecessor_map.get(vertex.id, [])
         ]
 
+    def get_all_successors(self, vertex, recursive=True):
+        # Recursively get the successors of the current vertex
+        successors = vertex.successors
+        if not successors:
+            return []
+        successors_result = []
+        for successor in successors:
+            # Just return a list of successors
+            if recursive:
+                next_successors = self.get_all_successors(successor)
+                successors_result.extend(next_successors)
+            successors_result.append(successor)
+        return successors_result
+
     def get_successors(self, vertex):
         """Returns the successors of a vertex."""
         return [
@@ -561,6 +609,8 @@ class Graph:
             return ChatVertex
         elif node_name in ["ShouldRunNext"]:
             return RoutingVertex
+        elif node_name in ["SharedState"]:
+            return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
         elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:

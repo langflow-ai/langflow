@@ -88,12 +88,9 @@ class Vertex:
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:
-            if key in self.graph_state:
-                self.graph_state[key].append(new_state)
-            else:
-                self.graph_state[key] = [new_state]
+            self.graph.append_state(key, new_state, caller=self.id)
         else:
-            self.graph_state[key] = new_state
+            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
@@ -511,7 +508,16 @@ class Vertex:
                     self.params[key] = []
                 self.params[key].extend(built)
             else:
-                self.params[key].append(built)
+                try:
+                    if self.params[key] == built:
+                        continue
+
+                    self.params[key].append(built)
+                except AttributeError as e:
+                    logger.exception(e)
+                    raise ValueError(
+                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
+                    ) from e
 
     def _handle_func(self, key, result):
         """
@@ -670,11 +676,3 @@ class Vertex:
             if self._built_object is not None
             else "Failed to build 😵‍💫"
         )
-
-
-class StatefulVertex(Vertex):
-    pass
-
-
-class StatelessVertex(Vertex):
-    pass
