@@ -14,7 +14,6 @@ from uuid import UUID
 
 import yaml
 from cachetools import TTLCache, cachedmethod
-from fastapi import HTTPException
 from langchain_core.documents import Document
 from sqlmodel import select
 
@@ -85,7 +84,7 @@ class CustomComponent(Component):
     def append_state(self, name: str, value: Any):
         try:
             self.vertex.graph.append_state(
-                key=name, record=value, caller=self.vertex.id
+                name=name, record=value, caller=self.vertex.id
             )
         except Exception as e:
             raise ValueError(f"Error appending state: {e}")
@@ -201,18 +200,7 @@ class CustomComponent(Component):
 
         args = build_method["args"]
         for arg in args:
-            if arg.get("type") == "prompt":
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "Type hint Error",
-                        "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
-                        ),
-                    },
-                )
-            elif not arg.get("type") and arg.get("name") != "self":
+            if not arg.get("type") and arg.get("name") != "self":
                 # Set the type to Data
                 arg["type"] = "Data"
         return args
