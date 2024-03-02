@@ -26,4 +26,6 @@ class TextToRecordComponent(CustomComponent):
         text: Text,
         data: Optional[dict] = {},
     ) -> Record:
-        return Record(text=text, data=data)
+        record = Record(text=text, data=data)
+        self.status = record
+        return record
