@@ -484,6 +484,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         setErrorData({ list, title });
       },
       onBuildStart: (idList) => {
+        console.log("onBuildStart", idList);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
