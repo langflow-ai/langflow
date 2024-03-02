@@ -1,7 +1,6 @@
 import ast
 import json
-from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
-                    Union)
+from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
@@ -487,6 +486,7 @@ class StateVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.steps = [self._build]
+        self.is_state = True
 
 
 def dict_to_codeblock(d: dict) -> str:
