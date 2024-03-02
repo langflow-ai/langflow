@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
@@ -25,6 +23,7 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
 def add_output_types(
@@ -86,6 +85,8 @@ def add_base_classes(
             )
 
         base_classes = get_base_classes(return_type_instance)
+        if return_type_instance == str:
+            base_classes.append("Text")
 
         for base_class in base_classes:
             frontend_node.add_base_class(base_class)

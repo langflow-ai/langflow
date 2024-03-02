@@ -3,8 +3,6 @@ from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
-from loguru import logger
-
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.state_manager import GraphStateManager
@@ -22,6 +20,7 @@ from langflow.graph.vertex.types import (
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
 from langflow.utils import payload
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -278,7 +277,7 @@ class Graph:
         self.edges = new_edges
 
     def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
-        data_is_equivalent = vertex.__repr__() == other_vertex.__repr__()
+        data_is_equivalent = vertex == other_vertex
         if not data_is_equivalent:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
@@ -304,39 +303,51 @@ class Graph:
         # Find vertices that are in self but not in other (removed vertices)
         removed_vertex_ids = existing_vertex_ids - other_vertex_ids
 
-        # Update existing vertices that have changed
-        for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
-            self_vertex = self.get_vertex(vertex_id)
-            other_vertex = other.get_vertex(vertex_id)
-            if not self.vertex_data_is_identical(self_vertex, other_vertex):
-                self_vertex._data = other_vertex._data
-                self_vertex._parse_data()
-                # Now we update the edges of the vertex
-                self.update_edges_from_vertex(self_vertex, other_vertex)
-                self_vertex.params = {}
-                self_vertex._build_params()
-                self_vertex.graph = self
-                # If the vertex is pinned, we don't want
-                # to reset the results nor the _built attribute
-                if not self_vertex.pinned:
-                    self_vertex._built = False
-                    self_vertex.result = None
-                    self_vertex.artifacts = {}
-                    self_vertex.set_top_level(self.top_level_vertices)
-                self.reset_all_edges_of_vertex(self_vertex)
-
-        # Remove vertices
+        # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
             self.remove_vertex(vertex_id)
 
         # Add new vertices
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
+            new_vertex.graph = self
             self._add_vertex(new_vertex)
+
+        # Update existing vertices that have changed
+        for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
+            self_vertex = self.get_vertex(vertex_id)
+            other_vertex = other.get_vertex(vertex_id)
+            # If the vertices are not identical, update the vertex
+            if not self.vertex_data_is_identical(self_vertex, other_vertex):
+                self.update_vertex_from_another(self_vertex, other_vertex)
 
         self.build_graph_maps()
         self.increment_update_count()
         return self
+
+    def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
+        """
+        Updates a vertex from another vertex.
+
+        Args:
+            vertex (Vertex): The vertex to be updated.
+            other_vertex (Vertex): The vertex to update from.
+        """
+        vertex._data = other_vertex._data
+        vertex._parse_data()
+        # Now we update the edges of the vertex
+        self.update_edges_from_vertex(vertex, other_vertex)
+        vertex.params = {}
+        vertex._build_params()
+        vertex.graph = self
+        # If the vertex is pinned, we don't want
+        # to reset the results nor the _built attribute
+        if not vertex.pinned:
+            vertex._built = False
+            vertex.result = None
+            vertex.artifacts = {}
+            vertex.set_top_level(self.top_level_vertices)
+        self.reset_all_edges_of_vertex(vertex)
 
     def reset_all_edges_of_vertex(self, vertex: Vertex) -> None:
         """Resets all the edges of a vertex."""
@@ -666,17 +677,41 @@ class Graph:
         """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
         # Initial setup
         visited = set()  # To keep track of visited vertices
+        excluded = set()  # To keep track of vertices that should be excluded
         stack = [vertex_id]  # Use a list as a stack for DFS
+
+        def get_successors(vertex, recursive=True):
+            # Recursively get the successors of the current vertex
+            successors = vertex.successors
+            if not successors:
+                return []
+            successors_result = []
+            for successor in successors:
+                # Just return a list of successors
+                if recursive:
+                    next_successors = get_successors(successor)
+                    successors_result.extend(next_successors)
+                successors_result.append(successor)
+            return successors_result
 
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
             current_id = stack.pop()
-            if current_id not in visited:
+            if current_id not in visited and current_id not in excluded:
                 visited.add(current_id)
                 current_vertex = self.get_vertex(current_id)
                 # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
                 for predecessor in current_vertex.predecessors:
                     stack.append(predecessor.id)
+
+                if current_id == vertex_id:
+                    # We should add to visited all the vertices that are successors of the current vertex
+                    # and their successors and so on
+                    for successor in current_vertex.successors:
+                        excluded.add(successor.id)
+                        all_successors = get_successors(successor)
+                        for successor in all_successors:
+                            excluded.add(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]

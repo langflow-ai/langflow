@@ -15,6 +15,7 @@ from uuid import UUID
 import yaml
 from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
+from pydantic import BaseModel
 from sqlmodel import select
 
 from langflow.interface.custom.code_parser.utils import (
@@ -144,28 +145,47 @@ class CustomComponent(Component):
         self, data: Any, text_key: str = "text", data_key: str = "data"
     ) -> List[Record]:
         """
-        Convert data into a list of records.
+        Converts input data into a list of Record objects.
 
         Args:
-            data (Any): The input data to be converted.
-            text_key (str, optional): The key to extract the text from a dictionary item. Defaults to "text".
-            data_key (str, optional): The key to extract the data from a dictionary item. Defaults to "data".
+            data (Any): The input data to be converted. It can be a single item or a sequence of items.
+            If the input data is a Langchain Document, text_key and data_key are ignored.
+
+            text_key (str, optional): The key to access the text value in each item. Defaults to "text".
+            data_key (str, optional): The key to access the data value in each item. Defaults to "data".
 
         Returns:
-            List[dict]: A list of records, where each record is a dictionary with 'text' and 'data' keys.
+            List[Record]: A list of Record objects.
+
+        Raises:
+            ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
+
         """
         records = []
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
-            if isinstance(item, str):
-                records.append(Record(text=item))
+            if isinstance(item, Document):
+                item = {"text": item.page_content, "data": item.metadata}
+            elif isinstance(item, BaseModel):
+                model_dump = item.model_dump()
+                if text_key not in model_dump:
+                    raise ValueError(f"Key '{text_key}' not found in BaseModel item.")
+                if data_key not in model_dump:
+                    raise ValueError(f"Key '{data_key}' not found in BaseModel item.")
+                item = {"text": model_dump[text_key], "data": model_dump[data_key]}
+            elif isinstance(item, str):
+                item = {"text": item, "data": {}}
             elif isinstance(item, dict):
-                records.append(Record(text=item.get(text_key), data=item.get(data_key)))
-            elif isinstance(item, Document):
-                records.append(Record(text=item.page_content, data=item.metadata))
+                if text_key not in item:
+                    raise ValueError(f"Key '{text_key}' not found in dictionary item.")
+                if data_key not in item:
+                    raise ValueError(f"Key '{data_key}' not found in dictionary item.")
+                item = {"text": item[text_key], "data": item[data_key]}
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
+
+            records.append(Record(**item))
 
         return records
 

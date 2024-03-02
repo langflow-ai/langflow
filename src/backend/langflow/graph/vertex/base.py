@@ -2,7 +2,17 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+)
 
 from loguru import logger
 
@@ -503,9 +513,12 @@ class Vertex:
         self.params[key] = []
         for node in nodes:
             built = await node.get_result(requester=self, user_id=user_id)
+            # Weird check to see if the params[key] is a list
+            # because sometimes it is a Record and breaks the code
+            if not isinstance(self.params[key], list):
+                self.params[key] = [self.params[key]]
+
             if isinstance(built, list):
-                if key not in self.params:
-                    self.params[key] = []
                 self.params[key].extend(built)
             else:
                 try:
@@ -517,6 +530,7 @@ class Vertex:
                     logger.exception(e)
                     raise ValueError(
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
+                        f"Error building node {self.display_name}: {str(e)}"
                     ) from e
 
     def _handle_func(self, key, result):
@@ -587,6 +601,14 @@ class Vertex:
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
+        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+            if self.display_name in ["Text Output"]:
+                raise ValueError(
+                    f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
+                )
+            raise ValueError(
+                f"{self.display_name}: You are trying to stream to a non-streamable component."
+            )
 
     def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
@@ -662,7 +684,15 @@ class Vertex:
 
     def __eq__(self, __o: object) -> bool:
         try:
-            return self.id == __o.id if isinstance(__o, Vertex) else False
+            if not isinstance(__o, Vertex):
+                return False
+            # We should create a more robust comparison
+            # for the Vertex class
+            ids_are_equal = self.id == __o.id
+            # self._data is a dict and we need to compare them
+            # to check if they are equal
+            data_are_equal = self.data == __o.data
+            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
 

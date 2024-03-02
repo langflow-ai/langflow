@@ -1,9 +1,10 @@
 from typing import Optional, Union
 
+from loguru import logger
+
 from langflow.schema import Record
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import MessageModel
-from loguru import logger
 
 
 def get_messages(
