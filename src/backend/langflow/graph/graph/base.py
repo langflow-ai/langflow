@@ -283,26 +283,37 @@ class Graph:
         for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
             self_vertex = self.get_vertex(vertex_id)
             other_vertex = other.get_vertex(vertex_id)
+            # If the vertices are not identical, update the vertex
             if not self.vertex_data_is_identical(self_vertex, other_vertex):
-                self_vertex._data = other_vertex._data
-                self_vertex._parse_data()
-                # Now we update the edges of the vertex
-                self.update_edges_from_vertex(self_vertex, other_vertex)
-                self_vertex.params = {}
-                self_vertex._build_params()
-                self_vertex.graph = self
-                # If the vertex is pinned, we don't want
-                # to reset the results nor the _built attribute
-                if not self_vertex.pinned:
-                    self_vertex._built = False
-                    self_vertex.result = None
-                    self_vertex.artifacts = {}
-                    self_vertex.set_top_level(self.top_level_vertices)
-                self.reset_all_edges_of_vertex(self_vertex)
+                self.update_vertex_from_another(self_vertex, other_vertex)
 
         self.build_graph_maps()
         self.increment_update_count()
         return self
+
+    def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
+        """
+        Updates a vertex from another vertex.
+
+        Args:
+            vertex (Vertex): The vertex to be updated.
+            other_vertex (Vertex): The vertex to update from.
+        """
+        vertex._data = other_vertex._data
+        vertex._parse_data()
+        # Now we update the edges of the vertex
+        self.update_edges_from_vertex(vertex, other_vertex)
+        vertex.params = {}
+        vertex._build_params()
+        vertex.graph = self
+        # If the vertex is pinned, we don't want
+        # to reset the results nor the _built attribute
+        if not vertex.pinned:
+            vertex._built = False
+            vertex.result = None
+            vertex.artifacts = {}
+            vertex.set_top_level(self.top_level_vertices)
+        self.reset_all_edges_of_vertex(vertex)
 
     def reset_all_edges_of_vertex(self, vertex: Vertex) -> None:
         """Resets all the edges of a vertex."""
