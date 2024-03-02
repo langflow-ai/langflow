@@ -2,6 +2,8 @@ from collections import defaultdict
 from threading import Lock
 from typing import Callable
 
+from loguru import logger
+
 
 class GraphStateManager:
     def __init__(self):
@@ -13,6 +15,8 @@ class GraphStateManager:
         with self.lock:
             if key not in self.states:
                 self.states[key] = []
+            elif not isinstance(self.states[key], list):
+                self.states[key] = [self.states[key]]
             self.states[key].append(new_state)
             self.notify_append_observers(key, new_state)
 
@@ -36,4 +40,8 @@ class GraphStateManager:
 
     def notify_append_observers(self, key, new_state):
         for callback in self.observers[key]:
-            callback(key, new_state, append=True)
+            try:
+                callback(key, new_state, append=True)
+            except Exception as e:
+                logger.error(f"Error in observer {callback} for key {key}: {e}")
+                logger.warning("Callbacks not implemented yet")
