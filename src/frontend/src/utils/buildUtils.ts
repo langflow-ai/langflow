@@ -78,6 +78,8 @@ export async function updateVerticesOrder(
         // If the targetId is not found, include the entire inner array
         verticesLayers.push(innerArray);
       }
+    } else {
+      verticesLayers = verticesOrder;
     }
     const verticesIds = verticesOrder.flat();
     useFlowStore.getState().updateVerticesBuild({
@@ -101,9 +103,11 @@ export async function buildVertices({
   validateNodes,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
+
   if (!verticesBuild || nodeId) {
     verticesBuild = await updateVerticesOrder(flowId, nodeId);
   }
+
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
   const runId = verticesBuild?.runId!;
@@ -124,6 +128,7 @@ export async function buildVertices({
 
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
+  console.log(verticesLayers);
   for (const layer of verticesLayers) {
     if (onBuildStart) onBuildStart(layer);
     for (const id of layer) {
