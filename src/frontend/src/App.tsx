@@ -20,6 +20,7 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
@@ -32,7 +33,6 @@ export default function App() {
   const successData = useAlertStore((state) => state.successData);
   const successOpen = useAlertStore((state) => state.successOpen);
   const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
-  const loading = useAlertStore((state) => state.loading);
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
@@ -122,9 +122,11 @@ export default function App() {
 
   const { isAuthenticated } = useContext(AuthContext);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const checkHasStore = useStoreStore((state) => state.checkHasStore);
 
   useEffect(() => {
     refreshStars();
@@ -136,6 +138,8 @@ export default function App() {
       getTypes().then(() => {
         refreshFlows();
       });
+      checkHasStore();
+      fetchApiData();
     }
   }, [isAuthenticated]);
 
