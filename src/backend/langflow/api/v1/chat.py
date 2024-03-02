@@ -156,13 +156,13 @@ async def build_vertex(
         inactivated_vertices = None
         inactivated_vertices = list(graph.inactivated_vertices)
         graph.reset_inactivated_vertices()
-        activated_vertices = list(graph.activated_vertices)
+        activated_layers = graph.activated_layers
         graph.reset_activated_vertices()
         chat_service.set_cache(flow_id, graph)
 
         build_response = VertexBuildResponse(
             inactivated_vertices=inactivated_vertices,
-            activated_vertices=activated_vertices,
+            activated_layers=activated_layers,
             valid=valid,
             params=params,
             id=vertex.id,

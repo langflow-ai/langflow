@@ -58,7 +58,7 @@ class Graph:
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self.inactivated_vertices: set = set()
-        self.activated_vertices: set = set()
+        self.activated_layers: List[List[str]] = []
         self.edges: List[ContractEdge] = []
         self.vertices: List[Vertex] = []
         self._build_graph()
@@ -80,20 +80,26 @@ class Graph:
         self.state_manager.update_state(name, record)
 
     def activate_state_vertices(self, name: str, caller: str):
+        layers = []
         for vertex_id in self._is_state_vertices:
+            if vertex_id == caller:
+                continue
             vertex = self.get_vertex(vertex_id)
             if (
-                name in vertex._raw_params["name"]
+                isinstance(vertex._raw_params["name"], str)
+                and name in vertex._raw_params["name"]
                 and vertex_id != caller
                 and isinstance(vertex, StateVertex)
             ):
-                successors = self.get_all_successors(vertex)
-                self.activated_vertices.add(vertex_id)
-                for successor in successors:
-                    self.activated_vertices.add(successor.id)
+                layers.append([vertex_id])
+                successors = self.get_all_successors(vertex, flat=False)
+                for layer in successors:
+
+                    layers.append([v.id for v in layer])
+        self.activated_layers = layers
 
     def reset_activated_vertices(self):
-        self.activated_vertices = set()
+        self.activated_layers = []
 
     def append_state(
         self, name: str, record: Union[str, Record], caller: Optional[str] = None
@@ -555,18 +561,41 @@ class Graph:
             for source_id in self.predecessor_map.get(vertex.id, [])
         ]
 
-    def get_all_successors(self, vertex, recursive=True):
+    def get_all_successors(self, vertex, recursive=True, flat=True):
         # Recursively get the successors of the current vertex
+        # successors = vertex.successors
+        # if not successors:
+        #     return []
+        # successors_result = []
+        # for successor in successors:
+        #     # Just return a list of successors
+        #     if recursive:
+        #         next_successors = self.get_all_successors(successor)
+        #         successors_result.extend(next_successors)
+        #     successors_result.append(successor)
+        # return successors_result
+        # The above is the version without the flat parameter
+        # The below is the version with the flat parameter
+        # the flat parameter will define if each layer of successors
+        # becomes one list or if the result is a list of lists
+        # if flat is True, the result will be a list of vertices
+        # if flat is False, the result will be a list of lists of vertices
+        # each list will represent a layer of successors
         successors = vertex.successors
         if not successors:
             return []
         successors_result = []
         for successor in successors:
-            # Just return a list of successors
             if recursive:
                 next_successors = self.get_all_successors(successor)
-                successors_result.extend(next_successors)
-            successors_result.append(successor)
+                if flat:
+                    successors_result.extend(next_successors)
+                else:
+                    successors_result.append(next_successors)
+            if flat:
+                successors_result.append(successor)
+            else:
+                successors_result.append([successor])
         return successors_result
 
     def get_successors(self, vertex):

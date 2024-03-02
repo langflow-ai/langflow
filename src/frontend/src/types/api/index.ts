@@ -141,7 +141,7 @@ export type VerticesOrderTypeAPI = {
 export type VertexBuildTypeAPI = {
   id: string;
   inactivated_vertices: Array<string> | null;
-  activated_vertices: Array<string> | null;
+  activated_layers: Array<Array<string>> | null;
   valid: boolean;
   params: string;
   data: VertexDataTypeAPI;
