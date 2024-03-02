@@ -92,7 +92,7 @@ class CustomComponent(Component):
 
     def get_state(self, name: str):
         try:
-            return self.vertex.graph.state_manager.get_state(key=name)
+            return self.vertex.graph.get_state(name=name)
         except Exception as e:
             raise ValueError(f"Error getting state: {e}")
 
