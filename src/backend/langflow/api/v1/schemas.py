@@ -230,6 +230,7 @@ class ResultDataResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
     inactivated_vertices: Optional[List[str]] = None
+    activated_vertices: Optional[List[str]] = None
     valid: bool
     params: Optional[str]
     """JSON string of the params."""
