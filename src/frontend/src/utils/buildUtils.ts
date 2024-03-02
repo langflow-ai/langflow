@@ -139,7 +139,8 @@ export async function buildVertices({
 
       console.log("nextLayerIndex", nextLayerIndex);
       console.log("dynamicVerticesLayers", dynamicVerticesLayers);
-
+      // This adds layers to the dynamicVerticesLayers array
+      // starting from the index of the current layer + 1
       data.activated_layers.forEach((newLayer) => {
         if (!dynamicVerticesLayers[nextLayerIndex]) {
           dynamicVerticesLayers[nextLayerIndex] = [];
@@ -150,6 +151,21 @@ export async function buildVertices({
         ];
         nextLayerIndex += 1;
       });
+      // Let's implement one that just adds all layers to the end of the array
+      // data.activated_layers.forEach((newLayer) => {
+      //   // filter the newLayer to remove any vertices that are already in the dynamicVerticesLayers
+      //   // after thisVertexLayer
+      //   newLayer = newLayer.filter((vertex) => {
+      //     return !dynamicVerticesLayers
+      //       .slice(thisVertexLayer)
+      //       .flat()
+      //       .includes(vertex);
+      //   });
+      //   if (newLayer.length > 0) {
+      //     console.log("newLayer after filter", newLayer);
+      //     dynamicVerticesLayers.push(newLayer);
+      //   }
+      // });
     }
     if (onBuildUpdate) onBuildUpdate(data, status, runId);
   };
@@ -157,9 +173,9 @@ export async function buildVertices({
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
   for (let i = 0; i < dynamicVerticesLayers.length; i++) {
-    console.log(dynamicVerticesLayers);
     const layer = dynamicVerticesLayers[i];
     if (onBuildStart) onBuildStart(layer);
+
     for (const id of layer) {
       // Check if id is in the list of inactive nodes
       // useFlowStore because it gets updated constantly
