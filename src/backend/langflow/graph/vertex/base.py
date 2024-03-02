@@ -689,7 +689,7 @@ class Vertex:
             ids_are_equal = self.id == __o.id
             # self._data is a dict and we need to compare them
             # to check if they are equal
-            data_are_equal = self._data == __o._data
+            data_are_equal = self.data == __o.data
             return ids_are_equal and data_are_equal
         except AttributeError:
             return False
