@@ -28,7 +28,7 @@ class SharedState(CustomComponent):
             self.update_state(name, record)
 
         state = self.get_state(name)
-        if not isinstance(state, Record):
+        if state and not isinstance(state, Record):
             if isinstance(state, str):
                 state = Record(text=state)
             elif isinstance(state, dict):

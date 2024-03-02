@@ -76,13 +76,17 @@ class CustomComponent(Component):
 
     def update_state(self, name: str, value: Any):
         try:
-            self.vertex.graph.state_manager.update_state(key=name, new_state=value)
+            self.vertex.graph.update_state(
+                name=name, record=value, caller=self.vertex.id
+            )
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
     def append_state(self, name: str, value: Any):
         try:
-            self.vertex.graph.state_manager.append_state(key=name, new_state=value)
+            self.vertex.graph.append_state(
+                key=name, record=value, caller=self.vertex.id
+            )
         except Exception as e:
             raise ValueError(f"Error appending state: {e}")
 
