@@ -191,7 +191,6 @@ export async function buildVertices({
     );
     // Once the current layer is built, move to the next layer
     currentLayerIndex += 1;
-    console.log(useFlowStore.getState().verticesBuild?.verticesLayers);
 
     if (stop) {
       break;
