@@ -35,9 +35,11 @@ export default function CodeAreaModal({
   children,
   dynamic,
   readonly = false,
-  openModal,
+  open: myOpen,
+  setOpen: mySetOpen,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
+  const [open, setOpen] = (mySetOpen !== undefined && myOpen !== undefined) ? [myOpen, mySetOpen] : useState(false);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
 
@@ -55,10 +57,6 @@ export default function CodeAreaModal({
       return;
     }
   }, []);
-
-  useEffect(() => {
-    if (openModal) setOpen(true);
-  }, [openModal]);
 
   function processNonDynamicField() {
     postValidateCode(code)
@@ -142,8 +140,6 @@ export default function CodeAreaModal({
       clearTimeout(delayedFunction);
     };
   }, [error, setHeight]);
-
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setCode(value);
