@@ -100,7 +100,10 @@ export default function GenericNode({
     if (duration === undefined) {
       return "";
     } else {
-      return `Duration: ${duration}`;
+      const nowTimestamp = new Date(Date.now());
+      // readable last run time like YYYY-MM-DD HH:MM:SS
+      const last_run_datetime = nowTimestamp.toLocaleString();
+      return `Last run: ${last_run_datetime}\nDuration: ${duration}`;
     }
   };
   const durationString = getDurationString(validationStatus?.data.duration);
