@@ -862,7 +862,7 @@ export async function getVerticesOrder(
   // if nodeId is not provided, the API will return all vertices
   const config = {};
   if (nodeId) {
-    config["params"] = { component_id: nodeId };
+    config["params"] = { stop_component_id: nodeId };
   }
   return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
 }
@@ -872,6 +872,7 @@ export async function postBuildVertex(
   vertexId: string,
   input_value: string
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  // input_value is optional and is a query parameter
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
     input_value ? { inputs: { input_value: input_value } } : undefined

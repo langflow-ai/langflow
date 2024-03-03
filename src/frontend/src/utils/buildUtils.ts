@@ -168,6 +168,7 @@ export async function buildVertices({
           buildResults.push(false);
           return;
         }
+
         // Build the vertex
         await buildVertex({
           flowId,
