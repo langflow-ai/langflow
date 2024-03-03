@@ -134,7 +134,7 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<Array<string>>;
+  ids: Array<string>;
   run_id: string;
 };
 

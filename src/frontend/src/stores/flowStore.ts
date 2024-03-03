@@ -444,25 +444,34 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
-      buildId: string
+      runId: string
     ) {
       if (vertexBuildData && vertexBuildData.inactive_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
       }
-      get().verticesBuild &&
+      if (vertexBuildData.next_vertices_ids) {
+        // next_vertices_ids is a list of vertices that are going to be built next
+        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
+        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
+        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+        const newLayers = [
+          ...get().verticesBuild!.verticesLayers,
+          vertexBuildData.next_vertices_ids,
+        ];
+        const newIds = [
+          ...get().verticesBuild!.verticesIds,
+          ...vertexBuildData.next_vertices_ids,
+        ];
         get().updateVerticesBuild({
-          verticesIds: [
-            ...get().verticesBuild!.verticesIds,
-            vertexBuildData.id,
-          ],
-          verticesLayers: [
-            ...get().verticesBuild!.verticesLayers,
-            vertexBuildData.next_vertices_ids,
-          ],
-          runId: vertexBuildData.run_id,
+          verticesIds: newIds,
+          verticesLayers: newLayers,
+          runId: runId,
         });
+        get().updateBuildStatus(newIds, BuildStatus.TO_BUILD);
+      }
+
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId },
+        { ...vertexBuildData, buildId: runId },
         vertexBuildData.id
       );
 
@@ -514,6 +523,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       runId: string;
     } | null
   ) => {
+    console.log("updateVerticesBuild", vertices);
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
