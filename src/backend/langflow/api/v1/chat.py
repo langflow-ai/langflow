@@ -124,7 +124,7 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-
+            next_vertices_ids = vertex.successors_ids
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
@@ -159,6 +159,13 @@ async def build_vertex(
             inactive_vertices = list(graph.inactive_vertices)
             graph.reset_inactive_vertices()
         chat_service.set_cache(flow_id, graph)
+
+        # graph.stop_vertex tells us if the user asked
+        # to stop the build of the graph at a certain vertex
+        # if it is in next_vertices_ids, we need to remove other
+        # vertices from next_vertices_ids
+        if graph.stop_vertex and graph.stop_vertex in next_vertices_ids:
+            next_vertices_ids = [graph.stop_vertex]
 
         build_response = VertexBuildResponse(
             next_vertices_ids=next_vertices_ids,
