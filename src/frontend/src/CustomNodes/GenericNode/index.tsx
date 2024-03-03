@@ -395,13 +395,13 @@ export default function GenericNode({
                                 ? nodeColors[
                                 data.node?.template[templateField]
                                   .input_types![data.node?.template[templateField]
-                                  .input_types!.length - 1]
+                                    .input_types!.length - 1]
                                 ] ??
                                 nodeColors[
                                 types[
                                 data.node?.template[templateField]
                                   .input_types![data.node?.template[templateField]
-                                  .input_types!.length - 1]
+                                    .input_types!.length - 1]
                                 ]
                                 ]
                                 : nodeColors[
@@ -475,12 +475,6 @@ export default function GenericNode({
               <Button
                 variant="secondary"
                 className={"group h-9 px-1.5"}
-                onClick={() => {
-                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                    return;
-                  setValidationStatus(null);
-                  buildFlow({ nodeId: data.id });
-                }}
               >
                 <div>
                   <ShadTooltip
@@ -503,7 +497,12 @@ export default function GenericNode({
                     }
                     side="bottom"
                   >
-                    <div className="generic-node-status-position flex items-center justify-center">
+                    <div onClick={() => {
+                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                        return;
+                      setValidationStatus(null);
+                      buildFlow({ nodeId: data.id });
+                    }} className="generic-node-status-position flex items-center justify-center">
                       {renderIconStatus(buildStatus, validationStatus)}
                     </div>
                   </ShadTooltip>
@@ -629,7 +628,7 @@ export default function GenericNode({
                             types[
                             data.node?.template[templateField]
                               .input_types![data.node?.template[templateField]
-                              .input_types!.length - 1]
+                                .input_types!.length - 1]
                             ]
                             ]
                             : nodeColors[
