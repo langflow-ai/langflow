@@ -219,23 +219,6 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <div className="hidden">
-                  <CodeAreaComponent
-                    openModal={openModal}
-                    readonly={
-                      data.node?.flow && data.node.template[name].dynamic
-                        ? true
-                        : false
-                    }
-                    dynamic={data.node?.template[name].dynamic ?? false}
-                    setNodeClass={handleNodeClass}
-                    nodeClass={data.node}
-                    disabled={false}
-                    value={data.node?.template[name].value ?? ""}
-                    onChange={handleOnNewValue}
-                    id={"code-input-node-toolbar-" + name}
-                  />
-                </div>
                 <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
@@ -492,6 +475,26 @@ export default function NodeToolbarComponent({
             is_component={true}
             component={flowComponent!}
           />
+          {hasCode && (
+            <div className="hidden">
+              <CodeAreaComponent
+                open={openModal}
+                setOpen={setOpenModal}
+                readonly={
+                  data.node?.flow && data.node.template[name].dynamic
+                    ? true
+                    : false
+                }
+                dynamic={data.node?.template[name].dynamic ?? false}
+                setNodeClass={handleNodeClass}
+                nodeClass={data.node}
+                disabled={false}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+                id={"code-input-node-toolbar-" + name}
+              />
+            </div>
+          )}
         </span>
       </div>
     </>
