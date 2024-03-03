@@ -12,13 +12,8 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    ChatVertex,
-    FileToolVertex,
-    LLMVertex,
-    RoutingVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
+                                         RoutingVertex, ToolkitVertex)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -783,7 +778,7 @@ class Graph:
             self.stop_vertex = stop_component_id
             vertices = self.sort_up_to_vertex(stop_component_id)
         elif start_component_id:
-            vertices = self.sort_up_to_vertex(start_component_id)
+            vertices = self.sort_up_to_vertex(start_component_id, is_start=True)
 
         else:
             vertices = self.vertices
