@@ -108,7 +108,7 @@ export default function ChatMessage({
           chat.isSend ? "" : " "
         )}
       >
-        <div className={classNames("form-modal-chatbot-icon ")}>
+        <div className={classNames("form-modal-chatbot-icon")}>
           {!chat.isSend ? (
             <div className="form-modal-chat-image">
               <div className="form-modal-chat-bot-icon ">
@@ -134,7 +134,7 @@ export default function ChatMessage({
           )}
         </div>
         {!chat.isSend ? (
-          <div className="form-modal-chat-text-position">
+          <div className="form-modal-chat-text-position flex-grow min-w-96">
             <div className="form-modal-chat-text">
               {hidden && chat.thought && chat.thought !== "" && (
                 <div
