@@ -640,7 +640,5 @@ export function getFieldTitle(
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
-    : template[templateField].name
-    ? toTitleCase(template[templateField].name!, true)
-    : toTitleCase(templateField, true);
+    : template[templateField].name ?? templateField;
 }
